@@ -276,14 +276,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('🔍 Supabase client methods:', Object.keys(supabase))
       console.log('🔍 Auth methods:', Object.keys(supabase.auth || {}))
       
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      })
-
-      if (error) throw error
+      console.log('🔍 Testing direct fetch for sign-in...')
+      
+      // Try direct fetch first to bypass hanging issue
+      try {
+        const signInResponse = await fetch('https://xnuokgscavnytpqxlurg.supabase.co/auth/v1/token?grant_type=password', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''}`
+          },
+          body: JSON.stringify({
+            email,
+            password
+          })
+        })
+        
+        console.log('🔍 Direct fetch sign-in response:', signInResponse.status, signInResponse.statusText)
+        
+        if (signInResponse.ok) {
+          const signInData = await signInResponse.json()
+          console.log('🔍 Direct fetch sign-in data:', signInData)
+          
+          // If direct fetch works, return success
+          console.log('✅ Sign in successful via direct fetch')
+          return
+        } else {
+          console.log('🔍 Direct fetch sign-in failed, trying Supabase client...')
+          throw new Error('Direct fetch sign-in failed')
+        }
+      } catch (fetchError) {
+        console.log('🔍 Direct fetch sign-in error, falling back to Supabase client:', fetchError)
+        
+        // Fallback to Supabase client with timeout
+        const signInPromise = supabase.auth.signInWithPassword({
+          email,
+          password
+        })
+        
+        // Create a timeout promise
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('SignIn request timed out after 30 seconds')), 30000)
+        })
+        
+        // Race between signIn and timeout
+        console.log('🔍 Waiting for Supabase client sign-in response...')
+        
+        const { error } = await Promise.race([signInPromise, timeoutPromise]) as any
+        
+        if (error) throw error
+        console.log('✅ Sign in successful via Supabase client')
+      }
     } catch (error) {
-      console.error('Sign in error:', error)
+      console.error('❌ Sign in error:', error)
       throw error
     }
   }
