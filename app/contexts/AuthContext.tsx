@@ -299,9 +299,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const signInData = await signInResponse.json()
           console.log('🔍 Direct fetch sign-in data:', signInData)
           
-          // If direct fetch works, return success
-          console.log('✅ Sign in successful via direct fetch')
-          return
+          // If direct fetch works, manually set the session
+          if (signInData.user && signInData.access_token) {
+            console.log('🔍 Setting user session manually...')
+            
+            // Create a mock session object that matches Supabase's format
+            const mockSession = {
+              access_token: signInData.access_token,
+              refresh_token: signInData.refresh_token,
+              expires_in: signInData.expires_in,
+              expires_at: signInData.expires_at,
+              token_type: signInData.token_type,
+              user: signInData.user
+            }
+            
+            // Update the local state
+            setUser(signInData.user)
+            setSession(mockSession as any)
+            
+            // Try to fetch the user profile
+            if (signInData.user.id) {
+              await fetchProfile(signInData.user.id)
+            }
+            
+            console.log('✅ Sign in successful via direct fetch, session established')
+            return
+          } else {
+            console.log('🔍 Direct fetch sign-in failed, trying Supabase client...')
+            throw new Error('Direct fetch sign-in failed - no user data')
+          }
         } else {
           console.log('🔍 Direct fetch sign-in failed, trying Supabase client...')
           throw new Error('Direct fetch sign-in failed')
