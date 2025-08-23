@@ -194,6 +194,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       console.error('❌ All profile fetch methods failed')
+      
+      // If we get here, no profile exists - let's create one
+      console.log('🔍 No profile found, attempting to create one...')
+      try {
+        if (user) {
+          const { error: createError } = await supabase
+            .from('user_profiles')
+            .insert([
+              {
+                id: userId,
+                email: user.email,
+                first_name: user.user_metadata?.first_name || 'Golfer',
+                last_name: user.user_metadata?.last_name || 'User',
+                username: user.user_metadata?.username || `golfer_${Date.now()}`,
+                full_name: user.user_metadata?.full_name || `${user.user_metadata?.first_name || 'Golfer'} ${user.user_metadata?.last_name || 'User'}`.trim(),
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }
+            ])
+          
+          if (createError) {
+            console.error('❌ Error creating profile:', createError)
+          } else {
+            console.log('✅ Profile created successfully, fetching again...')
+            // Try to fetch the newly created profile
+            const { data: newProfileData, error: fetchError } = await supabase
+              .from('user_profiles')
+              .select('*')
+              .eq('id', userId)
+              .single()
+            
+            if (!fetchError && newProfileData) {
+              console.log('✅ New profile fetched successfully')
+              await processProfileData(newProfileData, userId)
+              return
+            }
+          }
+        }
+      } catch (createProfileError) {
+        console.error('❌ Error in profile creation fallback:', createProfileError)
+      }
     } catch (error) {
       console.error('❌ Error in fetchProfile:', error)
     }
