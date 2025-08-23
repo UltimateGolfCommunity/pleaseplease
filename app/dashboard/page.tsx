@@ -32,7 +32,13 @@ export default function Dashboard() {
   const router = useRouter()
   
   // Debug user state
-  console.log('🔍 Dashboard - User state:', { user: !!user, profile: !!profile, loading })
+  console.log('🔍 Dashboard - User state:', { 
+    user: !!user, 
+    profile: !!profile, 
+    loading,
+    userDetails: user ? { id: user.id, email: user.email } : null,
+    profileDetails: profile ? { id: profile.id, first_name: profile.first_name, last_name: profile.last_name } : null
+  })
       const [activeTab, setActiveTab] = useState<'overview' | 'community' | 'golf' | 'achievements' | 'profile'>('overview')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
