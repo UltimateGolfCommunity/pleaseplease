@@ -141,54 +141,101 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchProfile = async (userId: string) => {
     if (!supabase) return
     
+    console.log('🔍 fetchProfile called for user ID:', userId)
+    
     try {
-      // Fetch user profile with related data
-      const { data: profileData, error: profileError } = await supabase
-        .from('user_profiles')
-        .select(`
-          *,
-          badges:user_badges(
-            badge_id,
-            earned_at,
-            earned_reason,
-            badge:badges(*)
-          ),
-          achievements:user_achievements(*)
-        `)
-        .eq('id', userId)
-        .single()
+      // Try Supabase client first with timeout
+      console.log('🔍 Trying Supabase client profile fetch...')
+      try {
+        const profilePromise = supabase
+          .from('user_profiles')
+          .select(`
+            *,
+            badges:user_badges(
+              badge_id,
+              earned_at,
+              earned_reason,
+              badge:badges(*)
+            ),
+            achievements:user_achievements(*)
+          `)
+          .eq('id', userId)
+          .single()
 
-      if (profileError) {
-        console.error('Error fetching profile:', profileError)
-        return
-      }
+        const profileTimeout = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Supabase profile fetch timed out after 8 seconds')), 8000)
+        })
 
-      if (profileData) {
-        // Calculate additional stats
-        const connectionsCount = 0 // Mock value for now
-        const teeTimesCount = 0 // Mock value for now
-        const groupsCount = 0 // Mock value for now
+        const { data: profileData, error: profileError } = await Promise.race([profilePromise, profileTimeout]) as any
 
-        const enhancedProfile: UserProfile = {
-          ...profileData,
-          connections_count: connectionsCount,
-          tee_times_count: teeTimesCount,
-          groups_count: groupsCount,
-          tee_times: [],
-          groups: [],
-          group_messages: [],
-          current_group: null,
-          group_activity: []
+        if (profileError) {
+          console.log('❌ Supabase profile fetch error:', profileError)
+          throw profileError
         }
 
-        setProfile(enhancedProfile)
-        
-        // Check if user should get the Founding Member badge
-        await checkFoundingMemberBadge(userId)
+        if (profileData) {
+          console.log('✅ Supabase profile fetch successful')
+          await processProfileData(profileData, userId)
+          return
+        }
+      } catch (supabaseError) {
+        console.log('🔍 Supabase profile fetch failed or timed out, trying direct fetch...')
       }
+
+      // Fallback to direct fetch
+      console.log('🔍 Trying direct fetch profile...')
+      try {
+        const response = await fetch(`${supabase.supabaseUrl}/rest/v1/user_profiles?id=eq.${userId}&select=*`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabase.supabaseKey,
+            'Authorization': `Bearer ${supabase.supabaseKey}`
+          }
+        })
+
+        if (response.ok) {
+          const profileData = await response.json()
+          if (profileData && profileData.length > 0) {
+            console.log('✅ Direct fetch profile successful')
+            await processProfileData(profileData[0], userId)
+            return
+          }
+        }
+        
+        console.log('❌ Direct fetch profile failed:', response.status, response.statusText)
+      } catch (directError) {
+        console.error('❌ Direct fetch profile error:', directError)
+      }
+
+      console.error('❌ All profile fetch methods failed')
     } catch (error) {
-      console.error('Error in fetchProfile:', error)
+      console.error('❌ Error in fetchProfile:', error)
     }
+  }
+
+  const processProfileData = async (profileData: any, userId: string) => {
+    // Calculate additional stats
+    const connectionsCount = 0 // Mock value for now
+    const teeTimesCount = 0 // Mock value for now
+    const groupsCount = 0 // Mock value for now
+
+    const enhancedProfile: UserProfile = {
+      ...profileData,
+      connections_count: connectionsCount,
+      tee_times_count: teeTimesCount,
+      groups_count: groupsCount,
+      tee_times: [],
+      groups: [],
+      group_messages: [],
+      current_group: null,
+      group_activity: []
+    }
+
+    setProfile(enhancedProfile)
+    
+    // Check if user should get the Founding Member badge
+    await checkFoundingMemberBadge(userId)
   }
 
   const checkFoundingMemberBadge = async (userId: string) => {
