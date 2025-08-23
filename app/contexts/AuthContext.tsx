@@ -31,6 +31,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const client = createBrowserClient()
       console.log('🔍 AuthContext: Creating Supabase client:', client)
       setSupabase(client)
+      
+      // Try to restore session from localStorage
+      try {
+        const storedSession = localStorage.getItem('supabase.auth.token')
+        const storedUser = localStorage.getItem('supabase.auth.user')
+        
+        if (storedSession && storedUser) {
+          console.log('🔍 Restoring session from localStorage...')
+          const session = JSON.parse(storedSession)
+          const user = JSON.parse(storedUser)
+          
+          setSession(session)
+          setUser(user)
+          
+          // Fetch profile for restored user
+          if (user.id) {
+            fetchProfile(user.id)
+          }
+          
+          console.log('✅ Session restored from localStorage')
+        }
+      } catch (restoreError) {
+        console.error('❌ Error restoring session:', restoreError)
+        // Clear invalid stored data
+        localStorage.removeItem('supabase.auth.token')
+        localStorage.removeItem('supabase.auth.user')
+      }
     }
   }, [])
 
@@ -316,6 +343,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Update the local state
             setUser(signInData.user)
             setSession(mockSession as any)
+            
+            // Persist session to localStorage
+            try {
+              localStorage.setItem('supabase.auth.token', JSON.stringify(mockSession))
+              localStorage.setItem('supabase.auth.user', JSON.stringify(signInData.user))
+              console.log('🔍 Session persisted to localStorage')
+            } catch (storageError) {
+              console.error('❌ Error persisting session:', storageError)
+            }
             
             // Try to fetch the user profile
             if (signInData.user.id) {
