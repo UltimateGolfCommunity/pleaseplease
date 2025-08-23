@@ -74,6 +74,9 @@ export default function SignupPage() {
     setLoading(true)
     
     try {
+      console.log('🔍 Starting signup process...')
+      console.log('🔍 Form data:', { email: formData.email, firstName: formData.firstName, lastName: formData.lastName })
+      
       await signUp(formData.email, formData.password, {
         first_name: formData.firstName,
         last_name: formData.lastName,
@@ -81,12 +84,14 @@ export default function SignupPage() {
         username: formData.email.split('@')[0]
       })
       
+      console.log('✅ Signup successful!')
       // Show success message and redirect
       alert('Account created successfully! Please check your email to verify your account.')
       router.push('/auth/login')
-         } catch (error: unknown) {
-               const errorMessage = error instanceof Error ? error.message : 'An error occurred during signup. Please try again.'
-               if (error instanceof Error && error.message?.toLowerCase().includes('email')) {
+    } catch (error: unknown) {
+      console.error('❌ Signup error:', error)
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred during signup. Please try again.'
+      if (error instanceof Error && error.message?.toLowerCase().includes('email')) {
         setErrors({ email: errorMessage })
       } else {
         setErrors({ password: errorMessage })

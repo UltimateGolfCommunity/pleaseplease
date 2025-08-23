@@ -144,9 +144,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signUp = async (email: string, password: string, profileData: Partial<UserProfile>) => {
-    if (!supabase) return
+    if (!supabase) {
+      console.error('❌ No Supabase client available for signUp')
+      throw new Error('Supabase client not initialized')
+    }
     
     try {
+      console.log('🔍 Starting signUp process for:', email)
+      console.log('🔍 Supabase client available:', !!supabase)
+      console.log('🔍 Supabase auth methods:', Object.keys(supabase.auth || {}))
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -155,9 +162,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       })
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ Supabase auth.signUp error:', error)
+        throw error
+      }
+
+      console.log('✅ User created successfully:', data.user?.id)
 
       if (data.user) {
+        console.log('🔍 Creating user profile for user ID:', data.user.id)
+        
         // Create user profile
         const { error: profileError } = await supabase
           .from('user_profiles')
@@ -168,16 +182,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               first_name: profileData.first_name,
               last_name: profileData.last_name,
               username: profileData.username,
-              full_name: profileData.full_name || `${profileData.first_name} ${profileData.last_name}`.trim()
+              full_name: profileData.full_name || `${profileData.first_name} ${profileData.last_name}`.trim(),
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
             }
           ])
 
         if (profileError) {
-          console.error('Error creating profile:', profileError)
+          console.error('❌ Error creating profile:', profileError)
+          // Don't throw here - user was created successfully
+        } else {
+          console.log('✅ User profile created successfully')
         }
       }
+      
+      console.log('✅ SignUp process completed successfully')
     } catch (error) {
-      console.error('Sign up error:', error)
+      console.error('❌ Sign up error:', error)
       throw error
     }
   }
