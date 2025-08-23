@@ -161,8 +161,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Fallback to direct fetch
       console.log('🔍 Trying direct fetch profile...')
+      const directFetchUrl = `${supabase.supabaseUrl}/rest/v1/user_profiles?id=eq.${userId}&select=*`
+      console.log('🔍 Direct fetch URL:', directFetchUrl)
+      console.log('🔍 Supabase config:', { url: supabase.supabaseUrl, key: supabase.supabaseKey?.substring(0, 20) + '...' })
+      
       try {
-        const response = await fetch(`${supabase.supabaseUrl}/rest/v1/user_profiles?id=eq.${userId}&select=*`, {
+        const response = await fetch(directFetchUrl, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -173,10 +177,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (response.ok) {
           const profileData = await response.json()
+          console.log('🔍 Direct fetch response:', { status: response.status, profileData, length: profileData?.length })
+          
           if (profileData && profileData.length > 0) {
             console.log('✅ Direct fetch profile successful')
             await processProfileData(profileData[0], userId)
             return
+          } else {
+            console.log('❌ Direct fetch returned empty data:', { profileData, length: profileData?.length })
           }
         }
         
