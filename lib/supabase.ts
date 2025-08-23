@@ -7,13 +7,45 @@ function isValidSupabaseConfig() {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   
   // Check if they exist
-  if (!url || !key) return false
+  if (!url || !key) {
+    console.error('❌ Missing Supabase environment variables')
+    return false
+  }
   
-  // Check if URL is valid
+  // Check for placeholder values
+  if (url.includes('[YOUR-') || url.includes('your_') || url.includes('_here')) {
+    console.error('❌ Supabase URL contains placeholder values:', url)
+    return false
+  }
+  
+  if (key.includes('[YOUR-') || key.includes('your_') || key.includes('_here')) {
+    console.error('❌ Supabase key contains placeholder values')
+    return false
+  }
+  
+  // Check if URL is valid and is a proper Supabase URL
   try {
-    new URL(url)
+    const urlObj = new URL(url)
+    
+    // Ensure it's not a database connection URL
+    if (urlObj.protocol === 'postgresql:' || urlObj.protocol === 'postgres:') {
+      console.error('❌ Found database URL instead of API URL. Use https://your-project.supabase.co format:', url)
+      return false
+    }
+    
+    if (!urlObj.hostname.includes('supabase.co')) {
+      console.error('❌ URL is not a valid Supabase URL:', url)
+      return false
+    }
+    
+    if (urlObj.protocol !== 'https:') {
+      console.error('❌ Supabase URL must use HTTPS:', url)
+      return false
+    }
+    
     return true
   } catch {
+    console.error('❌ Invalid URL format:', url)
     return false
   }
 }
