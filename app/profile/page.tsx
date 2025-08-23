@@ -268,10 +268,16 @@ export default function ProfilePage() {
               {profile.badges.map((userBadge: any) => (
                 <div 
                   key={userBadge.id}
-                  className="relative group cursor-pointer"
+                  className={`relative group cursor-pointer ${
+                    userBadge.badge?.name === 'Founding Member' ? 'animate-pulse' : ''
+                  }`}
                   title={`${userBadge.badge?.name} - ${userBadge.badge?.description}`}
                 >
-                  <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 backdrop-blur-xl border border-yellow-400/30 rounded-xl px-4 py-3 text-center transform transition-all duration-300 group-hover:scale-110 group-hover:border-yellow-400/50">
+                  <div className={`backdrop-blur-xl border rounded-xl px-4 py-3 text-center transform transition-all duration-300 group-hover:scale-110 ${
+                    userBadge.badge?.name === 'Founding Member' 
+                      ? 'bg-gradient-to-r from-purple-500/30 to-pink-500/30 border-purple-400/50 group-hover:border-purple-400/80' 
+                      : 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-400/30 group-hover:border-yellow-400/50'
+                  }`}>
                     <div className="text-2xl mb-2">
                       {userBadge.badge?.icon_name === 'crown' && '👑'}
                       {userBadge.badge?.icon_name === 'star' && '⭐'}
@@ -294,6 +300,9 @@ export default function ProfilePage() {
                     </div>
                     <div className="text-yellow-200 text-sm font-medium">{userBadge.badge?.name}</div>
                     <div className="text-yellow-400 text-xs">{userBadge.badge?.points} pts</div>
+                    {userBadge.badge?.name === 'Founding Member' && (
+                      <div className="text-purple-300 text-xs mt-1 font-medium">🏆 Pioneer!</div>
+                    )}
                   </div>
                   {/* Rarity indicator */}
                   <div className={`absolute -top-2 -right-2 px-2 py-1 rounded-full text-xs font-bold ${

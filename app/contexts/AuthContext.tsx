@@ -175,9 +175,66 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         setProfile(enhancedProfile)
+        
+        // Check if user should get the Founding Member badge
+        await checkFoundingMemberBadge(userId)
       }
     } catch (error) {
       console.error('Error in fetchProfile:', error)
+    }
+  }
+
+  const checkFoundingMemberBadge = async (userId: string) => {
+    if (!supabase) return
+    
+    try {
+      // Check if user already has the Founding Member badge
+      const { data: existingBadge, error: badgeError } = await supabase
+        .from('user_badges')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('badge_id', (await supabase.from('badges').select('id').eq('name', 'Founding Member').single()).data?.id)
+        .single()
+
+      if (badgeError && badgeError.code !== 'PGRST116') {
+        console.error('Error checking Founding Member badge:', badgeError)
+        return
+      }
+
+      // If user doesn't have the badge, check if they're within the first 50 users
+      if (!existingBadge) {
+        const { count: userCount, error: countError } = await supabase
+          .from('user_profiles')
+          .select('*', { count: 'exact', head: true })
+
+        if (countError) {
+          console.error('Error counting users:', countError)
+          return
+        }
+
+        // If user is within first 50, award the badge
+        if (userCount && userCount <= 50) {
+          const { data: badgeData, error: badgeInsertError } = await supabase
+            .from('user_badges')
+            .insert({
+              user_id: userId,
+              badge_id: (await supabase.from('badges').select('id').eq('name', 'Founding Member').single()).data?.id,
+              earned_reason: 'One of the first 50 founding members!'
+            })
+            .select()
+            .single()
+
+          if (badgeInsertError) {
+            console.error('Error awarding Founding Member badge:', badgeInsertError)
+          } else {
+            console.log('🎉 Founding Member badge awarded!')
+            // Refresh profile to show the new badge
+            await fetchProfile(userId)
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error in checkFoundingMemberBadge:', error)
     }
   }
 
