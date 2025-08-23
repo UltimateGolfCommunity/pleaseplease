@@ -336,15 +336,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('🔍 Auth methods:', Object.keys(supabase.auth || {}))
       
       console.log('🔍 Testing direct fetch for sign-in...')
+      console.log('🔍 Using Supabase key:', supabase.supabaseKey ? 'Key exists' : 'No key')
       
       // Try direct fetch first to bypass hanging issue
       try {
+        console.log('🔍 About to make direct fetch request...')
         const fetchPromise = fetch('https://xnuokgscavnytpqxlurg.supabase.co/auth/v1/token?grant_type=password', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''}`
+            'apikey': supabase.supabaseKey,
+            'Authorization': `Bearer ${supabase.supabaseKey}`
           },
           body: JSON.stringify({
             email,
@@ -352,11 +354,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           })
         })
         
+        console.log('🔍 Fetch request sent, waiting for response...')
+        
         // Add timeout to direct fetch
         const fetchTimeout = new Promise((_, reject) => {
           setTimeout(() => reject(new Error('Direct fetch sign-in timed out after 15 seconds')), 15000)
         })
         
+        console.log('🔍 Racing fetch vs timeout...')
         const signInResponse = await Promise.race([fetchPromise, fetchTimeout]) as Response
         
         console.log('🔍 Direct fetch sign-in response:', signInResponse.status, signInResponse.statusText)
