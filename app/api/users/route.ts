@@ -1,0 +1,230 @@
+import { NextRequest, NextResponse } from 'next/server'
+
+// Mock user data for development
+const mockUsers = [
+  {
+    id: 'user-1',
+    first_name: 'John',
+    last_name: 'Smith',
+    email: 'john.smith@example.com',
+    username: 'johnsmith',
+    handicap: 12,
+    location: 'San Francisco, CA',
+    bio: 'Weekend warrior who loves the game',
+    profile_image: null,
+    total_points: 450,
+    connections_count: 15,
+    rounds_played: 28
+  },
+  {
+    id: 'user-2',
+    first_name: 'Sarah',
+    last_name: 'Johnson',
+    email: 'sarah.j@example.com',
+    username: 'sarahj',
+    handicap: 8,
+    location: 'Los Angeles, CA',
+    bio: 'Competitive golfer, always looking to improve',
+    profile_image: null,
+    total_points: 720,
+    connections_count: 23,
+    rounds_played: 45
+  },
+  {
+    id: 'user-3',
+    first_name: 'Mike',
+    last_name: 'Davis',
+    email: 'mike.davis@example.com',
+    username: 'mikedavis',
+    handicap: 18,
+    location: 'Phoenix, AZ',
+    bio: 'Just getting back into golf after a long break',
+    profile_image: null,
+    total_points: 180,
+    connections_count: 8,
+    rounds_played: 12
+  }
+]
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const action = searchParams.get('action')
+  const query = searchParams.get('q')
+  const userId = searchParams.get('id')
+
+  try {
+    // Check if Supabase is configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      console.log('Using mock data for users API')
+      
+      if (action === 'search' && query) {
+        // Search users
+        const filteredUsers = mockUsers.filter(user => 
+          user.first_name.toLowerCase().includes(query.toLowerCase()) ||
+          user.last_name.toLowerCase().includes(query.toLowerCase()) ||
+          user.username.toLowerCase().includes(query.toLowerCase()) ||
+          user.location.toLowerCase().includes(query.toLowerCase())
+        )
+        return NextResponse.json(filteredUsers)
+      }
+      
+      if (action === 'profile' && userId) {
+        // Get user profile
+        const user = mockUsers.find(u => u.id === userId)
+        return user ? NextResponse.json(user) : NextResponse.json({ error: 'User not found' }, { status: 404 })
+      }
+      
+      if (action === 'connections') {
+        // Get user connections
+        return NextResponse.json([
+          { id: 'conn-1', user: mockUsers[0], status: 'connected', connected_at: '2024-01-15' },
+          { id: 'conn-2', user: mockUsers[1], status: 'connected', connected_at: '2024-01-10' }
+        ])
+      }
+      
+      // Default: return all users
+      return NextResponse.json(mockUsers)
+    }
+
+    // Use real Supabase if configured
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    )
+
+    if (action === 'search' && query) {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,username.ilike.%${query}%`)
+        .limit(20)
+
+      if (error) throw error
+      return NextResponse.json(data || [])
+    }
+
+    if (action === 'profile' && userId) {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
+
+      if (error) throw error
+      return NextResponse.json(data)
+    }
+
+    if (action === 'connections') {
+      const { data, error } = await supabase
+        .from('user_connections')
+        .select(`
+          *,
+          connected_user:user_profiles(*)
+        `)
+        .eq('user_id', userId)
+        .eq('status', 'connected')
+
+      if (error) throw error
+      return NextResponse.json(data || [])
+    }
+
+    // Default: return all users
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .limit(50)
+
+    if (error) throw error
+    return NextResponse.json(data || [])
+
+  } catch (error) {
+    console.error('Error in users API:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { action, ...data } = body
+
+    // Check if Supabase is configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      console.log('Using mock data for users API POST')
+      
+      if (action === 'connect') {
+        // Mock connection request
+        return NextResponse.json({ 
+          success: true, 
+          message: 'Connection request sent',
+          connection_id: 'mock-conn-' + Date.now()
+        })
+      }
+      
+      if (action === 'update_profile') {
+        // Mock profile update
+        return NextResponse.json({ 
+          success: true, 
+          message: 'Profile updated successfully'
+        })
+      }
+      
+      return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+    }
+
+    // Use real Supabase if configured
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    )
+
+    if (action === 'connect') {
+      const { error } = await supabase
+        .from('user_connections')
+        .insert({
+          user_id: data.user_id,
+          connected_user_id: data.connected_user_id,
+          status: 'pending'
+        })
+
+      if (error) throw error
+      return NextResponse.json({ success: true, message: 'Connection request sent' })
+    }
+
+    if (action === 'update_profile') {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update(data)
+        .eq('id', data.id)
+
+      if (error) throw error
+      return NextResponse.json({ success: true, message: 'Profile updated successfully' })
+    }
+
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+
+  } catch (error) {
+    console.error('Error in users API POST:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+// Helper function to create Supabase client
+function createClient(url: string, key: string) {
+  // This would normally import and create a Supabase client
+  // For now, return a mock object
+  return {
+    from: (table: string) => ({
+      select: (columns: string) => ({
+        or: (filter: string) => ({
+          limit: (count: number) => Promise.resolve({ data: [], error: null })
+        }),
+        eq: (column: string, value: any) => ({
+          single: () => Promise.resolve({ data: null, error: null })
+        })
+      }),
+      insert: (data: any) => Promise.resolve({ data: null, error: null }),
+      update: (data: any) => Promise.resolve({ data: null, error: null })
+    })
+  }
+}

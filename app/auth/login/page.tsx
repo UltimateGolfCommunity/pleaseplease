@@ -67,15 +67,15 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Navigation */}
-      <nav className="bg-black/80 backdrop-blur-md border-b border-gray-800">
+      <nav className="bg-slate-800/80 backdrop-blur-xl border-b border-slate-700/60 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <div className="relative">
-                <Club className="h-8 w-8 text-emerald-400 mr-3" />
-                <Sparkles className="h-4 w-4 text-emerald-300 absolute -top-1 -right-1" />
+                <Club className="h-8 w-8 text-emerald-500 mr-3" />
+                <Sparkles className="h-4 w-4 text-emerald-400 absolute -top-1 -right-1" />
               </div>
               <span className="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
                 Ultimate Golf Community
@@ -85,7 +85,7 @@ export default function LoginPage() {
             <div className="flex items-center space-x-4">
               <a
                 href="/"
-                className="flex items-center text-gray-300 hover:text-emerald-400 transition-colors duration-300"
+                className="flex items-center text-slate-300 hover:text-emerald-400 transition-colors duration-300"
               >
                 <ArrowLeft className="h-5 w-5 mr-2" />
                 Back to Home
@@ -96,12 +96,12 @@ export default function LoginPage() {
       </nav>
 
       {/* Main Content */}
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-gray-900 via-black to-gray-900">
-        <div className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-md border border-gray-700/50 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="bg-slate-800/80 backdrop-blur-xl border border-slate-600/40 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
           {/* Header */}
           <div className="bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 border-b border-emerald-400/30 p-8 text-center">
             <h1 className="text-3xl font-bold mb-2 text-white">Welcome Back</h1>
-            <p className="text-emerald-300">Sign in to your Ultimate Golf Community account</p>
+            <p className="text-slate-300">Sign in to your Ultimate Golf Community account</p>
           </div>
 
           {/* Form */}
@@ -109,20 +109,20 @@ export default function LoginPage() {
             <div className="space-y-6">
               {/* Email */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-slate-300 mb-2">
                   Email Address
                 </label>
                 <input
                   type="email"
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
-                  className={`w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300 ${
-                    errors.email ? 'border-red-500' : 'border-gray-600/50'
+                  className={`w-full px-4 py-3 bg-slate-700/80 border border-slate-500 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-white placeholder-slate-400 transition-all duration-300 ${
+                    errors.email ? 'border-red-500' : 'border-slate-500'
                   }`}
                   placeholder="Enter your email"
                 />
                 {errors.email && (
-                  <p className="text-red-400 text-sm mt-1 flex items-center">
+                  <p className="text-red-500 text-sm mt-1 flex items-center">
                     <XCircle className="h-4 w-4 mr-1" />
                     {errors.email}
                   </p>
@@ -131,7 +131,7 @@ export default function LoginPage() {
 
               {/* Password */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-slate-300 mb-2">
                   Password
                 </label>
                 <div className="relative">
@@ -139,21 +139,21 @@ export default function LoginPage() {
                     type={showPassword ? 'text' : 'password'}
                     value={formData.password}
                     onChange={(e) => handleInputChange('password', e.target.value)}
-                    className={`w-full px-4 py-3 pr-12 bg-gray-800/50 border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300 ${
-                      errors.password ? 'border-red-500' : 'border-gray-600/50'
+                    className={`w-full px-4 py-3 pr-12 bg-slate-700/80 border border-slate-500 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-white placeholder-slate-400 transition-all duration-300 ${
+                      errors.password ? 'border-red-500' : 'border-slate-500'
                     }`}
                     placeholder="Enter your password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-emerald-400 transition-colors duration-300"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-emerald-400 transition-colors duration-300"
                   >
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="text-red-400 text-sm mt-1 flex items-center">
+                  <p className="text-red-500 text-sm mt-1 flex items-center">
                     <XCircle className="h-4 w-4 mr-1" />
                     {errors.password}
                   </p>
@@ -167,13 +167,13 @@ export default function LoginPage() {
                     id="remember-me"
                     name="remember-me"
                     type="checkbox"
-                    className="h-4 w-4 text-emerald-500 focus:ring-emerald-500 border-gray-600 rounded bg-gray-800"
+                    className="h-4 w-4 text-emerald-500 focus:ring-emerald-500 border-slate-300 rounded bg-white"
                   />
-                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-300">
+                  <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-700">
                     Remember me
                   </label>
                 </div>
-                <a href="#" className="text-sm text-emerald-400 hover:text-emerald-300 transition-colors duration-300">
+                <a href="#" className="text-sm text-emerald-600 hover:text-emerald-700 transition-colors duration-300">
                   Forgot password?
                 </a>
               </div>
@@ -198,17 +198,17 @@ export default function LoginPage() {
               <div className="space-y-3">
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-600" />
+                    <div className="w-full border-t border-slate-300" />
                   </div>
                   <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-gray-800/90 text-gray-400">Or continue with</span>
+                    <span className="px-2 bg-white text-slate-500">Or continue with</span>
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    className="w-full inline-flex justify-center py-2 px-4 border border-gray-600 rounded-md shadow-sm bg-gray-800/50 text-sm font-medium text-gray-300 hover:bg-gray-700/50 hover:text-white transition-all duration-300"
+                    className="w-full inline-flex justify-center py-2 px-4 border border-slate-300 rounded-xl shadow-sm bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-all duration-300"
                   >
                     <svg className="h-5 w-5" viewBox="0 0 24 24">
                       <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -221,7 +221,7 @@ export default function LoginPage() {
                   
                   <button
                     type="button"
-                    className="w-full inline-flex justify-center py-2 px-4 border border-gray-600 rounded-md shadow-sm bg-gray-800/50 text-sm font-medium text-gray-300 hover:bg-gray-700/50 hover:text-white transition-all duration-300"
+                    className="w-full inline-flex justify-center py-2 px-4 border border-slate-300 rounded-xl shadow-sm bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-all duration-300"
                   >
                     <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
@@ -232,9 +232,9 @@ export default function LoginPage() {
               </div>
 
               {/* Signup Link */}
-              <p className="text-center text-gray-400">
+              <p className="text-center text-slate-600">
                 Don&apos;t have an account?{' '}
-                <a href="/auth/signup" className="text-emerald-400 hover:text-emerald-300 font-semibold transition-colors duration-300">
+                <a href="/auth/signup" className="text-emerald-600 hover:text-emerald-700 font-semibold transition-colors duration-300">
                   Sign up here
                 </a>
               </p>
