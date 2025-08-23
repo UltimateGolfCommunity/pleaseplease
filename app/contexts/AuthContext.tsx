@@ -414,6 +414,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   console.error('❌ Profile fetch timed out or failed:', profileError)
                   // Don't fail the sign-in if profile fetch fails
                 }
+              } catch (profileOuterError) {
+                console.error('❌ Outer profile fetch error:', profileOuterError)
+                // Don't fail the sign-in if profile fetch fails
               }
               
               console.log('✅ Sign in successful via direct fetch, session established')
