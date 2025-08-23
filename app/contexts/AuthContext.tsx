@@ -154,38 +154,73 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('🔍 Supabase client available:', !!supabase)
       console.log('🔍 Supabase auth methods:', Object.keys(supabase.auth || {}))
       
-      console.log('🔍 About to call supabase.auth.signUp...')
+            console.log('🔍 About to call supabase.auth.signUp...')
       console.log('🔍 Request details:', { email, passwordLength: password.length, profileData })
       
-      // Add timeout to prevent hanging
-      const signUpPromise = supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: profileData
-        }
-      })
-      
-      // Create a timeout promise
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('SignUp request timed out after 30 seconds')), 30000)
-      })
-      
-            // Race between signUp and timeout
-      console.log('🔍 Waiting for signUp response...')
+      // Try direct fetch first to test connection
+      console.log('🔍 Testing direct fetch to Supabase...')
       
       let data: any, error: any
       
       try {
-        const result = await Promise.race([signUpPromise, timeoutPromise]) as any
-        console.log('🔍 SignUp response received:', { data: !!result.data, error: !!result.error })
-        console.log('🔍 Full response:', result)
+        const testResponse = await fetch('https://xnuokgscavnytpqxlurg.supabase.co/auth/v1/signup', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''}`
+          },
+          body: JSON.stringify({
+            email,
+            password,
+            data: profileData
+          })
+        })
         
-        data = result.data
-        error = result.error
-      } catch (timeoutError) {
-        console.error('❌ SignUp timeout or error:', timeoutError)
-        throw timeoutError
+        console.log('🔍 Direct fetch response:', testResponse.status, testResponse.statusText)
+        
+        if (testResponse.ok) {
+          const testData = await testResponse.json()
+          console.log('🔍 Direct fetch data:', testData)
+          
+          // If direct fetch works, use the data
+          data = testData
+          error = null
+        } else {
+          console.log('🔍 Direct fetch failed, trying Supabase client...')
+          throw new Error('Direct fetch failed')
+        }
+      } catch (fetchError) {
+        console.log('🔍 Direct fetch error, falling back to Supabase client:', fetchError)
+        
+        // Fallback to Supabase client
+        const signUpPromise = supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: profileData
+          }
+        })
+        
+        // Create a timeout promise
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('SignUp request timed out after 30 seconds')), 30000)
+        })
+        
+        // Race between signUp and timeout
+        console.log('🔍 Waiting for Supabase client response...')
+        
+        try {
+          const result = await Promise.race([signUpPromise, timeoutPromise]) as any
+          console.log('🔍 Supabase client response received:', { data: !!result.data, error: !!result.error })
+          console.log('🔍 Full response:', result)
+          
+          data = result.data
+          error = result.error
+        } catch (timeoutError) {
+          console.error('❌ Supabase client timeout or error:', timeoutError)
+          throw timeoutError
+        }
       }
       
       if (error) {
