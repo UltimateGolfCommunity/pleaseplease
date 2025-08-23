@@ -31,8 +31,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const client = createBrowserClient()
       console.log('🔍 AuthContext: Creating Supabase client:', client)
       setSupabase(client)
-      
-      // Try to restore session from localStorage
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!supabase) return
+
+    // Add a timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      setLoading(false)
+    }, 5000) // 5 second timeout
+
+    // Try to restore session from localStorage first
+    const restoreFromLocalStorage = () => {
       try {
         const storedSession = localStorage.getItem('supabase.auth.token')
         const storedUser = localStorage.getItem('supabase.auth.user')
@@ -51,6 +62,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
           
           console.log('✅ Session restored from localStorage')
+          setLoading(false)
+          clearTimeout(timeoutId)
+          return true // Session restored successfully
         }
       } catch (restoreError) {
         console.error('❌ Error restoring session:', restoreError)
@@ -58,38 +72,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem('supabase.auth.token')
         localStorage.removeItem('supabase.auth.user')
       }
+      return false // No session restored
     }
-  }, [])
 
-  useEffect(() => {
-    if (!supabase) return
-
-    // Add a timeout to prevent infinite loading
-    const timeoutId = setTimeout(() => {
-      setLoading(false)
-    }, 5000) // 5 second timeout
-
-    // Get initial session
-    const getInitialSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
-        setSession(session)
-        setUser(session?.user ?? null)
-        
-        if (session?.user) {
-          await fetchProfile(session.user.id)
+    // Try localStorage first, then Supabase auth
+    const sessionRestored = restoreFromLocalStorage()
+    
+    if (!sessionRestored) {
+      // Only try Supabase auth if no localStorage session
+      const getInitialSession = async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession()
+          setSession(session)
+          setUser(session?.user ?? null)
+          
+          if (session?.user) {
+            await fetchProfile(session.user.id)
+          }
+          
+          setLoading(false)
+          clearTimeout(timeoutId)
+        } catch (error) {
+          console.error('Error getting initial session:', error)
+          setLoading(false)
+          clearTimeout(timeoutId)
         }
-        
-        setLoading(false)
-        clearTimeout(timeoutId)
-      } catch (error) {
-        console.error('Error getting initial session:', error)
-        setLoading(false)
-        clearTimeout(timeoutId)
       }
-    }
 
-    getInitialSession()
+      getInitialSession()
+    }
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
