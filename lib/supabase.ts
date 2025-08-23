@@ -1,4 +1,4 @@
-import { createBrowserClient, createServerClient as createServerClientSSR } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { mockSupabaseClient } from './supabase-mock'
 
 // Helper function to check if environment variables are valid
@@ -50,7 +50,7 @@ function isValidSupabaseConfig() {
   }
 }
 
-export function createClient() {
+export function createBrowserClient() {
   // Debug logging
   console.log('🔍 Supabase Config Check:')
   console.log('  URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
@@ -64,7 +64,7 @@ export function createClient() {
   }
 
   console.log('✅ Using real Supabase client')
-  return createBrowserClient(
+  return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
@@ -77,15 +77,8 @@ export function createServerClient() {
     return mockSupabaseClient as any
   }
 
-  return createServerClientSSR(
+  return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: () => '',
-        set: () => {},
-        remove: () => {},
-      },
-    }
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 }

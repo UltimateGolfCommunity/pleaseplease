@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase'
+import { createServerClient } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
     }
 
-    const supabase = createClient()
+    const supabase = createServerClient()
     
     const { data: profile, error } = await supabase
       .from('user_profiles')
@@ -39,7 +39,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
     }
 
-    const supabase = createClient()
+    const supabase = createServerClient()
     
     // Update profile
     const { data: updatedProfile, error } = await supabase

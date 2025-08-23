@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session } from '@supabase/supabase-js'
-import { createClient } from '@/lib/supabase'
+import { createBrowserClient } from '@/lib/supabase'
 import { UserProfile } from '@/lib/database.types'
 
 interface AuthContextType {
@@ -28,7 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Only create client on the client side
     if (typeof window !== 'undefined') {
-      const client = createClient()
+      const client = createBrowserClient()
       console.log('🔍 AuthContext: Creating Supabase client:', client)
       setSupabase(client)
     }

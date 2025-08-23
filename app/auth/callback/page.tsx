@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase'
+import { createBrowserClient } from '@/lib/supabase'
 
 export default function AuthCallback() {
   const router = useRouter()
@@ -10,7 +10,7 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        const supabase = createClient()
+        const supabase = createBrowserClient()
         
         // Get the session from the URL
         const { data: { session }, error } = await supabase.auth.getSession()
