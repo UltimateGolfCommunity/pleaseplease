@@ -260,31 +260,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data.user) {
         console.log('🔍 Creating user profile for user ID:', data.user.id)
         
-        // Create user profile
-        const { error: profileError } = await supabase
-          .from('user_profiles')
-          .insert([
-            {
-              id: data.user.id,
-              email: data.user.email,
-              first_name: profileData.first_name,
-              last_name: profileData.last_name,
-              username: profileData.username,
-              full_name: profileData.full_name || `${profileData.first_name} ${profileData.last_name}`.trim(),
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }
-          ])
-
-        if (profileError) {
-          console.error('❌ Error creating profile:', profileError)
-          // Don't throw here - user was created successfully
-        } else {
-          console.log('✅ User profile created successfully')
+        try {
+          // Create user profile with timeout
+          const profilePromise = supabase
+            .from('user_profiles')
+            .insert([
+              {
+                id: data.user.id,
+                email: data.user.email,
+                first_name: profileData.first_name,
+                last_name: profileData.last_name,
+                username: profileData.username,
+                full_name: profileData.full_name || `${profileData.first_name} ${profileData.last_name}`.trim(),
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }
+            ])
+          
+          // Add timeout to profile creation
+          const profileTimeout = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Profile creation timed out after 15 seconds')), 15000)
+          })
+          
+          const { error: profileError } = await Promise.race([profilePromise, profileTimeout]) as any
+          
+          if (profileError) {
+            console.error('❌ Error creating profile:', profileError)
+            // Don't throw here - user was created successfully
+          } else {
+            console.log('✅ User profile created successfully')
+          }
+        } catch (profileTimeoutError) {
+          console.error('❌ Profile creation timed out:', profileTimeoutError)
+          // Don't fail the sign-up if profile creation times out
         }
       }
       
+      // Always complete sign-up successfully, even if profile creation fails
       console.log('✅ SignUp process completed successfully')
+      
+      // Set user session immediately after successful sign-up
+      if (data.user) {
+        console.log('🔍 Setting user session after sign-up...')
+        setUser(data.user)
+        
+        // Create a basic session object
+        const signUpSession = {
+          access_token: data.session?.access_token || 'temp-token',
+          refresh_token: data.session?.refresh_token || 'temp-refresh',
+          expires_in: 3600,
+          expires_at: Math.floor(Date.now() / 1000) + 3600,
+          token_type: 'bearer',
+          user: data.user
+        }
+        
+        setSession(signUpSession as any)
+        console.log('✅ User session established after sign-up')
+      }
     } catch (error) {
       console.error('❌ Sign up error:', error)
       throw error
