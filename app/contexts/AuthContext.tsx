@@ -410,10 +410,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('🔍 Supabase client methods:', Object.keys(supabase))
       console.log('🔍 Auth methods:', Object.keys(supabase.auth || {}))
       
+      // Try Supabase client first with timeout
+      console.log('🔍 Trying Supabase client sign-in first...')
+      try {
+        const supabasePromise = supabase.auth.signInWithPassword({
+          email,
+          password
+        })
+        
+        const supabaseTimeout = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Supabase client sign-in timed out after 8 seconds')), 8000)
+        })
+        
+        const { data, error } = await Promise.race([supabasePromise, supabaseTimeout]) as any
+        
+        if (error) {
+          console.log('❌ Supabase client sign-in failed:', error)
+          throw error
+        }
+        
+        if (data?.user && data?.session) {
+          console.log('✅ Supabase client sign-in successful')
+          setUser(data.user)
+          setSession(data.session)
+          
+          // Fetch profile
+          if (data.user.id) {
+            await fetchProfile(data.user.id)
+          }
+          
+          return
+        }
+      } catch (supabaseError) {
+        console.log('🔍 Supabase client sign-in failed or timed out, trying direct fetch...')
+      }
+      
+      // Fallback to direct fetch
       console.log('🔍 Testing direct fetch for sign-in...')
       console.log('🔍 Using Supabase key:', supabase.supabaseKey ? 'Key exists' : 'No key')
       
-      // Try direct fetch first to bypass hanging issue
       try {
         console.log('🔍 About to make direct fetch request...')
         const fetchPromise = fetch('https://xnuokgscavnytpqxlurg.supabase.co/auth/v1/token?grant_type=password', {
