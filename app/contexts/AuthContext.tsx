@@ -537,7 +537,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
+    console.log('🔍 🔍 🔍 AuthContext signOut function called!')
     console.log('🔍 signOut called, supabase exists:', !!supabase)
+    console.log('🔍 Current user state:', { user: !!user, userId: user?.id, email: user?.email })
     
     try {
       // Clear localStorage session data first

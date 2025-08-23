@@ -60,10 +60,16 @@ export default function HomePage() {
   }, [])
 
   const handleSignOut = async () => {
+    console.log('🔍 Main page handleSignOut called')
     try {
+      console.log('🔍 Calling signOut() from AuthContext...')
       await signOut()
+      console.log('✅ signOut successful, redirecting to home...')
+      // Force page refresh to clear any cached state
+      window.location.href = '/'
     } catch (error) {
-      console.error('Sign out error:', error)
+      console.error('❌ Error signing out:', error)
+      alert('Failed to sign out. Please try again.')
     }
   }
 
