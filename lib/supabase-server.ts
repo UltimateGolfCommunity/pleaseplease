@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createServerClient as createServerClientSSR } from '@supabase/ssr'
 
 export function createServerClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -8,5 +8,11 @@ export function createServerClient() {
     throw new Error('Missing Supabase environment variables')
   }
   
-  return createClient(supabaseUrl, supabaseKey)
+  return createServerClientSSR(supabaseUrl, supabaseKey, {
+    cookies: {
+      get: () => '',
+      set: () => {},
+      remove: () => {},
+    },
+  })
 }

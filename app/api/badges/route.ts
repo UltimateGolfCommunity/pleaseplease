@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@/lib/supabase'
 
 // Mock data for development when Supabase is not configured
 const mockBadges = [
@@ -81,10 +81,7 @@ export async function GET(request: NextRequest) {
     }
     
     // Use real Supabase if configured
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    )
+    const supabase = createServerClient()
     
     let query = supabase
       .from('badges')
@@ -118,14 +115,14 @@ export async function GET(request: NextRequest) {
 
       if (!userBadgesError) {
         // Create a map of earned badge IDs
-        const earnedBadgeIds = new Set(userBadges?.map(ub => ub.badge_id) || [])
+        const earnedBadgeIds = new Set(userBadges?.map((ub: any) => ub.badge_id) || [])
         
         // Add earned status to badges
-        const badgesWithEarnedStatus = badges?.map(badge => ({
+        const badgesWithEarnedStatus = badges?.map((badge: any) => ({
           ...badge,
           is_earned: earnedBadgeIds.has(badge.id),
-          earned_at: userBadges?.find(ub => ub.badge_id === badge.id)?.earned_at || null,
-          earned_reason: userBadges?.find(ub => ub.badge_id === badge.id)?.earned_reason || null
+          earned_at: userBadges?.find((ub: any) => ub.badge_id === badge.id)?.earned_at || null,
+          earned_reason: userBadges?.find((ub: any) => ub.badge_id === badge.id)?.earned_reason || null
         }))
 
         return NextResponse.json({ 
