@@ -53,12 +53,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const session = JSON.parse(storedSession)
           const user = JSON.parse(storedUser)
           
+          console.log('🔍 Restored user object:', user)
+          console.log('🔍 User ID from localStorage:', user.id)
+          console.log('🔍 User email from localStorage:', user.email)
+          
           setSession(session)
           setUser(user)
           
           // Fetch profile for restored user
           if (user.id) {
+            console.log('🔍 Fetching profile for restored user ID:', user.id)
             fetchProfile(user.id)
+          } else {
+            console.error('❌ Restored user has no ID:', user)
           }
           
           console.log('✅ Session restored from localStorage')
@@ -558,22 +565,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
-    if (!supabase || !user) return
+    console.log('🔍 updateProfile called with:', { updates, hasSupabase: !!supabase, hasUser: !!user, userId: user?.id })
+    
+    if (!supabase || !user) {
+      console.error('❌ updateProfile: Missing supabase or user')
+      throw new Error('Missing supabase client or user')
+    }
+    
+    if (!user.id) {
+      console.error('❌ updateProfile: User ID is undefined')
+      throw new Error('User ID is undefined')
+    }
     
     try {
-      const { error } = await supabase
+      console.log('🔍 Updating profile for user ID:', user.id)
+      
+      const { data, error } = await supabase
         .from('user_profiles')
         .update(updates)
         .eq('id', user.id)
+        .select()
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ Supabase update error:', error)
+        throw error
+      }
+
+      console.log('✅ Profile updated in database:', data)
 
       // Update local profile state
       if (profile) {
-        setProfile({ ...profile, ...updates })
+        const updatedProfile = { ...profile, ...updates }
+        console.log('🔍 Updating local profile state:', updatedProfile)
+        setProfile(updatedProfile)
       }
+      
+      console.log('✅ Profile update completed successfully')
     } catch (error) {
-      console.error('Update profile error:', error)
+      console.error('❌ Update profile error:', error)
       throw error
     }
   }
