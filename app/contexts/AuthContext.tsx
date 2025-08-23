@@ -37,102 +37,79 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!supabase) return
 
+    console.log('🔍 Setting up Supabase authentication...')
+    
     // Add a timeout to prevent infinite loading
     const timeoutId = setTimeout(() => {
+      console.log('⚠️  Authentication setup timed out, setting loading to false')
       setLoading(false)
-    }, 5000) // 5 second timeout
+    }, 10000) // 10 second timeout
 
-    // Try to restore session from localStorage first
-    const restoreFromLocalStorage = () => {
+    // Get initial session from Supabase
+    const getInitialSession = async () => {
       try {
-        const storedSession = localStorage.getItem('supabase.auth.token')
-        const storedUser = localStorage.getItem('supabase.auth.user')
+        console.log('🔍 Getting initial session from Supabase...')
+        const { data: { session }, error } = await supabase.auth.getSession()
         
-        if (storedSession && storedUser) {
-          console.log('🔍 Restoring session from localStorage...')
-          const session = JSON.parse(storedSession)
-          const user = JSON.parse(storedUser)
-          
-          console.log('🔍 Restored user object:', user)
-          console.log('🔍 User ID from localStorage:', user.id)
-          console.log('🔍 User email from localStorage:', user.email)
-          
-          setSession(session)
-          setUser(user)
-          
-          // Fetch profile for restored user
-          if (user.id) {
-            console.log('🔍 Fetching profile for restored user ID:', user.id)
-            fetchProfile(user.id)
-          } else {
-            console.error('❌ Restored user has no ID:', user)
-          }
-          
-          console.log('✅ Session restored from localStorage')
+        if (error) {
+          console.error('❌ Error getting initial session:', error)
           setLoading(false)
           clearTimeout(timeoutId)
-          return true // Session restored successfully
+          return
         }
-      } catch (restoreError) {
-        console.error('❌ Error restoring session:', restoreError)
-        // Clear invalid stored data
-        localStorage.removeItem('supabase.auth.token')
-        localStorage.removeItem('supabase.auth.user')
+        
+        if (session) {
+          console.log('✅ Initial session found:', { userId: session.user.id, email: session.user.email })
+          setSession(session)
+          setUser(session.user)
+          
+          // Fetch profile for authenticated user
+          await fetchProfile(session.user.id)
+        } else {
+          console.log('ℹ️  No initial session found')
+        }
+        
+        setLoading(false)
+        clearTimeout(timeoutId)
+      } catch (error) {
+        console.error('❌ Error in getInitialSession:', error)
+        setLoading(false)
+        clearTimeout(timeoutId)
       }
-      return false // No session restored
     }
 
-    // Try localStorage first, then Supabase auth
-    const sessionRestored = restoreFromLocalStorage()
-    
-    if (!sessionRestored) {
-      // Only try Supabase auth if no localStorage session
-      const getInitialSession = async () => {
-        try {
-          const { data: { session } } = await supabase.auth.getSession()
-          setSession(session)
-          setUser(session?.user ?? null)
-          
-          if (session?.user) {
-            await fetchProfile(session.user.id)
-          }
-          
-          setLoading(false)
-          clearTimeout(timeoutId)
-        } catch (error) {
-          console.error('Error getting initial session:', error)
-          setLoading(false)
-          clearTimeout(timeoutId)
-        }
-      }
-
-      getInitialSession()
-    }
-
-    // Listen for auth changes
+    // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: string, session: Session | null) => {
+        console.log('🔍 Auth state change:', event, { userId: session?.user?.id, email: session?.user?.email })
+        
         try {
           setSession(session)
           setUser(session?.user ?? null)
           
-          if (session?.user) {
+          if (event === 'SIGNED_IN' && session?.user) {
+            console.log('✅ User signed in, fetching profile...')
             await fetchProfile(session.user.id)
-          } else {
+          } else if (event === 'SIGNED_OUT') {
+            console.log('ℹ️  User signed out, clearing profile...')
             setProfile(null)
           }
           
           setLoading(false)
           clearTimeout(timeoutId)
         } catch (error) {
-          console.error('Error in auth state change:', error)
+          console.error('❌ Error in auth state change:', error)
           setLoading(false)
           clearTimeout(timeoutId)
         }
       }
     )
 
+    // Get initial session
+    getInitialSession()
+
     return () => {
+      console.log('🔍 Cleaning up auth subscription...')
       subscription.unsubscribe()
       clearTimeout(timeoutId)
     }
@@ -457,160 +434,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('🔍 Supabase client methods:', Object.keys(supabase))
       console.log('🔍 Auth methods:', Object.keys(supabase.auth || {}))
       
-      // Try Supabase client first with timeout
-      console.log('🔍 Trying Supabase client sign-in first...')
-      try {
-        const supabasePromise = supabase.auth.signInWithPassword({
-          email,
-          password
-        })
-        
-        const supabaseTimeout = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Supabase client sign-in timed out after 8 seconds')), 8000)
-        })
-        
-        const { data, error } = await Promise.race([supabasePromise, supabaseTimeout]) as any
-        
-        if (error) {
-          console.log('❌ Supabase client sign-in failed:', error)
-          throw error
-        }
-        
-        if (data?.user && data?.session) {
-          console.log('✅ Supabase client sign-in successful')
-          setUser(data.user)
-          setSession(data.session)
-          
-          // Fetch profile
-          if (data.user.id) {
-            await fetchProfile(data.user.id)
-          }
-          
-          return
-        }
-      } catch (supabaseError) {
-        console.log('🔍 Supabase client sign-in failed or timed out, trying direct fetch...')
+      console.log('🔍 Attempting Supabase client sign-in...')
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+      
+      if (error) {
+        console.error('❌ Supabase sign-in error:', error)
+        throw error
       }
       
-      // Fallback to direct fetch
-      console.log('🔍 Testing direct fetch for sign-in...')
-      console.log('🔍 Using Supabase key:', supabase.supabaseKey ? 'Key exists' : 'No key')
-      
-      try {
-        console.log('🔍 About to make direct fetch request...')
-        const fetchPromise = fetch('https://xnuokgscavnytpqxlurg.supabase.co/auth/v1/token?grant_type=password', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': supabase.supabaseKey,
-            'Authorization': `Bearer ${supabase.supabaseKey}`
-          },
-          body: JSON.stringify({
-            email,
-            password
-          })
-        })
+      if (data?.user && data?.session) {
+        console.log('✅ Supabase sign-in successful')
+        console.log('🔍 User data:', { userId: data.user.id, email: data.user.email })
+        console.log('🔍 Session data:', { accessToken: !!data.session.access_token, refreshToken: !!data.session.refresh_token })
         
-        console.log('🔍 Fetch request sent, waiting for response...')
+        // Set user and session (this will trigger onAuthStateChange)
+        setUser(data.user)
+        setSession(data.session)
         
-        // Add timeout to direct fetch
-        const fetchTimeout = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Direct fetch sign-in timed out after 15 seconds')), 15000)
-        })
-        
-        console.log('🔍 Racing fetch vs timeout...')
-        const signInResponse = await Promise.race([fetchPromise, fetchTimeout]) as Response
-        
-        console.log('🔍 Direct fetch sign-in response:', signInResponse.status, signInResponse.statusText)
-        
-        if (signInResponse.ok) {
-          const signInData = await signInResponse.json()
-          console.log('🔍 Direct fetch sign-in data:', signInData)
-          
-          // If direct fetch works, manually set the session
-          if (signInData.user && signInData.access_token) {
-            console.log('🔍 Setting user session manually...')
-            
-            // Create a mock session object that matches Supabase's format
-            const mockSession = {
-              access_token: signInData.access_token,
-              refresh_token: signInData.refresh_token,
-              expires_in: signInData.expires_in,
-              expires_at: signInData.expires_at,
-              token_type: signInData.token_type,
-              user: signInData.user
-            }
-            
-            // Update the local state
-            setUser(signInData.user)
-            setSession(mockSession as any)
-            
-            // Persist session to localStorage
-            try {
-              localStorage.setItem('supabase.auth.token', JSON.stringify(mockSession))
-              localStorage.setItem('supabase.auth.user', JSON.stringify(signInData.user))
-              console.log('🔍 Session persisted to localStorage')
-            } catch (storageError) {
-              console.error('❌ Error persisting session:', storageError)
-            }
-            
-            // Try to fetch the user profile
-            if (signInData.user.id) {
-              console.log('🔍 Fetching profile for user ID:', signInData.user.id)
-              try {
-                // Add timeout to profile fetching
-                const profilePromise = fetchProfile(signInData.user.id)
-                const profileTimeout = new Promise((_, reject) => {
-                  setTimeout(() => reject(new Error('Profile fetch timed out after 15 seconds')), 15000)
-                })
-                
-                try {
-                  await Promise.race([profilePromise, profileTimeout])
-                  console.log('✅ Profile fetched successfully')
-                } catch (profileError) {
-                  console.error('❌ Profile fetch timed out or failed:', profileError)
-                  // Don't fail the sign-in if profile fetch fails
-                }
-              } catch (profileOuterError) {
-                console.error('❌ Outer profile fetch error:', profileOuterError)
-                // Don't fail the sign-in if profile fetch fails
-              }
-              
-              console.log('✅ Sign in successful via direct fetch, session established')
-              return
-            } else {
-              console.log('🔍 Direct fetch sign-in failed, trying Supabase client...')
-              throw new Error('Direct fetch sign-in failed - no user data')
-            }
-          } else {
-            console.log('🔍 Direct fetch sign-in failed, trying Supabase client...')
-            throw new Error('Direct fetch sign-in failed - no user data')
-          }
-        } else {
-          console.log('🔍 Direct fetch sign-in failed, trying Supabase client...')
-          throw new Error('Direct fetch sign-in failed')
+        // Fetch profile
+        if (data.user.id) {
+          await fetchProfile(data.user.id)
         }
-      } catch (fetchError) {
-        console.log('🔍 Direct fetch sign-in error, falling back to Supabase client:', fetchError)
         
-        // Fallback to Supabase client with timeout
-        const signInPromise = supabase.auth.signInWithPassword({
-          email,
-          password
-        })
-        
-        // Create a timeout promise
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('SignIn request timed out after 30 seconds')), 30000)
-        })
-        
-        // Race between signIn and timeout
-        console.log('🔍 Waiting for Supabase client sign-in response...')
-        
-        const { error } = await Promise.race([signInPromise, timeoutPromise]) as any
-        
-        if (error) throw error
-        console.log('✅ Sign in successful via Supabase client')
+        return
+      } else {
+        throw new Error('No user or session data received from Supabase')
       }
     } catch (error) {
       console.error('❌ Sign in error:', error)
