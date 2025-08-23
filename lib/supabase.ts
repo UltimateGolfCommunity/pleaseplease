@@ -53,9 +53,18 @@ function isValidSupabaseConfig() {
 export function createBrowserClient() {
   // Debug logging
   console.log('🔍 Supabase Config Check:')
-  console.log('  URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
+  console.log('  Raw URL from env:', process.env.NEXT_PUBLIC_SUPABASE_URL)
+  console.log('  Raw Key from env:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+  console.log('  URL exists:', !!process.env.NEXT_PUBLIC_SUPABASE_URL)
   console.log('  Key exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
   console.log('  Key starts with:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0, 20) + '...')
+  
+  // Check if we're in the browser
+  if (typeof window !== 'undefined') {
+    console.log('  Running in browser')
+  } else {
+    console.log('  Running on server')
+  }
   
   // Check if we have valid Supabase configuration
   if (!isValidSupabaseConfig()) {
