@@ -319,7 +319,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             
             // Try to fetch the user profile
             if (signInData.user.id) {
-              await fetchProfile(signInData.user.id)
+              console.log('🔍 Fetching profile for user ID:', signInData.user.id)
+              try {
+                // Add timeout to profile fetching
+                const profilePromise = fetchProfile(signInData.user.id)
+                const profileTimeout = new Promise((_, reject) => {
+                  setTimeout(() => reject(new Error('Profile fetch timed out after 10 seconds')), 10000)
+                })
+                
+                await Promise.race([profilePromise, profileTimeout])
+                console.log('✅ Profile fetched successfully')
+              } catch (profileError) {
+                console.error('❌ Error fetching profile:', profileError)
+                // Don't fail the sign-in if profile fetch fails
+              }
             }
             
             console.log('✅ Sign in successful via direct fetch, session established')
