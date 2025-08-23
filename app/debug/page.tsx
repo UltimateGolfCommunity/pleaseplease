@@ -22,6 +22,33 @@ export default function DebugPage() {
     }
   }
 
+  const handleTestConnection = async () => {
+    try {
+      console.log('🧪 Testing Supabase connection...')
+      
+      // Test basic fetch to Supabase
+      const response = await fetch('https://xnuokgscavnytpqxlurg.supabase.co/rest/v1/', {
+        method: 'GET',
+        headers: {
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''}`
+        }
+      })
+      
+      console.log('✅ Supabase REST API response:', response.status, response.statusText)
+      
+      // Test auth endpoint
+      const authResponse = await fetch('https://xnuokgscavnytpqxlurg.supabase.co/auth/v1/health', {
+        method: 'GET'
+      })
+      
+      console.log('✅ Supabase Auth API response:', authResponse.status, authResponse.statusText)
+      
+    } catch (error) {
+      console.error('❌ Supabase connection test failed:', error)
+    }
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-2xl mx-auto">
@@ -67,6 +94,18 @@ export default function DebugPage() {
             <li>Look for any errors or placeholder values</li>
             <li>Verify the URL uses https:// and not postgresql://</li>
           </ol>
+        </div>
+
+        <div className="bg-blue-100 dark:bg-blue-900 p-4 rounded-lg mt-4">
+          <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">
+            🧪 Test Supabase Connection
+          </h3>
+          <button 
+            onClick={handleTestConnection}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Test Supabase Connection
+          </button>
         </div>
       </div>
     </div>

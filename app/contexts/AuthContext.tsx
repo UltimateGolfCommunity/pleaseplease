@@ -171,11 +171,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setTimeout(() => reject(new Error('SignUp request timed out after 30 seconds')), 30000)
       })
       
-      // Race between signUp and timeout
-      const { data, error } = await Promise.race([signUpPromise, timeoutPromise]) as any
+            // Race between signUp and timeout
+      console.log('🔍 Waiting for signUp response...')
       
-      console.log('🔍 SignUp response received:', { data: !!data, error: !!error })
-
+      let data: any, error: any
+      
+      try {
+        const result = await Promise.race([signUpPromise, timeoutPromise]) as any
+        console.log('🔍 SignUp response received:', { data: !!result.data, error: !!result.error })
+        console.log('🔍 Full response:', result)
+        
+        data = result.data
+        error = result.error
+      } catch (timeoutError) {
+        console.error('❌ SignUp timeout or error:', timeoutError)
+        throw timeoutError
+      }
+      
       if (error) {
         console.error('❌ Supabase auth.signUp error:', error)
         throw error
