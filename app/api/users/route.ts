@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from '@/lib/supabase'
 
 // Mock user data for development
 const mockUsers = [
@@ -87,10 +88,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Use real Supabase if configured
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    )
+    const supabase = createServerClient()
 
     if (action === 'search' && query) {
       const { data, error } = await supabase
@@ -173,10 +171,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Use real Supabase if configured
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    )
+    const supabase = createServerClient()
 
     if (action === 'connect') {
       const { error } = await supabase
@@ -209,22 +204,4 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Helper function to create Supabase client
-function createClient(url: string, key: string) {
-  // This would normally import and create a Supabase client
-  // For now, return a mock object
-  return {
-    from: (table: string) => ({
-      select: (columns: string) => ({
-        or: (filter: string) => ({
-          limit: (count: number) => Promise.resolve({ data: [], error: null })
-        }),
-        eq: (column: string, value: any) => ({
-          single: () => Promise.resolve({ data: null, error: null })
-        })
-      }),
-      insert: (data: any) => Promise.resolve({ data: null, error: null }),
-      update: (data: any) => Promise.resolve({ data: null, error: null })
-    })
-  }
-}
+

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from '@/lib/supabase'
 
 // Mock message data for development
 const mockMessages = [
@@ -57,10 +58,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Use real Supabase if configured
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    )
+    const supabase = createServerClient()
 
     if (action === 'inbox' && userId) {
       const { data, error } = await supabase
@@ -149,7 +147,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ 
           success: true, 
           message: 'Message sent successfully',
-          message: newMessage
+          data: newMessage
         })
       }
       
@@ -165,10 +163,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Use real Supabase if configured
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    )
+    const supabase = createServerClient()
 
     if (action === 'send') {
       const { data: newMessage, error } = await supabase
@@ -184,7 +179,7 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (error) throw error
-      return NextResponse.json({ success: true, message: 'Message sent successfully', message: newMessage })
+      return NextResponse.json({ success: true, message: 'Message sent successfully', data: newMessage })
     }
 
     if (action === 'mark_read') {
@@ -205,22 +200,4 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Helper function to create Supabase client
-function createClient(url: string, key: string) {
-  // This would normally import and create a Supabase client
-  // For now, return a mock object
-  return {
-    from: (table: string) => ({
-      select: (columns: string) => ({
-        eq: (column: string, value: any) => ({
-          order: (column: string, options: any) => Promise.resolve({ data: [], error: null })
-        }),
-        or: (filter: string) => ({
-          order: (column: string, options: any) => Promise.resolve({ data: [], error: null })
-        })
-      }),
-      insert: (data: any) => Promise.resolve({ data: null, error: null }),
-      update: (data: any) => Promise.resolve({ data: null, error: null })
-    })
-  }
-}
+
