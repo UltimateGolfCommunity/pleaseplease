@@ -339,7 +339,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Try direct fetch first to bypass hanging issue
       try {
-        const signInResponse = await fetch('https://xnuokgscavnytpqxlurg.supabase.co/auth/v1/token?grant_type=password', {
+        const fetchPromise = fetch('https://xnuokgscavnytpqxlurg.supabase.co/auth/v1/token?grant_type=password', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -351,6 +351,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             password
           })
         })
+        
+        // Add timeout to direct fetch
+        const fetchTimeout = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Direct fetch sign-in timed out after 15 seconds')), 15000)
+        })
+        
+        const signInResponse = await Promise.race([fetchPromise, fetchTimeout]) as Response
         
         console.log('🔍 Direct fetch sign-in response:', signInResponse.status, signInResponse.statusText)
         
@@ -392,19 +399,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 // Add timeout to profile fetching
                 const profilePromise = fetchProfile(signInData.user.id)
                 const profileTimeout = new Promise((_, reject) => {
-                  setTimeout(() => reject(new Error('Profile fetch timed out after 10 seconds')), 10000)
+                  setTimeout(() => reject(new Error('Profile fetch timed out after 15 seconds')), 15000)
                 })
                 
-                await Promise.race([profilePromise, profileTimeout])
-                console.log('✅ Profile fetched successfully')
-              } catch (profileError) {
-                console.error('❌ Error fetching profile:', profileError)
-                // Don't fail the sign-in if profile fetch fails
+                try {
+                  await Promise.race([profilePromise, profileTimeout])
+                  console.log('✅ Profile fetched successfully')
+                } catch (profileError) {
+                  console.error('❌ Profile fetch timed out or failed:', profileError)
+                  // Don't fail the sign-in if profile fetch fails
+                }
               }
+              
+              console.log('✅ Sign in successful via direct fetch, session established')
+              return
+            } else {
+              console.log('🔍 Direct fetch sign-in failed, trying Supabase client...')
+              throw new Error('Direct fetch sign-in failed - no user data')
             }
-            
-            console.log('✅ Sign in successful via direct fetch, session established')
-            return
           } else {
             console.log('🔍 Direct fetch sign-in failed, trying Supabase client...')
             throw new Error('Direct fetch sign-in failed - no user data')
