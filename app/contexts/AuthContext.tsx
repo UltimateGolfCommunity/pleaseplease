@@ -550,11 +550,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('✅ localStorage cleared')
       }
       
-      // Try Supabase auth.signOut() if available
+      // Try Supabase auth.signOut() if available with timeout
       if (supabase) {
         try {
-          console.log('🔍 Calling Supabase auth.signOut()...')
-          const { error } = await supabase.auth.signOut()
+          console.log('🔍 Calling Supabase auth.signOut() with timeout...')
+          
+          // Create a timeout promise for Supabase signOut
+          const signOutPromise = supabase.auth.signOut()
+          const signOutTimeout = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Supabase signOut timed out after 5 seconds')), 5000)
+          })
+          
+          // Race between signOut and timeout
+          const { error } = await Promise.race([signOutPromise, signOutTimeout]) as any
           
           if (error) {
             console.error('❌ Supabase signOut error:', error)
@@ -563,7 +571,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.log('✅ Supabase signOut successful')
           }
         } catch (supabaseError) {
-          console.error('❌ Supabase signOut error:', supabaseError)
+          console.error('❌ Supabase signOut error or timeout:', supabaseError)
           // Don't throw here - we still want to clear local state
         }
       }
