@@ -539,27 +539,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     console.log('🔍 signOut called, supabase exists:', !!supabase)
     
-    if (!supabase) {
-      console.error('❌ No Supabase client available for signOut')
-      return
-    }
-    
     try {
-      console.log('🔍 Calling Supabase auth.signOut()...')
-      const { error } = await supabase.auth.signOut()
-      
-      if (error) {
-        console.error('❌ Supabase signOut error:', error)
-        throw error
+      // Clear localStorage session data first
+      if (typeof window !== 'undefined') {
+        console.log('🔍 Clearing localStorage session data...')
+        localStorage.removeItem('supabase.auth.token')
+        localStorage.removeItem('supabase.auth.user')
+        console.log('✅ localStorage cleared')
       }
       
-      console.log('✅ Supabase signOut successful, clearing local state...')
+      // Try Supabase auth.signOut() if available
+      if (supabase) {
+        try {
+          console.log('🔍 Calling Supabase auth.signOut()...')
+          const { error } = await supabase.auth.signOut()
+          
+          if (error) {
+            console.error('❌ Supabase signOut error:', error)
+            // Don't throw here - we still want to clear local state
+          } else {
+            console.log('✅ Supabase signOut successful')
+          }
+        } catch (supabaseError) {
+          console.error('❌ Supabase signOut error:', supabaseError)
+          // Don't throw here - we still want to clear local state
+        }
+      }
+      
+      // Always clear local state regardless of Supabase result
+      console.log('🔍 Clearing local state...')
       setUser(null)
       setSession(null)
       setProfile(null)
       console.log('✅ Local state cleared successfully')
+      
+      console.log('✅ Sign out completed successfully')
     } catch (error) {
       console.error('❌ Sign out error:', error)
+      // Even if there's an error, try to clear local state
+      setUser(null)
+      setSession(null)
+      setProfile(null)
       throw error
     }
   }
