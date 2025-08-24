@@ -197,25 +197,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // If we get here, no profile exists - let's create one
       console.log('🔍 No profile found, attempting to create one...')
+      console.log('🔍 Current user object:', { id: user?.id, email: user?.email, metadata: user?.user_metadata })
+      
       try {
         if (user) {
-          const { error: createError } = await supabase
+          const profileData = {
+            id: userId,
+            email: user.email,
+            first_name: user.user_metadata?.first_name || 'Golfer',
+            last_name: user.user_metadata?.last_name || 'User',
+            username: user.user_metadata?.username || `golfer_${Date.now()}`,
+            full_name: user.user_metadata?.full_name || `${user.user_metadata?.first_name || 'Golfer'} ${user.user_metadata?.last_name || 'User'}`.trim(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+          
+          console.log('🔍 Attempting to create profile with data:', profileData)
+          
+          const { data: insertResult, error: createError } = await supabase
             .from('user_profiles')
-            .insert([
-              {
-                id: userId,
-                email: user.email,
-                first_name: user.user_metadata?.first_name || 'Golfer',
-                last_name: user.user_metadata?.last_name || 'User',
-                username: user.user_metadata?.username || `golfer_${Date.now()}`,
-                full_name: user.user_metadata?.full_name || `${user.user_metadata?.first_name || 'Golfer'} ${user.user_metadata?.last_name || 'User'}`.trim(),
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              }
-            ])
+            .insert([profileData])
+            .select()
+          
+          console.log('🔍 Profile creation result:', { insertResult, createError })
           
           if (createError) {
             console.error('❌ Error creating profile:', createError)
+            console.error('❌ Error details:', { code: createError.code, message: createError.message, details: createError.details })
           } else {
             console.log('✅ Profile created successfully, fetching again...')
             // Try to fetch the newly created profile
@@ -225,15 +233,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               .eq('id', userId)
               .single()
             
+            console.log('🔍 Profile fetch after creation:', { newProfileData, fetchError })
+            
             if (!fetchError && newProfileData) {
               console.log('✅ New profile fetched successfully')
               await processProfileData(newProfileData, userId)
               return
+            } else {
+              console.error('❌ Failed to fetch newly created profile:', fetchError)
             }
           }
+        } else {
+          console.error('❌ No user object available for profile creation')
         }
       } catch (createProfileError) {
         console.error('❌ Error in profile creation fallback:', createProfileError)
+        if (createProfileError instanceof Error) {
+          console.error('❌ Error stack:', createProfileError.stack)
+        }
       }
     } catch (error) {
       console.error('❌ Error in fetchProfile:', error)
