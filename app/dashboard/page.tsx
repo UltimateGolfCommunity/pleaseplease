@@ -651,12 +651,21 @@ export default function Dashboard() {
   const handleTeeTimeSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-              const response = await fetch('/api/tee-times?action=user', {
+              const response = await fetch('/api/tee-times?action=create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(teeTimeForm),
+        body: JSON.stringify({
+          ...teeTimeForm,
+          creator_id: user?.id,
+          course_name: teeTimeForm.course,
+          tee_time_date: teeTimeForm.date,
+          tee_time_time: teeTimeForm.time,
+          max_players: teeTimeForm.players,
+          handicap_requirement: teeTimeForm.handicap,
+          description: teeTimeForm.description
+        }),
       })
       
       if (response.ok) {
