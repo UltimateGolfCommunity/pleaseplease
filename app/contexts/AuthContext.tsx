@@ -507,11 +507,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(data.user)
         setSession(data.session)
         
-        // Fetch profile
-        if (data.user.id) {
-          await fetchProfile(data.user.id, data.user)
-        }
-        
+        // Profile will be fetched via onAuthStateChange
         return
       } else {
         throw new Error('No user or session data received from Supabase')
