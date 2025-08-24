@@ -201,13 +201,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       try {
         if (user) {
+          // Try to extract a better name from the email
+          const emailName = user.email?.split('@')[0] || 'Golfer'
+          const displayName = emailName.charAt(0).toUpperCase() + emailName.slice(1)
+          
           const profileData = {
             id: userId,
             email: user.email,
-            first_name: user.user_metadata?.first_name || 'Golfer',
-            last_name: user.user_metadata?.last_name || 'User',
-            username: user.user_metadata?.username || `golfer_${Date.now()}`,
-            full_name: user.user_metadata?.full_name || `${user.user_metadata?.first_name || 'Golfer'} ${user.user_metadata?.last_name || 'User'}`.trim(),
+            first_name: user.user_metadata?.first_name || displayName,
+            last_name: user.user_metadata?.last_name || '',
+            username: user.user_metadata?.username || emailName.toLowerCase(),
+            full_name: user.user_metadata?.full_name || displayName,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           }
