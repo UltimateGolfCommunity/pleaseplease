@@ -70,8 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(session)
           setUser(session.user)
           
-          // Fetch profile for authenticated user
-          await fetchProfile(session.user.id, session.user)
+          // Profile will be fetched via onAuthStateChange when user signs in
         } else {
           console.log('ℹ️  No initial session found')
         }
@@ -96,7 +95,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           if (event === 'SIGNED_IN' && session?.user) {
             console.log('✅ User signed in, fetching profile...')
-            await fetchProfile(session.user.id, session.user)
+            // Don't await here - let profile creation happen independently
+            fetchProfile(session.user.id, session.user).catch(error => {
+              console.error('❌ Profile fetch error in auth state change:', error)
+            })
           } else if (event === 'SIGNED_OUT') {
             console.log('ℹ️  User signed out, clearing profile...')
             setProfile(null)
