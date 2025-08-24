@@ -43,13 +43,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const timeoutId = setTimeout(() => {
       console.log('⚠️  Authentication setup timed out, setting loading to false')
       setLoading(false)
-    }, 10000) // 10 second timeout
+    }, 30000) // 30 second timeout
 
     // Get initial session from Supabase
     const getInitialSession = async () => {
       try {
         console.log('🔍 Getting initial session from Supabase...')
-        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        // Add timeout to getSession call
+        const sessionPromise = supabase.auth.getSession()
+        const sessionTimeout = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('getSession timed out after 15 seconds')), 15000)
+        })
+        
+        const { data: { session }, error } = await Promise.race([sessionPromise, sessionTimeout]) as any
         
         if (error) {
           console.error('❌ Error getting initial session:', error)
@@ -64,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(session.user)
           
           // Fetch profile for authenticated user
-          await fetchProfile(session.user.id)
+          await fetchProfile(session.user.id, session.user)
         } else {
           console.log('ℹ️  No initial session found')
         }
