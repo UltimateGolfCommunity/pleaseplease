@@ -89,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           if (event === 'SIGNED_IN' && session?.user) {
             console.log('✅ User signed in, fetching profile...')
-            await fetchProfile(session.user.id)
+            await fetchProfile(session.user.id, session.user)
           } else if (event === 'SIGNED_OUT') {
             console.log('ℹ️  User signed out, clearing profile...')
             setProfile(null)
@@ -115,10 +115,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [supabase])
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string, userData?: any) => {
     if (!supabase) return
     
     console.log('🔍 fetchProfile called for user ID:', userId)
+    console.log('🔍 User data passed to fetchProfile:', userData)
     
     try {
       // Try Supabase client first with timeout
@@ -197,21 +198,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // If we get here, no profile exists - let's create one
       console.log('🔍 No profile found, attempting to create one...')
-      console.log('🔍 Current user object:', { id: user?.id, email: user?.email, metadata: user?.user_metadata })
+      
+      // Use passed userData if available, otherwise fall back to current user state
+      const userToUse = userData || user
+      console.log('🔍 User data for profile creation:', { 
+        passedUserData: userData, 
+        currentUserState: user, 
+        userToUse 
+      })
       
       try {
-        if (user) {
+        if (userToUse) {
           // Try to extract a better name from the email
-          const emailName = user.email?.split('@')[0] || 'Golfer'
+          const emailName = userToUse.email?.split('@')[0] || 'Golfer'
           const displayName = emailName.charAt(0).toUpperCase() + emailName.slice(1)
           
           const profileData = {
             id: userId,
-            email: user.email,
-            first_name: user.user_metadata?.first_name || displayName,
-            last_name: user.user_metadata?.last_name || '',
-            username: user.user_metadata?.username || emailName.toLowerCase(),
-            full_name: user.user_metadata?.full_name || displayName,
+            email: userToUse.email,
+            first_name: userToUse.user_metadata?.first_name || displayName,
+            last_name: userToUse.user_metadata?.last_name || '',
+            username: userToUse.user_metadata?.username || emailName.toLowerCase(),
+            full_name: userToUse.user_metadata?.full_name || displayName,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           }
@@ -248,7 +256,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
           }
         } else {
-          console.error('❌ No user object available for profile creation')
+          console.error('❌ No user data available for profile creation')
         }
       } catch (createProfileError) {
         console.error('❌ Error in profile creation fallback:', createProfileError)
@@ -527,7 +535,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         // Fetch profile
         if (data.user.id) {
-          await fetchProfile(data.user.id)
+          await fetchProfile(data.user.id, data.user)
         }
         
         return
