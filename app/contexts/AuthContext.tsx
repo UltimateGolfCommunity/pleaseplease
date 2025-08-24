@@ -185,13 +185,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             updated_at: new Date().toISOString()
           }
           
-          console.log('🔍 Attempting to create profile with data:', profileData)
+          console.log('🔍 Attempting to create profile with data:', JSON.stringify(profileData, null, 2))
           
           try {
-            const { data: insertResult, error: createError } = await supabase
+            // Add timeout to profile creation
+            const insertPromise = supabase
               .from('user_profiles')
               .insert([profileData])
               .select()
+            
+            const insertTimeout = new Promise((_, reject) => {
+              setTimeout(() => reject(new Error('Profile creation timed out after 10 seconds')), 10000)
+            })
+            
+            const { data: insertResult, error: createError } = await Promise.race([insertPromise, insertTimeout]) as any
             
             console.log('🔍 Profile creation result:', { insertResult, createError })
             
