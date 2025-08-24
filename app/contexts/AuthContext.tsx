@@ -187,34 +187,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           console.log('🔍 Attempting to create profile with data:', profileData)
           
-          const { data: insertResult, error: createError } = await supabase
-            .from('user_profiles')
-            .insert([profileData])
-            .select()
-          
-          console.log('🔍 Profile creation result:', { insertResult, createError })
-          
-          if (createError) {
-            console.error('❌ Error creating profile:', createError)
-            console.error('❌ Error details:', { code: createError.code, message: createError.message, details: createError.details })
-          } else {
-            console.log('✅ Profile created successfully, fetching again...')
-            // Try to fetch the newly created profile
-            const { data: newProfileData, error: fetchError } = await supabase
+          try {
+            const { data: insertResult, error: createError } = await supabase
               .from('user_profiles')
-              .select('*')
-              .eq('id', userId)
-              .single()
+              .insert([profileData])
+              .select()
             
-            console.log('🔍 Profile fetch after creation:', { newProfileData, fetchError })
+            console.log('🔍 Profile creation result:', { insertResult, createError })
             
-            if (!fetchError && newProfileData) {
-              console.log('✅ New profile fetched successfully')
-              await processProfileData(newProfileData, userId)
+            if (createError) {
+              console.error('❌ Profile creation failed:', createError)
+              console.error('❌ Error details:', { 
+                code: createError.code, 
+                message: createError.message, 
+                details: createError.details,
+                hint: createError.hint 
+              })
               return
-            } else {
-              console.error('❌ Failed to fetch newly created profile:', fetchError)
             }
+            
+            console.log('✅ Profile created successfully:', insertResult)
+          } catch (insertError) {
+            console.error('❌ Exception during profile creation:', insertError)
+            return
+          }
+          
+          // Try to fetch the newly created profile
+          console.log('✅ Profile created successfully, fetching again...')
+          const { data: newProfileData, error: fetchError } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('id', userId)
+            .single()
+          
+          console.log('🔍 Profile fetch after creation:', { newProfileData, fetchError })
+          
+          if (!fetchError && newProfileData) {
+            console.log('✅ New profile fetched successfully')
+            await processProfileData(newProfileData, userId)
+            return
+          } else {
+            console.error('❌ Failed to fetch newly created profile:', fetchError)
           }
         } else {
           console.error('❌ No user data available for profile creation')
