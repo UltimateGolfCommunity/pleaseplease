@@ -36,55 +36,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!supabase) return
-
+    
     console.log('🔍 Setting up Supabase authentication...')
     
-    // Add a timeout to prevent infinite loading
-    const timeoutId = setTimeout(() => {
-      console.log('⚠️  Authentication setup timed out, setting loading to false')
-      setLoading(false)
-    }, 30000) // 30 second timeout
-
-    // Get initial session from Supabase
-    const getInitialSession = async () => {
-      try {
-        console.log('🔍 Getting initial session from Supabase...')
-        
-        // Add timeout to getSession call
-        const sessionPromise = supabase.auth.getSession()
-        const sessionTimeout = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('getSession timed out after 15 seconds')), 15000)
-        })
-        
-        const { data: { session }, error } = await Promise.race([sessionPromise, sessionTimeout]) as any
-        
-        if (error) {
-          console.error('❌ Error getting initial session:', error)
-          setLoading(false)
-          clearTimeout(timeoutId)
-          return
-        }
-        
-        if (session) {
-          console.log('✅ Initial session found:', { userId: session.user.id, email: session.user.email })
-          setSession(session)
-          setUser(session.user)
-          
-          // Profile will be fetched via onAuthStateChange when user signs in
-        } else {
-          console.log('ℹ️  No initial session found')
-        }
-        
-        setLoading(false)
-        clearTimeout(timeoutId)
-      } catch (error) {
-        console.error('❌ Error in getInitialSession:', error)
-        setLoading(false)
-        clearTimeout(timeoutId)
-      }
-    }
-
-    // Set up auth state change listener
+    // Set up auth state change listener - this is all we need
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: string, session: Session | null) => {
         console.log('🔍 Auth state change:', event, { userId: session?.user?.id, email: session?.user?.email })
@@ -105,22 +60,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
           
           setLoading(false)
-          clearTimeout(timeoutId)
         } catch (error) {
           console.error('❌ Error in auth state change:', error)
           setLoading(false)
-          clearTimeout(timeoutId)
         }
       }
     )
 
-    // Get initial session
-    getInitialSession()
+    // Set loading to false immediately since we're not waiting for anything
+    setLoading(false)
 
     return () => {
       console.log('🔍 Cleaning up auth subscription...')
       subscription.unsubscribe()
-      clearTimeout(timeoutId)
     }
   }, [supabase])
 
