@@ -275,14 +275,24 @@ export default function Dashboard() {
       // Fetch real tee times from Supabase
       try {
         setTeeTimesLoading(true)
-        const response = await fetch('/api/tee-times')
+        const response = await fetch('/api/tee-times?action=available')
         if (response.ok) {
           const data = await response.json()
-          setAvailableTeeTimes(data.tee_times || [])
+          // Handle both array format and object format
+          const teeTimes = Array.isArray(data) ? data : (data.tee_times || [])
+          // Sort by date (earliest first)
+          const sortedTeeTimes = teeTimes.sort((a: any, b: any) => {
+            const dateA = new Date(a.tee_time_date + ' ' + a.tee_time_time)
+            const dateB = new Date(b.tee_time_date + ' ' + b.tee_time_time)
+            return dateA.getTime() - dateB.getTime()
+          })
+          setAvailableTeeTimes(sortedTeeTimes)
+          console.log('Fetched and sorted tee times:', sortedTeeTimes)
         } else {
           setAvailableTeeTimes([])
         }
       } catch (error) {
+        console.error('Error fetching tee times:', error)
         setAvailableTeeTimes([])
       } finally {
         setTeeTimesLoading(false)
@@ -338,8 +348,14 @@ export default function Dashboard() {
         const data = await response.json()
         // Handle both array format and object format
         const teeTimes = Array.isArray(data) ? data : (data.tee_times || [])
-        setAvailableTeeTimes(teeTimes)
-        console.log('Fetched tee times:', teeTimes)
+        // Sort by date (earliest first)
+        const sortedTeeTimes = teeTimes.sort((a: any, b: any) => {
+          const dateA = new Date(a.tee_time_date + ' ' + a.tee_time_time)
+          const dateB = new Date(b.tee_time_date + ' ' + b.tee_time_time)
+          return dateA.getTime() - dateB.getTime()
+        })
+        setAvailableTeeTimes(sortedTeeTimes)
+        console.log('Fetched and sorted tee times:', sortedTeeTimes)
       } else {
         console.error('Failed to fetch tee times')
         setAvailableTeeTimes([])
@@ -453,6 +469,18 @@ export default function Dashboard() {
           message: `Applied to tee time on ${new Date().toLocaleDateString()}`,
           time: 'Just now'
         }, ...prev.slice(0, 3)])
+        
+        // Add notification for the tee time creator
+        const teeTime = availableTeeTimes.find(tt => tt.id === teeTimeId)
+        if (teeTime && teeTime.creator_id !== user?.id) {
+          setNotifications(prev => [{
+            id: Date.now(),
+            type: 'tee_time_application',
+            message: `${profile?.first_name || 'Someone'} applied to join your tee time on ${teeTime.tee_time_date}`,
+            time: 'Just now',
+            read: false
+          }, ...prev.slice(0, 9)]) // Keep max 10 notifications
+        }
         
         alert('Application submitted successfully! The creator will be notified.')
         
@@ -702,6 +730,16 @@ export default function Dashboard() {
       if (response.ok) {
         const result = await response.json()
         console.log('Tee time posted successfully:', result)
+        
+        // Add notification for successful tee time creation
+        setNotifications(prev => [{
+          id: Date.now(),
+          type: 'tee_time_created',
+          message: `Your tee time for ${teeTimeForm.date} at ${teeTimeForm.time} has been posted successfully!`,
+          time: 'Just now',
+          read: false
+        }, ...prev.slice(0, 9)]) // Keep max 10 notifications
+        
         setShowTeeTimeModal(false)
         setTeeTimeForm({
           course: '',
