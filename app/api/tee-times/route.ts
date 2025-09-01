@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { createAdminClient } from '@/lib/supabase-admin'
 
 // Mock tee time data for development
 const mockTeeTimes = [
@@ -103,14 +104,19 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('🔍 Tee times POST request received')
     const body = await request.json()
+    console.log('🔍 Request body:', body)
     const { action, ...data } = body
+    console.log('🔍 Action:', action)
+    console.log('🔍 Data:', data)
 
     // Check if Supabase is configured
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      console.log('Using mock data for tee-times API POST')
+      console.log('🔍 Using mock data for tee-times API POST')
       
       if (action === 'create') {
+        console.log('🔍 Creating mock tee time with data:', data)
         // Mock tee time creation
         const newTeeTime = {
           id: 'tee-' + Date.now(),
@@ -120,6 +126,7 @@ export async function POST(request: NextRequest) {
           available_spots: data.max_players - 1,
           status: 'open'
         }
+        console.log('✅ Mock tee time created:', newTeeTime)
         return NextResponse.json({ 
           success: true, 
           message: 'Tee time created successfully',
@@ -143,13 +150,16 @@ export async function POST(request: NextRequest) {
         })
       }
       
-      return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+      console.log('❌ Invalid action:', action)
+      console.log('❌ Invalid action:', action)
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     }
 
     // Use real Supabase if configured
-    const supabase = createServerClient()
+    const supabase = createAdminClient()
 
     if (action === 'create') {
+      console.log('🔍 Creating tee time with data:', data)
       const { data: newTeeTime, error } = await supabase
         .from('tee_times')
         .insert({
@@ -166,7 +176,11 @@ export async function POST(request: NextRequest) {
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.log('❌ Error creating tee time:', error)
+        throw error
+      }
+      console.log('✅ Tee time created successfully:', newTeeTime)
       return NextResponse.json({ success: true, message: 'Tee time created successfully', tee_time: newTeeTime })
     }
 
@@ -205,8 +219,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
 
   } catch (error) {
-    console.error('Error in tee-times API POST:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('❌ Error in tee-times API POST:', error)
+    return NextResponse.json({ 
+      error: 'Internal server error', 
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 }
 
