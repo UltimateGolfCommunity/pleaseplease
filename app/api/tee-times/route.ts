@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
         .from('tee_times')
         .select(`
           *,
-          creator:user_profiles(id, first_name, last_name)
+          creator:user_profiles(id, first_name, last_name, avatar_url)
         `)
         .eq('creator_id', userId)
 
@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
         .from('tee_times')
         .select(`
           *,
-          creator:user_profiles(id, first_name, last_name)
+          creator:user_profiles(id, first_name, last_name, avatar_url)
         `)
         .eq('status', 'active')
 
@@ -157,7 +157,7 @@ export async function GET(request: NextRequest) {
       .from('tee_times')
       .select(`
         *,
-        creator:user_profiles(id, first_name, last_name)
+        creator:user_profiles(id, first_name, last_name, avatar_url)
       `)
 
     if (error) throw error

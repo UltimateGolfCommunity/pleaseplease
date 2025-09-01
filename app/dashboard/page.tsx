@@ -1257,10 +1257,22 @@ export default function Dashboard() {
                               <Calendar className="h-4 w-4 mr-2 text-emerald-400" />
                               {teeTime.tee_time_date} at {teeTime.tee_time_time}
                             </p>
-                            <p className="text-slate-300 text-sm flex items-center">
-                              <User className="h-4 w-4 mr-2 text-blue-400" />
-                              Created by {teeTime.creator?.first_name || 'Unknown'} {teeTime.creator?.last_name || ''}
-                            </p>
+                            <div className="flex items-center space-x-2">
+                              <div className="h-8 w-8 rounded-full overflow-hidden border-2 border-emerald-500/30">
+                                <img
+                                  src={teeTime.creator?.avatar_url || '/default-avatar.svg'}
+                                  alt={`${teeTime.creator?.first_name || 'Unknown'} ${teeTime.creator?.last_name || ''}`}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.src = '/default-avatar.svg'
+                                  }}
+                                />
+                              </div>
+                              <p className="text-slate-300 text-sm flex items-center">
+                                <User className="h-4 w-4 mr-2 text-blue-400" />
+                                Created by {teeTime.creator?.first_name || 'Unknown'} {teeTime.creator?.last_name || ''}
+                              </p>
+                            </div>
                           </div>
                         </div>
                         <div className="text-right sm:text-right">
@@ -1541,7 +1553,19 @@ export default function Dashboard() {
                             <div>
                         <h3 className="text-slate-800 font-semibold text-lg">{teeTime.course_name}</h3>
                         <p className="text-slate-600 text-sm">{teeTime.tee_time_date} at {teeTime.tee_time_time}</p>
-                        <p className="text-slate-600 text-sm">Created by {teeTime.creator?.first_name || 'Unknown'} {teeTime.creator?.last_name || ''}</p>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <div className="h-6 w-6 rounded-full overflow-hidden border border-slate-300">
+                            <img
+                              src={teeTime.creator?.avatar_url || '/default-avatar.svg'}
+                              alt={`${teeTime.creator?.first_name || 'Unknown'} ${teeTime.creator?.last_name || ''}`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.src = '/default-avatar.svg'
+                              }}
+                            />
+                          </div>
+                          <p className="text-slate-600 text-sm">Created by {teeTime.creator?.first_name || 'Unknown'} {teeTime.creator?.last_name || ''}</p>
+                        </div>
                             </div>
                       <div className="text-right">
                         <div className="text-sm text-slate-500">{teeTime.current_players}/{teeTime.max_players} players</div>
