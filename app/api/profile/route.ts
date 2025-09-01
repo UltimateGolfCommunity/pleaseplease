@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase'
+import { createAdminClient } from '@/lib/supabase-admin'
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
     }
 
-    const supabase = createServerClient()
+    const supabase = createAdminClient()
     
     const { data: profile, error } = await supabase
       .from('user_profiles')
@@ -43,10 +43,19 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
     }
     
-    console.log('🔍 User ID:', id)
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(id)) {
+      console.log('❌ Invalid UUID format:', id)
+      return NextResponse.json({ 
+        error: 'Invalid user ID format. Must be a valid UUID.' 
+      }, { status: 400 })
+    }
+    
+    console.log('🔍 User ID (valid UUID):', id)
 
-    const supabase = createServerClient()
-    console.log('🔍 Supabase client created')
+    const supabase = createAdminClient()
+    console.log('🔍 Supabase admin client created')
     
     // Simplified approach: try to update first, if it fails, create
     const updateData: any = {}
