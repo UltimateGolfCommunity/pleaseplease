@@ -221,8 +221,8 @@ export async function POST(request: NextRequest) {
     const supabase = createAdminClient()
 
     if (action === 'create') {
-      // Simple, bulletproof approach - just use the basic fields that should work
-      const insertData: any = {
+      // Use only the fields that exist in the database schema
+      const insertData = {
         creator_id: data.creator_id,
         tee_time_date: data.tee_time_date,
         tee_time_time: data.tee_time_time,
@@ -233,18 +233,8 @@ export async function POST(request: NextRequest) {
         status: 'active'
       }
       
-      // Try to add course_name if available, but don't fail if it doesn't work
-      if (data.course_name && data.course_name.trim() !== '') {
-        try {
-          insertData.course_name = data.course_name
-        } catch (e) {
-          console.log('⚠️ Could not add course_name, continuing without it')
-        }
-      }
-      
       console.log('🔍 Creating tee time with data:', insertData)
       
-      // Try to insert without course_name first
       const { data: newTeeTime, error } = await supabase
         .from('tee_times')
         .insert(insertData)

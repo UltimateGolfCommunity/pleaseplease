@@ -686,7 +686,6 @@ export default function Dashboard() {
         body: JSON.stringify({
           action: 'create',
           creator_id: user?.id,
-          course_name: teeTimeForm.course,
           tee_time_date: teeTimeForm.date,
           tee_time_time: teeTimeForm.time,
           max_players: teeTimeForm.players,
