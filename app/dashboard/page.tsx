@@ -1106,16 +1106,7 @@ export default function Dashboard() {
               {/* Quick Actions */}
               <div className="mt-8 sm:mt-10 pt-6 sm:pt-8 border-t border-slate-600/30">
                 <h3 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-emerald-400 to-teal-500 bg-clip-text text-transparent mb-4 sm:mb-6 text-center">Quick Actions</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
-                                      <button 
-                      onClick={openTeeTimeModal}
-                      className="group bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white py-6 px-6 rounded-2xl transition-all duration-300 font-semibold flex flex-col items-center justify-center shadow-lg hover:shadow-xl transform hover:-translate-y-2 hover:scale-105"
-                    >
-                      <div className="bg-white/20 p-3 rounded-full mb-3 group-hover:bg-white/30 transition-colors">
-                        <Calendar className="h-6 w-6" />
-                    </div>
-                      <span className="text-lg">Post Tee Time</span>
-                    </button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <button className="group bg-gradient-to-br from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-6 px-6 rounded-2xl transition-all duration-300 font-semibold flex flex-col items-center justify-center shadow-lg hover:shadow-xl transform hover:-translate-y-2 hover:scale-105">
                     <div className="bg-white/20 p-3 rounded-full mb-3 group-hover:bg-white/30 transition-colors">
                       <Users className="h-6 w-6" />
@@ -1125,7 +1116,7 @@ export default function Dashboard() {
                   <button className="group bg-gradient-to-br from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white py-6 px-6 rounded-2xl transition-all duration-300 font-semibold flex flex-col items-center justify-center shadow-lg hover:shadow-xl transform hover:-translate-y-2 hover:scale-105">
                     <div className="bg-white/20 p-3 rounded-full mb-3 group-hover:bg-white/30 transition-colors">
                       <Flag className="h-6 w-6" />
-                  </div>
+                    </div>
                     <span className="text-lg">Record Round</span>
                   </button>
                 </div>
@@ -1601,23 +1592,61 @@ export default function Dashboard() {
             <form onSubmit={handleTeeTimeSubmit} className="space-y-4">
                 <input
                   type="text"
-                placeholder="Course name"
+                  placeholder="Course name"
                   value={teeTimeForm.course}
                   onChange={(e) => setTeeTimeForm({...teeTimeForm, course: e.target.value})}
-                className="w-full p-3 border border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-700 text-white placeholder-slate-400"
+                  className="w-full p-3 border border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-700 text-white placeholder-slate-400"
                 />
-                  <input
-                    type="date"
-                    value={teeTimeForm.date}
-                    onChange={(e) => setTeeTimeForm({...teeTimeForm, date: e.target.value})}
-                className="w-full p-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                  <input
-                    type="time"
-                    value={teeTimeForm.time}
-                    onChange={(e) => setTeeTimeForm({...teeTimeForm, time: e.target.value})}
-                className="w-full p-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
+                <input
+                  type="date"
+                  value={teeTimeForm.date}
+                  onChange={(e) => setTeeTimeForm({...teeTimeForm, date: e.target.value})}
+                  className="w-full p-3 border border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-700 text-white"
+                />
+                <input
+                  type="time"
+                  value={teeTimeForm.time}
+                  onChange={(e) => setTeeTimeForm({...teeTimeForm, time: e.target.value})}
+                  className="w-full p-3 border border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-700 text-white"
+                />
+                <div className="flex space-x-2">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-slate-300 mb-1">Number of Players</label>
+                    <select
+                      value={teeTimeForm.players}
+                      onChange={(e) => setTeeTimeForm({...teeTimeForm, players: parseInt(e.target.value)})}
+                      className="w-full p-3 border border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-700 text-white"
+                    >
+                      <option value={2}>2 Players</option>
+                      <option value={3}>3 Players</option>
+                      <option value={4}>4 Players</option>
+                      <option value={5}>5 Players</option>
+                      <option value={6}>6 Players</option>
+                      <option value={7}>7 Players</option>
+                      <option value={8}>8 Players</option>
+                    </select>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-slate-300 mb-1">Handicap Level</label>
+                    <select
+                      value={teeTimeForm.handicap}
+                      onChange={(e) => setTeeTimeForm({...teeTimeForm, handicap: e.target.value})}
+                      className="w-full p-3 border border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-700 text-white"
+                    >
+                      <option value="any">Any Level</option>
+                      <option value="beginner">Beginner</option>
+                      <option value="intermediate">Intermediate</option>
+                      <option value="advanced">Advanced</option>
+                    </select>
+                  </div>
+                </div>
+                <textarea
+                  placeholder="Description (optional)"
+                  value={teeTimeForm.description}
+                  onChange={(e) => setTeeTimeForm({...teeTimeForm, description: e.target.value})}
+                  className="w-full p-3 border border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-700 text-white placeholder-slate-400"
+                  rows={3}
+                />
               <div className="flex space-x-2">
                 <button
                   type="button"
@@ -1628,9 +1657,9 @@ export default function Dashboard() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors"
+                  className="flex-1 py-3 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors font-semibold"
                 >
-                  Post
+                  Post to Feed
                 </button>
               </div>
             </form>

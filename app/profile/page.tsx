@@ -260,7 +260,7 @@ export default function ProfilePage() {
               {(formData.avatar_url || profile?.avatar_url) ? (
                 <div className="h-24 w-24 rounded-full overflow-hidden border-4 border-emerald-400/30">
                   <img 
-                    src={formData.avatar_url || profile?.avatar_url} 
+                    src={formData.avatar_url || profile?.avatar_url || '/default-avatar.png'} 
                     alt="Profile" 
                     className="w-full h-full object-cover"
                   />
