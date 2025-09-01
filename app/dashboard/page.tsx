@@ -1115,7 +1115,7 @@ export default function Dashboard() {
                             </p>
                             <p className="text-slate-300 text-sm flex items-center">
                               <User className="h-4 w-4 mr-2 text-blue-400" />
-                              Created by {teeTime.creator.first_name} {teeTime.creator.last_name}
+                              Created by {teeTime.creator?.first_name || 'Unknown'} {teeTime.creator?.last_name || ''}
                             </p>
                           </div>
                         </div>
@@ -1295,7 +1295,7 @@ export default function Dashboard() {
                             <div>
                         <h3 className="text-slate-800 font-semibold text-lg">{teeTime.course_name}</h3>
                         <p className="text-slate-600 text-sm">{teeTime.tee_time_date} at {teeTime.tee_time_time}</p>
-                        <p className="text-slate-600 text-sm">Created by {teeTime.creator.first_name} {teeTime.creator.last_name}</p>
+                        <p className="text-slate-600 text-sm">Created by {teeTime.creator?.first_name || 'Unknown'} {teeTime.creator?.last_name || ''}</p>
                             </div>
                       <div className="text-right">
                         <div className="text-sm text-slate-500">{teeTime.current_players}/{teeTime.max_players} players</div>
