@@ -931,10 +931,20 @@ export default function Dashboard() {
                 
                 <div className="relative group">
                 <button className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gradient-to-r hover:from-slate-700/80 hover:to-slate-600/60 transition-all duration-300 group-hover:scale-105">
-                  <div className="h-10 w-10 bg-gradient-to-br from-emerald-500 via-blue-600 to-indigo-700 rounded-full flex items-center justify-center shadow-lg relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12"></div>
-                    <User className="h-5 w-5 text-white relative z-10" />
+                  <div className="h-10 w-10 rounded-full overflow-hidden shadow-lg relative">
+                    {profile?.avatar_url ? (
+                      <img 
+                        src={profile.avatar_url} 
+                        alt="Profile" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-full w-full bg-gradient-to-br from-emerald-500 via-blue-600 to-indigo-700 flex items-center justify-center relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12"></div>
+                        <User className="h-5 w-5 text-white relative z-10" />
                       </div>
+                    )}
+                  </div>
                   <span className="text-white font-semibold text-lg">
                       {profile?.first_name || user?.email?.split('@')[0] || 'Golfer'}
                     </span>

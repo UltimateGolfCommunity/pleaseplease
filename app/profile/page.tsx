@@ -33,6 +33,7 @@ interface ProfileFormData {
   preferred_playing_days: string[]
   preferred_playing_times: string[]
   golf_goals: string[]
+  avatar_url: string
 }
 
 export default function ProfilePage() {
@@ -49,9 +50,11 @@ export default function ProfilePage() {
     experience_level: '',
     preferred_playing_days: [],
     preferred_playing_times: [],
-    golf_goals: []
+    golf_goals: [],
+    avatar_url: ''
   })
   const [saving, setSaving] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -70,7 +73,8 @@ export default function ProfilePage() {
         experience_level: '',
         preferred_playing_days: [],
         preferred_playing_times: [],
-        golf_goals: []
+        golf_goals: [],
+        avatar_url: profile.avatar_url || ''
       })
     }
   }, [user, profile, loading, router])
@@ -94,6 +98,39 @@ export default function ProfilePage() {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file')
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image size must be less than 5MB')
+      return
+    }
+
+    setUploadingImage(true)
+    try {
+      // Convert to base64 for now (in a real app, you'd upload to a CDN)
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const result = e.target?.result as string
+        setFormData(prev => ({ ...prev, avatar_url: result }))
+        setUploadingImage(false)
+      }
+      reader.readAsDataURL(file)
+    } catch (error) {
+      console.error('Error uploading image:', error)
+      alert('Failed to upload image. Please try again.')
+      setUploadingImage(false)
+    }
+  }
+
   const handleSave = async () => {
     setSaving(true)
     try {
@@ -109,7 +146,8 @@ export default function ProfilePage() {
         username: formData.username,
         bio: formData.bio,
         handicap: formData.handicap,
-        location: formData.location
+        location: formData.location,
+        avatar_url: formData.avatar_url
       })
       
       
@@ -135,7 +173,8 @@ export default function ProfilePage() {
         experience_level: '',
         preferred_playing_days: [],
         preferred_playing_times: [],
-        golf_goals: []
+        golf_goals: [],
+        avatar_url: profile.avatar_url || ''
       })
     }
     setIsEditing(false)
@@ -216,13 +255,35 @@ export default function ProfilePage() {
           <div className="flex items-start space-x-6">
             {/* Profile Picture */}
             <div className="relative">
-              <div className="h-24 w-24 bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-full flex items-center justify-center">
-                <User className="h-12 w-12 text-black" />
-              </div>
+              {formData.avatar_url ? (
+                <div className="h-24 w-24 rounded-full overflow-hidden border-4 border-emerald-400/30">
+                  <img 
+                    src={formData.avatar_url} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="h-24 w-24 bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-full flex items-center justify-center">
+                  <User className="h-12 w-12 text-black" />
+                </div>
+              )}
               {isEditing && (
-                <button className="absolute -bottom-2 -right-2 bg-emerald-500 hover:bg-emerald-600 text-white p-2 rounded-full transition-colors duration-300">
+                <label className="absolute -bottom-2 -right-2 bg-emerald-500 hover:bg-emerald-600 text-white p-2 rounded-full transition-colors duration-300 cursor-pointer">
                   <Camera className="h-4 w-4" />
-                </button>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    disabled={uploadingImage}
+                  />
+                </label>
+              )}
+              {uploadingImage && (
+                <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                </div>
               )}
             </div>
 

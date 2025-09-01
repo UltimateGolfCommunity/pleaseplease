@@ -29,7 +29,8 @@ import {
   Sparkles,
   MapPin,
   Clock,
-  TrendingUp
+  TrendingUp,
+  User
 } from 'lucide-react'
 
 
@@ -93,6 +94,19 @@ export default function HomePage() {
                 <div className="flex items-center space-x-2 sm:space-x-4">
                   <div className="hidden sm:block text-sm text-gray-300">
                     Welcome, {profile?.first_name || user.email?.split('@')[0] || 'Golfer'}!
+                  </div>
+                  <div className="h-8 w-8 rounded-full overflow-hidden shadow-lg">
+                    {profile?.avatar_url ? (
+                      <img 
+                        src={profile.avatar_url} 
+                        alt="Profile" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-full w-full bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center">
+                        <User className="h-4 w-4 text-white" />
+                      </div>
+                    )}
                   </div>
                   <a
                     href="/dashboard"
