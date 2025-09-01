@@ -109,9 +109,15 @@ export async function POST(request: NextRequest) {
     console.log('🔍 Request body:', body)
     const { action, ...data } = body
     console.log('🔍 Action:', action)
+    console.log('🔍 Action type:', typeof action)
     console.log('🔍 Data:', data)
 
     // Check if Supabase is configured
+    console.log('🔍 Environment check:')
+    console.log('🔍 NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Set' : 'Not set')
+    console.log('🔍 NEXT_PUBLIC_SUPABASE_ANON_KEY:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Set' : 'Not set')
+    console.log('🔍 SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'Set' : 'Not set')
+    
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
       console.log('🔍 Using mock data for tee-times API POST')
       
@@ -132,6 +138,9 @@ export async function POST(request: NextRequest) {
           message: 'Tee time created successfully',
           tee_time: newTeeTime
         })
+      } else {
+        console.log('❌ Invalid action in mock mode:', action)
+        return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
       }
       
       if (action === 'apply') {
