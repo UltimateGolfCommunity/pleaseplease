@@ -96,8 +96,7 @@ export default function ProfilePage() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      console.log('🔍 Profile save - User state:', { user: !!user, userId: user?.id, profile: !!profile })
-      console.log('🔍 Profile save - Form data:', formData)
+      
       
       if (!user || !user.id) {
         throw new Error('No user ID available for profile update')
@@ -112,7 +111,7 @@ export default function ProfilePage() {
         location: formData.location
       })
       
-      console.log('✅ Profile updated successfully')
+      
       setIsEditing(false)
     } catch (error) {
       console.error('❌ Failed to update profile:', error)

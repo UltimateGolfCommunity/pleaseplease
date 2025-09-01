@@ -74,8 +74,7 @@ export default function SignupPage() {
     setLoading(true)
     
     try {
-      console.log('🔍 Starting signup process...')
-      console.log('🔍 Form data:', { email: formData.email, firstName: formData.firstName, lastName: formData.lastName })
+
       
       await signUp(formData.email, formData.password, {
         first_name: formData.firstName,
@@ -84,7 +83,7 @@ export default function SignupPage() {
         username: formData.email.split('@')[0]
       })
       
-      console.log('✅ Signup successful!')
+      
       // Show success message and redirect
       alert('Account created successfully! Please check your email to verify your account.')
       router.push('/auth/login')

@@ -362,7 +362,7 @@ export default function Dashboard() {
 
   const handlePostTeeTime = async (teeTimeData: any) => {
     try {
-      console.log('🔍 Creating new tee time:', teeTimeData)
+
       
       // Create real tee time in Supabase
       const response = await fetch('/api/tee-times', {
@@ -383,7 +383,7 @@ export default function Dashboard() {
 
       if (response.ok) {
         const newTeeTime = await response.json()
-        console.log('✅ Tee time created successfully:', newTeeTime)
+
         
         // Refresh the tee times list
         const refreshResponse = await fetch('/api/tee-times')
@@ -883,7 +883,7 @@ export default function Dashboard() {
                     <hr className="my-2 border-slate-200" />
                       <button
                         onClick={() => {
-                          console.log('🔍 Sign Out button clicked!')
+                  
                           handleSignOut()
                         }}
                         className="flex items-center w-full px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -1295,7 +1295,7 @@ export default function Dashboard() {
               {/* Badge Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {(() => {
-                  console.log('🔍 Rendering badges section, availableBadges:', availableBadges, 'Type:', typeof availableBadges, 'IsArray:', Array.isArray(availableBadges))
+          
                   return !Array.isArray(availableBadges) ? (
                     <div className="col-span-full text-center py-8">
                       <div className="animate-spin rounded-full h-8 w-8 border-2 border-emerald-500 border-t-transparent mx-auto mb-4"></div>
