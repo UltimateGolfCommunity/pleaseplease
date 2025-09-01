@@ -248,12 +248,6 @@ export default function ProfilePage() {
                     {profile.location}
                   </div>
                 )}
-                                 {profile?.home_course && (
-                   <div className="flex items-center">
-                     <Flag className="h-4 w-4 mr-2" />
-                     {profile.home_course}
-                   </div>
-                 )}
                 <div className="flex items-center">
                   <Calendar className="h-4 w-4 mr-2" />
                   Member since {new Date(user.created_at || Date.now()).toLocaleDateString()}
@@ -429,20 +423,7 @@ export default function ProfilePage() {
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Home Course</label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={formData.home_course}
-                      onChange={(e) => handleInputChange('home_course', e.target.value)}
-                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300"
-                      placeholder="Enter your home course"
-                    />
-                  ) : (
-                    <p className="text-white">{profile?.home_course || 'Not set'}</p>
-                  )}
-                </div>
+
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Location</label>

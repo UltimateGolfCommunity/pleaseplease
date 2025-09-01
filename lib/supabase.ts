@@ -50,44 +50,52 @@ function isValidSupabaseConfig() {
   }
 }
 
+// Cache for the Supabase client to avoid recreating it
+let cachedClient: any = null
+
 export function createBrowserClient() {
-  // Debug logging
-  console.log('🔍 Supabase Config Check:')
-  console.log('  Raw URL from env:', process.env.NEXT_PUBLIC_SUPABASE_URL)
-  console.log('  Raw Key from env:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
-  console.log('  URL exists:', !!process.env.NEXT_PUBLIC_SUPABASE_URL)
-  console.log('  Key exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
-  console.log('  Key starts with:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0, 20) + '...')
-  
-  // Check if we're in the browser
-  if (typeof window !== 'undefined') {
-    console.log('  Running in browser')
-  } else {
-    console.log('  Running on server')
+  // Return cached client if available
+  if (cachedClient) {
+    return cachedClient
   }
   
   // Check if we have valid Supabase configuration
   if (!isValidSupabaseConfig()) {
     console.warn('⚠️  Invalid Supabase credentials. Using mock client for development.')
-    return mockSupabaseClient as any
+    cachedClient = mockSupabaseClient as any
+    return cachedClient
   }
 
-  console.log('✅ Using real Supabase client')
-  return createClient(
+  // Create and cache the client
+  cachedClient = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
+  
+  return cachedClient
 }
 
+// Cache for server client
+let cachedServerClient: any = null
+
 export function createServerClient() {
+  // Return cached client if available
+  if (cachedServerClient) {
+    return cachedServerClient
+  }
+  
   // Check if we have valid Supabase configuration
   if (!isValidSupabaseConfig()) {
     console.warn('⚠️  Invalid or placeholder Supabase credentials. Using mock client for development.')
-    return mockSupabaseClient as any
+    cachedServerClient = mockSupabaseClient as any
+    return cachedServerClient
   }
 
-  return createClient(
+  // Create and cache the client
+  cachedServerClient = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
+  
+  return cachedServerClient
 }
