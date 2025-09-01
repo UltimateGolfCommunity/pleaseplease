@@ -632,13 +632,13 @@ export default function Dashboard() {
   const handleTeeTimeSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-              const response = await fetch('/api/tee-times?action=create', {
+              const response = await fetch('/api/tee-times', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...teeTimeForm,
+          action: 'create',
           creator_id: user?.id,
           course_name: teeTimeForm.course,
           tee_time_date: teeTimeForm.date,
@@ -671,12 +671,15 @@ export default function Dashboard() {
   const handleGroupSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-              const response = await fetch('/api/groups?action=create', {
+              const response = await fetch('/api/groups', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(groupForm),
+        body: JSON.stringify({
+          action: 'create',
+          ...groupForm
+        }),
       })
       
       if (response.ok) {
@@ -698,12 +701,15 @@ export default function Dashboard() {
   const handleMessageSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-              const response = await fetch('/api/messages?action=send', {
+              const response = await fetch('/api/messages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(messageForm),
+        body: JSON.stringify({
+          action: 'send',
+          ...messageForm
+        }),
       })
       
       if (response.ok) {
