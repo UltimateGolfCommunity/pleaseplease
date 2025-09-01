@@ -520,6 +520,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     try {
       console.log('🔍 Updating profile for user ID:', user.id)
+      console.log('🔍 Update data:', updates)
       
       const { data, error } = await supabase
         .from('user_profiles')
@@ -529,7 +530,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('❌ Supabase update error:', error)
-        throw error
+        console.error('❌ Error details:', { 
+          code: error.code, 
+          message: error.message, 
+          details: error.details,
+          hint: error.hint 
+        })
+        throw new Error(`Database update failed: ${error.message}`)
       }
 
       console.log('✅ Profile updated in database:', data)

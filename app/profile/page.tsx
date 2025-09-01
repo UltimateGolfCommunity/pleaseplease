@@ -27,7 +27,6 @@ interface ProfileFormData {
   username: string
   bio: string
   handicap: number | null
-  home_course: string
   location: string
   experience_level: string
   preferred_playing_days: string[]
@@ -45,7 +44,6 @@ export default function ProfilePage() {
     username: '',
     bio: '',
     handicap: null,
-    home_course: '',
     location: '',
     experience_level: '',
     preferred_playing_days: [],
@@ -67,7 +65,6 @@ export default function ProfilePage() {
         username: profile.username || '',
         bio: profile.bio || '',
         handicap: profile.handicap,
-        home_course: profile.home_course || '',
         location: profile.location || '',
         experience_level: '',
         preferred_playing_days: [],
@@ -112,7 +109,6 @@ export default function ProfilePage() {
         username: formData.username,
         bio: formData.bio,
         handicap: formData.handicap,
-        home_course: formData.home_course,
         location: formData.location
       })
       
@@ -135,7 +131,6 @@ export default function ProfilePage() {
         username: profile.username || '',
         bio: profile.bio || '',
         handicap: profile.handicap,
-        home_course: profile.home_course || '',
         location: profile.location || '',
         experience_level: '',
         preferred_playing_days: [],
