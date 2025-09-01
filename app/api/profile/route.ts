@@ -48,71 +48,8 @@ export async function PUT(request: NextRequest) {
     const supabase = createServerClient()
     console.log('🔍 Supabase client created')
     
-    // Test database connection first
-    console.log('🔍 Testing database connection...')
-    const { data: testData, error: testError } = await supabase
-      .from('user_profiles')
-      .select('count')
-      .limit(1)
-    
-    if (testError) {
-      console.error('❌ Database connection test failed:', testError)
-      return NextResponse.json({ 
-        error: 'Database connection failed', 
-        details: testError.message 
-      }, { status: 500 })
-    }
-    
-    console.log('✅ Database connection successful')
-    
-    // First check if profile exists
-    console.log('🔍 Checking if profile exists for user:', id)
-    const { data: existingProfile, error: checkError } = await supabase
-      .from('user_profiles')
-      .select('id')
-      .eq('id', id)
-      .single()
-    
-    if (checkError) {
-      console.error('❌ Error checking profile existence:', checkError)
-      
-      // Try to create profile if it doesn't exist
-      console.log('🔍 Profile not found, attempting to create new profile')
-      const { data: createdProfile, error: createError } = await supabase
-        .from('user_profiles')
-        .insert({
-          id: id,
-          email: body.email || 'user@example.com', // Fallback email
-          first_name: first_name || '',
-          last_name: last_name || '',
-          username: username || '',
-          full_name: first_name && last_name ? `${first_name} ${last_name}`.trim() : '',
-          bio: bio || '',
-          avatar_url: avatar_url || '',
-          handicap: handicap || 0,
-          location: location || ''
-        })
-        .select()
-        .single()
-      
-      if (createError) {
-        console.error('❌ Error creating profile:', createError)
-        return NextResponse.json({ 
-          error: 'Failed to create profile', 
-          details: createError.message 
-        }, { status: 500 })
-      }
-      
-      console.log('✅ Profile created successfully:', createdProfile)
-      return NextResponse.json(createdProfile)
-    }
-    
-    console.log('✅ Profile exists, proceeding with update')
-    
-    // Build update object with only provided fields
-    const updateData: any = {
-      updated_at: new Date().toISOString()
-    }
+    // Simplified approach: try to update first, if it fails, create
+    const updateData: any = {}
     
     if (first_name !== undefined) updateData.first_name = first_name
     if (last_name !== undefined) updateData.last_name = last_name
@@ -127,22 +64,50 @@ export async function PUT(request: NextRequest) {
       updateData.full_name = `${first_name} ${last_name}`.trim()
     }
     
+    updateData.updated_at = new Date().toISOString()
+    
     console.log('🔍 Update data:', updateData)
     
-    // Update profile
-    const { data: updatedProfile, error } = await supabase
+    // Try to update first
+    const { data: updatedProfile, error: updateError } = await supabase
       .from('user_profiles')
       .update(updateData)
       .eq('id', id)
       .select()
       .single()
 
-    if (error) {
-      console.error('❌ Error updating profile:', error)
-      return NextResponse.json({ 
-        error: 'Failed to update profile', 
-        details: error.message 
-      }, { status: 500 })
+    if (updateError) {
+      console.log('❌ Update failed, trying to create profile:', updateError.message)
+      
+      // If update fails, try to create the profile
+      const { data: createdProfile, error: createError } = await supabase
+        .from('user_profiles')
+        .insert({
+          id: id,
+          email: body.email || 'user@example.com',
+          first_name: first_name || '',
+          last_name: last_name || '',
+          username: username || '',
+          full_name: first_name && last_name ? `${first_name} ${last_name}`.trim() : '',
+          bio: bio || '',
+          avatar_url: avatar_url || '',
+          handicap: handicap || 0,
+          location: location || '',
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single()
+      
+      if (createError) {
+        console.error('❌ Error creating profile:', createError)
+        return NextResponse.json({ 
+          error: 'Failed to create profile', 
+          details: createError.message 
+        }, { status: 500 })
+      }
+      
+      console.log('✅ Profile created successfully:', createdProfile)
+      return NextResponse.json(createdProfile)
     }
 
     console.log('✅ Profile updated successfully:', updatedProfile)
