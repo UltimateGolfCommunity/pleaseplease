@@ -333,14 +333,19 @@ export default function Dashboard() {
   const fetchTeeTimes = async () => {
     try {
       setTeeTimesLoading(true)
-      const response = await fetch('/api/tee-times')
+      const response = await fetch('/api/tee-times?action=available')
       if (response.ok) {
         const data = await response.json()
-        setAvailableTeeTimes(data.tee_times || [])
+        // Handle both array format and object format
+        const teeTimes = Array.isArray(data) ? data : (data.tee_times || [])
+        setAvailableTeeTimes(teeTimes)
+        console.log('Fetched tee times:', teeTimes)
       } else {
+        console.error('Failed to fetch tee times')
         setAvailableTeeTimes([])
       }
     } catch (error) {
+      console.error('Error fetching tee times:', error)
       setAvailableTeeTimes([])
     } finally {
       setTeeTimesLoading(false)
