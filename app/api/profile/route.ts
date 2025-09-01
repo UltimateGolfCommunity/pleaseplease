@@ -48,6 +48,23 @@ export async function PUT(request: NextRequest) {
     const supabase = createServerClient()
     console.log('🔍 Supabase client created')
     
+    // Test database connection first
+    console.log('🔍 Testing database connection...')
+    const { data: testData, error: testError } = await supabase
+      .from('user_profiles')
+      .select('count')
+      .limit(1)
+    
+    if (testError) {
+      console.error('❌ Database connection test failed:', testError)
+      return NextResponse.json({ 
+        error: 'Database connection failed', 
+        details: testError.message 
+      }, { status: 500 })
+    }
+    
+    console.log('✅ Database connection successful')
+    
     // First check if profile exists
     console.log('🔍 Checking if profile exists for user:', id)
     const { data: existingProfile, error: checkError } = await supabase
