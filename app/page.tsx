@@ -79,48 +79,53 @@ export default function HomePage() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <div className="relative">
-                <Club className="h-8 w-8 text-emerald-400 mr-3" />
-                <Sparkles className="h-4 w-4 text-emerald-300 absolute -top-1 -right-1" />
+                <Club className="h-6 w-6 sm:h-8 sm:w-8 text-emerald-400 mr-2 sm:mr-3" />
+                <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-300 absolute -top-1 -right-1" />
               </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
-                Ultimate Golf Community
+              <span className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+                <span className="hidden sm:inline">Ultimate Golf Community</span>
+                <span className="sm:hidden">UGC</span>
               </span>
             </div>
             
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               {user ? (
-                <div className="flex items-center space-x-4">
-                  <div className="text-sm text-gray-300">
+                <div className="flex items-center space-x-2 sm:space-x-4">
+                  <div className="hidden sm:block text-sm text-gray-300">
                     Welcome, {profile?.first_name || user.email?.split('@')[0] || 'Golfer'}!
                   </div>
                   <a
                     href="/dashboard"
-                    className="bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white px-4 py-2 rounded-lg transition-all duration-300 shadow-lg hover:shadow-emerald-500/25"
+                    className="bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white px-2 sm:px-4 py-2 rounded-lg transition-all duration-300 shadow-lg hover:shadow-emerald-500/25 text-sm sm:text-base"
                   >
-                    Go to Dashboard
+                    <span className="hidden sm:inline">Go to Dashboard</span>
+                    <span className="sm:hidden">Dashboard</span>
                   </a>
                   <button
                     onClick={handleSignOut}
-                    className="bg-red-600/20 hover:bg-red-600/40 text-red-400 hover:text-red-300 px-4 py-2 rounded-lg transition-all duration-300 border border-red-600/30"
+                    className="bg-red-600/20 hover:bg-red-600/40 text-red-400 hover:text-red-300 px-2 sm:px-4 py-2 rounded-lg transition-all duration-300 border border-red-600/30 text-sm sm:text-base"
                   >
-                    Sign Out
+                    <span className="hidden sm:inline">Sign Out</span>
+                    <span className="sm:hidden">Out</span>
                   </button>
                 </div>
               ) : (
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2 sm:space-x-4">
                   <a
                     href="/auth/login"
-                    className="flex items-center text-gray-300 hover:text-emerald-400 transition-colors duration-300"
+                    className="flex items-center text-gray-300 hover:text-emerald-400 transition-colors duration-300 text-sm sm:text-base"
                   >
-                    <LogIn className="h-5 w-5 mr-2" />
-                    Sign In
+                    <LogIn className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Sign In</span>
+                    <span className="sm:hidden">In</span>
                   </a>
                   <a
                     href="/auth/signup"
-                    className="bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white px-6 py-2 rounded-lg transition-all duration-300 shadow-lg hover:shadow-emerald-500/25"
+                    className="bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white px-3 sm:px-6 py-2 rounded-lg transition-all duration-300 shadow-lg hover:shadow-emerald-500/25 text-sm sm:text-base"
                   >
-                    <UserPlus className="h-5 w-5 mr-2 inline" />
-                    Sign Up
+                    <UserPlus className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 inline" />
+                    <span className="hidden sm:inline">Sign Up</span>
+                    <span className="sm:hidden">Up</span>
                   </a>
                 </div>
               )}
@@ -148,14 +153,14 @@ export default function HomePage() {
         
         {/* Hero Content */}
         <div className="relative z-10 text-center max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-8">
-            <div className="inline-flex items-center px-4 py-2 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-sm font-medium mb-6">
-              <Sparkles className="h-4 w-4 mr-2" />
+          <div className="mb-6 sm:mb-8">
+            <div className="inline-flex items-center px-3 sm:px-4 py-2 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs sm:text-sm font-medium mb-4 sm:mb-6">
+              <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               The Future of Golf is Here
             </div>
           </div>
           
-          <h1 className="text-6xl md:text-7xl font-bold mb-8 leading-tight">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 sm:mb-8 leading-tight">
             <span className="text-white">Ultimate Golf</span>
             <br />
             <span className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent">
@@ -163,18 +168,18 @@ export default function HomePage() {
             </span>
           </h1>
           
-          <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-4xl mx-auto leading-relaxed">
+          <p className="text-lg sm:text-xl md:text-2xl text-gray-300 mb-8 sm:mb-12 max-w-4xl mx-auto leading-relaxed px-2">
             Connect with fellow golfers, book tee times, track your game, and join the most vibrant golf community online.
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center">
             <a
               href="/explore"
-              className="group bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white px-10 py-4 rounded-xl text-lg font-semibold transition-all duration-300 shadow-2xl hover:shadow-emerald-500/25 transform hover:scale-105 flex items-center"
+              className="group bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white px-6 sm:px-10 py-3 sm:py-4 rounded-xl text-base sm:text-lg font-semibold transition-all duration-300 shadow-2xl hover:shadow-emerald-500/25 transform hover:scale-105 flex items-center w-full sm:w-auto justify-center"
             >
-              <Play className="h-5 w-5 mr-2" />
+              <Play className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
               Explore Courses
-              <ArrowRight className="h-5 w-5 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
+              <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
             </a>
             <a
               href="/auth/signup"

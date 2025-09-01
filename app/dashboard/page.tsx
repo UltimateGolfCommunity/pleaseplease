@@ -44,6 +44,7 @@ export default function Dashboard() {
   const [showMessageModal, setShowMessageModal] = useState(false)
   const [showRatingModal, setShowRatingModal] = useState(false)
   const [showGolfRoundModal, setShowGolfRoundModal] = useState(false)
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
   
   // Form states
   const [teeTimeForm, setTeeTimeForm] = useState({
@@ -874,6 +875,18 @@ export default function Dashboard() {
                   )
                 })}
               </div>
+              
+              {/* Mobile Navigation */}
+              <div className="md:hidden">
+                <button
+                  onClick={() => setShowMobileMenu(!showMobileMenu)}
+                  className="p-2 text-slate-300 hover:text-white transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+              </div>
 
             {/* User Menu */}
             <div className="flex items-center space-x-4">
@@ -952,8 +965,43 @@ export default function Dashboard() {
         </div>
       </nav>
 
+      {/* Mobile Menu */}
+      {showMobileMenu && (
+        <div className="md:hidden bg-slate-800/95 backdrop-blur-xl border-b border-slate-700/60">
+          <div className="px-4 py-2 space-y-1">
+            {[
+              { id: 'overview', label: 'Tee Times', icon: Home },
+              { id: 'community', label: 'Community', icon: Users },
+              { id: 'golf', label: 'Golf', icon: Target },
+              { id: 'achievements', label: 'Achievements', icon: Trophy },
+              { id: 'profile', label: 'Profile', icon: User }
+            ].map((tab) => {
+              const Icon = tab.icon
+              const isActive = activeTab === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id as any)
+                    setShowMobileMenu(false)
+                  }}
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 font-medium ${
+                    isActive
+                      ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-600/60'
+                  }`}
+                >
+                  <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  <span className="font-semibold">{tab.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
 
         {/* Overview Tab */}
         {activeTab === 'overview' && (
@@ -968,17 +1016,17 @@ export default function Dashboard() {
         </div>
 
             {/* Tee Time Feed */}
-            <div className="bg-gradient-to-br from-slate-800 via-slate-700/30 to-slate-600/20 rounded-3xl p-8 shadow-xl border border-slate-600/40 backdrop-blur-sm relative overflow-hidden">
+            <div className="bg-gradient-to-br from-slate-800 via-slate-700/30 to-slate-600/20 rounded-3xl p-4 sm:p-8 shadow-xl border border-slate-600/40 backdrop-blur-sm relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-600/20 to-transparent transform -skew-y-6"></div>
-              <div className="relative flex items-center justify-between mb-8">
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-teal-500 bg-clip-text text-transparent">Available Tee Times</h2>
-              <button 
-                onClick={openTeeTimeModal}
-                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-8 py-4 rounded-2xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-              >
-                Post Tee Time
-              </button>
-            </div>
+              <div className="relative flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 gap-4">
+                <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-emerald-400 to-teal-500 bg-clip-text text-transparent">Available Tee Times</h2>
+                <button 
+                  onClick={openTeeTimeModal}
+                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-2xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 w-full sm:w-auto"
+                >
+                  Post Tee Time
+                </button>
+              </div>
             
               {/* Tee Times List */}
               <div className="space-y-6">
@@ -1003,11 +1051,11 @@ export default function Dashboard() {
                   </div>
                 ) : (
                   availableTeeTimes.map((teeTime) => (
-                    <div key={teeTime.id} className="bg-gradient-to-br from-slate-700 to-slate-600/40 border border-slate-500/60 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] backdrop-blur-sm relative overflow-hidden group">
+                    <div key={teeTime.id} className="bg-gradient-to-br from-slate-700 to-slate-600/40 border border-slate-500/60 rounded-2xl p-4 sm:p-8 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] backdrop-blur-sm relative overflow-hidden group">
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-500/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                      <div className="relative flex items-start justify-between mb-6">
-                        <div>
-                          <h3 className="text-white font-bold text-xl mb-2">{teeTime.course_name}</h3>
+                      <div className="relative flex flex-col sm:flex-row sm:items-start justify-between mb-4 sm:mb-6 gap-4">
+                        <div className="flex-1">
+                          <h3 className="text-white font-bold text-lg sm:text-xl mb-2">{teeTime.course_name}</h3>
                           <div className="space-y-1">
                             <p className="text-slate-300 text-sm flex items-center">
                               <Calendar className="h-4 w-4 mr-2 text-emerald-400" />
@@ -1019,8 +1067,8 @@ export default function Dashboard() {
                             </p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-4 py-2 rounded-full text-sm font-semibold mb-2">
+                        <div className="text-right sm:text-right">
+                          <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-3 sm:px-4 py-2 rounded-full text-sm font-semibold mb-2">
                             {teeTime.current_players}/{teeTime.max_players} players
                           </div>
                           <div className="text-sm text-slate-300 bg-slate-600 px-3 py-1 rounded-full">
@@ -1028,8 +1076,8 @@ export default function Dashboard() {
                           </div>
                         </div>
                       </div>
-                      <p className="text-slate-200 mb-6 text-lg leading-relaxed">{teeTime.description}</p>
-                      <div className="flex space-x-4">
+                      <p className="text-slate-200 mb-4 sm:mb-6 text-base sm:text-lg leading-relaxed">{teeTime.description}</p>
+                      <div className="flex flex-col sm:flex-row gap-3 sm:space-x-4">
                         <button
                           onClick={() => handleApplyToTeeTime(teeTime.id)}
                           className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white py-3 px-6 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
@@ -1046,9 +1094,9 @@ export default function Dashboard() {
               </div>
 
               {/* Quick Actions */}
-              <div className="mt-10 pt-8 border-t border-slate-600/30">
-                <h3 className="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-teal-500 bg-clip-text text-transparent mb-6 text-center">Quick Actions</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="mt-8 sm:mt-10 pt-6 sm:pt-8 border-t border-slate-600/30">
+                <h3 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-emerald-400 to-teal-500 bg-clip-text text-transparent mb-4 sm:mb-6 text-center">Quick Actions</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
                                       <button 
                       onClick={openTeeTimeModal}
                       className="group bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white py-6 px-6 rounded-2xl transition-all duration-300 font-semibold flex flex-col items-center justify-center shadow-lg hover:shadow-xl transform hover:-translate-y-2 hover:scale-105"
