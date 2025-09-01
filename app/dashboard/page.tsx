@@ -32,7 +32,7 @@ export default function Dashboard() {
   const router = useRouter()
   
 
-      const [activeTab, setActiveTab] = useState<'overview' | 'community' | 'golf' | 'achievements' | 'profile'>('overview')
+      const [activeTab, setActiveTab] = useState<'overview' | 'community' | 'golf' | 'achievements'>('overview')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
@@ -796,8 +796,7 @@ export default function Dashboard() {
                 { id: 'overview', label: 'Tee Times', icon: Home },
                 { id: 'community', label: 'Community', icon: Users },
                 { id: 'golf', label: 'Golf', icon: Target },
-                { id: 'achievements', label: 'Achievements', icon: Trophy },
-                { id: 'profile', label: 'Profile', icon: User }
+                { id: 'achievements', label: 'Achievements', icon: Trophy }
                 ].map((tab) => {
                   const Icon = tab.icon
                   const isActive = activeTab === tab.id
@@ -872,21 +871,17 @@ export default function Dashboard() {
                 
                 <div className="absolute right-0 mt-2 w-48 bg-slate-800 rounded-xl shadow-lg border border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                   <div className="p-2">
-                    <a href="/profile" className="flex items-center px-3 py-2 text-slate-200 hover:bg-slate-700 rounded-lg transition-colors">
-                        <User className="h-4 w-4 mr-3" />
-                        Profile
-                      </a>
-                    <Link href="/settings" className="flex items-center px-3 py-2 text-slate-700 hover:bg-slate-50 rounded-lg transition-colors">
+                    <Link href="/settings" className="flex items-center px-3 py-2 text-slate-200 hover:bg-slate-700 rounded-lg transition-colors">
                         <Settings className="h-4 w-4 mr-3" />
                         Settings
                     </Link>
-                    <hr className="my-2 border-slate-200" />
+                    <hr className="my-2 border-slate-700" />
                       <button
                         onClick={() => {
                   
                           handleSignOut()
                         }}
-                        className="flex items-center w-full px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="flex items-center w-full px-3 py-2 text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
                       >
                         <LogOut className="h-4 w-4 mr-3" />
                         Sign Out
@@ -1374,111 +1369,7 @@ export default function Dashboard() {
             </div>
           )}
 
-        {/* Profile Tab */}
-        {activeTab === 'profile' && (
-            <div className="space-y-6">
-            {/* User Profile */}
-            <div className="bg-slate-800 rounded-2xl p-8 shadow-xl border border-slate-600">
-              <h2 className="text-2xl font-bold text-white mb-6">Your Profile</h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div>
-                  <h3 className="text-lg font-semibold text-slate-800 mb-4">Personal Information</h3>
-                  <div className="space-y-3">
-                          <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">First Name</label>
-                                              <input
-                          type="text"
-                          value={profileForm.first_name || ''}
-                          onChange={(e) => setProfileForm(prev => ({ ...prev, first_name: e.target.value }))}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                          placeholder="Enter your first name"
-                        />
-                          </div>
-                          <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Last Name</label>
-                                              <input
-                          type="text"
-                          value={profileForm.last_name || ''}
-                          onChange={(e) => setProfileForm(prev => ({ ...prev, last_name: e.target.value }))}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                          placeholder="Enter your last name"
-                        />
-                          </div>
-                          <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Handicap</label>
-                                              <input
-                          type="number"
-                          value={profileForm.handicap || ''}
-                          onChange={(e) => setProfileForm(prev => ({ ...prev, handicap: parseInt(e.target.value) || 0 }))}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                          placeholder="Enter your handicap"
-                          min="0"
-                          max="54"
-                        />
-                          </div>
-                          </div>
-                        </div>
-                
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Statistics</h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-slate-300">Rounds Played:</span>
-                      <span className="font-semibold text-white">{statistics.roundsPlayed}</span>
-                        </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-300">Average Score:</span>
-                      <span className="font-semibold text-white">{statistics.averageScore}</span>
-                      </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-300">Best Round:</span>
-                      <span className="font-semibold text-white">{statistics.bestRound}</span>
-                      </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-300">Total Points:</span>
-                      <span className="font-semibold text-white">450</span>
-                    </div>
-                </div>
-              </div>
-            </div>
-              
-              <div className="mt-6 flex space-x-3">
-                <button 
-                  onClick={handleSaveProfile}
-                  disabled={profileSaving}
-                  className="bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-400 text-white px-6 py-3 rounded-xl transition-colors font-medium disabled:cursor-not-allowed"
-                >
-                  {profileSaving ? 'Saving...' : 'Save Changes'}
-                </button>
-                <button 
-                  onClick={handleResetProfile}
-                  className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-6 py-3 rounded-xl transition-colors font-medium"
-                >
-                  Reset
-                </button>
-              </div>
-                   </div>
-                   
-            {/* Recent Activity */}
-            <div className="bg-slate-800 rounded-2xl p-6 shadow-xl border border-slate-600">
-              <h3 className="text-lg font-semibold text-white mb-4">Recent Activity</h3>
-              <div className="space-y-3">
-                {recentActivity.map((activity) => (
-                  <div key={activity.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-700 transition-colors">
-                    <div className="h-8 w-8 rounded-full flex items-center justify-center bg-emerald-900">
-                      <Flag className="h-4 w-4 text-emerald-400" />
-                             </div>
-                             <div className="flex-1">
-                      <p className="text-slate-200 text-sm">{activity.message}</p>
-                      <p className="text-slate-400 text-xs">{activity.time}</p>
-                             </div>
-                           </div>
-                ))}
-                         </div>
-                     </div>
-                       </div>
-                     )}
+
       </div>
       
       {/* Modals */}
