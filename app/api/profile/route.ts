@@ -32,16 +32,24 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    console.log('🔍 Profile PUT request received')
     const body = await request.json()
+    console.log('🔍 Request body:', body)
+    
     const { id, first_name, last_name, username, bio, avatar_url, handicap, location } = body
     
     if (!id) {
+      console.log('❌ No user ID provided')
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
     }
+    
+    console.log('🔍 User ID:', id)
 
     const supabase = createServerClient()
+    console.log('🔍 Supabase client created')
     
     // First check if profile exists
+    console.log('🔍 Checking if profile exists for user:', id)
     const { data: existingProfile, error: checkError } = await supabase
       .from('user_profiles')
       .select('id')
@@ -49,9 +57,10 @@ export async function PUT(request: NextRequest) {
       .single()
     
     if (checkError) {
-      console.error('Error checking profile existence:', checkError)
+      console.error('❌ Error checking profile existence:', checkError)
       
       // Try to create profile if it doesn't exist
+      console.log('🔍 Profile not found, attempting to create new profile')
       const { data: createdProfile, error: createError } = await supabase
         .from('user_profiles')
         .insert({
@@ -70,15 +79,18 @@ export async function PUT(request: NextRequest) {
         .single()
       
       if (createError) {
-        console.error('Error creating profile:', createError)
+        console.error('❌ Error creating profile:', createError)
         return NextResponse.json({ 
           error: 'Failed to create profile', 
           details: createError.message 
         }, { status: 500 })
       }
       
+      console.log('✅ Profile created successfully:', createdProfile)
       return NextResponse.json(createdProfile)
     }
+    
+    console.log('✅ Profile exists, proceeding with update')
     
     // Build update object with only provided fields
     const updateData: any = {
@@ -98,6 +110,8 @@ export async function PUT(request: NextRequest) {
       updateData.full_name = `${first_name} ${last_name}`.trim()
     }
     
+    console.log('🔍 Update data:', updateData)
+    
     // Update profile
     const { data: updatedProfile, error } = await supabase
       .from('user_profiles')
@@ -107,16 +121,17 @@ export async function PUT(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Error updating profile:', error)
+      console.error('❌ Error updating profile:', error)
       return NextResponse.json({ 
         error: 'Failed to update profile', 
         details: error.message 
       }, { status: 500 })
     }
 
+    console.log('✅ Profile updated successfully:', updatedProfile)
     return NextResponse.json(updatedProfile)
   } catch (error) {
-    console.error('Profile PUT error:', error)
+    console.error('❌ Profile PUT error:', error)
     return NextResponse.json({ 
       error: 'Internal server error',
       details: error instanceof Error ? error.message : 'Unknown error'
