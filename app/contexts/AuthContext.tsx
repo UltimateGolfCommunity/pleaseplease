@@ -157,94 +157,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.error('❌ All profile fetch methods failed')
       
-      // If we get here, no profile exists - let's create one
-      console.log('🔍 No profile found, attempting to create one...')
+      // If we get here, no profile exists - let's wait a moment and try again
+      // The database trigger should have created it automatically
+      console.log('🔍 No profile found, waiting for database trigger to create it...')
       
-      // Use passed userData if available, otherwise fall back to current user state
-      const userToUse = userData || user
-      console.log('🔍 User data for profile creation:', { 
-        passedUserData: userData, 
-        currentUserState: user, 
-        userToUse 
-      })
+      // Wait 2 seconds for the database trigger to create the profile
+      await new Promise(resolve => setTimeout(resolve, 2000))
       
+      // Try fetching the profile again
+      console.log('🔍 Trying to fetch profile again after waiting...')
       try {
-        if (userToUse) {
-          // Try to extract a better name from the email
-          const emailName = userToUse.email?.split('@')[0] || 'Golfer'
-          const displayName = emailName.charAt(0).toUpperCase() + emailName.slice(1)
-          
-          const profileData = {
-            id: userId,
-            email: userToUse.email,
-            first_name: userToUse.user_metadata?.first_name || displayName,
-            last_name: userToUse.user_metadata?.last_name || '',
-            username: userToUse.user_metadata?.username || emailName.toLowerCase(),
-            full_name: userToUse.user_metadata?.full_name || displayName,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
-          
-          console.log('🔍 Attempting to create profile with data:', JSON.stringify(profileData, null, 2))
-          
-          try {
-            // Add timeout to profile creation
-            const insertPromise = supabase
-              .from('user_profiles')
-              .insert([profileData])
-              .select()
-            
-            const insertTimeout = new Promise((_, reject) => {
-              setTimeout(() => reject(new Error('Profile creation timed out after 10 seconds')), 10000)
-            })
-            
-            const { data: insertResult, error: createError } = await Promise.race([insertPromise, insertTimeout]) as any
-            
-            console.log('🔍 Profile creation result:', { insertResult, createError })
-            
-            if (createError) {
-              console.error('❌ Profile creation failed:', createError)
-              console.error('❌ Error details:', { 
-                code: createError.code, 
-                message: createError.message, 
-                details: createError.details,
-                hint: createError.hint 
-              })
-              return
-            }
-            
-            console.log('✅ Profile created successfully:', insertResult)
-          } catch (insertError) {
-            console.error('❌ Exception during profile creation:', insertError)
-            return
-          }
-          
-          // Try to fetch the newly created profile
-          console.log('✅ Profile created successfully, fetching again...')
-          const { data: newProfileData, error: fetchError } = await supabase
-            .from('user_profiles')
-            .select('*')
-            .eq('id', userId)
-            .single()
-          
-          console.log('🔍 Profile fetch after creation:', { newProfileData, fetchError })
-          
-          if (!fetchError && newProfileData) {
-            console.log('✅ New profile fetched successfully')
-            await processProfileData(newProfileData, userId)
-            return
-          } else {
-            console.error('❌ Failed to fetch newly created profile:', fetchError)
-          }
+        const { data: retryProfileData, error: retryError } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', userId)
+          .single()
+        
+        if (!retryError && retryProfileData) {
+          console.log('✅ Profile found after waiting (created by database trigger):', retryProfileData)
+          await processProfileData(retryProfileData, userId)
+          return
         } else {
-          console.error('❌ No user data available for profile creation')
+          console.log('❌ Still no profile found after waiting:', retryError)
         }
-      } catch (createProfileError) {
-        console.error('❌ Error in profile creation fallback:', createProfileError)
-        if (createProfileError instanceof Error) {
-          console.error('❌ Error stack:', createProfileError.stack)
-        }
+      } catch (retryError) {
+        console.error('❌ Error retrying profile fetch:', retryError)
       }
+      
+      console.error('❌ Profile not found and could not be created automatically')
     } catch (error) {
       console.error('❌ Error in fetchProfile:', error)
     }
@@ -414,45 +354,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       console.log('✅ User created successfully:', data.user?.id)
-
-      if (data.user) {
-        console.log('🔍 Creating user profile for user ID:', data.user.id)
-        
-        try {
-          // Create user profile with timeout
-          const profilePromise = supabase
-            .from('user_profiles')
-            .insert([
-              {
-                id: data.user.id,
-                email: data.user.email,
-                first_name: profileData.first_name,
-                last_name: profileData.last_name,
-                username: profileData.username,
-                full_name: profileData.full_name || `${profileData.first_name} ${profileData.last_name}`.trim(),
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              }
-            ])
-          
-          // Add timeout to profile creation
-          const profileTimeout = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Profile creation timed out after 15 seconds')), 15000)
-          })
-          
-          const { error: profileError } = await Promise.race([profilePromise, profileTimeout]) as any
-          
-          if (profileError) {
-            console.error('❌ Error creating profile:', profileError)
-            // Don't throw here - user was created successfully
-          } else {
-            console.log('✅ User profile created successfully')
-          }
-        } catch (profileTimeoutError) {
-          console.error('❌ Profile creation timed out:', profileTimeoutError)
-          // Don't fail the sign-up if profile creation times out
-        }
-      }
+      console.log('🔍 Database trigger should automatically create user profile')
       
       // Always complete sign-up successfully, even if profile creation fails
       console.log('✅ SignUp process completed successfully')
