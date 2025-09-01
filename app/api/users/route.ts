@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
       if (error) throw error
 
       // Get user profiles for the other users in the connections
-      const userIds = connections?.map(conn => 
+      const userIds = connections?.map((conn: any) => 
         conn.requester_id === userId ? conn.recipient_id : conn.requester_id
       ) || []
 
@@ -136,9 +136,9 @@ export async function GET(request: NextRequest) {
         if (profilesError) throw profilesError
 
         // Combine connection data with user profiles
-        const enrichedConnections = connections?.map(conn => ({
+        const enrichedConnections = connections?.map((conn: any) => ({
           ...conn,
-          connected_user: userProfiles?.find(profile => 
+          connected_user: userProfiles?.find((profile: any) => 
             profile.id === (conn.requester_id === userId ? conn.recipient_id : conn.requester_id)
           )
         })) || []
