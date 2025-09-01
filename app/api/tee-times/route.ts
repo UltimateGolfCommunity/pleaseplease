@@ -15,7 +15,7 @@ const mockTeeTimes = [
     available_spots: 2,
     handicap_requirement: 'Any',
     description: 'Weekend round at Pebble Beach',
-    status: 'open'
+    status: 'active'
   },
   {
     id: 'tee-2',
@@ -28,7 +28,7 @@ const mockTeeTimes = [
     available_spots: 0,
     handicap_requirement: '15 or better',
     description: 'Afternoon round at Augusta',
-    status: 'full'
+    status: 'completed'
   }
 ]
 
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
       
       if (action === 'available') {
         // Get available tee times
-        return NextResponse.json(mockTeeTimes.filter(tt => tt.status === 'open'))
+        return NextResponse.json(mockTeeTimes.filter(tt => tt.status === 'active'))
       }
       
       // Default: return all tee times
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
           *,
           creator:user_profiles(id, first_name, last_name)
         `)
-        .eq('status', 'open')
+        .eq('status', 'active')
 
       if (error) throw error
       return NextResponse.json(data || [])
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
           creator: { id: data.creator_id, first_name: 'You', last_name: '' },
           current_players: 1,
           available_spots: data.max_players - 1,
-          status: 'open'
+          status: 'active'
         }
         return NextResponse.json({ 
           success: true, 
@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
           current_players: 1,
           handicap_requirement: data.handicap_requirement,
           description: data.description,
-          status: 'open'
+          status: 'active'
         })
         .select()
         .single()
