@@ -218,12 +218,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!supabase) return
     
     try {
+      // First, get the Founding Member badge ID
+      const { data: foundingMemberBadge, error: badgeQueryError } = await supabase
+        .from('badges')
+        .select('id')
+        .eq('name', 'Founding Member')
+        .single()
+
+      if (badgeQueryError) {
+        console.error('Error fetching Founding Member badge:', badgeQueryError)
+        return
+      }
+
+      if (!foundingMemberBadge?.id) {
+        console.error('Founding Member badge not found in database')
+        return
+      }
+
       // Check if user already has the Founding Member badge
       const { data: existingBadge, error: badgeError } = await supabase
         .from('user_badges')
         .select('*')
         .eq('user_id', userId)
-        .eq('badge_id', (await supabase.from('badges').select('id').eq('name', 'Founding Member').single()).data?.id)
+        .eq('badge_id', foundingMemberBadge.id)
         .single()
 
       if (badgeError && badgeError.code !== 'PGRST116') {
@@ -248,7 +265,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .from('user_badges')
             .insert({
               user_id: userId,
-              badge_id: (await supabase.from('badges').select('id').eq('name', 'Founding Member').single()).data?.id,
+              badge_id: foundingMemberBadge.id,
               earned_reason: 'One of the first 50 founding members!'
             })
             .select()
