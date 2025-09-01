@@ -63,6 +63,7 @@ export default function ProfilePage() {
     }
 
     if (profile) {
+      console.log('🔍 Profile data loaded:', profile)
       setFormData({
         first_name: profile.first_name || '',
         last_name: profile.last_name || '',
@@ -120,6 +121,7 @@ export default function ProfilePage() {
       const reader = new FileReader()
       reader.onload = (e) => {
         const result = e.target?.result as string
+        console.log('🔍 Image uploaded:', result.substring(0, 50) + '...')
         setFormData(prev => ({ ...prev, avatar_url: result }))
         setUploadingImage(false)
       }
@@ -255,10 +257,10 @@ export default function ProfilePage() {
           <div className="flex items-start space-x-6">
             {/* Profile Picture */}
             <div className="relative">
-              {formData.avatar_url ? (
+              {(formData.avatar_url || profile?.avatar_url) ? (
                 <div className="h-24 w-24 rounded-full overflow-hidden border-4 border-emerald-400/30">
                   <img 
-                    src={formData.avatar_url} 
+                    src={formData.avatar_url || profile?.avatar_url} 
                     alt="Profile" 
                     className="w-full h-full object-cover"
                   />
