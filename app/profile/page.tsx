@@ -20,6 +20,7 @@ import {
   Users,
   Clock
 } from 'lucide-react'
+import GolfGrassFooter from '@/components/GolfGrassFooter'
 
 interface ProfileFormData {
   first_name: string
@@ -505,6 +506,9 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+      
+      {/* Golf Grass Footer */}
+      <GolfGrassFooter />
     </div>
   )
 }

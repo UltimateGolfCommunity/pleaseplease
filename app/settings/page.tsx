@@ -12,6 +12,7 @@ import {
   ArrowLeft
 } from 'lucide-react'
 import Link from 'next/link'
+import GolfGrassFooter from '@/components/GolfGrassFooter'
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('profile')
@@ -714,6 +715,9 @@ export default function SettingsPage() {
         </div>
         )}
       </div>
+      
+      {/* Golf Grass Footer */}
+      <GolfGrassFooter />
     </div>
   )
 }

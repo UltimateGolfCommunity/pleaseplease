@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { LogIn, Eye, EyeOff, XCircle, Club, Sparkles, ArrowLeft } from 'lucide-react'
+import GolfGrassFooter from '@/components/GolfGrassFooter'
 
 export default function LoginPage() {
   const { signIn } = useAuth()
@@ -96,8 +97,15 @@ export default function LoginPage() {
       </nav>
 
       {/* Main Content */}
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="bg-slate-800/80 backdrop-blur-xl border border-slate-600/40 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div className="min-h-screen flex items-center justify-center p-4 relative">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/20 via-slate-900 to-emerald-900/20">
+          <div className="absolute inset-0 opacity-30">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30px_30px,rgba(255,255,255,0.02)_2px,transparent_2px)] bg-[length:60px_60px]"></div>
+          </div>
+        </div>
+        
+        <div className="relative z-10 bg-slate-800/90 backdrop-blur-xl border border-slate-600/40 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
           {/* Header */}
           <div className="bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 border-b border-emerald-400/30 p-8 text-center">
             <h1 className="text-3xl font-bold mb-2 text-white">Welcome Back</h1>
@@ -242,6 +250,9 @@ export default function LoginPage() {
           </form>
         </div>
       </div>
+      
+      {/* Golf Grass Footer */}
+      <GolfGrassFooter />
     </div>
   )
 }

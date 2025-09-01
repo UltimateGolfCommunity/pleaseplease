@@ -31,6 +31,7 @@ import {
   Clock,
   TrendingUp
 } from 'lucide-react'
+import GolfGrassFooter from '@/components/GolfGrassFooter'
 
 export default function HomePage() {
   const { user, profile, signOut } = useAuth()
@@ -355,6 +356,9 @@ export default function HomePage() {
           </a>
         </div>
       </div>
+      
+      {/* Golf Grass Footer */}
+      <GolfGrassFooter />
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { UserPlus, Eye, EyeOff, XCircle, Club, Sparkles, ArrowLeft } from 'lucide-react'
+import GolfGrassFooter from '@/components/GolfGrassFooter'
 
 export default function SignupPage() {
   const { signUp } = useAuth()
@@ -343,6 +344,9 @@ export default function SignupPage() {
           </form>
         </div>
       </div>
+      
+      {/* Golf Grass Footer */}
+      <GolfGrassFooter />
     </div>
   )
 }
