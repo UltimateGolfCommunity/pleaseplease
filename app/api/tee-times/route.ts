@@ -103,8 +103,13 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  console.log('🔍 Tee times POST request received - START')
   try {
     console.log('🔍 Tee times POST request received')
+    console.log('🔍 Request URL:', request.url)
+    console.log('🔍 Request method:', request.method)
+    console.log('🔍 Request headers:', Object.fromEntries(request.headers.entries()))
+    
     const body = await request.json()
     console.log('🔍 Request body:', body)
     const { action, ...data } = body
@@ -160,13 +165,14 @@ export async function POST(request: NextRequest) {
       }
       
       console.log('❌ Invalid action:', action)
-      console.log('❌ Invalid action:', action)
-    return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+      console.log('🔍 Returning 400 for invalid action')
+      return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     }
 
     // Use real Supabase if configured
     const supabase = createAdminClient()
 
+    console.log('🔍 About to check action:', action)
     if (action === 'create') {
       console.log('🔍 Creating tee time with data:', data)
       const { data: newTeeTime, error } = await supabase
@@ -225,6 +231,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, message: 'Successfully joined tee time' })
     }
 
+    console.log('🔍 Returning 400 for invalid action (real Supabase)')
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
 
   } catch (error) {
