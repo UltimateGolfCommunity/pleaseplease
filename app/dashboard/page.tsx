@@ -1231,7 +1231,7 @@ export default function Dashboard() {
                     <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-500 border-t-transparent mx-auto mb-4"></div>
                     <p className="text-slate-600 text-lg">Loading tee times...</p>
                   </div>
-                ) : availableTeeTimes.length === 0 ? (
+                ) : !availableTeeTimes || availableTeeTimes.length === 0 ? (
                   <div className="text-center py-12">
                     <div className="bg-gradient-to-r from-slate-100 to-blue-50 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
                       <Calendar className="h-10 w-10 text-slate-400" />
@@ -1246,7 +1246,7 @@ export default function Dashboard() {
                     </button>
                   </div>
                 ) : (
-                  availableTeeTimes.map((teeTime) => (
+                  availableTeeTimes?.map((teeTime) => (
                     <div key={teeTime.id} className="bg-gradient-to-br from-slate-700 to-slate-600/40 border border-slate-500/60 rounded-2xl p-4 sm:p-8 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] backdrop-blur-sm relative overflow-hidden group">
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-500/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                       <div className="relative flex flex-col sm:flex-row sm:items-start justify-between mb-4 sm:mb-6 gap-4">
@@ -1335,9 +1335,9 @@ export default function Dashboard() {
               </div>
               
               {/* Search Results */}
-              {searchResults.length > 0 && (
+              {searchResults && searchResults.length > 0 && (
                 <div className="space-y-3">
-                  {searchResults.map((user) => (
+                  {searchResults?.map((user) => (
                     <div key={user.id} className="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg border border-slate-600/50">
                       <div className="flex items-center space-x-3">
                         <div className="h-12 w-12 rounded-full overflow-hidden border-2 border-emerald-500/30">
@@ -1367,7 +1367,7 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {searchPerformed && searchResults.length === 0 && !searchLoading && (
+              {searchPerformed && (!searchResults || searchResults.length === 0) && !searchLoading && (
                 <div className="text-center py-8">
                   <p className="text-slate-400">No users found matching your search.</p>
                 </div>
@@ -1385,8 +1385,8 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {connections.length > 0 ? (
-                    connections.map((connection) => (
+                  {connections && connections.length > 0 ? (
+                    connections?.map((connection) => (
                       <div key={connection.id} className="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg border border-slate-600/50">
                         <div className="flex items-center space-x-3">
                           <div className="h-12 w-12 rounded-full overflow-hidden border-2 border-emerald-500/30">
@@ -1422,11 +1422,11 @@ export default function Dashboard() {
             </div>
 
             {/* Pending Requests */}
-            {pendingRequests.length > 0 && (
+            {pendingRequests && pendingRequests.length > 0 && (
               <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8 shadow-xl">
                 <h2 className="text-2xl font-bold text-white mb-6">Pending Requests</h2>
                 <div className="space-y-4">
-                  {pendingRequests.map((request) => (
+                  {pendingRequests?.map((request) => (
                     <div key={request.id} className="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg border border-slate-600/50">
                       <div className="flex items-center space-x-3">
                         <div className="h-12 w-12 rounded-full overflow-hidden border-2 border-emerald-500/30">
@@ -1535,7 +1535,7 @@ export default function Dashboard() {
               
               {/* Available Tee Times */}
               <div className="space-y-4">
-                {availableTeeTimes.map((teeTime) => (
+                {availableTeeTimes?.map((teeTime) => (
                   <div key={teeTime.id} className="bg-slate-50 border border-slate-200 rounded-xl p-6">
                     <div className="flex items-start justify-between mb-4">
                             <div>
@@ -1588,9 +1588,9 @@ export default function Dashboard() {
                 </div>
 
               {/* Course Results */}
-              {courseSearchResults.length > 0 && (
+              {courseSearchResults && courseSearchResults.length > 0 && (
                 <div className="space-y-4">
-                  {courseSearchResults.map((course) => (
+                  {courseSearchResults?.map((course) => (
                     <div key={course.id} className="bg-slate-50 border border-slate-200 rounded-xl p-6">
                         <div className="flex items-start justify-between mb-4">
                         <div>
@@ -1614,7 +1614,7 @@ export default function Dashboard() {
                         </div>
                         <div>
                           <span className="text-slate-500">Recent Reviews:</span>
-                          <p className="text-slate-800 font-medium">{course.reviews.length}</p>
+                          <p className="text-slate-800 font-medium">{course.reviews?.length || 0}</p>
                                       </div>
                                     </div>
                       <div className="flex space-x-3">
@@ -1691,7 +1691,7 @@ export default function Dashboard() {
                       <div className="animate-spin rounded-full h-8 w-8 border-2 border-emerald-500 border-t-transparent mx-auto mb-4"></div>
                       <p className="text-slate-600">Loading badges...</p>
                     </div>
-                  ) : availableBadges.length === 0 ? (
+                  ) : !availableBadges || availableBadges.length === 0 ? (
                     <div className="col-span-full text-center py-8">
                       <div className="text-4xl mb-4">🏆</div>
                       <p className="text-slate-600">No badges available yet.</p>
