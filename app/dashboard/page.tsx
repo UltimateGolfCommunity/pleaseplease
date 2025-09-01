@@ -96,6 +96,11 @@ export default function Dashboard() {
   const [applications, setApplications] = useState<any[]>([])
   const [applicationsLoading, setApplicationsLoading] = useState(false)
 
+  // Connections state
+  const [connections, setConnections] = useState<any[]>([])
+  const [pendingRequests, setPendingRequests] = useState<any[]>([])
+  const [connectionsLoading, setConnectionsLoading] = useState(false)
+
   // Profile editing state
   const [profileForm, setProfileForm] = useState({
     first_name: '',
@@ -338,6 +343,13 @@ export default function Dashboard() {
     }
   }, [profile])
 
+  // Fetch connections when user loads
+  useEffect(() => {
+    if (user?.id) {
+      fetchConnections()
+    }
+  }, [user?.id])
+
   // Handler functions
   const openTeeTimeModal = () => {
     setShowTeeTimeModal(true)
@@ -385,6 +397,86 @@ export default function Dashboard() {
       console.error('Error fetching applications:', error)
     } finally {
       setApplicationsLoading(false)
+    }
+  }
+
+  const fetchConnections = async () => {
+    if (!user?.id) return
+    
+    try {
+      setConnectionsLoading(true)
+      const response = await fetch(`/api/users?action=connections&user_id=${user.id}`)
+      if (response.ok) {
+        const data = await response.json()
+        // Filter connections based on status and who initiated them
+        const acceptedConnections = data.filter((conn: any) => 
+          conn.status === 'accepted'
+        )
+        const pendingRequests = data.filter((conn: any) => 
+          conn.status === 'pending' && conn.recipient_id === user.id
+        )
+        
+        setConnections(acceptedConnections)
+        setPendingRequests(pendingRequests)
+      } else {
+        console.error('Failed to fetch connections')
+      }
+    } catch (error) {
+      console.error('Error fetching connections:', error)
+    } finally {
+      setConnectionsLoading(false)
+    }
+  }
+
+  const handleAcceptConnection = async (connectionId: string) => {
+    try {
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'accept_connection',
+          connection_id: connectionId
+        }),
+      })
+      
+      if (response.ok) {
+        alert('Connection accepted!')
+        fetchConnections() // Refresh connections
+      } else {
+        const error = await response.json()
+        alert(`Failed to accept connection: ${error.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Error accepting connection:', error)
+      alert('Failed to accept connection. Please try again.')
+    }
+  }
+
+  const handleRejectConnection = async (connectionId: string) => {
+    try {
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'reject_connection',
+          connection_id: connectionId
+        }),
+      })
+      
+      if (response.ok) {
+        alert('Connection rejected')
+        fetchConnections() // Refresh connections
+      } else {
+        const error = await response.json()
+        alert(`Failed to reject connection: ${error.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Error rejecting connection:', error)
+      alert('Failed to reject connection. Please try again.')
     }
   }
 
@@ -702,10 +794,12 @@ export default function Dashboard() {
     setSearchPerformed(true)
     
     try {
-              const response = await fetch(`/api/users?action=search&q=${encodeURIComponent(searchQuery)}`)
+      const response = await fetch(`/api/users?action=search&q=${encodeURIComponent(searchQuery)}`)
       if (response.ok) {
         const data = await response.json()
-        setSearchResults(data.users)
+        // Filter out the current user from search results
+        const filteredData = data.filter((user: any) => user.id !== user?.id)
+        setSearchResults(filteredData)
       } else {
         console.error('Search failed:', response.statusText)
         setSearchResults([])
@@ -723,23 +817,41 @@ export default function Dashboard() {
   }
 
   const handleConnect = async (userId: string) => {
+    if (!user?.id) {
+      alert('You must be logged in to connect with users')
+      return
+    }
+
     try {
-              const response = await fetch('/api/users?action=connections', {
+      const response = await fetch('/api/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ recipientId: userId }),
+        body: JSON.stringify({
+          action: 'connect',
+          user_id: user.id,
+          connected_user_id: userId
+        }),
       })
           
-          if (response.ok) {
-            const data = await response.json()
+      if (response.ok) {
+        const data = await response.json()
         alert('Connection request sent successfully!')
-          } else {
+        
+        // Add to recent activity
+        setRecentActivity(prev => [{
+          id: Date.now(),
+          type: 'connection',
+          message: `Sent connection request to ${searchResults.find(u => u.id === userId)?.first_name || 'user'}`,
+          time: 'Just now'
+        }, ...prev.slice(0, 3)])
+        
+      } else {
         const error = await response.json()
-        alert(`Failed to send connection request: ${error.details}`)
-          }
-        } catch (error) {
+        alert(`Failed to send connection request: ${error.error || 'Unknown error'}`)
+      }
+    } catch (error) {
       console.error('Connection error:', error)
       alert('Failed to send connection request. Please try again.')
     }
@@ -1203,52 +1315,154 @@ export default function Dashboard() {
         {activeTab === 'community' && (
           <div className="space-y-6">
             {/* User Search & Connections */}
-            <div className="bg-gradient-to-br from-slate-800 via-slate-700/30 to-slate-600/20 rounded-3xl p-8 shadow-xl border border-slate-600/40 backdrop-blur-sm relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-600/20 to-transparent transform -skew-y-6"></div>
-              <div className="relative">
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-teal-500 bg-clip-text text-transparent mb-8">Find Golfers</h2>
-                <div className="flex space-x-4 mb-8">
-                        <input
-                          type="text"
-                    placeholder="Search by name, location, or handicap..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                    className="flex-1 px-6 py-4 border border-white/60 rounded-2xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white/80 backdrop-blur-sm text-lg"
-                        />
-                        <button
-                          onClick={handleSearch}
-                    className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-8 py-4 rounded-2xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-                  >
-                    Search
-                  </button>
-                            </div>
+            <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8 shadow-xl">
+              <h2 className="text-2xl font-bold text-white mb-6">Find Golfers</h2>
+              <div className="flex space-x-4 mb-6">
+                <input
+                  type="text"
+                  placeholder="Search by name, location, or handicap..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="flex-1 px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300"
+                />
+                <button
+                  onClick={handleSearch}
+                  disabled={searchLoading}
+                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-6 py-3 rounded-lg transition-all duration-300 font-medium disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                >
+                  {searchLoading ? 'Searching...' : 'Search'}
+                </button>
+              </div>
               
               {/* Search Results */}
               {searchResults.length > 0 && (
                 <div className="space-y-3">
                   {searchResults.map((user) => (
-                    <div key={user.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <div key={user.id} className="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg border border-slate-600/50">
                       <div className="flex items-center space-x-3">
-                        <div className="h-10 w-10 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
-                          {user.first_name?.[0]}{user.last_name?.[0]}
+                        <div className="h-12 w-12 rounded-full overflow-hidden border-2 border-emerald-500/30">
+                          <img
+                            src={user.avatar_url || '/default-avatar.svg'}
+                            alt={`${user.first_name} ${user.last_name}`}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = '/default-avatar.svg'
+                            }}
+                          />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-slate-800">{user.first_name} {user.last_name}</h3>
-                          <p className="text-slate-600 text-sm">{user.location} • Handicap: {user.handicap}</p>
+                          <h3 className="font-semibold text-white">{user.first_name} {user.last_name}</h3>
+                          <p className="text-slate-300 text-sm">{user.location} • Handicap: {user.handicap}</p>
+                          {user.bio && <p className="text-slate-400 text-xs mt-1">{user.bio}</p>}
                         </div>
                       </div>
                       <button
                         onClick={() => handleConnect(user.id)}
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors text-sm"
+                        className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1"
                       >
                         Connect
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {searchPerformed && searchResults.length === 0 && !searchLoading && (
+                <div className="text-center py-8">
+                  <p className="text-slate-400">No users found matching your search.</p>
+                </div>
+              )}
+            </div>
+
+            {/* My Connections */}
+            <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8 shadow-xl">
+              <h2 className="text-2xl font-bold text-white mb-6">My Connections</h2>
+              
+              {connectionsLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mx-auto"></div>
+                  <p className="text-slate-400 mt-2">Loading connections...</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {connections.length > 0 ? (
+                    connections.map((connection) => (
+                      <div key={connection.id} className="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg border border-slate-600/50">
+                        <div className="flex items-center space-x-3">
+                          <div className="h-12 w-12 rounded-full overflow-hidden border-2 border-emerald-500/30">
+                            <img
+                              src={connection.connected_user?.avatar_url || '/default-avatar.svg'}
+                              alt={`${connection.connected_user?.first_name} ${connection.connected_user?.last_name}`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.src = '/default-avatar.svg'
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-white">{connection.connected_user?.first_name} {connection.connected_user?.last_name}</h3>
+                            <p className="text-slate-300 text-sm">{connection.connected_user?.location} • Handicap: {connection.connected_user?.handicap}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => router.push(`/users/${connection.connected_user?.id}`)}
+                          className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                        >
+                          View Profile
                         </button>
                       </div>
-                  ))}
+                    ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-slate-400">No connections yet. Search for golfers to connect!</p>
                     </div>
-              )}
-                  </div>
+                  )}
                 </div>
+              )}
+            </div>
+
+            {/* Pending Requests */}
+            {pendingRequests.length > 0 && (
+              <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8 shadow-xl">
+                <h2 className="text-2xl font-bold text-white mb-6">Pending Requests</h2>
+                <div className="space-y-4">
+                  {pendingRequests.map((request) => (
+                    <div key={request.id} className="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg border border-slate-600/50">
+                      <div className="flex items-center space-x-3">
+                        <div className="h-12 w-12 rounded-full overflow-hidden border-2 border-emerald-500/30">
+                          <img
+                            src={request.connected_user?.avatar_url || '/default-avatar.svg'}
+                            alt={`${request.connected_user?.first_name} ${request.connected_user?.last_name}`}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = '/default-avatar.svg'
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-white">{request.connected_user?.first_name} {request.connected_user?.last_name}</h3>
+                          <p className="text-slate-300 text-sm">Wants to connect with you</p>
+                        </div>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleAcceptConnection(request.id)}
+                          className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-3 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                        >
+                          Accept
+                        </button>
+                        <button
+                          onClick={() => handleRejectConnection(request.id)}
+                          className="bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white px-3 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
                 
             {/* Groups Management */}
             <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">

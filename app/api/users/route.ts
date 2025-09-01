@@ -113,17 +113,40 @@ export async function GET(request: NextRequest) {
     }
 
     if (action === 'connections') {
-      const { data, error } = await supabase
+      // Get connections where user is requester or recipient
+      const { data: connections, error } = await supabase
         .from('user_connections')
-        .select(`
-          *,
-          connected_user:user_profiles(*)
-        `)
-        .eq('user_id', userId)
-        .eq('status', 'connected')
+        .select('*')
+        .or(`requester_id.eq.${userId},recipient_id.eq.${userId}`)
+        .in('status', ['pending', 'accepted'])
 
       if (error) throw error
-      return NextResponse.json(data || [])
+
+      // Get user profiles for the other users in the connections
+      const userIds = connections?.map(conn => 
+        conn.requester_id === userId ? conn.recipient_id : conn.requester_id
+      ) || []
+
+      if (userIds.length > 0) {
+        const { data: userProfiles, error: profilesError } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .in('id', userIds)
+
+        if (profilesError) throw profilesError
+
+        // Combine connection data with user profiles
+        const enrichedConnections = connections?.map(conn => ({
+          ...conn,
+          connected_user: userProfiles?.find(profile => 
+            profile.id === (conn.requester_id === userId ? conn.recipient_id : conn.requester_id)
+          )
+        })) || []
+
+        return NextResponse.json(enrichedConnections)
+      }
+
+      return NextResponse.json([])
     }
 
     // Default: return all users
@@ -177,13 +200,33 @@ export async function POST(request: NextRequest) {
       const { error } = await supabase
         .from('user_connections')
         .insert({
-          user_id: data.user_id,
-          connected_user_id: data.connected_user_id,
+          requester_id: data.user_id,
+          recipient_id: data.connected_user_id,
           status: 'pending'
         })
 
       if (error) throw error
       return NextResponse.json({ success: true, message: 'Connection request sent' })
+    }
+
+    if (action === 'accept_connection') {
+      const { error } = await supabase
+        .from('user_connections')
+        .update({ status: 'accepted' })
+        .eq('id', data.connection_id)
+
+      if (error) throw error
+      return NextResponse.json({ success: true, message: 'Connection accepted' })
+    }
+
+    if (action === 'reject_connection') {
+      const { error } = await supabase
+        .from('user_connections')
+        .update({ status: 'rejected' })
+        .eq('id', data.connection_id)
+
+      if (error) throw error
+      return NextResponse.json({ success: true, message: 'Connection rejected' })
     }
 
     if (action === 'update_profile') {
