@@ -163,20 +163,12 @@ export async function POST(request: NextRequest) {
         current_players: 1,
         handicap_requirement: data.handicap_requirement || 'Any level',
         description: data.description || '',
-        status: 'active',
-        course_name: data.course_name || 'TBD' // Default course name to avoid null constraint
+        status: 'active'
       }
       
       console.log('🔍 Creating tee time with data:', insertData)
       
-      // First, let's check what columns actually exist
-      const { data: columns, error: columnError } = await supabase
-        .from('tee_times')
-        .select('*')
-        .limit(1)
-      
-      console.log('🔍 Available columns check:', { columns, columnError })
-      
+      // Try to insert without course_name first
       const { data: newTeeTime, error } = await supabase
         .from('tee_times')
         .insert(insertData)
@@ -187,7 +179,7 @@ export async function POST(request: NextRequest) {
         console.error('❌ Error creating tee time:', error)
         return NextResponse.json({ 
           error: 'Failed to create tee time', 
-          details: error.message,
+          details: (error as any).message,
           attemptedData: insertData
         }, { status: 400 })
       }
