@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { 
   Search, 
@@ -31,14 +31,7 @@ export default function Dashboard() {
   const { user, profile, signOut, loading } = useAuth()
   const router = useRouter()
   
-  // Debug user state
-  console.log('🔍 Dashboard - User state:', { 
-    user: !!user, 
-    profile: !!profile, 
-    loading,
-    userDetails: user ? { id: user.id, email: user.email } : null,
-    profileDetails: profile ? { id: profile.id, first_name: profile.first_name, last_name: profile.last_name } : null
-  })
+
       const [activeTab, setActiveTab] = useState<'overview' | 'community' | 'golf' | 'achievements' | 'profile'>('overview')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
@@ -91,8 +84,7 @@ export default function Dashboard() {
   const [badgeCategoryFilter, setBadgeCategoryFilter] = useState('')
   const [availableBadges, setAvailableBadges] = useState<any[]>([])
 
-  // Debug logging
-  console.log('🔍 Dashboard render - availableBadges:', availableBadges, 'Type:', typeof availableBadges, 'IsArray:', Array.isArray(availableBadges))
+
 
   // Tee time loading state
   const [teeTimesLoading, setTeeTimesLoading] = useState(false)
@@ -225,57 +217,53 @@ export default function Dashboard() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showNotifications])
 
+  // Memoized mock badges to prevent recreation
+  const mockBadges = useMemo(() => [
+    {
+      id: 'badge-1',
+      name: 'First Round',
+      description: 'Complete your first golf round',
+      icon_name: 'flag',
+      category: 'achievement',
+      points: 10,
+      rarity: 'common',
+      criteria: 'Play 18 holes'
+    },
+    {
+      id: 'badge-2',
+      name: 'Early Adopter',
+      description: 'One of the first users',
+      icon_name: 'star',
+      category: 'early_adopter',
+      points: 50,
+      rarity: 'rare',
+      criteria: 'Join in first month'
+    },
+    {
+      id: 'badge-3',
+      name: 'Social Butterfly',
+      description: 'Connect with 10 golfers',
+      icon_name: 'users',
+      category: 'milestone',
+      points: 25,
+      rarity: 'uncommon',
+      criteria: 'Make 10 connections'
+    }
+  ], [])
+
   // Fetch available badges and tee times
   useEffect(() => {
     const fetchData = async () => {
       // Fetch badges
       try {
-        console.log('🔍 Fetching badges...')
         const response = await fetch('/api/badges')
         if (response.ok) {
           const data = await response.json()
-          console.log('✅ Badges fetched:', data)
           setAvailableBadges(data)
         } else {
-          console.error('❌ Bad response for badges:', response.status)
-          throw new Error(`Bad response: ${response.status}`)
+          setAvailableBadges(mockBadges)
         }
       } catch (error) {
-        console.error('❌ Error fetching badges:', error)
-        // Set mock badges for development
-        const mockBadges = [
-          {
-            id: 'badge-1',
-            name: 'First Round',
-            description: 'Complete your first golf round',
-            icon_name: 'flag',
-            category: 'achievement',
-            points: 10,
-            rarity: 'common',
-            criteria: 'Play 18 holes'
-          },
-          {
-            id: 'badge-2',
-            name: 'Early Adopter',
-            description: 'One of the first users',
-            icon_name: 'star',
-            category: 'early_adopter',
-            points: 50,
-            rarity: 'rare',
-            criteria: 'Join in first month'
-          },
-          {
-            id: 'badge-3',
-            name: 'Social Butterfly',
-            description: 'Connect with 10 golfers',
-            icon_name: 'users',
-            category: 'milestone',
-            points: 25,
-            rarity: 'uncommon',
-            criteria: 'Make 10 connections'
-          }
-        ]
-        console.log('🔄 Setting mock badges:', mockBadges)
         setAvailableBadges(mockBadges)
       }
 
@@ -287,12 +275,9 @@ export default function Dashboard() {
           const data = await response.json()
           setAvailableTeeTimes(data)
         } else {
-          console.error('Error fetching tee times:', response.status)
-          // Set empty array if no tee times found
           setAvailableTeeTimes([])
         }
       } catch (error) {
-        console.error('Error fetching tee times:', error)
         setAvailableTeeTimes([])
       } finally {
         setTeeTimesLoading(false)
@@ -300,7 +285,7 @@ export default function Dashboard() {
     }
     
     fetchData()
-  }, [])
+  }, [mockBadges])
 
   // Initialize profile form when profile data loads
   useEffect(() => {
@@ -331,7 +316,6 @@ export default function Dashboard() {
 
     try {
       setProfileSaving(true)
-      console.log('🔍 Saving profile:', profileForm)
 
       const response = await fetch('/api/profile', {
         method: 'PUT',
@@ -346,13 +330,13 @@ export default function Dashboard() {
 
       if (response.ok) {
         const updatedProfile = await response.json()
-        console.log('✅ Profile saved successfully:', updatedProfile)
         
         // Update local profile state
         // Note: In a real app, you'd want to update the AuthContext profile as well
         alert('Profile saved successfully!')
       } else {
-        throw new Error('Failed to save profile')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to save profile')
       }
     } catch (error) {
       console.error('❌ Error saving profile:', error)
@@ -468,14 +452,11 @@ export default function Dashboard() {
   }
 
   const handleSignOut = async () => {
-    console.log('🔍 Dashboard handleSignOut called')
     try {
-      console.log('🔍 Calling signOut() from AuthContext...')
       await signOut()
-      console.log('✅ signOut successful, redirecting to home...')
       router.push('/')
     } catch (error) {
-      console.error('❌ Error signing out:', error)
+      console.error('Error signing out:', error)
       alert('Failed to sign out. Please try again.')
     }
   }
