@@ -22,7 +22,8 @@ import {
   Flag,
   Home,
   Trophy,
-  Target
+  Target,
+  Camera
 } from 'lucide-react'
 import WeatherWidget from '@/app/components/WeatherWidget'
 import GolfRoundForm from '@/app/components/GolfRoundForm'
@@ -106,6 +107,7 @@ export default function Dashboard() {
     location: ''
   })
   const [profileSaving, setProfileSaving] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   // Notifications state
   const [notifications, setNotifications] = useState([
@@ -436,6 +438,41 @@ export default function Dashboard() {
         handicap: profile.handicap || 0,
         location: profile.location || ''
       })
+    }
+  }
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file')
+      return
+    }
+
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image size must be less than 5MB')
+      return
+    }
+
+    try {
+      setUploadingImage(true)
+      
+      // Convert to base64
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const base64String = e.target?.result as string
+        setProfileForm(prev => ({ ...prev, avatar_url: base64String }))
+      }
+      reader.readAsDataURL(file)
+      
+    } catch (error) {
+      console.error('Error uploading image:', error)
+      alert('Failed to upload image. Please try again.')
+    } finally {
+      setUploadingImage(false)
     }
   }
 
@@ -1521,6 +1558,38 @@ export default function Dashboard() {
               <h2 className="text-2xl font-bold text-white mb-6">Your Profile</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Profile Picture Section */}
+                <div className="flex flex-col items-center space-y-4">
+                  <h3 className="text-lg font-semibold text-white mb-4">Profile Picture</h3>
+                  <div className="relative">
+                    <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-emerald-500/30 bg-slate-700/50">
+                      <img
+                        src={profileForm.avatar_url || profile?.avatar_url || '/default-avatar.svg'}
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = '/default-avatar.svg'
+                        }}
+                      />
+                    </div>
+                    {uploadingImage && (
+                      <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
+                      </div>
+                    )}
+                  </div>
+                  <label className="cursor-pointer bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2">
+                    <Camera className="h-4 w-4" />
+                    <span>Upload Photo</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+                
                 <div>
                   <h3 className="text-lg font-semibold text-white mb-4">Personal Information</h3>
                   <div className="space-y-4">
