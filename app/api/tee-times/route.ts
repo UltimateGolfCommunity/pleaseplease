@@ -103,31 +103,15 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  console.log('🔍 Tee times POST request received - START')
   try {
-    console.log('🔍 Tee times POST request received')
-    console.log('🔍 Request URL:', request.url)
-    console.log('🔍 Request method:', request.method)
-    console.log('🔍 Request headers:', Object.fromEntries(request.headers.entries()))
-    
     const body = await request.json()
-    console.log('🔍 Request body:', body)
     const { action, ...data } = body
-    console.log('🔍 Action:', action)
-    console.log('🔍 Action type:', typeof action)
-    console.log('🔍 Data:', data)
 
     // Check if Supabase is configured
-    console.log('🔍 Environment check:')
-    console.log('🔍 NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Set' : 'Not set')
-    console.log('🔍 NEXT_PUBLIC_SUPABASE_ANON_KEY:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Set' : 'Not set')
-    console.log('🔍 SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'Set' : 'Not set')
-    
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      console.log('🔍 Using mock data for tee-times API POST')
+      console.log('Using mock data for tee-times API POST')
       
       if (action === 'create') {
-        console.log('🔍 Creating mock tee time with data:', data)
         // Mock tee time creation
         const newTeeTime = {
           id: 'tee-' + Date.now(),
@@ -137,16 +121,14 @@ export async function POST(request: NextRequest) {
           available_spots: data.max_players - 1,
           status: 'open'
         }
-        console.log('✅ Mock tee time created:', newTeeTime)
         return NextResponse.json({ 
           success: true, 
           message: 'Tee time created successfully',
           tee_time: newTeeTime
         })
-      } else {
-        console.log('❌ Invalid action in mock mode:', action)
-        return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
       }
+      
+      return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
       
       if (action === 'apply') {
         // Mock application
@@ -165,16 +147,13 @@ export async function POST(request: NextRequest) {
       }
       
       console.log('❌ Invalid action:', action)
-      console.log('🔍 Returning 400 for invalid action')
-      return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+          return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     }
 
     // Use real Supabase if configured
     const supabase = createAdminClient()
 
-    console.log('🔍 About to check action:', action)
     if (action === 'create') {
-      console.log('🔍 Creating tee time with data:', data)
       const { data: newTeeTime, error } = await supabase
         .from('tee_times')
         .insert({
@@ -192,10 +171,10 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (error) {
-        console.log('❌ Error creating tee time:', error)
-        throw error
+        console.error('Error creating tee time:', error)
+        return NextResponse.json({ error: 'Failed to create tee time', details: error.message }, { status: 400 })
       }
-      console.log('✅ Tee time created successfully:', newTeeTime)
+      
       return NextResponse.json({ success: true, message: 'Tee time created successfully', tee_time: newTeeTime })
     }
 
@@ -231,15 +210,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, message: 'Successfully joined tee time' })
     }
 
-    console.log('🔍 Returning 400 for invalid action (real Supabase)')
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
 
   } catch (error) {
-    console.error('❌ Error in tee-times API POST:', error)
-    return NextResponse.json({ 
-      error: 'Internal server error', 
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    console.error('Error in tee-times API POST:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 

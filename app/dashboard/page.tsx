@@ -307,6 +307,23 @@ export default function Dashboard() {
     setShowTeeTimeModal(true)
   }
 
+  const fetchTeeTimes = async () => {
+    try {
+      setTeeTimesLoading(true)
+      const response = await fetch('/api/tee-times')
+      if (response.ok) {
+        const data = await response.json()
+        setAvailableTeeTimes(data)
+      } else {
+        setAvailableTeeTimes([])
+      }
+    } catch (error) {
+      setAvailableTeeTimes([])
+    } finally {
+      setTeeTimesLoading(false)
+    }
+  }
+
   // Profile management functions
   const handleSaveProfile = async () => {
     if (!user?.id) {
@@ -360,49 +377,7 @@ export default function Dashboard() {
     }
   }
 
-  const handlePostTeeTime = async (teeTimeData: any) => {
-    try {
 
-      
-      // Create real tee time in Supabase
-      const response = await fetch('/api/tee-times', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          course_id: teeTimeData.course,
-          tee_time_date: teeTimeData.date,
-          tee_time_time: teeTimeData.time,
-          max_players: teeTimeData.players,
-          handicap_requirement: teeTimeData.handicap,
-          description: teeTimeData.description,
-          creator_id: user?.id
-        })
-      })
-
-      if (response.ok) {
-        const newTeeTime = await response.json()
-
-        
-        // Refresh the tee times list
-        const refreshResponse = await fetch('/api/tee-times')
-        if (refreshResponse.ok) {
-          const updatedTeeTimes = await refreshResponse.json()
-          setAvailableTeeTimes(updatedTeeTimes)
-        }
-        
-        // Close modal and show success
-        setShowTeeTimeModal(false)
-        alert('Tee time posted successfully!')
-      } else {
-        throw new Error('Failed to create tee time')
-      }
-    } catch (error) {
-      console.error('❌ Error creating tee time:', error)
-      alert('Failed to post tee time. Please try again.')
-    }
-  }
 
   const handleCreateGroup = () => {
     setShowGroupModal(true)
@@ -632,7 +607,7 @@ export default function Dashboard() {
   const handleTeeTimeSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-              const response = await fetch('/api/tee-times', {
+      const response = await fetch('/api/tee-times', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -650,7 +625,8 @@ export default function Dashboard() {
       })
       
       if (response.ok) {
-        console.log('Tee time posted successfully')
+        const result = await response.json()
+        console.log('Tee time posted successfully:', result)
         setShowTeeTimeModal(false)
         setTeeTimeForm({
           course: '',
@@ -660,11 +636,16 @@ export default function Dashboard() {
           handicap: 'any',
           description: ''
         })
+        // Refresh tee times list
+        fetchTeeTimes()
       } else {
-        console.error('Failed to post tee time')
+        const errorData = await response.json()
+        console.error('Failed to post tee time:', errorData)
+        alert('Failed to post tee time: ' + (errorData.error || 'Unknown error'))
       }
     } catch (error) {
       console.error('Error posting tee time:', error)
+      alert('Error posting tee time. Please try again.')
     }
   }
   
@@ -944,7 +925,7 @@ export default function Dashboard() {
                     <h3 className="text-xl font-semibold text-slate-700 mb-2">No Tee Times Available</h3>
                     <p className="text-slate-500 mb-6">Be the first to post a tee time and start building the golf community!</p>
                     <button 
-                      onClick={handlePostTeeTime}
+                      onClick={openTeeTimeModal}
                       className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 py-3 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
                     >
                       Post First Tee Time
@@ -1138,7 +1119,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-slate-800">Tee Times</h2>
                 <button
-                  onClick={handlePostTeeTime}
+                  onClick={openTeeTimeModal}
                   className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-xl transition-colors font-medium"
                 >
                   Post Tee Time
