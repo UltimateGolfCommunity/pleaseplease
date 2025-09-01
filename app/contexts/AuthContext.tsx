@@ -227,11 +227,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (badgeQueryError) {
         console.error('Error fetching Founding Member badge:', badgeQueryError)
+        if (badgeQueryError.code === 'PGRST116') {
+          console.log('ℹ️  Founding Member badge not found - run founding-member-badge.sql in Supabase')
+        }
         return
       }
 
       if (!foundingMemberBadge?.id) {
-        console.error('Founding Member badge not found in database')
+        console.log('ℹ️  Founding Member badge not found in database - run founding-member-badge.sql in Supabase')
         return
       }
 
