@@ -263,11 +263,18 @@ export async function POST(request: NextRequest) {
         .from('tee_time_applications')
         .insert({
           tee_time_id: data.tee_time_id,
-          user_id: data.user_id,
+          applicant_id: data.applicant_id,
           status: 'pending'
         })
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ Error applying to tee time:', error)
+        return NextResponse.json({ 
+          error: 'Failed to submit application', 
+          details: (error as any).message
+        }, { status: 400 })
+      }
+      
       return NextResponse.json({ success: true, message: 'Application submitted successfully' })
     }
 

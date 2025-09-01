@@ -110,21 +110,60 @@ export default function ProfilePage() {
       return
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Image size must be less than 5MB')
+    // Validate file size (max 2MB for better performance)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Image size must be less than 2MB')
       return
     }
 
     setUploadingImage(true)
     try {
-      // Convert to base64 for now (in a real app, you'd upload to a CDN)
+      // Compress image before converting to base64
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      const img = new Image()
+      
+      img.onload = () => {
+        // Set canvas size (max 200x200 for profile pictures)
+        const maxSize = 200
+        let { width, height } = img
+        
+        if (width > height) {
+          if (width > maxSize) {
+            height = (height * maxSize) / width
+            width = maxSize
+          }
+        } else {
+          if (height > maxSize) {
+            width = (width * maxSize) / height
+            height = maxSize
+          }
+        }
+        
+        canvas.width = width
+        canvas.height = height
+        
+        // Draw and compress image
+        ctx?.drawImage(img, 0, 0, width, height)
+        
+        // Convert to base64 with compression
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7) // 70% quality
+        
+        console.log('🔍 Compressed image uploaded:', compressedDataUrl.substring(0, 50) + '...')
+        setFormData(prev => ({ ...prev, avatar_url: compressedDataUrl }))
+        setUploadingImage(false)
+      }
+      
+      img.onerror = () => {
+        console.error('Error loading image')
+        alert('Failed to process image. Please try again.')
+        setUploadingImage(false)
+      }
+      
+      // Load image from file
       const reader = new FileReader()
       reader.onload = (e) => {
-        const result = e.target?.result as string
-        console.log('🔍 Image uploaded:', result.substring(0, 50) + '...')
-        setFormData(prev => ({ ...prev, avatar_url: result }))
-        setUploadingImage(false)
+        img.src = e.target?.result as string
       }
       reader.readAsDataURL(file)
     } catch (error) {
