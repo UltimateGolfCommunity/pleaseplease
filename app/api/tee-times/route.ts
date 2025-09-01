@@ -52,6 +52,41 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(mockTeeTimes.filter(tt => tt.status === 'active'))
       }
       
+      if (action === 'get-applications' && userId) {
+        // Mock applications data
+        const mockApplications = [
+          {
+            id: 'app-1',
+            applicant_id: userId,
+            tee_time_id: 'tee-1',
+            status: 'pending',
+            applied_at: new Date().toISOString(),
+            tee_times: {
+              id: 'tee-1',
+              course_name: 'Pebble Beach Golf Links',
+              tee_time_date: '2024-04-15',
+              tee_time_time: '9:00 AM',
+              creator_id: 'user-1'
+            }
+          },
+          {
+            id: 'app-2',
+            applicant_id: userId,
+            tee_time_id: 'tee-2',
+            status: 'accepted',
+            applied_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+            tee_times: {
+              id: 'tee-2',
+              course_name: 'Augusta National',
+              tee_time_date: '2024-04-20',
+              tee_time_time: '2:00 PM',
+              creator_id: 'user-2'
+            }
+          }
+        ]
+        return NextResponse.json({ applications: mockApplications })
+      }
+      
       // Default: return all tee times
       return NextResponse.json(mockTeeTimes)
     }
@@ -87,23 +122,34 @@ export async function GET(request: NextRequest) {
     
     if (action === 'get-applications' && userId) {
       // Fetch applications for a specific user
-      const { data: applications, error } = await supabase
-        .from('tee_time_applications')
-        .select(`
-          *,
-          tee_times (
-            id,
-            course_name,
-            tee_time_date,
-            tee_time_time,
-            creator_id
-          )
-        `)
-        .eq('applicant_id', userId)
-        .order('applied_at', { ascending: false })
+      try {
+        const { data: applications, error } = await supabase
+          .from('tee_time_applications')
+          .select(`
+            *,
+            tee_times (
+              id,
+              course_name,
+              tee_time_date,
+              tee_time_time,
+              creator_id
+            )
+          `)
+          .eq('applicant_id', userId)
+          .order('applied_at', { ascending: false })
 
-      if (error) throw error
-      return NextResponse.json({ applications: applications || [] })
+        if (error) {
+          console.error('Error fetching applications:', error)
+          // Return empty applications instead of throwing
+          return NextResponse.json({ applications: [] })
+        }
+        
+        return NextResponse.json({ applications: applications || [] })
+      } catch (dbError) {
+        console.error('Database error fetching applications:', dbError)
+        // Return empty applications instead of throwing
+        return NextResponse.json({ applications: [] })
+      }
     }
 
     // Default: return all tee times
