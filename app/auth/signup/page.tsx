@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { UserPlus, Eye, EyeOff, XCircle, Club, Sparkles, ArrowLeft } from 'lucide-react'
-import GolfGrassFooter from '@/components/GolfGrassFooter'
+
 
 export default function SignupPage() {
   const { signUp } = useAuth()
@@ -159,8 +159,19 @@ export default function SignupPage() {
       </nav>
 
       {/* Main Content */}
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-gray-900 via-black to-gray-900">
-        <div className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-md border border-gray-700/50 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div className="min-h-screen flex items-center justify-center p-4 relative">
+        {/* Animated Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/30 via-slate-900 to-cyan-900/30">
+          <div className="absolute inset-0">
+            <div className="absolute top-20 left-20 w-1 h-1 bg-emerald-400 rounded-full animate-ping"></div>
+            <div className="absolute top-40 right-40 w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
+            <div className="absolute bottom-20 left-1/3 w-1.5 h-1.5 bg-emerald-300 rounded-full animate-bounce"></div>
+            <div className="absolute bottom-40 right-1/4 w-1 h-1 bg-cyan-300 rounded-full animate-ping"></div>
+          </div>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30px_30px,rgba(255,255,255,0.03)_2px,transparent_2px)] bg-[length:60px_60px] opacity-40"></div>
+        </div>
+        
+        <div className="relative z-10 bg-slate-800/95 backdrop-blur-2xl border border-slate-600/50 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden transform hover:scale-[1.02] transition-transform duration-500">
           {/* Header */}
           <div className="bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 border-b border-emerald-400/30 p-8 text-center">
             <h1 className="text-3xl font-bold mb-2 text-white">Join the Community</h1>
@@ -345,8 +356,7 @@ export default function SignupPage() {
         </div>
       </div>
       
-      {/* Golf Grass Footer */}
-      <GolfGrassFooter />
+
     </div>
   )
 }

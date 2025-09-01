@@ -31,7 +31,7 @@ import {
   Clock,
   TrendingUp
 } from 'lucide-react'
-import GolfGrassFooter from '@/components/GolfGrassFooter'
+
 
 export default function HomePage() {
   const { user, profile, signOut } = useAuth()
@@ -338,27 +338,46 @@ export default function HomePage() {
       </div>
 
       {/* CTA Section */}
-      <div className="py-24 bg-gradient-to-br from-black via-gray-900 to-black">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            Ready to Transform Your
-            <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent"> Golf Experience</span>?
-          </h2>
-          <p className="text-xl text-gray-400 mb-10 max-w-3xl mx-auto">
-            Join thousands of golfers who are already part of the Ultimate Golf Community and discover a new way to enjoy the game
-          </p>
-          <a
-            href="/auth/signup"
-            className="group bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white px-12 py-5 rounded-xl text-xl font-semibold transition-all duration-300 shadow-2xl hover:shadow-emerald-500/25 transform hover:scale-105 inline-flex items-center"
-          >
-            Get Started Today
-            <ArrowRight className="h-6 w-6 ml-3 group-hover:translate-x-2 transition-transform duration-300" />
-          </a>
+      <div className="py-24 bg-gradient-to-br from-black via-gray-900 to-black relative overflow-hidden">
+        {/* Animated background elements */}
+        <div className="absolute inset-0">
+          <div className="absolute top-20 left-10 w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+          <div className="absolute top-40 right-20 w-1 h-1 bg-cyan-400 rounded-full animate-ping"></div>
+          <div className="absolute bottom-20 left-1/4 w-3 h-3 bg-emerald-300 rounded-full animate-bounce"></div>
+          <div className="absolute bottom-40 right-1/3 w-1.5 h-1.5 bg-cyan-300 rounded-full animate-pulse"></div>
+        </div>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+          <div className="bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 backdrop-blur-sm border border-emerald-500/20 rounded-3xl p-12">
+            <h2 className="text-5xl md:text-6xl font-bold text-white mb-8">
+              Ready to Transform Your
+              <span className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent"> Golf Experience</span>?
+            </h2>
+            <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-4xl mx-auto leading-relaxed">
+              Join thousands of golfers who are already part of the Ultimate Golf Community and discover a new way to enjoy the game
+            </p>
+            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+              <a
+                href="/auth/signup"
+                className="group bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500 hover:from-emerald-600 hover:via-cyan-600 hover:to-blue-600 text-white px-16 py-6 rounded-2xl text-2xl font-bold transition-all duration-500 shadow-2xl hover:shadow-emerald-500/50 transform hover:scale-110 inline-flex items-center relative overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                <span className="relative">Get Started Today</span>
+                <ArrowRight className="h-7 w-7 ml-4 group-hover:translate-x-2 transition-transform duration-300 relative" />
+              </a>
+              <a
+                href="/dashboard"
+                className="group border-2 border-emerald-400/50 text-emerald-400 hover:bg-emerald-400/10 hover:border-emerald-400 px-16 py-6 rounded-2xl text-2xl font-bold transition-all duration-500 backdrop-blur-sm flex items-center"
+              >
+                Explore Dashboard
+                <ArrowRight className="h-7 w-7 ml-4 group-hover:translate-x-2 transition-transform duration-300" />
+              </a>
+            </div>
+          </div>
         </div>
       </div>
       
-      {/* Golf Grass Footer */}
-      <GolfGrassFooter />
+
     </div>
   )
 }

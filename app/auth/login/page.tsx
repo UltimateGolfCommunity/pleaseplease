@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { LogIn, Eye, EyeOff, XCircle, Club, Sparkles, ArrowLeft } from 'lucide-react'
-import GolfGrassFooter from '@/components/GolfGrassFooter'
+
 
 export default function LoginPage() {
   const { signIn } = useAuth()
@@ -98,14 +98,18 @@ export default function LoginPage() {
 
       {/* Main Content */}
       <div className="min-h-screen flex items-center justify-center p-4 relative">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/20 via-slate-900 to-emerald-900/20">
-          <div className="absolute inset-0 opacity-30">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30px_30px,rgba(255,255,255,0.02)_2px,transparent_2px)] bg-[length:60px_60px]"></div>
+        {/* Animated Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/30 via-slate-900 to-cyan-900/30">
+          <div className="absolute inset-0">
+            <div className="absolute top-20 left-20 w-1 h-1 bg-emerald-400 rounded-full animate-ping"></div>
+            <div className="absolute top-40 right-40 w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
+            <div className="absolute bottom-20 left-1/3 w-1.5 h-1.5 bg-emerald-300 rounded-full animate-bounce"></div>
+            <div className="absolute bottom-40 right-1/4 w-1 h-1 bg-cyan-300 rounded-full animate-ping"></div>
           </div>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30px_30px,rgba(255,255,255,0.03)_2px,transparent_2px)] bg-[length:60px_60px] opacity-40"></div>
         </div>
         
-        <div className="relative z-10 bg-slate-800/90 backdrop-blur-xl border border-slate-600/40 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="relative z-10 bg-slate-800/95 backdrop-blur-2xl border border-slate-600/50 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden transform hover:scale-[1.02] transition-transform duration-500">
           {/* Header */}
           <div className="bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 border-b border-emerald-400/30 p-8 text-center">
             <h1 className="text-3xl font-bold mb-2 text-white">Welcome Back</h1>
@@ -190,7 +194,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 disabled:from-emerald-400 disabled:to-cyan-400 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 flex items-center justify-center transform hover:scale-105 shadow-lg hover:shadow-emerald-500/25"
+                className="w-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500 hover:from-emerald-600 hover:via-cyan-600 hover:to-blue-600 disabled:from-emerald-400 disabled:to-cyan-400 text-white font-bold py-4 px-6 rounded-xl transition-all duration-500 flex items-center justify-center transform hover:scale-105 shadow-2xl hover:shadow-emerald-500/50 relative overflow-hidden group"
               >
                 {loading ? (
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
@@ -251,8 +255,7 @@ export default function LoginPage() {
         </div>
       </div>
       
-      {/* Golf Grass Footer */}
-      <GolfGrassFooter />
+
     </div>
   )
 }

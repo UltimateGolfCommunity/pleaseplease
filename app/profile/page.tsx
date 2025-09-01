@@ -20,7 +20,7 @@ import {
   Users,
   Clock
 } from 'lucide-react'
-import GolfGrassFooter from '@/components/GolfGrassFooter'
+
 
 interface ProfileFormData {
   first_name: string
@@ -142,7 +142,14 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0">
+        <div className="absolute top-20 left-20 w-1 h-1 bg-emerald-400 rounded-full animate-ping"></div>
+        <div className="absolute top-40 right-40 w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
+        <div className="absolute bottom-20 left-1/3 w-1.5 h-1.5 bg-emerald-300 rounded-full animate-bounce"></div>
+        <div className="absolute bottom-40 right-1/4 w-1 h-1 bg-cyan-300 rounded-full animate-ping"></div>
+      </div>
       {/* Navigation */}
       <nav className="bg-gray-900/95 backdrop-blur-md border-b border-gray-800 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -507,8 +514,7 @@ export default function ProfilePage() {
         </div>
       </div>
       
-      {/* Golf Grass Footer */}
-      <GolfGrassFooter />
+
     </div>
   )
 }

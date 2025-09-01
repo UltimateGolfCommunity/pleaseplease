@@ -154,26 +154,24 @@ export async function POST(request: NextRequest) {
     const supabase = createAdminClient()
 
     if (action === 'create') {
-      // Try to determine the correct field name for course
-      let insertData: any = {
+      // Simple, bulletproof approach - just use the basic fields that should work
+      const insertData: any = {
         creator_id: data.creator_id,
         tee_time_date: data.tee_time_date,
         tee_time_time: data.tee_time_time,
-        max_players: data.max_players,
+        max_players: data.max_players || 4,
         current_players: 1,
-        handicap_requirement: data.handicap_requirement,
-        description: data.description,
+        handicap_requirement: data.handicap_requirement || 'Any level',
+        description: data.description || '',
         status: 'active'
       }
       
-      // Try course_name first (production schema), fallback to course_id (development schema)
+      // Add course field based on what's available
       if (data.course_name) {
         insertData.course_name = data.course_name
-      } else if (data.course_id) {
-        insertData.course_id = data.course_id
       }
       
-      console.log('🔍 Attempting to insert tee time with data:', insertData)
+      console.log('🔍 Creating tee time with data:', insertData)
       
       const { data: newTeeTime, error } = await supabase
         .from('tee_times')
@@ -182,33 +180,20 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (error) {
-        console.error('Error creating tee time:', error)
-        
-        // If course_name failed, try course_id
-        if (error.message?.includes('course_name') && data.course_name) {
-          console.log('🔍 Retrying with course_id instead of course_name')
-          const retryData = { ...insertData }
-          delete retryData.course_name
-          retryData.course_id = data.course_name // Use course_name as course_id
-          
-          const { data: retryTeeTime, error: retryError } = await supabase
-            .from('tee_times')
-            .insert(retryData)
-            .select()
-            .single()
-            
-          if (retryError) {
-            console.error('Retry also failed:', retryError)
-            return NextResponse.json({ error: 'Failed to create tee time', details: retryError.message }, { status: 400 })
-          }
-          
-          return NextResponse.json({ success: true, message: 'Tee time created successfully', tee_time: retryTeeTime })
-        }
-        
-        return NextResponse.json({ error: 'Failed to create tee time', details: error.message }, { status: 400 })
+        console.error('❌ Error creating tee time:', error)
+        return NextResponse.json({ 
+          error: 'Failed to create tee time', 
+          details: error.message,
+          attemptedData: insertData
+        }, { status: 400 })
       }
       
-      return NextResponse.json({ success: true, message: 'Tee time created successfully', tee_time: newTeeTime })
+      console.log('✅ Tee time created successfully:', newTeeTime)
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Tee time created successfully', 
+        tee_time: newTeeTime 
+      })
     }
 
     if (action === 'apply') {

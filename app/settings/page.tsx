@@ -12,7 +12,7 @@ import {
   ArrowLeft
 } from 'lucide-react'
 import Link from 'next/link'
-import GolfGrassFooter from '@/components/GolfGrassFooter'
+
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('profile')
@@ -179,7 +179,14 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0">
+        <div className="absolute top-20 left-20 w-1 h-1 bg-emerald-400 rounded-full animate-ping"></div>
+        <div className="absolute top-40 right-40 w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
+        <div className="absolute bottom-20 left-1/3 w-1.5 h-1.5 bg-emerald-300 rounded-full animate-bounce"></div>
+        <div className="absolute bottom-40 right-1/4 w-1 h-1 bg-cyan-300 rounded-full animate-ping"></div>
+      </div>
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-xl border-b border-slate-200/60 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-6">
@@ -716,8 +723,7 @@ export default function SettingsPage() {
         )}
       </div>
       
-      {/* Golf Grass Footer */}
-      <GolfGrassFooter />
+
     </div>
   )
 }
