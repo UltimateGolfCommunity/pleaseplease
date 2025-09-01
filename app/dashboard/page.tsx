@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import WeatherWidget from '@/app/components/WeatherWidget'
 import GolfRoundForm from '@/app/components/GolfRoundForm'
+import Logo from '@/app/components/Logo'
 
 export default function Dashboard() {
   const { user, profile, signOut, loading } = useAuth()
@@ -882,13 +883,7 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
-            <div className="flex items-center space-x-4">
-              <div className="h-12 w-12 bg-gradient-to-br from-emerald-500 via-blue-600 to-indigo-700 rounded-2xl flex items-center justify-center shadow-xl relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 group-hover:animate-pulse"></div>
-                <Target className="h-7 w-7 text-white relative z-10" />
-                </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-slate-800 via-blue-800 to-indigo-800 bg-clip-text text-transparent">Golf Community</span>
-            </div>
+            <Logo size="lg" showText={false} />
 
             {/* Navigation Tabs */}
             <div className="hidden md:flex items-center space-x-1 bg-gradient-to-r from-slate-700/90 to-slate-600/80 backdrop-blur-xl rounded-2xl p-2 shadow-lg border border-slate-600/40">

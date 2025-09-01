@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
-import { LogIn, Eye, EyeOff, XCircle, Club, Sparkles, ArrowLeft } from 'lucide-react'
+import { LogIn, Eye, EyeOff, XCircle, ArrowLeft } from 'lucide-react'
+import Logo from '@/app/components/Logo'
 
 
 export default function LoginPage() {
@@ -73,15 +74,7 @@ export default function LoginPage() {
       <nav className="bg-slate-800/80 backdrop-blur-xl border-b border-slate-700/60 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <div className="relative">
-                <Club className="h-8 w-8 text-emerald-500 mr-3" />
-                <Sparkles className="h-4 w-4 text-emerald-400 absolute -top-1 -right-1" />
-              </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
-                Ultimate Golf Community
-              </span>
-            </div>
+            <Logo size="md" />
             
             <div className="flex items-center space-x-4">
               <a

@@ -16,7 +16,6 @@ interface WeatherData {
 import { 
   LogIn, 
   UserPlus, 
-  Club, 
   Users, 
   Calendar, 
   Trophy, 
@@ -32,6 +31,7 @@ import {
   TrendingUp,
   User
 } from 'lucide-react'
+import Logo from '@/app/components/Logo'
 
 
 export default function HomePage() {
@@ -78,16 +78,7 @@ export default function HomePage() {
       <nav className="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-md border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <div className="relative">
-                <Club className="h-6 w-6 sm:h-8 sm:w-8 text-emerald-400 mr-2 sm:mr-3" />
-                <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-300 absolute -top-1 -right-1" />
-              </div>
-              <span className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
-                <span className="hidden sm:inline">Ultimate Golf Community</span>
-                <span className="sm:hidden">UGC</span>
-              </span>
-            </div>
+            <Logo size="md" />
             
             <div className="flex items-center space-x-2 sm:space-x-4">
               {user ? (
