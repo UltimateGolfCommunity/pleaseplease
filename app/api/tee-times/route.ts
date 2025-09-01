@@ -84,6 +84,27 @@ export async function GET(request: NextRequest) {
       if (error) throw error
       return NextResponse.json(data || [])
     }
+    
+    if (action === 'get-applications' && userId) {
+      // Fetch applications for a specific user
+      const { data: applications, error } = await supabase
+        .from('tee_time_applications')
+        .select(`
+          *,
+          tee_times (
+            id,
+            course_name,
+            tee_time_date,
+            tee_time_time,
+            creator_id
+          )
+        `)
+        .eq('applicant_id', userId)
+        .order('applied_at', { ascending: false })
+
+      if (error) throw error
+      return NextResponse.json({ applications: applications || [] })
+    }
 
     // Default: return all tee times
     const { data, error } = await supabase
@@ -164,6 +185,15 @@ export async function POST(request: NextRequest) {
         handicap_requirement: data.handicap_requirement || 'Any level',
         description: data.description || '',
         status: 'active'
+      }
+      
+      // Try to add course_name if available, but don't fail if it doesn't work
+      if (data.course_name && data.course_name.trim() !== '') {
+        try {
+          insertData.course_name = data.course_name
+        } catch (e) {
+          console.log('⚠️ Could not add course_name, continuing without it')
+        }
       }
       
       console.log('🔍 Creating tee time with data:', insertData)

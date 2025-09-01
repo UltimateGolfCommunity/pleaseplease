@@ -88,6 +88,10 @@ export default function Dashboard() {
 
   // Tee time loading state
   const [teeTimesLoading, setTeeTimesLoading] = useState(false)
+  
+  // Applications state
+  const [applications, setApplications] = useState<any[]>([])
+  const [applicationsLoading, setApplicationsLoading] = useState(false)
 
   // Profile editing state
   const [profileForm, setProfileForm] = useState({
@@ -273,7 +277,7 @@ export default function Dashboard() {
         const response = await fetch('/api/tee-times')
         if (response.ok) {
           const data = await response.json()
-          setAvailableTeeTimes(data)
+          setAvailableTeeTimes(data.tee_times || [])
         } else {
           setAvailableTeeTimes([])
         }
@@ -281,6 +285,24 @@ export default function Dashboard() {
         setAvailableTeeTimes([])
       } finally {
         setTeeTimesLoading(false)
+      }
+      
+      // Fetch applications
+      if (user?.id) {
+        try {
+          setApplicationsLoading(true)
+          const response = await fetch('/api/tee-times?action=get-applications&user_id=' + user.id)
+          if (response.ok) {
+            const data = await response.json()
+            setApplications(data.applications || [])
+          } else {
+            setApplications([])
+          }
+        } catch (error) {
+          setApplications([])
+        } finally {
+          setApplicationsLoading(false)
+        }
       }
     }
     
@@ -313,7 +335,7 @@ export default function Dashboard() {
       const response = await fetch('/api/tee-times')
       if (response.ok) {
         const data = await response.json()
-        setAvailableTeeTimes(data)
+        setAvailableTeeTimes(data.tee_times || [])
       } else {
         setAvailableTeeTimes([])
       }
@@ -321,6 +343,23 @@ export default function Dashboard() {
       setAvailableTeeTimes([])
     } finally {
       setTeeTimesLoading(false)
+    }
+  }
+  
+  const fetchApplications = async () => {
+    try {
+      setApplicationsLoading(true)
+      const response = await fetch('/api/tee-times?action=get-applications&user_id=' + user?.id)
+      if (response.ok) {
+        const data = await response.json()
+        setApplications(data.applications || [])
+      } else {
+        console.error('Failed to fetch applications')
+      }
+    } catch (error) {
+      console.error('Error fetching applications:', error)
+    } finally {
+      setApplicationsLoading(false)
     }
   }
 
@@ -385,8 +424,39 @@ export default function Dashboard() {
 
   const handleApplyToTeeTime = async (teeTimeId: string) => {
     try {
-      // In a real app, this would make an API call
-      alert('Application submitted successfully! The creator will be notified.')
+      const response = await fetch('/api/tee-times', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'apply',
+          tee_time_id: teeTimeId,
+          applicant_id: user?.id
+        }),
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        console.log('Application submitted successfully:', result)
+        
+        // Add to recent activity for immediate feedback
+        setRecentActivity(prev => [{
+          id: Date.now(),
+          type: 'application',
+          message: `Applied to tee time on ${new Date().toLocaleDateString()}`,
+          time: 'Just now'
+        }, ...prev.slice(0, 3)])
+        
+        alert('Application submitted successfully! The creator will be notified.')
+        
+        // Refresh tee times to show updated status
+        fetchTeeTimes()
+      } else {
+        const errorData = await response.json()
+        console.error('Failed to submit application:', errorData)
+        alert('Failed to submit application: ' + (errorData.error || 'Unknown error'))
+      }
     } catch (error) {
       console.error('Error applying to tee time:', error)
       alert('Failed to submit application')
