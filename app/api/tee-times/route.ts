@@ -195,8 +195,6 @@ export async function POST(request: NextRequest) {
         })
       }
       
-      return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
-      
       if (action === 'apply') {
         // Mock application
         return NextResponse.json({ 
@@ -214,7 +212,7 @@ export async function POST(request: NextRequest) {
       }
       
       console.log('❌ Invalid action:', action)
-          return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+      return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     }
 
     // Use real Supabase if configured
