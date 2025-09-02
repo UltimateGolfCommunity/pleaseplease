@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   const lon = searchParams.get('lon')
   
   // Check if we have a valid OpenWeather API key
-  const apiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY
+  const apiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY || '4f47bb853251d4df07d4e8d8c178c77f'
   const hasValidApiKey = apiKey && 
                         !apiKey.includes('your_openweather_api_key_here') && 
                         apiKey.length > 10
