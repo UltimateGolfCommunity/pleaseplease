@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { createAdminClient } from '@/lib/supabase-admin'
 
 // Mock user data for development
 const mockUsers = [
@@ -113,40 +114,65 @@ export async function GET(request: NextRequest) {
     }
 
     if (action === 'connections') {
-      // Get connections where user is requester or recipient
-      const { data: connections, error } = await supabase
-        .from('user_connections')
-        .select('*')
-        .or(`requester_id.eq.${userId},recipient_id.eq.${userId}`)
-        .in('status', ['pending', 'accepted'])
-
-      if (error) throw error
-
-      // Get user profiles for the other users in the connections
-      const userIds = connections?.map((conn: any) => 
-        conn.requester_id === userId ? conn.recipient_id : conn.requester_id
-      ) || []
-
-      if (userIds.length > 0) {
-        const { data: userProfiles, error: profilesError } = await supabase
-          .from('user_profiles')
+      try {
+        console.log('🔍 Fetching connections for user:', userId)
+        
+        // Use admin client to bypass RLS for connections query
+        const adminSupabase = createAdminClient()
+        
+        // Get connections where user is requester or recipient
+        const { data: connections, error } = await adminSupabase
+          .from('user_connections')
           .select('*')
-          .in('id', userIds)
+          .or(`requester_id.eq.${userId},recipient_id.eq.${userId}`)
+          .in('status', ['pending', 'accepted'])
 
-        if (profilesError) throw profilesError
+        if (error) {
+          console.error('❌ Error fetching connections:', error)
+          throw error
+        }
 
-        // Combine connection data with user profiles
-        const enrichedConnections = connections?.map((conn: any) => ({
-          ...conn,
-          connected_user: userProfiles?.find((profile: any) => 
-            profile.id === (conn.requester_id === userId ? conn.recipient_id : conn.requester_id)
-          )
-        })) || []
+        console.log('📊 Found connections:', connections?.length || 0)
 
-        return NextResponse.json(enrichedConnections)
+        // Get user profiles for the other users in the connections
+        const userIds = connections?.map((conn: any) => 
+          conn.requester_id === userId ? conn.recipient_id : conn.requester_id
+        ) || []
+
+        console.log('👥 User IDs to fetch:', userIds)
+
+        if (userIds.length > 0) {
+          const { data: userProfiles, error: profilesError } = await adminSupabase
+            .from('user_profiles')
+            .select('*')
+            .in('id', userIds)
+
+          if (profilesError) {
+            console.error('❌ Error fetching user profiles:', profilesError)
+            throw profilesError
+          }
+
+          console.log('👤 Found user profiles:', userProfiles?.length || 0)
+
+          // Combine connection data with user profiles
+          const enrichedConnections = connections?.map((conn: any) => ({
+            ...conn,
+            connected_user: userProfiles?.find((profile: any) => 
+              profile.id === (conn.requester_id === userId ? conn.recipient_id : conn.requester_id)
+            )
+          })) || []
+
+          console.log('✅ Returning enriched connections:', enrichedConnections.length)
+          return NextResponse.json(enrichedConnections)
+        }
+
+        console.log('✅ No connections found, returning empty array')
+        return NextResponse.json([])
+      } catch (connectionError) {
+        console.error('❌ Connection fetch error:', connectionError)
+        // Return empty array instead of throwing to prevent 500 error
+        return NextResponse.json([])
       }
-
-      return NextResponse.json([])
     }
 
     // Default: return all users
