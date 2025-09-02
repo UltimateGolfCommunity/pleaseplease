@@ -655,6 +655,51 @@ export default function Dashboard() {
     }
   }
 
+  const handleDeleteTeeTime = async (teeTimeId: string) => {
+    if (!confirm('Are you sure you want to delete this tee time? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      const response = await fetch('/api/tee-times', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'delete',
+          tee_time_id: teeTimeId,
+          user_id: user?.id
+        }),
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        console.log('Tee time deleted successfully:', result)
+        
+        // Add to recent activity for immediate feedback
+        setRecentActivity(prev => [{
+          id: Date.now(),
+          type: 'delete',
+          message: `Deleted tee time on ${new Date().toLocaleDateString()}`,
+          time: 'Just now'
+        }, ...prev.slice(0, 3)])
+        
+        alert('Tee time deleted successfully!')
+        
+        // Refresh tee times to show updated status
+        fetchTeeTimes()
+      } else {
+        const errorData = await response.json()
+        console.error('Failed to delete tee time:', errorData)
+        alert('Failed to delete tee time: ' + (errorData.error || 'Unknown error'))
+      }
+    } catch (error) {
+      console.error('Error deleting tee time:', error)
+      alert('Failed to delete tee time')
+    }
+  }
+
   const handleViewCourse = (courseId: string) => {
     // In a real app, this would navigate to course details
     alert(`Viewing course details for ${courseId}`)
@@ -1327,12 +1372,23 @@ export default function Dashboard() {
                       </div>
                       <p className="text-slate-200 mb-4 sm:mb-6 text-base sm:text-lg leading-relaxed">{teeTime.description}</p>
                       <div className="flex flex-col sm:flex-row gap-3 sm:space-x-4">
-                        <button
-                          onClick={() => handleApplyToTeeTime(teeTime.id)}
-                          className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white py-3 px-6 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-                        >
-                          Apply to Join
-                        </button>
+                        {teeTime.creator_id === user?.id ? (
+                          // Show delete button for tee time creator
+                          <button
+                            onClick={() => handleDeleteTeeTime(teeTime.id)}
+                            className="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white py-3 px-6 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                          >
+                            Delete Tee Time
+                          </button>
+                        ) : (
+                          // Show apply button for other users
+                          <button
+                            onClick={() => handleApplyToTeeTime(teeTime.id)}
+                            className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white py-3 px-6 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                          >
+                            Apply to Join
+                          </button>
+                        )}
                         <button className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-3 px-6 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1">
                           Message Creator
                         </button>

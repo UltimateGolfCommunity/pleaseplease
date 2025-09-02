@@ -169,6 +169,83 @@ export async function GET(request: NextRequest) {
   }
 }
 
+export async function DELETE(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { action, tee_time_id, user_id } = body
+
+    if (!tee_time_id || !user_id) {
+      return NextResponse.json({ error: 'Tee time ID and user ID are required' }, { status: 400 })
+    }
+
+    // Check if Supabase is configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      console.log('Using mock data for tee-times API DELETE')
+      
+      if (action === 'delete') {
+        // Mock tee time deletion
+        return NextResponse.json({ 
+          success: true, 
+          message: 'Tee time deleted successfully'
+        })
+      }
+      
+      return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+    }
+
+    // Use real Supabase if configured
+    const supabase = createAdminClient()
+
+    if (action === 'delete') {
+      // First verify the user owns this tee time
+      const { data: teeTime, error: checkError } = await supabase
+        .from('tee_times')
+        .select('creator_id')
+        .eq('id', tee_time_id)
+        .single()
+
+      if (checkError || !teeTime) {
+        return NextResponse.json({ 
+          error: 'Tee time not found',
+          details: 'The tee time you are trying to delete does not exist'
+        }, { status: 404 })
+      }
+
+      if (teeTime.creator_id !== user_id) {
+        return NextResponse.json({ 
+          error: 'Unauthorized',
+          details: 'You can only delete your own tee times'
+        }, { status: 403 })
+      }
+
+      // Delete the tee time
+      const { error: deleteError } = await supabase
+        .from('tee_times')
+        .delete()
+        .eq('id', tee_time_id)
+
+      if (deleteError) {
+        console.error('Error deleting tee time:', deleteError)
+        return NextResponse.json({ 
+          error: 'Failed to delete tee time',
+          details: deleteError.message
+        }, { status: 500 })
+      }
+
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Tee time deleted successfully'
+      })
+    }
+
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+
+  } catch (error) {
+    console.error('Error in tee-times DELETE API:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
