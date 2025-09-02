@@ -221,6 +221,21 @@ export async function POST(request: NextRequest) {
     const supabase = createAdminClient()
 
     if (action === 'create') {
+      // First check if user profile exists
+      const { data: userProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('id', data.creator_id)
+        .single()
+
+      if (profileError || !userProfile) {
+        console.error('❌ User profile not found:', data.creator_id)
+        return NextResponse.json({ 
+          error: 'User profile not found. Please complete your profile first.',
+          details: 'User profile does not exist'
+        }, { status: 400 })
+      }
+
       // Use only the fields that exist in the database schema
       const insertData = {
         creator_id: data.creator_id,

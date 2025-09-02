@@ -347,8 +347,30 @@ export default function Dashboard() {
   useEffect(() => {
     if (user?.id) {
       fetchConnections()
+      // Check if user profile exists
+      checkUserProfile()
     }
   }, [user?.id])
+
+  const checkUserProfile = async () => {
+    if (!user?.id) return
+    
+    try {
+      const response = await fetch(`/api/check-user-profile?user_id=${user.id}`)
+      if (response.ok) {
+        const result = await response.json()
+        if (!result.exists && result.created) {
+          console.log('✅ User profile created successfully')
+          // Refresh the profile data
+          window.location.reload()
+        }
+      } else {
+        console.error('Failed to check user profile')
+      }
+    } catch (error) {
+      console.error('Error checking user profile:', error)
+    }
+  }
 
   // Handler functions
   const openTeeTimeModal = () => {
