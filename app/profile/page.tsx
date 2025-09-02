@@ -243,7 +243,7 @@ export default function ProfilePage() {
                 <ArrowLeft className="h-5 w-5 mr-2" />
                 Back to Dashboard
               </button>
-              <Logo size="md" />
+              <Logo size="lg" />
             </div>
             
             <div className="flex items-center space-x-4">

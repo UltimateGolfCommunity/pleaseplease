@@ -73,8 +73,8 @@ export default function LoginPage() {
       {/* Navigation */}
       <nav className="bg-slate-800/80 backdrop-blur-xl border-b border-slate-700/60 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Logo size="md" />
+          <div className="flex justify-between items-center h-20">
+            <Logo size="lg" />
             
             <div className="flex items-center space-x-4">
               <a

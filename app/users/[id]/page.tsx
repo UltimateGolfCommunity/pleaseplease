@@ -126,7 +126,7 @@ export default function UserProfilePage() {
       {/* Navigation */}
       <nav className="bg-gray-900/95 backdrop-blur-md border-b border-gray-800 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-20">
             <div className="flex items-center">
               <button
                 onClick={() => router.push('/dashboard')}
@@ -135,7 +135,7 @@ export default function UserProfilePage() {
                 <ArrowLeft className="h-5 w-5 mr-2" />
                 Back to Dashboard
               </button>
-              <Logo size="md" />
+              <Logo size="lg" />
             </div>
           </div>
         </div>

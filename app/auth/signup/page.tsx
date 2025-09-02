@@ -135,8 +135,8 @@ export default function SignupPage() {
       {/* Navigation */}
       <nav className="bg-black/80 backdrop-blur-md border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Logo size="md" />
+          <div className="flex justify-between items-center h-20">
+            <Logo size="lg" />
             
             <div className="flex items-center space-x-4">
               <a
