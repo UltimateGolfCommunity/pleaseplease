@@ -22,38 +22,67 @@ CREATE TABLE IF NOT EXISTS group_invitations (
 );
 
 -- Add indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_group_invitations_group_id ON group_invitations(group_id);
-CREATE INDEX IF NOT EXISTS idx_group_invitations_invited_user_id ON group_invitations(invited_user_id);
-CREATE INDEX IF NOT EXISTS idx_group_invitations_status ON group_invitations(status);
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_group_invitations_group_id') THEN
+        CREATE INDEX idx_group_invitations_group_id ON group_invitations(group_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_group_invitations_invited_user_id') THEN
+        CREATE INDEX idx_group_invitations_invited_user_id ON group_invitations(invited_user_id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_group_invitations_status') THEN
+        CREATE INDEX idx_group_invitations_status ON group_invitations(status);
+    END IF;
+END $$;
 
 -- Add RLS policies for group_invitations
 ALTER TABLE group_invitations ENABLE ROW LEVEL SECURITY;
 
 -- Users can view invitations sent to them
-CREATE POLICY IF NOT EXISTS "Users can view own invitations" ON group_invitations 
-FOR SELECT USING (auth.uid() = invited_user_id);
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can view own invitations' AND tablename = 'group_invitations') THEN
+        CREATE POLICY "Users can view own invitations" ON group_invitations 
+        FOR SELECT USING (auth.uid() = invited_user_id);
+    END IF;
+END $$;
 
 -- Group owners can view invitations for their groups
-CREATE POLICY IF NOT EXISTS "Group owners can view group invitations" ON group_invitations 
-FOR SELECT USING (
-    EXISTS (
-        SELECT 1 FROM golf_groups 
-        WHERE id = group_id AND creator_id = auth.uid()
-    )
-);
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Group owners can view group invitations' AND tablename = 'group_invitations') THEN
+        CREATE POLICY "Group owners can view group invitations" ON group_invitations 
+        FOR SELECT USING (
+            EXISTS (
+                SELECT 1 FROM golf_groups 
+                WHERE id = group_id AND creator_id = auth.uid()
+            )
+        );
+    END IF;
+END $$;
 
 -- Users can create invitations (if they're group owners)
-CREATE POLICY IF NOT EXISTS "Group owners can create invitations" ON group_invitations 
-FOR INSERT WITH CHECK (
-    EXISTS (
-        SELECT 1 FROM golf_groups 
-        WHERE id = group_id AND creator_id = auth.uid()
-    )
-);
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Group owners can create invitations' AND tablename = 'group_invitations') THEN
+        CREATE POLICY "Group owners can create invitations" ON group_invitations 
+        FOR INSERT WITH CHECK (
+            EXISTS (
+                SELECT 1 FROM golf_groups 
+                WHERE id = group_id AND creator_id = auth.uid()
+            )
+        );
+    END IF;
+END $$;
 
 -- Users can update their own invitations
-CREATE POLICY IF NOT EXISTS "Users can update own invitations" ON group_invitations 
-FOR UPDATE USING (auth.uid() = invited_user_id);
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can update own invitations' AND tablename = 'group_invitations') THEN
+        CREATE POLICY "Users can update own invitations" ON group_invitations 
+        FOR UPDATE USING (auth.uid() = invited_user_id);
+    END IF;
+END $$;
 
 -- Add comments
 COMMENT ON COLUMN user_profiles.header_image_url IS 'URL or base64 data for the user profile header image';
