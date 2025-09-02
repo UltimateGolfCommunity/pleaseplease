@@ -1,22 +1,24 @@
 import Image from 'next/image'
 
 interface LogoProps {
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'sm' | 'md' | 'lg' | 'xl'
   showText?: boolean
   className?: string
 }
 
-export default function Logo({ size = 'md', showText = true, className = '' }: LogoProps) {
+export default function Logo({ size = 'lg', showText = true, className = '' }: LogoProps) {
   const sizeClasses = {
-    sm: 'h-6 w-6',
-    md: 'h-8 w-8',
-    lg: 'h-12 w-12'
+    sm: 'h-8 w-8',
+    md: 'h-12 w-12',
+    lg: 'h-16 w-16',
+    xl: 'h-20 w-20'
   }
 
   const textSizes = {
     sm: 'text-lg',
     md: 'text-xl',
-    lg: 'text-2xl'
+    lg: 'text-2xl',
+    xl: 'text-3xl'
   }
 
   return (

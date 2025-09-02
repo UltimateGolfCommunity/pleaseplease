@@ -1116,9 +1116,9 @@ export default function Dashboard() {
       {/* Clean Navigation */}
       <nav className="bg-slate-800/90 backdrop-blur-xl border-b border-slate-700/60 sticky top-0 z-50 shadow-xl">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-20">
             {/* Logo */}
-            <Logo size="lg" showText={false} />
+            <Logo size="xl" showText={false} />
 
             {/* Navigation Tabs */}
             <div className="hidden md:flex items-center space-x-1 bg-gradient-to-r from-slate-700/90 to-slate-600/80 backdrop-blur-xl rounded-2xl p-2 shadow-lg border border-slate-600/40">
