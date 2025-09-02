@@ -825,7 +825,7 @@ export default function Dashboard() {
         console.log('📊 Search results:', data?.length || 0)
         
         // Filter out the current user from search results
-        const filteredData = data.filter((user: any) => user.id !== user?.id)
+        const filteredData = data.filter((searchedUser: any) => searchedUser.id !== user?.id)
         console.log('🔍 Filtered results:', filteredData?.length || 0)
         
         setSearchResults(filteredData)
@@ -1359,7 +1359,7 @@ export default function Dashboard() {
             {/* User Search & Connections */}
             <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8 shadow-xl">
               <h2 className="text-2xl font-bold text-white mb-6">Find Golfers</h2>
-              <div className="flex space-x-4 mb-6">
+              <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }} className="flex space-x-4 mb-6">
                 <input
                   type="text"
                   placeholder="Search by name, location, or handicap..."
@@ -1368,13 +1368,13 @@ export default function Dashboard() {
                   className="flex-1 px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300"
                 />
                 <button
-                  onClick={handleSearch}
+                  type="submit"
                   disabled={searchLoading}
                   className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-6 py-3 rounded-lg transition-all duration-300 font-medium disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-1"
                 >
                   {searchLoading ? 'Searching...' : 'Search'}
                 </button>
-              </div>
+              </form>
               
               {/* Search Results */}
               {searchResults && searchResults.length > 0 && (
@@ -1411,7 +1411,17 @@ export default function Dashboard() {
 
               {searchPerformed && (!searchResults || searchResults.length === 0) && !searchLoading && (
                 <div className="text-center py-8">
-                  <p className="text-slate-400">No users found matching your search.</p>
+                  <p className="text-slate-400 mb-4">No users found matching your search.</p>
+                  <p className="text-slate-500 text-sm">Try searching for common names like "John", "Sarah", or "Mike"</p>
+                  <button
+                    onClick={() => {
+                      setSearchQuery('John')
+                      handleSearch()
+                    }}
+                    className="mt-4 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium"
+                  >
+                    Try Example Search
+                  </button>
                 </div>
               )}
             </div>
