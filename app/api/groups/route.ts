@@ -5,7 +5,8 @@ const supabase = createServerClient()
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, description, maxMembers } = await request.json()
+    const body = await request.json()
+    const { action, name, description, maxMembers, user_id: bodyUserId } = body
     
     if (!name) {
       return NextResponse.json(
@@ -15,15 +16,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the current user from the request
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader) {
+    let user_id = bodyUserId
+    
+    // Try to get user_id from Authorization header if not in body
+    if (!user_id) {
+      const authHeader = request.headers.get('authorization')
+      if (authHeader) {
+        user_id = authHeader.replace('Bearer ', '')
+      }
+    }
+    
+    // If still no user_id, return error
+    if (!user_id) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { error: 'User ID is required' },
+        { status: 400 }
       )
     }
-
-    const user_id = authHeader.replace('Bearer ', '')
 
     // Create the group
     const { data: group, error: groupError } = await supabase

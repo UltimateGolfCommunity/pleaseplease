@@ -958,20 +958,25 @@ export default function Dashboard() {
         },
         body: JSON.stringify({
           action: 'create',
+          user_id: user?.id,
           ...groupForm
         }),
       })
       
       if (response.ok) {
-        console.log('Group created successfully')
+        const result = await response.json()
+        console.log('Group created successfully:', result)
         setShowGroupModal(false)
         setGroupForm({
           name: '',
           description: '',
           maxMembers: 8
         })
+        alert('Group created successfully!')
       } else {
-        console.error('Failed to create group')
+        const errorData = await response.json()
+        console.error('Failed to create group:', errorData)
+        alert('Failed to create group: ' + (errorData.error || 'Unknown error'))
       }
     } catch (error) {
       console.error('Error creating group:', error)
