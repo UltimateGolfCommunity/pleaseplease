@@ -4,16 +4,16 @@ import React, { memo } from 'react'
 import { Home, Users, Trophy, Target, User } from 'lucide-react'
 
 interface DashboardTabsProps {
-  activeTab: 'overview' | 'community' | 'golf' | 'achievements' | 'profile'
-  onTabChange: (tab: 'overview' | 'community' | 'golf' | 'achievements' | 'profile') => void
+  activeTab: 'overview' | 'find-someone' | 'courses' | 'groups' | 'profile'
+  onTabChange: (tab: 'overview' | 'find-someone' | 'courses' | 'groups' | 'profile') => void
 }
 
 const DashboardTabs = memo(({ activeTab, onTabChange }: DashboardTabsProps) => {
   const tabs = [
     { id: 'overview' as const, label: 'Overview', icon: Home },
-    { id: 'community' as const, label: 'Community', icon: Users },
-    { id: 'golf' as const, label: 'Golf', icon: Trophy },
-    { id: 'achievements' as const, label: 'Achievements', icon: Target },
+    { id: 'find-someone' as const, label: 'Find Someone', icon: Users },
+    { id: 'courses' as const, label: 'Courses', icon: Trophy },
+    { id: 'groups' as const, label: 'Groups', icon: Users },
     { id: 'profile' as const, label: 'Profile', icon: User },
   ]
 

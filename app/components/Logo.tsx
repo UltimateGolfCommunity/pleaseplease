@@ -1,5 +1,3 @@
-import Image from 'next/image'
-
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl'
   showText?: boolean
@@ -8,36 +6,22 @@ interface LogoProps {
 
 export default function Logo({ size = 'xl', showText = true, className = '' }: LogoProps) {
   const sizeClasses = {
-    sm: 'h-12 w-12',
-    md: 'h-16 w-16',
-    lg: 'h-20 w-20',
-    xl: 'h-24 w-24'
-  }
-
-  const textSizes = {
-    sm: 'text-lg',
-    md: 'text-xl',
-    lg: 'text-2xl',
-    xl: 'text-3xl'
+    sm: 'h-40 w-40',
+    md: 'h-56 w-56',
+    lg: 'h-72 w-72',
+    xl: 'h-96 w-96'
   }
 
   return (
     <div className={`flex items-center ${className}`}>
-      <div className={`relative ${sizeClasses[size]} mr-2 sm:mr-3`}>
-        <Image
-          src="/logoreal.png"
+      {/* Logo Image */}
+      <div className={`relative ${sizeClasses[size]}`}>
+        <img
+          src="/newlogo.png"
           alt="Ultimate Golf Community Logo"
-          width={48}
-          height={48}
           className="w-full h-full object-contain"
         />
       </div>
-      {showText && (
-        <span className={`font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent ${textSizes[size]}`}>
-          <span className="hidden sm:inline">Ultimate Golf Community</span>
-          <span className="sm:hidden">UGC</span>
-        </span>
-      )}
     </div>
   )
 }

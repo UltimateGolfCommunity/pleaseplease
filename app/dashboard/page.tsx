@@ -23,7 +23,8 @@ import {
   Home,
   Trophy,
   Target,
-  Camera
+  Camera,
+  X
 } from 'lucide-react'
 import WeatherWidget from '@/app/components/WeatherWidget'
 import GolfRoundForm from '@/app/components/GolfRoundForm'
@@ -34,7 +35,7 @@ export default function Dashboard() {
   const router = useRouter()
   
 
-      const [activeTab, setActiveTab] = useState<'overview' | 'community' | 'golf' | 'achievements' | 'profile'>('overview')
+      const [activeTab, setActiveTab] = useState<'overview' | 'find-someone' | 'courses' | 'groups' | 'profile'>('overview')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
@@ -64,6 +65,16 @@ export default function Dashboard() {
     maxMembers: 8
   })
   
+  // Group invitation state
+  const [groupInviteQuery, setGroupInviteQuery] = useState('')
+  const [groupInviteResults, setGroupInviteResults] = useState<any[]>([])
+  const [groupInviteLoading, setGroupInviteLoading] = useState(false)
+  const [selectedInvitees, setSelectedInvitees] = useState<any[]>([])
+  
+  // Group invitations state
+  const [pendingInvitations, setPendingInvitations] = useState<any[]>([])
+  const [invitationsLoading, setInvitationsLoading] = useState(false)
+  
   const [messageForm, setMessageForm] = useState({
     recipient: '',
     subject: '',
@@ -82,6 +93,33 @@ export default function Dashboard() {
   const [courseSearchQuery, setCourseSearchQuery] = useState('')
   const [courseSearchLoading, setCourseSearchLoading] = useState(false)
   const [courseSearchResults, setCourseSearchResults] = useState<any[]>([])
+  
+  // Course review state
+  const [showReviewModal, setShowReviewModal] = useState(false)
+  const [selectedCourse, setSelectedCourse] = useState<any>(null)
+  const [reviewForm, setReviewForm] = useState({
+    rating: 5,
+    comment: ''
+  })
+  const [reviewSubmitting, setReviewSubmitting] = useState(false)
+  
+  // Course creation state
+  const [showCreateCourseModal, setShowCreateCourseModal] = useState(false)
+    const [createCourseForm, setCreateCourseForm] = useState({
+    name: '',
+    location: '',
+    description: '',
+    par: '',
+    holes: 18
+  })
+
+  // Load courses when Courses tab is opened
+  useEffect(() => {
+    if (activeTab === 'courses' && courseSearchResults.length === 0) {
+      handleCourseSearch()
+    }
+  }, [activeTab])
+  const [createCourseSubmitting, setCreateCourseSubmitting] = useState(false)
 
   // Badge system state
   const [badgeCategoryFilter, setBadgeCategoryFilter] = useState('')
@@ -100,6 +138,7 @@ export default function Dashboard() {
   const [connections, setConnections] = useState<any[]>([])
   const [pendingRequests, setPendingRequests] = useState<any[]>([])
   const [connectionsLoading, setConnectionsLoading] = useState(false)
+  const [showConnectionsModal, setShowConnectionsModal] = useState(false)
 
   // Profile editing state
   const [profileForm, setProfileForm] = useState({
@@ -108,11 +147,14 @@ export default function Dashboard() {
     username: '',
     bio: '',
     avatar_url: '',
+    header_image_url: '',
     handicap: 0,
     location: ''
   })
   const [profileSaving, setProfileSaving] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [uploadingHeaderImage, setUploadingHeaderImage] = useState(false)
+  const [isEditingProfile, setIsEditingProfile] = useState(false)
 
   // Notifications state
   const [notifications, setNotifications] = useState([
@@ -337,6 +379,7 @@ export default function Dashboard() {
         username: profile.username || '',
         bio: profile.bio || '',
         avatar_url: profile.avatar_url || '',
+        header_image_url: profile.header_image_url || '',
         handicap: profile.handicap || 0,
         location: profile.location || ''
       })
@@ -347,6 +390,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (user?.id) {
       fetchConnections()
+      fetchPendingInvitations()
       // Check if user profile exists
       checkUserProfile()
     }
@@ -535,6 +579,7 @@ export default function Dashboard() {
         // Update local profile state
         // Note: In a real app, you'd want to update the AuthContext profile as well
         alert('Profile saved successfully!')
+        setIsEditingProfile(false) // Exit edit mode after successful save
       } else {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || 'Failed to save profile')
@@ -555,6 +600,7 @@ export default function Dashboard() {
         username: profile.username || '',
         bio: profile.bio || '',
         avatar_url: profile.avatar_url || '',
+        header_image_url: profile.header_image_url || '',
         handicap: profile.handicap || 0,
         location: profile.location || ''
       })
@@ -596,10 +642,131 @@ export default function Dashboard() {
     }
   }
 
+  const handleHeaderImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
 
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file')
+      return
+    }
+
+    // Validate file size (10MB limit for header images)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Header image size must be less than 10MB')
+      return
+    }
+
+    try {
+      setUploadingHeaderImage(true)
+      
+      // Convert to base64
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const base64String = e.target?.result as string
+        setProfileForm(prev => ({ ...prev, header_image_url: base64String }))
+      }
+      reader.readAsDataURL(file)
+      
+    } catch (error) {
+      console.error('Error uploading header image:', error)
+      alert('Failed to upload header image. Please try again.')
+    } finally {
+      setUploadingHeaderImage(false)
+    }
+  }
 
   const handleCreateGroup = () => {
     setShowGroupModal(true)
+    setSelectedInvitees([])
+    setGroupInviteQuery('')
+    setGroupInviteResults([])
+  }
+  
+  const handleGroupInviteSearch = async () => {
+    if (!groupInviteQuery.trim()) {
+      setGroupInviteResults([])
+      return
+    }
+    
+    setGroupInviteLoading(true)
+    try {
+      const response = await fetch(`/api/users?search=${encodeURIComponent(groupInviteQuery)}`)
+      if (response.ok) {
+        const data = await response.json()
+        // Filter out the current user and already selected users
+        const filteredUsers = data.users?.filter((user: any) => 
+          user.id !== profile?.id && 
+          !selectedInvitees.some(invitee => invitee.id === user.id)
+        ) || []
+        setGroupInviteResults(filteredUsers)
+      } else {
+        setGroupInviteResults([])
+      }
+    } catch (error) {
+      console.error('Error searching for users:', error)
+      setGroupInviteResults([])
+    } finally {
+      setGroupInviteLoading(false)
+    }
+  }
+  
+  const handleAddInvitee = (user: any) => {
+    if (!selectedInvitees.some(invitee => invitee.id === user.id)) {
+      setSelectedInvitees([...selectedInvitees, user])
+      setGroupInviteQuery('')
+      setGroupInviteResults([])
+    }
+  }
+  
+  const handleRemoveInvitee = (userId: string) => {
+    setSelectedInvitees(selectedInvitees.filter(invitee => invitee.id !== userId))
+  }
+  
+  const fetchPendingInvitations = async () => {
+    if (!user?.id) return
+    
+    setInvitationsLoading(true)
+    try {
+      const response = await fetch(`/api/groups/invitations?user_id=${user.id}`)
+      if (response.ok) {
+        const data = await response.json()
+        setPendingInvitations(data.invitations || [])
+      }
+    } catch (error) {
+      console.error('Error fetching invitations:', error)
+    } finally {
+      setInvitationsLoading(false)
+    }
+  }
+  
+  const handleInvitationResponse = async (invitationId: string, action: 'accept' | 'decline') => {
+    try {
+      const response = await fetch('/api/groups/invitations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action,
+          invitation_id: invitationId,
+          user_id: user?.id
+        }),
+      })
+      
+      if (response.ok) {
+        // Refresh invitations
+        fetchPendingInvitations()
+        alert(action === 'accept' ? 'Invitation accepted!' : 'Invitation declined.')
+      } else {
+        const errorData = await response.json()
+        alert('Failed to respond to invitation: ' + (errorData.error || 'Unknown error'))
+      }
+    } catch (error) {
+      console.error('Error responding to invitation:', error)
+      alert('Failed to respond to invitation')
+    }
   }
 
   const handleApplyToTeeTime = async (teeTimeId: string) => {
@@ -745,79 +912,107 @@ export default function Dashboard() {
 
   // Course search functionality
   const handleCourseSearch = async () => {
-    if (!courseSearchQuery.trim()) return
-    
-    setCourseSearchLoading(true)
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      setCourseSearchLoading(true)
+      const response = await fetch(`/api/golf-courses?query=${encodeURIComponent(courseSearchQuery)}`)
       
-      // Mock course search results
-      const mockResults = [
-        {
-          id: 'course-1',
-          name: 'Pebble Beach Golf Links',
-          location: 'Pebble Beach, CA',
-          description: 'Iconic coastal golf course with stunning ocean views',
-          par: 72,
-          holes: 18,
-          average_rating: 4.8,
-          review_count: 1247,
-          reviews: [
-            {
-              user: { first_name: 'John' },
-              rating: 5,
-              comment: 'Absolutely breathtaking course. Worth every penny!'
-            },
-            {
-              user: { first_name: 'Sarah' },
-              rating: 4,
-              comment: 'Challenging but fair. The views are incredible.'
-            }
-          ]
-        },
-        {
-          id: 'course-2',
-          name: 'Augusta National Golf Club',
-          location: 'Augusta, GA',
-          description: 'Home of The Masters Tournament',
-          par: 72,
-          holes: 18,
-          average_rating: 4.9,
-          review_count: 892,
-          reviews: [
-            {
-              user: { first_name: 'Mike' },
-              rating: 5,
-              comment: 'The most pristine course I\'ve ever played.'
-            }
-          ]
-        },
-        {
-          id: 'course-3',
-          name: 'St. Andrews Old Course',
-          location: 'St. Andrews, Scotland',
-          description: 'The oldest and most iconic golf course in the world',
-          par: 72,
-          holes: 18,
-          average_rating: 4.7,
-          review_count: 1563,
-          reviews: [
-            {
-              user: { first_name: 'David' },
-              rating: 5,
-              comment: 'A pilgrimage every golfer should make.'
-            }
-          ]
-        }
-      ]
-      
-      setCourseSearchResults(mockResults)
+      if (response.ok) {
+        const data = await response.json()
+        setCourseSearchResults(data.courses || [])
+      } else {
+        console.error('Failed to search courses')
+        setCourseSearchResults([])
+      }
     } catch (error) {
       console.error('Error searching courses:', error)
       setCourseSearchResults([])
     } finally {
       setCourseSearchLoading(false)
+    }
+  }
+
+  const handleWriteReview = (course: any) => {
+    setSelectedCourse(course)
+    setReviewForm({ rating: 5, comment: '' })
+    setShowReviewModal(true)
+  }
+
+  const handleSubmitReview = async () => {
+    if (!selectedCourse || !user?.id) return
+
+    try {
+      setReviewSubmitting(true)
+      const response = await fetch('/api/golf-courses/review', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          course_id: selectedCourse.id,
+          user_id: user.id,
+          rating: reviewForm.rating,
+          comment: reviewForm.comment
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        alert('Review submitted successfully!')
+        setShowReviewModal(false)
+        // Refresh course search results to show updated ratings
+        if (courseSearchQuery) {
+          handleCourseSearch()
+        }
+      } else {
+        const errorData = await response.json()
+        alert(errorData.error || 'Failed to submit review')
+      }
+    } catch (error) {
+      console.error('Error submitting review:', error)
+      alert('Failed to submit review. Please try again.')
+    } finally {
+      setReviewSubmitting(false)
+    }
+  }
+
+  const handleCreateCourse = async () => {
+    if (!createCourseForm.name || !createCourseForm.location) {
+      alert('Course name and location are required')
+      return
+    }
+
+    try {
+      setCreateCourseSubmitting(true)
+      const response = await fetch('/api/golf-courses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: createCourseForm.name,
+          location: createCourseForm.location,
+          description: createCourseForm.description,
+          par: createCourseForm.par ? parseInt(createCourseForm.par) : null,
+          holes: parseInt(createCourseForm.holes.toString())
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        alert('Course created successfully!')
+        setShowCreateCourseModal(false)
+        setCreateCourseForm({ name: '', location: '', description: '', par: '', holes: 18 })
+        // Refresh course search results to show the new course
+        handleCourseSearch()
+      } else {
+        const errorData = await response.json()
+        alert(errorData.error || 'Failed to create course')
+      }
+    } catch (error) {
+      console.error('Error creating course:', error)
+      alert('Failed to create course. Please try again.')
+    } finally {
+      setCreateCourseSubmitting(false)
     }
   }
 
@@ -996,7 +1191,7 @@ export default function Dashboard() {
   const handleGroupSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-              const response = await fetch('/api/groups', {
+      const response = await fetch('/api/groups', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1004,7 +1199,8 @@ export default function Dashboard() {
         body: JSON.stringify({
           action: 'create',
           user_id: user?.id,
-          ...groupForm
+          ...groupForm,
+          invitees: selectedInvitees.map(invitee => invitee.id)
         }),
       })
       
@@ -1017,7 +1213,10 @@ export default function Dashboard() {
           description: '',
           maxMembers: 8
         })
-        alert('Group created successfully!')
+        setSelectedInvitees([])
+        setGroupInviteQuery('')
+        setGroupInviteResults([])
+        alert('Group created successfully!' + (selectedInvitees.length > 0 ? ` Invitations sent to ${selectedInvitees.length} user(s).` : ''))
       } else {
         const errorData = await response.json()
         console.error('Failed to create group:', errorData)
@@ -1099,7 +1298,7 @@ export default function Dashboard() {
           review: ''
         })
         // Refresh course search results if we're on the golf courses tab
-        if (activeTab === 'golf' && courseSearchQuery) {
+        if (activeTab === 'courses' && courseSearchQuery) {
           handleCourseSearch()
         }
       } else {
@@ -1115,20 +1314,22 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Clean Navigation */}
       <nav className="bg-slate-800/90 backdrop-blur-xl border-b border-slate-700/60 sticky top-0 z-50 shadow-xl">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-7xl mx-auto px-0">
           <div className="flex justify-between items-center h-24">
             {/* Logo */}
-            <Logo size="xl" showText={false} />
+            <div className="pl-6">
+              <Logo size="lg" />
+            </div>
 
             {/* Navigation Tabs */}
             <div className="hidden md:flex items-center space-x-1 bg-gradient-to-r from-slate-700/90 to-slate-600/80 backdrop-blur-xl rounded-2xl p-2 shadow-lg border border-slate-600/40">
-              {[
-                { id: 'overview', label: 'Tee Times', icon: Home },
-                { id: 'community', label: 'Community', icon: Users },
-                { id: 'golf', label: 'Golf', icon: Target },
-                { id: 'achievements', label: 'Achievements', icon: Trophy },
-                { id: 'profile', label: 'Profile', icon: User }
-                ].map((tab) => {
+                          {[
+              { id: 'overview', label: 'Tee Times', icon: Home },
+              { id: 'find-someone', label: 'Find Someone', icon: Users },
+              { id: 'courses', label: 'Courses', icon: Target },
+              { id: 'groups', label: 'Groups', icon: Users },
+              { id: 'profile', label: 'Profile', icon: User }
+            ].map((tab) => {
                   const Icon = tab.icon
                   const isActive = activeTab === tab.id
                   return (
@@ -1169,7 +1370,11 @@ export default function Dashboard() {
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-red-400 to-pink-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
                   <Bell className="h-6 w-6 relative z-10" />
-                  <div className="absolute -top-1 -right-1 h-4 w-4 bg-gradient-to-r from-red-500 to-pink-600 rounded-full shadow-lg animate-pulse"></div>
+                  {pendingInvitations.length > 0 && (
+                    <div className="absolute -top-1 -right-1 h-5 w-5 bg-gradient-to-r from-red-500 to-pink-600 rounded-full shadow-lg animate-pulse flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">{pendingInvitations.length}</span>
+                    </div>
+                  )}
                 </button>
                 
                 {/* Notifications Dropdown */}
@@ -1178,6 +1383,37 @@ export default function Dashboard() {
                     <div className="p-4">
                       <h3 className="text-lg font-semibold text-slate-800 mb-3">Notifications</h3>
                       <div className="space-y-3 max-h-64 overflow-y-auto">
+                        {/* Pending Group Invitations */}
+                        {pendingInvitations.length > 0 && (
+                          <div className="mb-4">
+                            <h4 className="text-sm font-semibold text-slate-700 mb-2">Group Invitations</h4>
+                            {pendingInvitations.map((invitation) => (
+                              <div 
+                                key={invitation.id} 
+                                className="p-3 rounded-lg border bg-blue-50 border-blue-200 mb-2"
+                              >
+                                <p className="text-slate-700 text-sm mb-2">
+                                  <span className="font-semibold">{invitation.inviter?.first_name} {invitation.inviter?.last_name}</span> invited you to join <span className="font-semibold">{invitation.group?.name}</span>
+                                </p>
+                                <div className="flex space-x-2">
+                                  <button
+                                    onClick={() => handleInvitationResponse(invitation.id, 'accept')}
+                                    className="px-3 py-1 bg-emerald-500 hover:bg-emerald-600 text-white text-xs rounded transition-colors"
+                                  >
+                                    Accept
+                                  </button>
+                                  <button
+                                    onClick={() => handleInvitationResponse(invitation.id, 'decline')}
+                                    className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-xs rounded transition-colors"
+                                  >
+                                    Decline
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
                         {notifications.map((notification) => (
                           <div 
                             key={notification.id} 
@@ -1187,9 +1423,9 @@ export default function Dashboard() {
                           >
                             <p className="text-slate-700 text-sm mb-1">{notification.message}</p>
                             <p className="text-slate-500 text-xs">{notification.time}</p>
-                    </div>
+                          </div>
                         ))}
-                  </div>
+                      </div>
                       <button 
                         onClick={() => setNotifications(notifications.map(n => ({ ...n, read: true })))}
                         className="w-full mt-3 py-2 text-sm text-emerald-600 hover:text-emerald-700 transition-colors"
@@ -1231,7 +1467,6 @@ export default function Dashboard() {
                     <hr className="my-2 border-slate-700" />
                       <button
                         onClick={() => {
-                  
                           handleSignOut()
                         }}
                         className="flex items-center w-full px-3 py-2 text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
@@ -1253,9 +1488,9 @@ export default function Dashboard() {
           <div className="px-4 py-2 space-y-1">
             {[
               { id: 'overview', label: 'Tee Times', icon: Home },
-              { id: 'community', label: 'Community', icon: Users },
-              { id: 'golf', label: 'Golf', icon: Target },
-              { id: 'achievements', label: 'Achievements', icon: Trophy },
+              { id: 'find-someone', label: 'Find Someone', icon: Users },
+              { id: 'courses', label: 'Courses', icon: Target },
+              { id: 'groups', label: 'Groups', icon: Users },
               { id: 'profile', label: 'Profile', icon: User }
             ].map((tab) => {
               const Icon = tab.icon
@@ -1398,30 +1633,13 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* Quick Actions */}
-              <div className="mt-8 sm:mt-10 pt-6 sm:pt-8 border-t border-slate-600/30">
-                <h3 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-emerald-400 to-teal-500 bg-clip-text text-transparent mb-4 sm:mb-6 text-center">Quick Actions</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                  <button className="group bg-gradient-to-br from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-6 px-6 rounded-2xl transition-all duration-300 font-semibold flex flex-col items-center justify-center shadow-lg hover:shadow-xl transform hover:-translate-y-2 hover:scale-105">
-                    <div className="bg-white/20 p-3 rounded-full mb-3 group-hover:bg-white/30 transition-colors">
-                      <Users className="h-6 w-6" />
-                    </div>
-                    <span className="text-lg">Find Golfers</span>
-                  </button>
-                  <button className="group bg-gradient-to-br from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white py-6 px-6 rounded-2xl transition-all duration-300 font-semibold flex flex-col items-center justify-center shadow-lg hover:shadow-xl transform hover:-translate-y-2 hover:scale-105">
-                    <div className="bg-white/20 p-3 rounded-full mb-3 group-hover:bg-white/30 transition-colors">
-                      <Flag className="h-6 w-6" />
-                    </div>
-                    <span className="text-lg">Record Round</span>
-                  </button>
-                </div>
-              </div>
+
             </div>
           </div>
         )}
 
         {/* Community Tab */}
-        {activeTab === 'community' && (
+        {activeTab === 'find-someone' && (
           <div className="space-y-6">
             {/* User Search & Connections */}
             <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8 shadow-xl">
@@ -1493,52 +1711,7 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* My Connections */}
-            <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8 shadow-xl">
-              <h2 className="text-2xl font-bold text-white mb-6">My Connections</h2>
-              
-              {connectionsLoading ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mx-auto"></div>
-                  <p className="text-slate-400 mt-2">Loading connections...</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {connections && connections.length > 0 ? (
-                    connections?.map((connection) => (
-                      <div key={connection.id} className="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg border border-slate-600/50">
-                        <div className="flex items-center space-x-3">
-                          <div className="h-12 w-12 rounded-full overflow-hidden border-2 border-emerald-500/30">
-                            <img
-                              src={connection.connected_user?.avatar_url || '/default-avatar.svg'}
-                              alt={`${connection.connected_user?.first_name} ${connection.connected_user?.last_name}`}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.currentTarget.src = '/default-avatar.svg'
-                              }}
-                            />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-white">{connection.connected_user?.first_name} {connection.connected_user?.last_name}</h3>
-                            <p className="text-slate-300 text-sm">{connection.connected_user?.location} • Handicap: {connection.connected_user?.handicap}</p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => router.push(`/users/${connection.connected_user?.id}`)}
-                          className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-                        >
-                          View Profile
-                        </button>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-slate-400">No connections yet. Search for golfers to connect!</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+
 
             {/* Pending Requests */}
             {pendingRequests && pendingRequests.length > 0 && (
@@ -1582,36 +1755,188 @@ export default function Dashboard() {
                 </div>
               </div>
             )}
-                
-            {/* Groups Management */}
-            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
+          </div>
+        )}
+
+                  {/* Courses Tab */}
+        {activeTab === 'courses' && (
+          <div className="space-y-6">
+
+            {/* Golf Courses */}
+            <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8 shadow-xl">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-slate-800">My Groups</h2>
-                    <button
+                <h2 className="text-2xl font-bold text-white">Golf Courses</h2>
+                <button
+                  onClick={() => setShowCreateCourseModal(true)}
+                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 py-3 rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Add Course</span>
+                </button>
+              </div>
+                
+                {/* Course Search */}
+              <div className="flex space-x-3 mb-6">
+                        <input
+                          type="text"
+                  placeholder="Search courses by name or location..."
+                          value={courseSearchQuery}
+                          onChange={(e) => setCourseSearchQuery(e.target.value)}
+                  className="flex-1 px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300"
+                        />
+                        <button
+                          onClick={handleCourseSearch}
+                          disabled={courseSearchLoading}
+                  className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-6 py-3 rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed"
+                >
+                  {courseSearchLoading ? 'Searching...' : 'Search'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setCourseSearchQuery('')
+                            handleCourseSearch()
+                          }}
+                          disabled={courseSearchLoading}
+                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-6 py-3 rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed"
+                >
+                  Show All
+                        </button>
+                </div>
+
+              {/* Course Results */}
+              {courseSearchResults && courseSearchResults.length > 0 ? (
+                <div className="space-y-4">
+                  {courseSearchResults?.map((course) => (
+                    <div key={course.id} className="bg-slate-800/50 border border-slate-600/50 rounded-xl p-6">
+                        <div className="flex items-start justify-between mb-4">
+                        <div>
+                          <h3 className="text-white font-semibold text-xl">{course.name}</h3>
+                          <p className="text-slate-300 text-sm">{course.location}</p>
+                          <p className="text-slate-200 mt-2">{course.description}</p>
+                            </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-bold text-emerald-400">{course.average_rating}</div>
+                          <div className="text-sm text-slate-400">{course.review_count} reviews</div>
+                          </div>
+                            </div>
+                      <div className="grid grid-cols-3 gap-4 text-sm mb-4">
+                        <div>
+                          <span className="text-slate-400">Par:</span>
+                          <p className="text-white font-medium">{course.par}</p>
+                          </div>
+                        <div>
+                          <span className="text-slate-400">Holes:</span>
+                          <p className="text-white font-medium">{course.holes}</p>
+                        </div>
+                        <div>
+                          <span className="text-slate-400">Recent Reviews:</span>
+                          <p className="text-white font-medium">{course.reviews?.length || 0}</p>
+                                      </div>
+                                    </div>
+                      {/* Recent Reviews */}
+                      {course.recent_reviews && course.recent_reviews.length > 0 && (
+                        <div className="mt-4 p-4 bg-slate-700/30 rounded-lg border border-slate-600/30">
+                          <h4 className="text-sm font-medium text-slate-300 mb-3">Recent Reviews</h4>
+                          <div className="space-y-3">
+                            {course.recent_reviews.map((review: any, index: number) => (
+                              <div key={index} className="flex items-start space-x-3">
+                                <div className="flex items-center space-x-2">
+                                  <div className="flex items-center">
+                                    {[...Array(5)].map((_, i) => (
+                                      <Star 
+                                        key={i} 
+                                        className={`h-3 w-3 ${i < review.rating ? 'text-yellow-400 fill-current' : 'text-slate-500'}`} 
+                                      />
+                                    ))}
+                                  </div>
+                                  <span className="text-xs text-slate-400">
+                                    {review.user_profiles?.first_name || 'Anonymous'}
+                                  </span>
+                                </div>
+                                {review.comment && (
+                                  <p className="text-sm text-slate-300 flex-1">{review.comment}</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="flex space-x-3 mt-4">
+                          <button 
+                            onClick={() => handleViewCourse(course.id)}
+                          className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white py-2 px-4 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                          >
+                            View Details
+                          </button>
+                        <button 
+                          onClick={() => handleWriteReview(course)}
+                          className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-2 px-4 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                        >
+                            Write Review
+                          </button>
+                        </div>
+                      </div>
+                  ))}
+                    </div>
+                  ) : courseSearchResults && courseSearchResults.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="bg-gradient-to-r from-slate-100 to-blue-50 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
+                        <Target className="h-10 w-10 text-slate-400" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-slate-700 mb-2">No Courses Found</h3>
+                      <p className="text-slate-600 mb-4">
+                        {courseSearchQuery ? `No courses found for "${courseSearchQuery}"` : 'No courses available yet'}
+                      </p>
+                      {courseSearchQuery && (
+                        <button
+                          onClick={() => {
+                            setCourseSearchQuery('')
+                            handleCourseSearch()
+                          }}
+                          className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 py-3 rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                        >
+                          Show All Courses
+                        </button>
+                      )}
+                    </div>
+                  ) : null}
+              </div>
+            </div>
+          )}
+
+        {/* Groups Tab */}
+        {activeTab === 'groups' && (
+          <div className="space-y-6">
+            {/* Groups Management */}
+            <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8 shadow-xl">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-white">My Groups</h2>
+                <button
                   onClick={handleCreateGroup}
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-xl transition-colors font-medium"
+                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 py-3 rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1"
                 >
                   Create Group
-                    </button>
+                </button>
               </div>
               
               {/* Group Info */}
-              <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-6 border border-purple-200">
-                <h3 className="text-lg font-semibold text-slate-800 mb-3">Weekend Warriors</h3>
-                <p className="text-slate-600 mb-4">Your active golf group with 8 members</p>
+              <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-600/50">
+                <h3 className="text-lg font-semibold text-white mb-3">Weekend Warriors</h3>
+                <p className="text-slate-300 mb-4">Your active golf group with 8 members</p>
                 
                 {/* Group Chat */}
-                <div className="bg-white rounded-lg p-4 mb-4">
-                  <h4 className="font-medium text-slate-800 mb-3">Group Chat</h4>
+                <div className="bg-slate-700/50 rounded-lg p-4 mb-4 border border-slate-600/50">
+                  <h4 className="font-medium text-white mb-3">Group Chat</h4>
                   <div className="space-y-3 mb-4 max-h-40 overflow-y-auto">
                     {groupMessages.map((message) => (
                       <div key={message.id} className="flex items-start space-x-2">
-                        <div className="h-6 w-6 bg-emerald-100 rounded-full flex items-center justify-center text-xs font-medium text-emerald-700">
+                        <div className="h-6 w-6 bg-emerald-500/20 rounded-full flex items-center justify-center text-xs font-medium text-emerald-400">
                           {message.sender.first_name[0]}
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm text-slate-800">{message.message_content}</p>
-                          <p className="text-xs text-slate-500">{message.timestamp}</p>
+                          <p className="text-sm text-slate-200">{message.message_content}</p>
+                          <p className="text-xs text-slate-400">{message.timestamp}</p>
                         </div>
                       </div>
                     ))}
@@ -1622,294 +1947,47 @@ export default function Dashboard() {
                       placeholder="Type a message..."
                       value={groupMessageText}
                       onChange={(e) => setGroupMessageText(e.target.value)}
-                      className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      className="flex-1 px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300"
                     />
                     <button
                       onClick={handleSendGroupMessage}
-                      className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg transition-colors text-sm"
+                      className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-4 py-2 rounded-lg transition-all duration-300 text-sm font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1"
                     >
                       Send
                     </button>
                   </div>
                 </div>
-                      </div>
-                    </div>
-                    </div>
+              </div>
+            </div>
+          </div>
         )}
-
-        {/* Golf Tab */}
-        {activeTab === 'golf' && (
-          <div className="space-y-6">
-            {/* Tee Times */}
-            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-slate-800">Tee Times</h2>
-                <button
-                  onClick={openTeeTimeModal}
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-xl transition-colors font-medium"
-                >
-                  Post Tee Time
-                </button>
-                            </div>
-              
-              {/* Available Tee Times */}
-              <div className="space-y-4">
-                {availableTeeTimes?.map((teeTime) => (
-                  <div key={teeTime.id} className="bg-slate-50 border border-slate-200 rounded-xl p-6">
-                    <div className="flex items-start justify-between mb-4">
-                            <div>
-                        <h3 className="text-slate-800 font-semibold text-lg">{teeTime.course_name}</h3>
-                        <p className="text-slate-600 text-sm">{teeTime.tee_time_date} at {teeTime.tee_time_time}</p>
-                        <div className="flex items-center space-x-2 mt-1">
-                          <div className="h-6 w-6 rounded-full overflow-hidden border border-slate-300">
-                            <img
-                              src={teeTime.creator?.avatar_url || '/default-avatar.svg'}
-                              alt={`${teeTime.creator?.first_name || 'Unknown'} ${teeTime.creator?.last_name || ''}`}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.currentTarget.src = '/default-avatar.svg'
-                              }}
-                            />
-                          </div>
-                          <p className="text-slate-600 text-sm">Created by {teeTime.creator?.first_name || 'Unknown'} {teeTime.creator?.last_name || ''}</p>
-                        </div>
-                            </div>
-                      <div className="text-right">
-                        <div className="text-sm text-slate-500">{teeTime.current_players}/{teeTime.max_players} players</div>
-                        <div className="text-sm text-slate-500">Handicap: {teeTime.handicap_requirement}</div>
-                          </div>
-                    </div>
-                    <p className="text-slate-700 mb-4">{teeTime.description}</p>
-                    <div className="flex space-x-3">
-                            <button 
-                        onClick={() => handleApplyToTeeTime(teeTime.id)}
-                        className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-2 px-4 rounded-lg transition-colors font-medium"
-                      >
-                        Apply to Join
-                            </button>
-                      <button className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-2 px-4 rounded-lg transition-colors font-medium">
-                        Message Creator
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                      </div>
-
-            {/* Golf Courses */}
-            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
-              <h2 className="text-2xl font-bold text-slate-800 mb-6">Golf Courses</h2>
-                
-                {/* Course Search */}
-              <div className="flex space-x-3 mb-6">
-                        <input
-                          type="text"
-                  placeholder="Search courses by name or location..."
-                          value={courseSearchQuery}
-                          onChange={(e) => setCourseSearchQuery(e.target.value)}
-                  className="flex-1 px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                        />
-                        <button
-                          onClick={handleCourseSearch}
-                          disabled={courseSearchLoading}
-                  className="bg-blue-500 hover:bg-blue-600 disabled:bg-slate-400 text-white px-6 py-3 rounded-xl transition-colors font-medium"
-                >
-                  {courseSearchLoading ? 'Searching...' : 'Search'}
-                        </button>
-                </div>
-
-              {/* Course Results */}
-              {courseSearchResults && courseSearchResults.length > 0 && (
-                <div className="space-y-4">
-                  {courseSearchResults?.map((course) => (
-                    <div key={course.id} className="bg-slate-50 border border-slate-200 rounded-xl p-6">
-                        <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <h3 className="text-slate-800 font-semibold text-xl">{course.name}</h3>
-                          <p className="text-slate-600 text-sm">{course.location}</p>
-                          <p className="text-slate-700 mt-2">{course.description}</p>
-                            </div>
-                        <div className="text-right">
-                          <div className="text-2xl font-bold text-emerald-600">{course.average_rating}</div>
-                          <div className="text-sm text-slate-500">{course.review_count} reviews</div>
-                          </div>
-                            </div>
-                      <div className="grid grid-cols-3 gap-4 text-sm mb-4">
-                        <div>
-                          <span className="text-slate-500">Par:</span>
-                          <p className="text-slate-800 font-medium">{course.par}</p>
-                          </div>
-                        <div>
-                          <span className="text-slate-500">Holes:</span>
-                          <p className="text-slate-800 font-medium">{course.holes}</p>
-                        </div>
-                        <div>
-                          <span className="text-slate-500">Recent Reviews:</span>
-                          <p className="text-slate-800 font-medium">{course.reviews?.length || 0}</p>
-                                      </div>
-                                    </div>
-                      <div className="flex space-x-3">
-                          <button 
-                            onClick={() => handleViewCourse(course.id)}
-                          className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-2 px-4 rounded-lg transition-colors font-medium"
-                          >
-                            View Details
-                          </button>
-                        <button className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition-colors font-medium">
-                            Write Review
-                          </button>
-                        </div>
-                      </div>
-                  ))}
-                    </div>
-                  )}
-              </div>
-            </div>
-          )}
-
-        {/* Achievements Tab */}
-        {activeTab === 'achievements' && (
-            <div className="space-y-6">
-            {/* Badges */}
-            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
-              <h2 className="text-2xl font-bold text-slate-800 mb-6">Badges & Achievements</h2>
-              
-              {/* Badge Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                <div className="text-center p-4 bg-emerald-50 rounded-xl border border-emerald-200">
-                  <div className="text-3xl font-bold text-emerald-600 mb-1">12</div>
-                  <div className="text-slate-600 text-sm font-medium">Badges Earned</div>
-                  </div>
-                <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-200">
-                  <div className="text-3xl font-bold text-blue-600 mb-1">3</div>
-                  <div className="text-slate-600 text-sm font-medium">Rare Badges</div>
-                  </div>
-                <div className="text-center p-4 bg-purple-50 rounded-xl border border-purple-200">
-                  <div className="text-3xl font-bold text-purple-600 mb-1">450</div>
-                  <div className="text-slate-600 text-sm font-medium">Total Points</div>
-                  </div>
-                <div className="text-center p-4 bg-orange-50 rounded-xl border border-orange-200">
-                  <div className="text-3xl font-bold text-orange-600 mb-1">8</div>
-                  <div className="text-slate-600 text-sm font-medium">Achievements</div>
-                  </div>
-                </div>
-
-                {/* Badge Categories */}
-              <div className="mb-6">
-                <div className="flex space-x-2 mb-4">
-                  {['all', 'achievement', 'milestone', 'early_adopter'].map((category) => (
-                      <button
-                      key={category}
-                      onClick={() => setBadgeCategoryFilter(category === 'all' ? '' : category)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        badgeCategoryFilter === (category === 'all' ? '' : category)
-                          ? 'bg-emerald-500 text-white'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
-                    >
-                      {category === 'all' ? 'All' : category.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-              {/* Badge Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {(() => {
-          
-                  return !Array.isArray(availableBadges) ? (
-                    <div className="col-span-full text-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-2 border-emerald-500 border-t-transparent mx-auto mb-4"></div>
-                      <p className="text-slate-600">Loading badges...</p>
-                    </div>
-                  ) : !availableBadges || availableBadges.length === 0 ? (
-                    <div className="col-span-full text-center py-8">
-                      <div className="text-4xl mb-4">🏆</div>
-                      <p className="text-slate-600">No badges available yet.</p>
-                    </div>
-                  ) : (
-                    availableBadges
-                      .filter(badge => !badgeCategoryFilter || badge.category === badgeCategoryFilter)
-                      .map((badge) => (
-                        <div key={badge.id} className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                          <div className="text-center">
-                            <div className="text-3xl mb-2">🏆</div>
-                            <h4 className="font-semibold text-slate-800 mb-1">{badge.name}</h4>
-                            <p className="text-slate-600 text-sm mb-2">{badge.description}</p>
-                            <div className="flex items-center justify-between text-xs">
-                              <span className={`px-2 py-1 rounded-full ${
-                                badge.rarity === 'common' ? 'bg-green-100 text-green-700' :
-                                badge.rarity === 'uncommon' ? 'bg-blue-100 text-blue-700' :
-                                badge.rarity === 'rare' ? 'bg-purple-100 text-purple-700' :
-                                'bg-yellow-100 text-yellow-700'
-                              }`}>
-                                {badge.rarity}
-                              </span>
-                              <span className="text-slate-500">{badge.points} pts</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                  )
-                })()}
-              </div>
-                          </div>
-
-            {/* Leaderboard */}
-            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
-              <h2 className="text-2xl font-bold text-slate-800 mb-6">Community Leaderboard</h2>
-              
-              {/* Top 5 Leaderboard */}
-              <div className="space-y-4">
-                {leaderboard.map((player, index) => (
-                  <div key={player.rank} className={`flex items-center space-x-4 p-4 rounded-xl border transition-all duration-200 ${
-                    index === 0 ? 'bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-200' :
-                    index === 1 ? 'bg-gradient-to-r from-slate-50 to-gray-50 border-slate-200' :
-                    index === 2 ? 'bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200' :
-                    'bg-slate-50 border-slate-200'
-                  }`}>
-                    <div className={`flex items-center justify-center w-12 h-12 rounded-full font-bold text-lg ${
-                      index === 0 ? 'bg-yellow-400 text-white' :
-                      index === 1 ? 'bg-slate-400 text-white' :
-                      index === 2 ? 'bg-orange-400 text-white' :
-                      'bg-slate-300 text-white'
-                    }`}>
-                      {player.rank}
-                          </div>
-                    <div className="text-3xl">{player.avatar}</div>
-                    <div className="flex-1">
-                      <h3 className="text-slate-800 font-semibold text-lg">{player.name}</h3>
-                      <div className="flex items-center space-x-4 text-sm text-slate-600">
-                        <span>Handicap: {player.handicap}</span>
-                        <span>Rounds: {player.rounds}</span>
-                          </div>
-                        </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-emerald-600">{player.points}</div>
-                      <div className="text-sm text-slate-500">points</div>
-                    </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            </div>
-          )}
 
         {/* Profile Tab */}
         {activeTab === 'profile' && (
-          <div className="space-y-6">
-            {/* User Profile */}
-            <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8 shadow-xl">
-              <h2 className="text-2xl font-bold text-white mb-6">Your Profile</h2>
+          <div className="space-y-8">
+            {/* Profile Header */}
+            <div className="relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl overflow-hidden shadow-xl">
+              {/* Background Image */}
+              {(profile?.header_image_url || profileForm.header_image_url) && (
+                <div className="absolute inset-0">
+                  <img
+                    src={profileForm.header_image_url || profile?.header_image_url || ''}
+                    alt="Profile Header"
+                    className="w-full h-48 object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-black/40"></div>
+                </div>
+              )}
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Profile Picture Section */}
-                <div className="flex flex-col items-center space-y-4">
-                  <h3 className="text-lg font-semibold text-white mb-4">Profile Picture</h3>
-                  <div className="relative">
-                    <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-emerald-500/30 bg-slate-700/50">
+              <div className="relative p-8">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-emerald-500/30 bg-slate-700/50 shadow-lg">
                       <img
-                        src={profileForm.avatar_url || profile?.avatar_url || '/default-avatar.svg'}
+                        src={profile?.avatar_url || '/default-avatar.svg'}
                         alt="Profile"
                         className="w-full h-full object-cover"
                         onError={(e) => {
@@ -1917,102 +1995,299 @@ export default function Dashboard() {
                         }}
                       />
                     </div>
-                    {uploadingImage && (
-                      <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
-                      </div>
-                    )}
-                  </div>
-                  <label className="cursor-pointer bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2">
-                    <Camera className="h-4 w-4" />
-                    <span>Upload Photo</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-                
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Personal Information</h3>
-                  <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">First Name</label>
-                      <input
-                        type="text"
-                        value={profileForm.first_name || ''}
-                        onChange={(e) => setProfileForm(prev => ({ ...prev, first_name: e.target.value }))}
-                        className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300"
-                        placeholder="Enter your first name"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">Last Name</label>
-                      <input
-                        type="text"
-                        value={profileForm.last_name || ''}
-                        onChange={(e) => setProfileForm(prev => ({ ...prev, last_name: e.target.value }))}
-                        className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300"
-                        placeholder="Enter your last name"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">Handicap</label>
-                      <input
-                        type="number"
-                        value={profileForm.handicap || ''}
-                        onChange={(e) => setProfileForm(prev => ({ ...prev, handicap: parseInt(e.target.value) || 0 }))}
-                        className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300"
-                        placeholder="Enter your handicap"
-                        min="0"
-                        max="54"
-                      />
+                      <h2 className="text-3xl font-bold text-white">
+                        {profile?.first_name && profile?.last_name 
+                          ? `${profile.first_name} ${profile.last_name}`
+                          : 'Your Profile'
+                        }
+                      </h2>
+                      <p className="text-slate-300 text-lg">
+                        {profile?.location ? `${profile.location} • Handicap: ${profile.handicap}` : 'Complete your profile to get started'}
+                      </p>
                     </div>
                   </div>
-                </div>
-                
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Statistics</h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-slate-300">Rounds Played:</span>
-                      <span className="font-semibold text-white">{statistics.roundsPlayed}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-300">Average Score:</span>
-                      <span className="font-semibold text-white">{statistics.averageScore}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-300">Best Round:</span>
-                      <span className="font-semibold text-white">{statistics.bestRound}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-300">Total Points:</span>
-                      <span className="font-semibold text-white">450</span>
-                    </div>
-                  </div>
+                  {!isEditingProfile && (
+                    <button
+                      onClick={() => setIsEditingProfile(true)}
+                      className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 py-3 rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2"
+                    >
+                      <Settings className="h-4 w-4" />
+                      <span>Edit Profile</span>
+                    </button>
+                  )}
                 </div>
               </div>
-              
-              <div className="mt-6 flex space-x-3">
+            </div>
+
+            {/* Main Profile Content */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Personal Information Card */}
+              <div className="lg:col-span-2 space-y-6">
+                <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6 shadow-xl">
+                  <h3 className="text-xl font-semibold text-white mb-6 flex items-center space-x-2">
+                    <User className="h-5 w-5 text-emerald-400" />
+                    <span>Personal Information</span>
+                  </h3>
+                  
+                  {!isEditingProfile ? (
+                    // View Mode
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-slate-400 mb-2">First Name</label>
+                          <div className="px-4 py-3 bg-slate-800/30 border border-slate-600/30 rounded-lg text-white font-medium">
+                            {profile?.first_name || 'Not set'}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-400 mb-2">Last Name</label>
+                          <div className="px-4 py-3 bg-slate-800/30 border border-slate-600/30 rounded-lg text-white font-medium">
+                            {profile?.last_name || 'Not set'}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-400 mb-2">Handicap</label>
+                          <div className="px-4 py-3 bg-slate-800/30 border border-slate-600/30 rounded-lg text-white font-medium">
+                            {profile?.handicap ? `${profile.handicap}` : 'Not set'}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-slate-400 mb-2">Location</label>
+                          <div className="px-4 py-3 bg-slate-800/30 border border-slate-600/30 rounded-lg text-white font-medium">
+                            {profile?.location || 'Not set'}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-400 mb-2">Bio</label>
+                          <div className="px-4 py-3 bg-slate-800/30 border border-slate-600/30 rounded-lg text-white font-medium min-h-[80px] leading-relaxed">
+                            {profile?.bio || 'No bio added yet. Tell us about your golf journey!'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    // Edit Mode
+                    <div className="space-y-6">
+                      <div className="flex flex-col items-center space-y-4 mb-6">
+                        <div className="relative">
+                          <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-emerald-500/30 bg-slate-700/50 shadow-lg">
+                            <img
+                              src={profileForm.avatar_url || profile?.avatar_url || '/default-avatar.svg'}
+                              alt="Profile"
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.src = '/default-avatar.svg'
+                              }}
+                            />
+                          </div>
+                          {uploadingImage && (
+                            <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500"></div>
+                            </div>
+                          )}
+                        </div>
+                        <label className="cursor-pointer bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2">
+                          <Camera className="h-4 w-4" />
+                          <span>Upload Photo</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+
+                      {/* Header Image Upload */}
+                      <div className="flex flex-col items-center space-y-4 mb-6">
+                        <div className="relative w-full max-w-md">
+                          <div className="w-full h-32 rounded-xl overflow-hidden border-2 border-emerald-500/30 bg-slate-700/50 shadow-lg">
+                            <img
+                              src={profileForm.header_image_url || profile?.header_image_url || '/default-avatar.svg'}
+                              alt="Header"
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.src = '/default-avatar.svg'
+                              }}
+                            />
+                          </div>
+                          {uploadingHeaderImage && (
+                            <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500"></div>
+                            </div>
+                          )}
+                        </div>
+                        <label className="cursor-pointer bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2">
+                          <Camera className="h-4 w-4" />
+                          <span>Upload Header Image</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleHeaderImageUpload}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-2">First Name</label>
+                          <input
+                            type="text"
+                            value={profileForm.first_name || ''}
+                            onChange={(e) => setProfileForm(prev => ({ ...prev, first_name: e.target.value }))}
+                            className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300"
+                            placeholder="Enter your first name"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-2">Last Name</label>
+                          <input
+                            type="text"
+                            value={profileForm.last_name || ''}
+                            onChange={(e) => setProfileForm(prev => ({ ...prev, last_name: e.target.value }))}
+                            className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300"
+                            placeholder="Enter your last name"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-2">Handicap</label>
+                          <input
+                            type="number"
+                            value={profileForm.handicap || ''}
+                            onChange={(e) => setProfileForm(prev => ({ ...prev, handicap: parseInt(e.target.value) || 0 }))}
+                            className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300"
+                            placeholder="Enter your handicap"
+                            min="0"
+                            max="54"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-2">Location</label>
+                          <input
+                            type="text"
+                            value={profileForm.location || ''}
+                            onChange={(e) => setProfileForm(prev => ({ ...prev, location: e.target.value }))}
+                            className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300"
+                            placeholder="Enter your location"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Bio</label>
+                        <textarea
+                          value={profileForm.bio || ''}
+                          onChange={(e) => setProfileForm(prev => ({ ...prev, bio: e.target.value }))}
+                          className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300 resize-none"
+                          placeholder="Tell us about your golf journey, favorite courses, or what you're working on..."
+                          rows={4}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Statistics Card */}
+              <div className="space-y-6">
+                <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6 shadow-xl">
+                  <h3 className="text-xl font-semibold text-white mb-6 flex items-center space-x-2">
+                    <TrendingUp className="h-5 w-5 text-emerald-400" />
+                    <span>Statistics</span>
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-3 bg-slate-800/30 rounded-lg border border-slate-600/30">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-emerald-500/20 rounded-full flex items-center justify-center">
+                          <Flag className="h-4 w-4 text-emerald-400" />
+                        </div>
+                        <span className="text-slate-300">Rounds Played</span>
+                      </div>
+                      <span className="font-bold text-white text-lg">{statistics.roundsPlayed}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-slate-800/30 rounded-lg border border-slate-600/30">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center">
+                          <Target className="h-4 w-4 text-blue-400" />
+                        </div>
+                        <span className="text-slate-300">Average Score</span>
+                      </div>
+                      <span className="font-bold text-white text-lg">{statistics.averageScore}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-slate-800/30 rounded-lg border border-slate-600/30">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-purple-500/20 rounded-full flex items-center justify-center">
+                          <Trophy className="h-4 w-4 text-purple-400" />
+                        </div>
+                        <span className="text-slate-300">Best Round</span>
+                      </div>
+                      <span className="font-bold text-white text-lg">{statistics.bestRound}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-slate-800/30 rounded-lg border border-slate-600/30">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-orange-500/20 rounded-full flex items-center justify-center">
+                          <Zap className="h-4 w-4 text-orange-400" />
+                        </div>
+                        <span className="text-slate-300">Total Points</span>
+                      </div>
+                      <span className="font-bold text-white text-lg">450</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-slate-800/30 rounded-lg border border-slate-600/30">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center">
+                          <Users className="h-4 w-4 text-blue-400" />
+                        </div>
+                        <span className="text-slate-300">Connections</span>
+                      </div>
+                      <button
+                        onClick={() => setShowConnectionsModal(true)}
+                        className="font-bold text-white text-lg hover:text-blue-400 transition-colors cursor-pointer"
+                      >
+                        {connections?.length || 0}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            {isEditingProfile && (
+              <div className="flex justify-center space-x-4">
                 <button 
                   onClick={handleSaveProfile}
                   disabled={profileSaving}
-                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-6 py-3 rounded-xl transition-all duration-300 font-medium disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-8 py-4 rounded-xl transition-all duration-300 font-medium disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2"
                 >
-                  {profileSaving ? 'Saving...' : 'Save Changes'}
+                  {profileSaving ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Save Changes</span>
+                    </>
+                  )}
                 </button>
                 <button 
-                  onClick={handleResetProfile}
-                  className="bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white px-6 py-3 rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                  onClick={() => {
+                    setIsEditingProfile(false)
+                    handleResetProfile()
+                  }}
+                  className="bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white px-8 py-4 rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1"
                 >
-                  Reset
+                  Cancel
                 </button>
               </div>
-            </div>
-            
+            )}
+
             {/* Recent Activity */}
             <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6 shadow-xl">
               <h3 className="text-lg font-semibold text-white mb-4">Recent Activity</h3>
@@ -2036,6 +2311,142 @@ export default function Dashboard() {
       </div>
       
       {/* Modals */}
+      
+      {/* Review Modal */}
+      {showReviewModal && selectedCourse && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-2xl p-8 max-w-md w-full border border-slate-600">
+            <h3 className="text-xl font-bold text-white mb-4">Write Review for {selectedCourse.name}</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Rating</label>
+                <div className="flex items-center space-x-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      onClick={() => setReviewForm(prev => ({ ...prev, rating: star }))}
+                      className="text-2xl hover:scale-110 transition-transform"
+                    >
+                      <Star 
+                        className={`h-8 w-8 ${star <= reviewForm.rating ? 'text-yellow-400 fill-current' : 'text-slate-500'}`} 
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Comment (Optional)</label>
+                <textarea
+                  value={reviewForm.comment}
+                  onChange={(e) => setReviewForm(prev => ({ ...prev, comment: e.target.value }))}
+                  className="w-full p-3 border border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-700 text-white placeholder-slate-400 resize-none"
+                  placeholder="Share your experience with this course..."
+                  rows={4}
+                />
+              </div>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowReviewModal(false)}
+                  className="flex-1 py-3 px-4 border border-slate-500 rounded-lg text-slate-300 hover:bg-slate-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmitReview}
+                  disabled={reviewSubmitting}
+                  className="flex-1 py-3 px-4 bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-500 text-white rounded-lg transition-colors font-semibold disabled:cursor-not-allowed"
+                >
+                  {reviewSubmitting ? 'Submitting...' : 'Submit Review'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Course Modal */}
+      {showCreateCourseModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-2xl p-8 max-w-md w-full border border-slate-600">
+            <h3 className="text-xl font-bold text-white mb-4">Add New Golf Course</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Course Name *</label>
+                <input
+                  type="text"
+                  value={createCourseForm.name}
+                  onChange={(e) => setCreateCourseForm(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full p-3 border border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-700 text-white placeholder-slate-400"
+                  placeholder="Enter course name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Location *</label>
+                <input
+                  type="text"
+                  value={createCourseForm.location}
+                  onChange={(e) => setCreateCourseForm(prev => ({ ...prev, location: e.target.value }))}
+                  className="w-full p-3 border border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-700 text-white placeholder-slate-400"
+                  placeholder="Enter location (City, State)"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Description</label>
+                <textarea
+                  value={createCourseForm.description}
+                  onChange={(e) => setCreateCourseForm(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full p-3 border border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-700 text-white placeholder-slate-400 resize-none"
+                  placeholder="Describe the course..."
+                  rows={3}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Par</label>
+                  <input
+                    type="number"
+                    value={createCourseForm.par}
+                    onChange={(e) => setCreateCourseForm(prev => ({ ...prev, par: e.target.value }))}
+                    className="w-full p-3 border border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-700 text-white"
+                    placeholder="72"
+                    min="54"
+                    max="80"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Holes</label>
+                  <select
+                    value={createCourseForm.holes}
+                    onChange={(e) => setCreateCourseForm(prev => ({ ...prev, holes: parseInt(e.target.value) }))}
+                    className="w-full p-3 border border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-700 text-white"
+                  >
+                    <option value={9}>9 Holes</option>
+                    <option value={18}>18 Holes</option>
+                    <option value={27}>27 Holes</option>
+                    <option value={36}>36 Holes</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowCreateCourseModal(false)}
+                  className="flex-1 py-3 px-4 border border-slate-500 rounded-lg text-slate-300 hover:bg-slate-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateCourse}
+                  disabled={createCourseSubmitting}
+                  className="flex-1 py-3 px-4 bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-500 text-white rounded-lg transition-colors font-semibold disabled:cursor-not-allowed"
+                >
+                  {createCourseSubmitting ? 'Creating...' : 'Create Course'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showTeeTimeModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-slate-800 rounded-2xl p-8 max-w-md w-full border border-slate-600">
@@ -2120,36 +2531,153 @@ export default function Dashboard() {
       
       {showGroupModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full">
-            <h3 className="text-xl font-bold text-slate-800 mb-4">Create Group</h3>
-            <form onSubmit={handleGroupSubmit} className="space-y-4">
-                <input
-                  type="text"
-                placeholder="Group name"
-                  value={groupForm.name}
-                  onChange={(e) => setGroupForm({...groupForm, name: e.target.value})}
-                className="w-full p-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-                <textarea
-                placeholder="Description"
-                  value={groupForm.description}
-                  onChange={(e) => setGroupForm({...groupForm, description: e.target.value})}
-                className="w-full p-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  rows={3}
-                />
-              <div className="flex space-x-2">
+          <div className="bg-slate-800 rounded-2xl p-8 max-w-2xl w-full border border-slate-600">
+            <h3 className="text-xl font-bold text-white mb-6">Create Group</h3>
+            <form onSubmit={handleGroupSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Group Details */}
+                <div className="space-y-4">
+                  <h4 className="text-lg font-semibold text-white">Group Details</h4>
+                  <input
+                    type="text"
+                    placeholder="Group name"
+                    value={groupForm.name}
+                    onChange={(e) => setGroupForm({...groupForm, name: e.target.value})}
+                    className="w-full p-3 border border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-700 text-white placeholder-slate-400"
+                  />
+                  <textarea
+                    placeholder="Description"
+                    value={groupForm.description}
+                    onChange={(e) => setGroupForm({...groupForm, description: e.target.value})}
+                    className="w-full p-3 border border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-700 text-white placeholder-slate-400"
+                    rows={3}
+                  />
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">Max Members</label>
+                    <select
+                      value={groupForm.maxMembers}
+                      onChange={(e) => setGroupForm({...groupForm, maxMembers: parseInt(e.target.value)})}
+                      className="w-full p-3 border border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-700 text-white"
+                    >
+                      <option value={4}>4 Members</option>
+                      <option value={6}>6 Members</option>
+                      <option value={8}>8 Members</option>
+                      <option value={10}>10 Members</option>
+                      <option value={12}>12 Members</option>
+                      <option value={15}>15 Members</option>
+                      <option value={20}>20 Members</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Invite Users */}
+                <div className="space-y-4">
+                  <h4 className="text-lg font-semibold text-white">Invite Users</h4>
+                  <div className="space-y-3">
+                    <div className="flex space-x-2">
+                      <input
+                        type="text"
+                        placeholder="Search users to invite..."
+                        value={groupInviteQuery}
+                        onChange={(e) => setGroupInviteQuery(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleGroupInviteSearch())}
+                        className="flex-1 p-3 border border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-700 text-white placeholder-slate-400"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleGroupInviteSearch}
+                        disabled={groupInviteLoading}
+                        className="px-4 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        {groupInviteLoading ? '...' : 'Search'}
+                      </button>
+                    </div>
+
+                    {/* Search Results */}
+                    {groupInviteResults.length > 0 && (
+                      <div className="max-h-32 overflow-y-auto space-y-2">
+                        {groupInviteResults.map((user) => (
+                          <div
+                            key={user.id}
+                            className="flex items-center justify-between p-2 bg-slate-700 rounded-lg border border-slate-600"
+                          >
+                            <div className="flex items-center space-x-2">
+                              <div className="w-8 h-8 rounded-full overflow-hidden border border-emerald-500/30">
+                                <img
+                                  src={user.avatar_url || '/default-avatar.svg'}
+                                  alt={`${user.first_name} ${user.last_name}`}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.src = '/default-avatar.svg'
+                                  }}
+                                />
+                              </div>
+                              <span className="text-white text-sm">{user.first_name} {user.last_name}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleAddInvitee(user)}
+                              className="px-3 py-1 bg-emerald-500 hover:bg-emerald-600 text-white text-xs rounded transition-colors"
+                            >
+                              Invite
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Selected Invitees */}
+                    {selectedInvitees.length > 0 && (
+                      <div className="space-y-2">
+                        <h5 className="text-sm font-medium text-slate-300">Selected Invitees ({selectedInvitees.length})</h5>
+                        <div className="max-h-32 overflow-y-auto space-y-2">
+                          {selectedInvitees.map((invitee) => (
+                            <div
+                              key={invitee.id}
+                              className="flex items-center justify-between p-2 bg-slate-700 rounded-lg border border-slate-600"
+                            >
+                              <div className="flex items-center space-x-2">
+                                <div className="w-6 h-6 rounded-full overflow-hidden border border-emerald-500/30">
+                                  <img
+                                    src={invitee.avatar_url || '/default-avatar.svg'}
+                                    alt={`${invitee.first_name} ${invitee.last_name}`}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      e.currentTarget.src = '/default-avatar.svg'
+                                    }}
+                                  />
+                                </div>
+                                <span className="text-white text-sm">{invitee.first_name} {invitee.last_name}</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveInvitee(invitee.id)}
+                                className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white text-xs rounded transition-colors"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex space-x-2 pt-4">
                 <button
                   type="button"
                   onClick={() => setShowGroupModal(false)}
-                  className="flex-1 py-3 px-4 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
+                  className="flex-1 py-3 px-4 border border-slate-500 rounded-lg text-slate-300 hover:bg-slate-700 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors"
+                  className="flex-1 py-3 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors font-semibold"
                 >
-                  Create
+                  Create Group {selectedInvitees.length > 0 && `& Invite ${selectedInvitees.length} User(s)`}
                 </button>
               </div>
             </form>
@@ -2259,6 +2787,76 @@ export default function Dashboard() {
           onSave={handleRecordGolfRound}
           userId={user?.id || ''}
         />
+      )}
+
+      {/* Connections Modal */}
+      {showConnectionsModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-2xl p-8 max-w-2xl w-full border border-slate-600">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-white">My Connections</h3>
+              <button
+                onClick={() => setShowConnectionsModal(false)}
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
+            {connectionsLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mx-auto"></div>
+                <p className="text-slate-400 mt-2">Loading connections...</p>
+              </div>
+            ) : (
+              <div className="space-y-4 max-h-96 overflow-y-auto">
+                {connections && connections.length > 0 ? (
+                  connections?.map((connection) => (
+                    <div key={connection.id} className="flex items-center justify-between p-4 bg-slate-700/50 rounded-lg border border-slate-600/50">
+                      <div className="flex items-center space-x-3">
+                        <div className="h-12 w-12 rounded-full overflow-hidden border-2 border-emerald-500/30">
+                          <img
+                            src={connection.connected_user?.avatar_url || '/default-avatar.svg'}
+                            alt={`${connection.connected_user?.first_name} ${connection.connected_user?.last_name}`}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = '/default-avatar.svg'
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-white">{connection.connected_user?.first_name} {connection.connected_user?.last_name}</h3>
+                          <p className="text-slate-300 text-sm">{connection.connected_user?.location} • Handicap: {connection.connected_user?.handicap}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => router.push(`/users/${connection.connected_user?.id}`)}
+                        className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                      >
+                        View Profile
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="text-4xl mb-4">👥</div>
+                    <p className="text-slate-400 mb-2">No connections yet</p>
+                    <p className="text-slate-500 text-sm">Search for golfers in the "Find Someone" tab to start connecting!</p>
+                    <button
+                      onClick={() => {
+                        setShowConnectionsModal(false)
+                        setActiveTab('find-someone')
+                      }}
+                      className="mt-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 py-2 rounded-lg transition-all duration-300 font-medium"
+                    >
+                      Find Golfers
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   )

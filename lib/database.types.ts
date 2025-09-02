@@ -35,6 +35,7 @@ export interface UserProfile {
   email: string | null
   username: string | null
   avatar_url: string | null
+  header_image_url: string | null
   bio: string | null
   handicap: number | null
   home_course: string | null

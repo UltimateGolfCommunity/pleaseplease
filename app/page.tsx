@@ -76,9 +76,11 @@ export default function HomePage() {
     <div className="min-h-screen bg-black text-white">
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-md border-b border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-24">
-            <Logo size="xl" />
+        <div className="max-w-7xl mx-auto px-0">
+          <div className="flex justify-between items-center h-28">
+            <div className="pl-6 sm:pl-8 lg:pl-12">
+              <Logo size="lg" />
+            </div>
             
             <div className="flex items-center space-x-2 sm:space-x-4">
               {user ? (
@@ -389,6 +391,68 @@ export default function HomePage() {
                 <ArrowRight className="h-7 w-7 ml-4 group-hover:translate-x-2 transition-transform duration-300" />
               </a>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Contact Us Section */}
+      <div className="py-24 bg-gradient-to-br from-gray-900 to-black">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+              Get in
+              <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent"> Touch</span>
+            </h2>
+            <p className="text-xl text-gray-400 max-w-3xl mx-auto">
+              Have questions or want to partner with us? We'd love to hear from you
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+            {/* Partnership Opportunities */}
+            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-gray-700/50 rounded-2xl p-8 backdrop-blur-sm hover:border-emerald-500/50 transition-all duration-300">
+              <div className="bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Users className="h-8 w-8 text-emerald-400" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-4 text-center">Partnership Opportunities</h3>
+              <p className="text-gray-400 text-center mb-6">
+                Interested in partnering with Ultimate Golf Community? Let's explore how we can work together to grow the golf community.
+              </p>
+              <div className="text-center">
+                <a
+                  href="mailto:partners@ultimategolfcommunity.com"
+                  className="inline-flex items-center bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-emerald-500/25"
+                >
+                  <span>partners@ultimategolfcommunity.com</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Sales Inquiries */}
+            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-gray-700/50 rounded-2xl p-8 backdrop-blur-sm hover:border-emerald-500/50 transition-all duration-300">
+              <div className="bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <TrendingUp className="h-8 w-8 text-emerald-400" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-4 text-center">Sales Inquiries</h3>
+              <p className="text-gray-400 text-center mb-6">
+                Looking to learn more about our premium features or enterprise solutions? Our sales team is here to help.
+              </p>
+              <div className="text-center">
+                <a
+                  href="mailto:sales@ultimategolfcommunity.com"
+                  className="inline-flex items-center bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-emerald-500/25"
+                >
+                  <span>sales@ultimategolfcommunity.com</span>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="mt-16 pt-8 border-t border-gray-800 text-center">
+            <p className="text-gray-500 text-sm">
+              © 2024 Ultimate Golf Community. All rights reserved.
+            </p>
           </div>
         </div>
       </div>

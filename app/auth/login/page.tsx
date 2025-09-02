@@ -72,9 +72,11 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Navigation */}
       <nav className="bg-slate-800/80 backdrop-blur-xl border-b border-slate-700/60 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            <Logo size="lg" />
+        <div className="max-w-7xl mx-auto px-0">
+          <div className="flex justify-between items-center h-24">
+            <div className="pl-6 sm:pl-8 lg:pl-12">
+              <Logo size="lg" />
+            </div>
             
             <div className="flex items-center space-x-4">
               <a

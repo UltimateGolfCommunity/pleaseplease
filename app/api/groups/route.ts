@@ -6,7 +6,7 @@ const supabase = createServerClient()
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { action, name, description, maxMembers, user_id: bodyUserId } = body
+    const { action, name, description, maxMembers, user_id: bodyUserId, invitees } = body
     
     if (!name) {
       return NextResponse.json(
@@ -70,9 +70,30 @@ export async function POST(request: NextRequest) {
       // Don't fail the request if this fails
     }
 
+    // Send invitations to invitees if any
+    if (invitees && invitees.length > 0) {
+      const invitations = invitees.map((inviteeId: string) => ({
+        group_id: group.id,
+        invited_user_id: inviteeId,
+        invited_by: user_id,
+        status: 'pending',
+        created_at: new Date().toISOString()
+      }))
+
+      const { error: invitationError } = await supabase
+        .from('group_invitations')
+        .insert(invitations)
+
+      if (invitationError) {
+        console.error('Error creating invitations:', invitationError)
+        // Don't fail the request if invitations fail
+      }
+    }
+
     return NextResponse.json({ 
       success: true, 
-      group 
+      group,
+      invitations_sent: invitees?.length || 0
     })
 
   } catch (error) {
