@@ -304,11 +304,31 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (profileError || !userProfile) {
-        console.error('❌ User profile not found:', data.creator_id)
-        return NextResponse.json({ 
-          error: 'User profile not found. Please complete your profile first.',
-          details: 'User profile does not exist'
-        }, { status: 400 })
+        console.log('⚠️ User profile not found, attempting to create one...')
+        
+        // Try to create a basic user profile
+        const { data: newProfile, error: createError } = await supabase
+          .from('user_profiles')
+          .insert({
+            id: data.creator_id,
+            email: 'user@example.com',
+            username: 'user',
+            first_name: 'User',
+            last_name: 'Profile',
+            full_name: 'User Profile'
+          })
+          .select('id')
+          .single()
+
+        if (createError) {
+          console.error('❌ Failed to create user profile:', createError)
+          return NextResponse.json({ 
+            error: 'User profile not found. Please complete your profile first.',
+            details: 'User profile does not exist and could not be created'
+          }, { status: 400 })
+        }
+        
+        console.log('✅ Created basic user profile for:', data.creator_id)
       }
 
       // Use only the fields that exist in the database schema

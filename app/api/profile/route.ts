@@ -36,7 +36,7 @@ export async function PUT(request: NextRequest) {
     const body = await request.json()
     console.log('🔍 Request body:', body)
     
-    const { id, first_name, last_name, username, bio, avatar_url, handicap, location } = body
+    const { id, first_name, last_name, username, bio, avatar_url, header_image_url, handicap, location } = body
     
     if (!id) {
       console.log('❌ No user ID provided')
@@ -65,6 +65,7 @@ export async function PUT(request: NextRequest) {
     if (username !== undefined) updateData.username = username
     if (bio !== undefined) updateData.bio = bio
     if (avatar_url !== undefined) updateData.avatar_url = avatar_url
+    if (header_image_url !== undefined) updateData.header_image_url = header_image_url
     if (handicap !== undefined) updateData.handicap = handicap
     if (location !== undefined) updateData.location = location
     
@@ -100,6 +101,7 @@ export async function PUT(request: NextRequest) {
           full_name: first_name && last_name ? `${first_name} ${last_name}`.trim() : '',
           bio: bio || '',
           avatar_url: avatar_url || '',
+          header_image_url: header_image_url || '',
           handicap: handicap || 0,
           location: location || '',
           updated_at: new Date().toISOString()

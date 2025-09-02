@@ -15,6 +15,15 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Check if Supabase is configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      console.log('Using mock data for group invitations API')
+      return NextResponse.json({ 
+        success: true, 
+        invitations: [] 
+      })
+    }
+
     // Get pending invitations for the user
     const { data, error } = await supabase
       .from('group_invitations')
@@ -28,6 +37,14 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Database error:', error)
+      // If table doesn't exist, return empty array instead of error
+      if (error.message.includes('relation "group_invitations" does not exist')) {
+        console.log('⚠️ group_invitations table does not exist, returning empty array')
+        return NextResponse.json({ 
+          success: true, 
+          invitations: [] 
+        })
+      }
       return NextResponse.json(
         { error: 'Failed to fetch invitations' },
         { status: 500 }
