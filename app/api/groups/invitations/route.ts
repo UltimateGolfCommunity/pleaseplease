@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
-
-const supabase = createServerClient()
+import { createAdminClient } from '@/lib/supabase-admin'
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,6 +22,9 @@ export async function GET(request: NextRequest) {
         invitations: [] 
       })
     }
+
+    // Use admin client to bypass RLS
+    const supabase = createAdminClient()
 
     // Get pending invitations for the user
     const { data, error } = await supabase

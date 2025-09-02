@@ -333,6 +333,7 @@ export async function POST(request: NextRequest) {
 
       // Use only the fields that exist in the database schema
       const insertData = {
+        course_name: data.course || 'TBD',
         creator_id: data.creator_id,
         tee_time_date: data.tee_time_date,
         tee_time_time: data.tee_time_time,
