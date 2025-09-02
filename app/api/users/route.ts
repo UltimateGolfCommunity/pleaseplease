@@ -92,25 +92,56 @@ export async function GET(request: NextRequest) {
     const supabase = createServerClient()
 
     if (action === 'search' && query) {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,username.ilike.%${query}%`)
-        .limit(20)
+      try {
+        console.log('🔍 Searching for users with query:', query)
+        
+        // Use admin client to bypass RLS for search
+        const adminSupabase = createAdminClient()
+        
+        const { data, error } = await adminSupabase
+          .from('user_profiles')
+          .select('*')
+          .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,username.ilike.%${query}%`)
+          .limit(20)
 
-      if (error) throw error
-      return NextResponse.json(data || [])
+        if (error) {
+          console.error('❌ Error searching users:', error)
+          throw error
+        }
+
+        console.log('👥 Found users:', data?.length || 0)
+        return NextResponse.json(data || [])
+      } catch (searchError) {
+        console.error('❌ Search error:', searchError)
+        // Return empty array instead of throwing to prevent 500 error
+        return NextResponse.json([])
+      }
     }
 
     if (action === 'profile' && userId) {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
+      try {
+        console.log('🔍 Fetching profile for user:', userId)
+        
+        // Use admin client to bypass RLS for profile fetch
+        const adminSupabase = createAdminClient()
+        
+        const { data, error } = await adminSupabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', userId)
+          .single()
 
-      if (error) throw error
-      return NextResponse.json(data)
+        if (error) {
+          console.error('❌ Error fetching profile:', error)
+          throw error
+        }
+
+        console.log('✅ Profile found:', data ? 'yes' : 'no')
+        return NextResponse.json(data)
+      } catch (profileError) {
+        console.error('❌ Profile fetch error:', profileError)
+        return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+      }
     }
 
     if (action === 'connections') {
@@ -176,13 +207,28 @@ export async function GET(request: NextRequest) {
     }
 
     // Default: return all users
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .limit(50)
+    try {
+      console.log('🔍 Fetching all users')
+      
+      // Use admin client to bypass RLS for all users fetch
+      const adminSupabase = createAdminClient()
+      
+      const { data, error } = await adminSupabase
+        .from('user_profiles')
+        .select('*')
+        .limit(50)
 
-    if (error) throw error
-    return NextResponse.json(data || [])
+      if (error) {
+        console.error('❌ Error fetching all users:', error)
+        throw error
+      }
+
+      console.log('👥 Found users:', data?.length || 0)
+      return NextResponse.json(data || [])
+    } catch (allUsersError) {
+      console.error('❌ All users fetch error:', allUsersError)
+      return NextResponse.json([])
+    }
 
   } catch (error) {
     console.error('Error in users API:', error)

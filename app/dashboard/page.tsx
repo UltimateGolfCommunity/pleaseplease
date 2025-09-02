@@ -812,22 +812,30 @@ export default function Dashboard() {
   const handleSearch = async () => {
     if (!searchQuery.trim()) return
     
+    console.log('🔍 Starting search for:', searchQuery)
     setSearchLoading(true)
     setSearchPerformed(true)
     
     try {
       const response = await fetch(`/api/users?action=search&q=${encodeURIComponent(searchQuery)}`)
+      console.log('📡 Search response status:', response.status)
+      
       if (response.ok) {
         const data = await response.json()
+        console.log('📊 Search results:', data?.length || 0)
+        
         // Filter out the current user from search results
         const filteredData = data.filter((user: any) => user.id !== user?.id)
+        console.log('🔍 Filtered results:', filteredData?.length || 0)
+        
         setSearchResults(filteredData)
       } else {
-        console.error('Search failed:', response.statusText)
+        const errorText = await response.text()
+        console.error('❌ Search failed:', response.status, errorText)
         setSearchResults([])
       }
     } catch (error) {
-      console.error('Search error:', error)
+      console.error('❌ Search error:', error)
       setSearchResults([])
     } finally {
       setSearchLoading(false)
