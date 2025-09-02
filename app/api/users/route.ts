@@ -45,6 +45,20 @@ const mockUsers = [
     total_points: 180,
     connections_count: 8,
     rounds_played: 12
+  },
+  {
+    id: 'user-4',
+    first_name: 'Luke',
+    last_name: 'Restall',
+    email: 'luke.restall@example.com',
+    username: 'lukerestall',
+    handicap: 15,
+    location: 'Toronto, ON',
+    bio: 'Passionate golfer looking for new connections',
+    profile_image: null,
+    total_points: 320,
+    connections_count: 12,
+    rounds_played: 25
   }
 ]
 
@@ -57,35 +71,136 @@ export async function GET(request: NextRequest) {
   try {
     // Check if Supabase is configured
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      console.log('Using mock data for users API')
+      console.log('⚠️ Supabase environment variables not found, trying admin client...')
       
-      if (action === 'search' && query) {
-        // Search users
-        const filteredUsers = mockUsers.filter(user => 
-          user.first_name.toLowerCase().includes(query.toLowerCase()) ||
-          user.last_name.toLowerCase().includes(query.toLowerCase()) ||
-          user.username.toLowerCase().includes(query.toLowerCase()) ||
-          user.location.toLowerCase().includes(query.toLowerCase())
-        )
-        return NextResponse.json(filteredUsers)
+      // Try to use admin client even if regular client isn't configured
+      try {
+        const adminSupabase = createAdminClient()
+        
+        if (action === 'search' && query) {
+          console.log('🔍 Searching with admin client for:', query)
+          const { data, error } = await adminSupabase
+            .from('user_profiles')
+            .select('*')
+            .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,username.ilike.%${query}%`)
+            .limit(20)
+
+          if (error) {
+            console.error('❌ Admin search error:', error)
+            throw error
+          }
+
+          console.log('👥 Admin search found:', data?.length || 0)
+          return NextResponse.json(data || [])
+        }
+        
+        if (action === 'profile' && userId) {
+          console.log('🔍 Fetching profile with admin client for:', userId)
+          const { data, error } = await adminSupabase
+            .from('user_profiles')
+            .select('*')
+            .eq('id', userId)
+            .single()
+
+          if (error) {
+            console.error('❌ Admin profile error:', error)
+            throw error
+          }
+
+          return NextResponse.json(data)
+        }
+        
+        if (action === 'connections') {
+          console.log('🔍 Fetching connections with admin client for:', userId)
+          const { data: connections, error } = await adminSupabase
+            .from('user_connections')
+            .select('*')
+            .or(`requester_id.eq.${userId},recipient_id.eq.${userId}`)
+            .in('status', ['pending', 'accepted'])
+
+          if (error) {
+            console.error('❌ Admin connections error:', error)
+            throw error
+          }
+
+          const userIds = connections?.map((conn: any) => 
+            conn.requester_id === userId ? conn.recipient_id : conn.requester_id
+          ) || []
+
+          if (userIds.length > 0) {
+            const { data: userProfiles, error: profilesError } = await adminSupabase
+              .from('user_profiles')
+              .select('*')
+              .in('id', userIds)
+
+            if (profilesError) {
+              console.error('❌ Admin profiles error:', profilesError)
+              throw profilesError
+            }
+
+            const connectionsWithProfiles = connections?.map((conn: any) => {
+              const otherUserId = conn.requester_id === userId ? conn.recipient_id : conn.requester_id
+              const profile = userProfiles?.find((profile: any) => profile.id === otherUserId)
+              return {
+                ...conn,
+                user: profile
+              }
+            }) || []
+
+            return NextResponse.json(connectionsWithProfiles)
+          }
+
+          return NextResponse.json([])
+        }
+        
+        // Default: return all users with admin client
+        console.log('🔍 Fetching all users with admin client')
+        const { data, error } = await adminSupabase
+          .from('user_profiles')
+          .select('*')
+          .limit(20)
+
+        if (error) {
+          console.error('❌ Admin all users error:', error)
+          throw error
+        }
+
+        console.log('👥 Admin all users found:', data?.length || 0)
+        return NextResponse.json(data || [])
+        
+      } catch (adminError) {
+        console.error('❌ Admin client failed, falling back to mock data:', adminError)
+        
+        // Fall back to mock data if admin client fails
+        if (action === 'search' && query) {
+          console.log('🔍 Using mock data search for:', query)
+          console.log('📊 Available mock users:', mockUsers.map(u => u.first_name + ' ' + u.last_name))
+          
+          const filteredUsers = mockUsers.filter(user => 
+            user.first_name.toLowerCase().includes(query.toLowerCase()) ||
+            user.last_name.toLowerCase().includes(query.toLowerCase()) ||
+            user.username.toLowerCase().includes(query.toLowerCase()) ||
+            user.location.toLowerCase().includes(query.toLowerCase())
+          )
+          
+          console.log('✅ Mock search results:', filteredUsers.length)
+          return NextResponse.json(filteredUsers)
+        }
+        
+        if (action === 'profile' && userId) {
+          const user = mockUsers.find(u => u.id === userId)
+          return user ? NextResponse.json(user) : NextResponse.json({ error: 'User not found' }, { status: 404 })
+        }
+        
+        if (action === 'connections') {
+          return NextResponse.json([
+            { id: 'conn-1', user: mockUsers[0], status: 'connected', connected_at: '2024-01-15' },
+            { id: 'conn-2', user: mockUsers[1], status: 'connected', connected_at: '2024-01-10' }
+          ])
+        }
+        
+        return NextResponse.json(mockUsers)
       }
-      
-      if (action === 'profile' && userId) {
-        // Get user profile
-        const user = mockUsers.find(u => u.id === userId)
-        return user ? NextResponse.json(user) : NextResponse.json({ error: 'User not found' }, { status: 404 })
-      }
-      
-      if (action === 'connections') {
-        // Get user connections
-        return NextResponse.json([
-          { id: 'conn-1', user: mockUsers[0], status: 'connected', connected_at: '2024-01-15' },
-          { id: 'conn-2', user: mockUsers[1], status: 'connected', connected_at: '2024-01-10' }
-        ])
-      }
-      
-      // Default: return all users
-      return NextResponse.json(mockUsers)
     }
 
     // Use real Supabase if configured
