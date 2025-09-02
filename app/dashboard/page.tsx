@@ -365,7 +365,13 @@ export default function Dashboard() {
           window.location.reload()
         }
       } else {
-        console.error('Failed to check user profile')
+        const errorData = await response.json()
+        console.error('Failed to check user profile:', errorData)
+        
+        // If it's a fallback error, don't show it to the user
+        if (errorData.fallback) {
+          console.log('Profile check failed, continuing with existing profile')
+        }
       }
     } catch (error) {
       console.error('Error checking user profile:', error)
