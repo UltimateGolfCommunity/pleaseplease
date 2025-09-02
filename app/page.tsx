@@ -153,8 +153,9 @@ export default function HomePage() {
             onLoadStart={() => console.log('Video loading started')}
             onCanPlay={() => console.log('Video can play')}
           >
-            <source src="/Firefly Have the two golfers exchanging contact information  636854.mp4" type="video/mp4" />
+            <source src="/0901.mp4" type="video/mp4" />
             <source src="/0901.mov" type="video/quicktime" />
+            <source src="/Firefly Have the two golfers exchanging contact information  636854.mp4" type="video/mp4" />
             Your browser does not support the video tag.
           </video>
           {/* Dark overlay */}
