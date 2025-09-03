@@ -1500,10 +1500,10 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Clean Navigation */}
       <nav className="bg-slate-800/90 backdrop-blur-xl border-b border-slate-700/60 sticky top-0 z-50 shadow-xl">
-        <div className="max-w-6xl mx-auto px-6 sm:px-8">
+        <div className="max-w-6xl mx-auto px-2 sm:px-4">
           <div className="flex items-center justify-between h-20 sm:h-24">
             {/* Logo - Far Left */}
-            <div className="flex-shrink-0 -ml-6 sm:-ml-4">
+            <div className="flex-shrink-0 -ml-8 sm:-ml-6">
               <Logo size="lg" />
             </div>
 
@@ -1512,7 +1512,6 @@ export default function Dashboard() {
             <div className="hidden md:flex items-center space-x-1 bg-gradient-to-r from-slate-700/90 to-slate-600/80 backdrop-blur-xl rounded-2xl p-2 shadow-lg border border-slate-600/40">
                           {[
               { id: 'overview', label: 'Tee Times', icon: Home },
-              { id: 'find-someone', label: 'Find Someone', icon: Users },
               { id: 'courses', label: 'Courses', icon: Target },
               { id: 'groups', label: 'Groups', icon: Users },
               { id: 'messages', label: 'Messages', icon: MessageCircle }
@@ -1557,10 +1556,21 @@ export default function Dashboard() {
               </div>
 
               {/* User Menu - Far Right */}
-              <div className="relative notifications-container">
+              <div className="flex items-center space-x-2">
+                {/* Search */}
                 <button 
                   className="p-2 sm:p-3 text-slate-300 hover:text-white transition-all duration-300 hover:scale-110 relative group"
-                  onClick={() => setShowNotifications(!showNotifications)}
+                  onClick={() => setActiveTab('find-someone')}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
+                  <Search className="h-5 w-5 sm:h-6 sm:w-6 relative z-10" />
+                </button>
+                
+                {/* Notifications */}
+                <div className="relative notifications-container">
+                  <button 
+                    className="p-2 sm:p-3 text-slate-300 hover:text-white transition-all duration-300 hover:scale-110 relative group"
+                    onClick={() => setShowNotifications(!showNotifications)}
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-red-400 to-pink-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
                   <Bell className="h-5 w-5 sm:h-6 sm:w-6 relative z-10" />
@@ -1633,6 +1643,7 @@ export default function Dashboard() {
                 )}
               </div>
                 
+                {/* User Profile */}
                 <div className="relative group">
                 <button className="flex items-center space-x-2 sm:space-x-3 p-2 sm:p-3 rounded-xl hover:bg-gradient-to-r hover:from-slate-700/80 hover:to-slate-600/60 transition-all duration-300 group-hover:scale-105">
                   <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full overflow-hidden shadow-lg relative">
@@ -1698,6 +1709,7 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+          </div>
         </div>
       </nav>
 
@@ -1707,7 +1719,6 @@ export default function Dashboard() {
           <div className="px-4 py-3 space-y-2 max-h-screen overflow-y-auto">
             {[
               { id: 'overview', label: 'Tee Times', icon: Home },
-              { id: 'find-someone', label: 'Find Someone', icon: Users },
               { id: 'courses', label: 'Courses', icon: Target },
               { id: 'groups', label: 'Groups', icon: Users },
               { id: 'messages', label: 'Messages', icon: MessageCircle }
