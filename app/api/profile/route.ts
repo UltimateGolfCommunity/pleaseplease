@@ -56,7 +56,7 @@ export async function PUT(request: NextRequest) {
     console.log('🔍 User ID (valid UUID):', id)
 
     // Use smart fallback logic like tee-times API
-    let supabase
+    let supabase: any = null
     let usingMockMode = false
     
     try {
@@ -75,7 +75,7 @@ export async function PUT(request: NextRequest) {
     }
     
     // Test database connection if we have a client
-    if (!usingMockMode) {
+    if (!usingMockMode && supabase) {
       try {
         const { error: testError } = await supabase.from('user_profiles').select('id').limit(1)
         if (testError && testError.message.includes('Invalid API key')) {
@@ -88,8 +88,8 @@ export async function PUT(request: NextRequest) {
       }
     }
     
-    // If using mock mode, return success without database operations
-    if (usingMockMode) {
+    // If using mock mode or no supabase client, return success without database operations
+    if (usingMockMode || !supabase) {
       console.log('🔧 PROFILE: Using mock mode for profile save')
       const mockProfile = {
         id,
