@@ -1485,10 +1485,10 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Clean Navigation */}
       <nav className="bg-slate-800/90 backdrop-blur-xl border-b border-slate-700/60 sticky top-0 z-50 shadow-xl">
-        <div className="max-w-7xl mx-auto px-0">
-          <div className="flex justify-between items-center h-24">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex justify-between items-center h-20 sm:h-24 px-4 sm:px-6">
             {/* Logo */}
-            <div className="pl-6">
+            <div className="flex-shrink-0">
               <Logo size="lg" />
             </div>
 
@@ -1527,25 +1527,30 @@ export default function Dashboard() {
               <div className="md:hidden">
                 <button
                   onClick={() => setShowMobileMenu(!showMobileMenu)}
-                  className="p-2 text-slate-300 hover:text-white transition-colors"
+                  className="p-3 text-slate-300 hover:text-white transition-colors rounded-lg hover:bg-slate-700/50 touch-manipulation"
+                  aria-label="Toggle navigation menu"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
+                  {showMobileMenu ? (
+                    <X className="w-6 h-6" />
+                  ) : (
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                  )}
                 </button>
               </div>
 
             {/* User Menu */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               <div className="relative notifications-container">
                 <button 
-                  className="p-3 text-slate-600 hover:text-slate-800 transition-all duration-300 hover:scale-110 relative group"
+                  className="p-2 sm:p-3 text-slate-300 hover:text-white transition-all duration-300 hover:scale-110 relative group"
                   onClick={() => setShowNotifications(!showNotifications)}
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-red-400 to-pink-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
-                  <Bell className="h-6 w-6 relative z-10" />
+                  <Bell className="h-5 w-5 sm:h-6 sm:w-6 relative z-10" />
                   {(pendingInvitations.length > 0 || notifications.filter(n => !n.read).length > 0) && (
-                    <div className="absolute -top-1 -right-1 h-5 w-5 bg-gradient-to-r from-red-500 to-pink-600 rounded-full shadow-lg animate-pulse flex items-center justify-center">
+                    <div className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 bg-gradient-to-r from-red-500 to-pink-600 rounded-full shadow-lg animate-pulse flex items-center justify-center">
                       <span className="text-white text-xs font-bold">
                         {pendingInvitations.length + notifications.filter(n => !n.read).length}
                       </span>
@@ -1555,7 +1560,7 @@ export default function Dashboard() {
                 
                 {/* Notifications Dropdown */}
                 {showNotifications && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-slate-200 z-50">
+                  <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white rounded-xl shadow-lg border border-slate-200 z-50">
                     <div className="p-4">
                       <h3 className="text-lg font-semibold text-slate-800 mb-3">Notifications</h3>
                       <div className="space-y-3 max-h-64 overflow-y-auto">
@@ -1614,8 +1619,8 @@ export default function Dashboard() {
               </div>
                 
                 <div className="relative group">
-                <button className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gradient-to-r hover:from-slate-700/80 hover:to-slate-600/60 transition-all duration-300 group-hover:scale-105">
-                  <div className="h-10 w-10 rounded-full overflow-hidden shadow-lg relative">
+                <button className="flex items-center space-x-2 sm:space-x-3 p-2 sm:p-3 rounded-xl hover:bg-gradient-to-r hover:from-slate-700/80 hover:to-slate-600/60 transition-all duration-300 group-hover:scale-105">
+                  <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full overflow-hidden shadow-lg relative">
                     {profile?.avatar_url ? (
                       <img 
                         src={profile.avatar_url} 
@@ -1625,11 +1630,11 @@ export default function Dashboard() {
                     ) : (
                       <div className="h-full w-full bg-gradient-to-br from-emerald-500 via-blue-600 to-indigo-700 flex items-center justify-center relative overflow-hidden">
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12"></div>
-                        <User className="h-5 w-5 text-white relative z-10" />
+                        <User className="h-4 w-4 sm:h-5 sm:w-5 text-white relative z-10" />
                       </div>
                     )}
                   </div>
-                  <span className="text-white font-semibold text-lg">
+                  <span className="hidden sm:block text-white font-semibold text-lg">
                       {profile?.first_name || user?.email?.split('@')[0] || 'Golfer'}
                     </span>
                   </button>
@@ -1656,12 +1661,15 @@ export default function Dashboard() {
       {/* Mobile Menu */}
       {showMobileMenu && (
         <div className="md:hidden bg-slate-800/95 backdrop-blur-xl border-b border-slate-700/60">
-          <div className="px-4 py-2 space-y-1">
+          <div className="px-4 py-3 space-y-2 max-h-screen overflow-y-auto">
             {[
               { id: 'overview', label: 'Tee Times', icon: Home },
               { id: 'find-someone', label: 'Find Someone', icon: Users },
               { id: 'courses', label: 'Courses', icon: Target },
               { id: 'groups', label: 'Groups', icon: Users },
+              { id: 'messages', label: 'Messages', icon: MessageCircle },
+              { id: 'badges', label: 'Badges', icon: Trophy },
+              { id: 'applications', label: 'Applications', icon: Bell },
               { id: 'profile', label: 'Profile', icon: User }
             ].map((tab) => {
               const Icon = tab.icon
@@ -1673,7 +1681,7 @@ export default function Dashboard() {
                     setActiveTab(tab.id as any)
                     setShowMobileMenu(false)
                   }}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 font-medium ${
+                  className={`w-full flex items-center space-x-3 px-4 py-4 rounded-xl transition-all duration-300 font-medium touch-manipulation ${
                     isActive
                       ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg'
                       : 'text-slate-300 hover:text-white hover:bg-slate-600/60'
