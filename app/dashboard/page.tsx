@@ -37,7 +37,7 @@ export default function Dashboard() {
   const supabase = createBrowserClient()
   
 
-      const [activeTab, setActiveTab] = useState<'overview' | 'find-someone' | 'courses' | 'groups' | 'profile'>('overview')
+      const [activeTab, setActiveTab] = useState<'overview' | 'find-someone' | 'courses' | 'groups' | 'profile' | 'applications'>('overview')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
@@ -135,6 +135,10 @@ export default function Dashboard() {
   // Applications state
   const [applications, setApplications] = useState<any[]>([])
   const [applicationsLoading, setApplicationsLoading] = useState(false)
+  
+  // Pending applications to user's posted tee times
+  const [pendingApplications, setPendingApplications] = useState<any[]>([])
+  const [pendingApplicationsLoading, setPendingApplicationsLoading] = useState(false)
 
   // Connections state
   const [connections, setConnections] = useState<any[]>([])
@@ -159,12 +163,9 @@ export default function Dashboard() {
   const [isEditingProfile, setIsEditingProfile] = useState(false)
 
   // Notifications state
-  const [notifications, setNotifications] = useState([
-    { id: 1, type: 'tee_time', message: 'New tee time available at Pebble Beach', time: '2 min ago', read: false },
-    { id: 2, type: 'badge', message: 'Congratulations! You earned the "First Round" badge', time: '1 hour ago', read: false },
-    { id: 3, type: 'message', message: 'John D. sent you a message about golfing this weekend', time: '3 hours ago', read: false }
-  ])
+  const [notifications, setNotifications] = useState<any[]>([])
   const [showNotifications, setShowNotifications] = useState(false)
+  const [notificationsLoading, setNotificationsLoading] = useState(false)
 
   // Recent activity state
   const [recentActivity, setRecentActivity] = useState([
@@ -393,6 +394,8 @@ export default function Dashboard() {
     if (user?.id) {
       fetchConnections()
       fetchPendingInvitations()
+      fetchNotifications()
+      fetchPendingApplications()
       // Check if user profile exists
       checkUserProfile()
     }
@@ -471,6 +474,80 @@ export default function Dashboard() {
       console.error('Error fetching applications:', error)
     } finally {
       setApplicationsLoading(false)
+    }
+  }
+
+  const formatTimeAgo = (dateString: string) => {
+    const now = new Date()
+    const date = new Date(dateString)
+    const diffInMs = now.getTime() - date.getTime()
+    const diffInMinutes = Math.floor(diffInMs / (1000 * 60))
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60))
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24))
+    
+    if (diffInMinutes < 1) return 'Just now'
+    if (diffInMinutes < 60) return `${diffInMinutes} min ago`
+    if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`
+    return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`
+  }
+
+  const fetchPendingApplications = async () => {
+    if (!user?.id) return
+    
+    try {
+      setPendingApplicationsLoading(true)
+      console.log('📋 Fetching pending applications for user tee times:', user.id)
+      
+      const response = await fetch(`/api/tee-times?action=get-pending-applications&user_id=${user.id}`)
+      
+      if (response.ok) {
+        const data = await response.json()
+        console.log('📋 Fetched pending applications:', data.applications?.length || 0)
+        setPendingApplications(data.applications || [])
+      } else {
+        console.error('Failed to fetch pending applications:', response.status)
+        setPendingApplications([])
+      }
+    } catch (error) {
+      console.error('Error fetching pending applications:', error)
+      setPendingApplications([])
+    } finally {
+      setPendingApplicationsLoading(false)
+    }
+  }
+
+  const fetchNotifications = async () => {
+    if (!user?.id) return
+    
+    try {
+      setNotificationsLoading(true)
+      console.log('🔔 Fetching notifications for user:', user.id)
+      
+      const response = await fetch(`/api/notifications?user_id=${user.id}`)
+      
+      if (response.ok) {
+        const data = await response.json()
+        console.log('🔔 Fetched notifications:', data.notifications?.length || 0)
+        
+        // Convert API notifications to dashboard format
+        const formattedNotifications = (data.notifications || []).map((notif: any) => ({
+          id: notif.id,
+          type: notif.type,
+          message: notif.message,
+          time: formatTimeAgo(notif.created_at),
+          read: notif.is_read || false,
+          related_id: notif.related_id,
+          title: notif.title
+        }))
+        
+        setNotifications(formattedNotifications)
+      } else {
+        console.error('Failed to fetch notifications:', response.status)
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error)
+    } finally {
+      setNotificationsLoading(false)
     }
   }
 
@@ -1378,9 +1455,11 @@ export default function Dashboard() {
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-red-400 to-pink-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
                   <Bell className="h-6 w-6 relative z-10" />
-                  {pendingInvitations.length > 0 && (
+                  {(pendingInvitations.length > 0 || notifications.filter(n => !n.read).length > 0) && (
                     <div className="absolute -top-1 -right-1 h-5 w-5 bg-gradient-to-r from-red-500 to-pink-600 rounded-full shadow-lg animate-pulse flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">{pendingInvitations.length}</span>
+                      <span className="text-white text-xs font-bold">
+                        {pendingInvitations.length + notifications.filter(n => !n.read).length}
+                      </span>
                     </div>
                   )}
                 </button>

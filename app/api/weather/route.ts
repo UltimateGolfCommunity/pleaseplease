@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
       description: data.weather[0].description,
       icon: data.weather[0].icon,
       humidity: data.main.humidity,
-      windSpeed: Math.round(data.wind.speed * 3.6), // Convert m/s to km/h
+      windSpeed: Math.round(data.wind.speed), // Wind speed in mph (imperial units)
       feelsLike: Math.round(data.main.feels_like)
     }
 
