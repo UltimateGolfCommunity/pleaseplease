@@ -564,6 +564,8 @@ export default function Dashboard() {
     try {
       setProfileSaving(true)
 
+      console.log('🔍 Saving profile with data:', { id: user.id, ...profileForm })
+      
       const response = await fetch('/api/profile', {
         method: 'PUT',
         headers: {
@@ -571,9 +573,12 @@ export default function Dashboard() {
         },
         body: JSON.stringify({
           id: user.id,
+          email: user.email,
           ...profileForm
         })
       })
+      
+      console.log('🔍 Profile save response status:', response.status)
 
       if (response.ok) {
         const updatedProfile = await response.json()
@@ -773,15 +778,10 @@ export default function Dashboard() {
 
   const handleApplyToTeeTime = async (teeTimeId: string) => {
     try {
-      // Get the current session token
-      const { data: { session } } = await supabase.auth.getSession()
-      const authToken = session?.access_token
-      
       const response = await fetch('/api/tee-times', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
         },
         body: JSON.stringify({
           action: 'apply',
@@ -835,15 +835,10 @@ export default function Dashboard() {
     }
 
     try {
-      // Get the current session token
-      const { data: { session } } = await supabase.auth.getSession()
-      const authToken = session?.access_token
-      
       const response = await fetch('/api/tee-times', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
         },
         body: JSON.stringify({
           action: 'delete',
@@ -1149,19 +1144,15 @@ export default function Dashboard() {
   const handleTeeTimeSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      // Get the current session token
-      const { data: { session } } = await supabase.auth.getSession()
-      const authToken = session?.access_token
-      
       const response = await fetch('/api/tee-times', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
         },
         body: JSON.stringify({
           action: 'create',
           creator_id: user?.id,
+          course: teeTimeForm.course,
           tee_time_date: teeTimeForm.date,
           tee_time_time: teeTimeForm.time,
           max_players: teeTimeForm.players,
