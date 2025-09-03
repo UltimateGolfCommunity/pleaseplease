@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { createAdminClient } from '@/lib/supabase-admin'
 
-// Mock tee time data for development
-const mockTeeTimes = [
+// Mock tee time data for development with in-memory storage
+let mockTeeTimes = [
   {
     id: 'tee-1',
     creator: { id: 'user-1', first_name: 'John', last_name: 'Smith' },
@@ -32,24 +32,67 @@ const mockTeeTimes = [
   }
 ]
 
+// In-memory storage for newly created mock tee times
+const mockTeeTimeStorage: any[] = []
+
+// Function to get all mock tee times (base + dynamically created)
+function getAllMockTeeTimes() {
+  return [...mockTeeTimes, ...mockTeeTimeStorage]
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const action = searchParams.get('action')
   const userId = searchParams.get('user_id')
 
   try {
-    // Check if Supabase is configured
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      console.log('Using mock data for tee-times API')
+    // Use smart fallback logic like POST/DELETE methods
+    let supabase: any = null
+    let usingMockMode = false
+    
+    try {
+      console.log('🔍 GET: Attempting to create admin client...')
+      supabase = createAdminClient()
+      console.log('✅ GET: Admin client created successfully')
+    } catch (adminError) {
+      console.log('⚠️ GET: Admin client failed, trying server client')
+      try {
+        supabase = createServerClient()
+        console.log('✅ GET: Server client created as fallback')
+      } catch (serverError) {
+        console.log('❌ GET: Both clients failed, using mock mode')
+        usingMockMode = true
+      }
+    }
+    
+    // Test database connection if we have a client
+    if (!usingMockMode && supabase) {
+      try {
+        const { error: testError } = await supabase.from('tee_times').select('id').limit(1)
+        if (testError && testError.message.includes('Invalid API key')) {
+          console.log('⚠️ GET: Database test failed with Invalid API key, switching to mock mode')
+          usingMockMode = true
+        }
+      } catch (testQueryError) {
+        console.log('⚠️ GET: Database test query failed, switching to mock mode')
+        usingMockMode = true
+      }
+    }
+    
+    // Handle mock mode responses
+    if (usingMockMode || !supabase) {
+      console.log('🔧 GET: Using mock mode for tee times')
       
       if (action === 'user' && userId) {
         // Get user's tee times
-        return NextResponse.json(mockTeeTimes.filter(tt => tt.creator.id === userId))
+        const allMockTeeTimes = getAllMockTeeTimes()
+        return NextResponse.json(allMockTeeTimes.filter(tt => tt.creator_id === userId || tt.creator?.id === userId))
       }
       
       if (action === 'available') {
         // Get available tee times
-        return NextResponse.json(mockTeeTimes.filter(tt => tt.status === 'active'))
+        const allMockTeeTimes = getAllMockTeeTimes()
+        return NextResponse.json(allMockTeeTimes.filter(tt => tt.status === 'active'))
       }
       
       if (action === 'get-applications' && userId) {
@@ -88,11 +131,11 @@ export async function GET(request: NextRequest) {
       }
       
       // Default: return all tee times
-      return NextResponse.json(mockTeeTimes)
+      return NextResponse.json(getAllMockTeeTimes())
     }
 
-    // Use real Supabase if configured
-    const supabase = createServerClient()
+    // Use real Supabase for database operations
+    console.log('🔍 GET: Using database for tee time operations')
 
     if (action === 'user' && userId) {
       const { data, error } = await supabase
@@ -251,6 +294,15 @@ export async function DELETE(request: NextRequest) {
     // Check if this is a mock tee time (starts with 'mock-')
     if (tee_time_id.startsWith('mock-')) {
       console.log('🔧 DELETE: Handling mock tee time deletion:', tee_time_id)
+      
+      // Remove from mock storage
+      const index = mockTeeTimeStorage.findIndex(tt => tt.id === tee_time_id)
+      if (index !== -1) {
+        mockTeeTimeStorage.splice(index, 1)
+        console.log('✅ Mock tee time removed from storage:', tee_time_id)
+        console.log('📦 Remaining mock tee times in storage:', mockTeeTimeStorage.length)
+      }
+      
       return NextResponse.json({ 
         success: true, 
         message: 'Tee time deleted successfully (mock mode)'
@@ -439,7 +491,7 @@ export async function POST(request: NextRequest) {
         current_players: 1,
         handicap_requirement: data.handicap_requirement || 'any',
         description: data.description || '',
-        status: 'open',
+        status: 'active',
         available_spots: (data.max_players || 4) - 1,
         creator: { 
           id: data.creator_id, 
@@ -450,7 +502,11 @@ export async function POST(request: NextRequest) {
         created_at: new Date().toISOString()
       }
       
-      console.log('✅ Mock tee time created:', newTeeTime)
+      // Store the mock tee time so it persists across GET requests
+      mockTeeTimeStorage.push(newTeeTime)
+      
+      console.log('✅ Mock tee time created and stored:', newTeeTime)
+      console.log('📦 Total mock tee times in storage:', mockTeeTimeStorage.length)
       
       return NextResponse.json({ 
         success: true, 
