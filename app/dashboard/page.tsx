@@ -1500,15 +1500,15 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Clean Navigation */}
       <nav className="bg-slate-800/90 backdrop-blur-xl border-b border-slate-700/60 sticky top-0 z-50 shadow-xl">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center h-20 sm:h-24 px-4 sm:px-6">
-            {/* Logo */}
-            <div className="flex-shrink-0 w-48">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="flex items-center justify-between h-20 sm:h-24">
+            {/* Logo - Far Left */}
+            <div className="flex-shrink-0">
               <Logo size="lg" />
             </div>
 
-            {/* Navigation Tabs - Centered */}
-            <div className="flex-1 flex justify-center">
+            {/* Navigation Tabs - Absolute Center */}
+            <div className="absolute left-1/2 transform -translate-x-1/2">
               <div className="hidden md:flex items-center space-x-1 bg-gradient-to-r from-slate-700/90 to-slate-600/80 backdrop-blur-xl rounded-2xl p-2 shadow-lg border border-slate-600/40">
                           {[
               { id: 'overview', label: 'Tee Times', icon: Home },
@@ -1538,7 +1538,10 @@ export default function Dashboard() {
                   )
                 })}
               </div>
-              
+            </div>
+
+            {/* Right Side Container */}
+            <div className="flex items-center space-x-2 sm:space-x-4">
               {/* Mobile Navigation */}
               <div className="md:hidden">
                 <button
@@ -1555,10 +1558,8 @@ export default function Dashboard() {
                   )}
                 </button>
               </div>
-            </div>
 
-            {/* User Menu - Right Side */}
-            <div className="flex items-center space-x-2 sm:space-x-4 w-48 justify-end">
+              {/* User Menu - Far Right */}
               <div className="relative notifications-container">
                 <button 
                   className="p-2 sm:p-3 text-slate-300 hover:text-white transition-all duration-300 hover:scale-110 relative group"
