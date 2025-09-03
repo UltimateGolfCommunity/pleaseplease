@@ -419,7 +419,34 @@ export async function POST(request: NextRequest) {
         })
       }
       
-      return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+      if (action === 'search') {
+        const { query } = data
+        console.log('🔍 USERS POST: Mock search for:', query)
+        
+        if (!query) {
+          return NextResponse.json([])
+        }
+        
+        // Filter mock users based on search query
+        const filteredUsers = mockUsers.filter(user => 
+          user.first_name.toLowerCase().includes(query.toLowerCase()) ||
+          user.last_name.toLowerCase().includes(query.toLowerCase()) ||
+          user.username.toLowerCase().includes(query.toLowerCase()) ||
+          user.location.toLowerCase().includes(query.toLowerCase())
+        )
+        
+        console.log('✅ USERS POST: Mock search results:', filteredUsers.length)
+        
+        // If no results found, return some users for testing
+        if (filteredUsers.length === 0) {
+          console.log('🔧 USERS POST: No results found, returning sample users')
+          return NextResponse.json([mockUsers[0], mockUsers[1], mockUsers[2]])
+        }
+        
+        return NextResponse.json(filteredUsers)
+      }
+      
+      return NextResponse.json({ error: 'Invalid action for mock mode', action }, { status: 400 })
     }
 
     console.log('🔍 USERS POST: Using database for operations')

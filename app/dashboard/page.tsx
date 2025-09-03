@@ -923,6 +923,14 @@ export default function Dashboard() {
   }
 
   const handleApplyToTeeTime = async (teeTimeId: string) => {
+    // Check if user is logged in
+    if (!user?.id) {
+      alert('You must be logged in to apply for tee times')
+      return
+    }
+    
+    console.log('🏌️ Applying to tee time:', teeTimeId, 'for user:', user.id)
+    
     try {
       const response = await fetch('/api/tee-times', {
         method: 'POST',
@@ -932,7 +940,7 @@ export default function Dashboard() {
         body: JSON.stringify({
           action: 'apply',
           tee_time_id: teeTimeId,
-          applicant_id: user?.id
+          applicant_id: user.id
         }),
       })
       
@@ -976,10 +984,17 @@ export default function Dashboard() {
   }
 
   const handleMessageCreator = (creator: any) => {
+    if (!user?.id) {
+      alert('You must be logged in to send messages')
+      return
+    }
+    
     if (!creator) {
       alert('Creator information not available')
       return
     }
+    
+    console.log('📧 Opening message composer for:', creator.first_name, creator.last_name, '(User ID:', user.id, ')')
     
     // Switch to messages tab and pre-select the creator for messaging
     setActiveTab('messages')
@@ -988,7 +1003,7 @@ export default function Dashboard() {
     setTimeout(() => {
       // The MessagingSystem component should handle pre-selecting this user
       // We could pass this via a prop or state if needed
-      console.log('📧 Opening message composer for:', creator.first_name, creator.last_name)
+      console.log('📧 Message composer opened for:', creator.first_name, creator.last_name)
     }, 100)
   }
 
