@@ -3003,7 +3003,7 @@ export default function Dashboard() {
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-teal-500/5 animate-pulse"></div>
             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-400/10 to-transparent rounded-full transform translate-x-16 -translate-y-16"></div>
             
-            <div className="relative flex flex-col h-full">
+            <div className="relative flex flex-col min-h-0 flex-1">
               {/* Header */}
               <div className="text-center mb-6 flex-shrink-0">
                 <div className="inline-flex items-center gap-3 mb-4">
@@ -3015,8 +3015,8 @@ export default function Dashboard() {
                 <p className="text-slate-400">Set up your perfect golf outing and invite others to join</p>
               </div>
 
-              <form onSubmit={handleTeeTimeSubmit} className="flex flex-col h-full">
-                <div className="overflow-y-auto flex-1 pr-2 space-y-5">
+              <form onSubmit={handleTeeTimeSubmit} className="flex flex-col flex-1 min-h-0">
+                <div className="overflow-y-auto pr-2 space-y-5" style={{ maxHeight: 'calc(100% - 80px)' }}>
                 {/* Course Name */}
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-emerald-400 mb-2">Golf Course</label>
@@ -3161,7 +3161,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Action Buttons - Fixed at bottom */}
-                <div className="flex flex-col sm:flex-row gap-3 pt-4 flex-shrink-0 border-t border-slate-600/30 mt-4">
+                <div className="flex flex-col sm:flex-row gap-3 pt-4 flex-shrink-0 border-t border-slate-600/30 mt-4 bg-slate-800/50">
                 <button
                   type="button"
                   onClick={() => setShowTeeTimeModal(false)}
