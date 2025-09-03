@@ -1741,7 +1741,13 @@ export default function Dashboard() {
                               </div>
                               <p className="text-slate-300 text-sm flex items-center">
                                 <User className="h-4 w-4 mr-2 text-blue-400" />
-                                Created by {teeTime.creator?.first_name || 'Unknown'} {teeTime.creator?.last_name || ''}
+                                Created by{' '}
+                                <button
+                                  onClick={() => router.push(`/users/${teeTime.creator?.id}`)}
+                                  className="text-emerald-400 hover:text-emerald-300 transition-colors duration-200 ml-1 underline"
+                                >
+                                  {teeTime.creator?.first_name || 'Unknown'} {teeTime.creator?.last_name || ''}
+                                </button>
                               </p>
                             </div>
                           </div>
@@ -1815,8 +1821,11 @@ export default function Dashboard() {
               {searchResults && searchResults.length > 0 && (
                 <div className="space-y-3">
                   {searchResults?.map((user) => (
-                    <div key={user.id} className="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg border border-slate-600/50">
-                      <div className="flex items-center space-x-3">
+                    <div key={user.id} className="flex items-center justify-between p-4 bg-slate-800/50 rounded-lg border border-slate-600/50 hover:bg-slate-700/50 transition-colors duration-300">
+                      <div 
+                        onClick={() => router.push(`/users/${user.id}`)}
+                        className="flex items-center space-x-3 flex-1 cursor-pointer"
+                      >
                         <div className="h-12 w-12 rounded-full overflow-hidden border-2 border-emerald-500/30">
                           <img
                             src={user.avatar_url || '/default-avatar.svg'}
@@ -1828,17 +1837,27 @@ export default function Dashboard() {
                           />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-white">{user.first_name} {user.last_name}</h3>
+                          <h3 className="font-semibold text-white hover:text-emerald-400 transition-colors">
+                            {user.first_name} {user.last_name}
+                          </h3>
                           <p className="text-slate-300 text-sm">{user.location} • Handicap: {user.handicap}</p>
                           {user.bio && <p className="text-slate-400 text-xs mt-1">{user.bio}</p>}
                         </div>
                       </div>
-                      <button
-                        onClick={() => handleConnect(user.id)}
-                        className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-                      >
-                        Connect
-                      </button>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => router.push(`/users/${user.id}`)}
+                          className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                        >
+                          View Profile
+                        </button>
+                        <button
+                          onClick={() => handleConnect(user.id)}
+                          className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                        >
+                          Connect
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -2167,9 +2186,12 @@ export default function Dashboard() {
                                 </span>
                               </div>
                               <div>
-                                <h4 className="font-semibold text-gray-800">
+                                <button
+                                  onClick={() => router.push(`/users/${application.applicant?.id}`)}
+                                  className="font-semibold text-gray-800 hover:text-blue-600 transition-colors duration-200 text-left"
+                                >
                                   {application.applicant?.first_name} {application.applicant?.last_name}
-                                </h4>
+                                </button>
                                 <p className="text-sm text-gray-600">@{application.applicant?.username}</p>
                               </div>
                             </div>

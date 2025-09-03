@@ -49,16 +49,26 @@ export default function UserProfilePage() {
     const fetchUser = async () => {
       try {
         setLoading(true)
-        // For now, fetch from our mock API
-        const response = await fetch(`/api/users/search?q=${params.id}`)
+        console.log('🔍 Fetching user profile for ID:', params.id)
+        
+        // Try fetching by user ID first
+        const response = await fetch(`/api/users?action=profile&id=${params.id}`)
         if (response.ok) {
-          const data = await response.json()
-          // Find the specific user by ID or username
-          const foundUser = data.users.find((u: UserProfile) => 
-            u.id === params.id || u.username === params.id
-          )
-          if (foundUser) {
-            setUser(foundUser)
+          const userData = await response.json()
+          if (userData && userData.id) {
+            setUser(userData)
+          } else {
+            // If not found by ID, try searching by username
+            const searchResponse = await fetch(`/api/users?action=search&q=${params.id}`)
+            if (searchResponse.ok) {
+              const searchData = await searchResponse.json()
+              const foundUser = searchData.find((u: UserProfile) => 
+                u.username === params.id || u.id === params.id
+              )
+              if (foundUser) {
+                setUser(foundUser)
+              }
+            }
           }
         }
       } catch (error) {
@@ -74,23 +84,63 @@ export default function UserProfilePage() {
   }, [params.id])
 
   const handleConnect = async () => {
-    setConnectionStatus('pending')
-    // In production, this would send a connection request
-    setTimeout(() => {
-      setConnectionStatus('connected')
-    }, 1000)
+    try {
+      setConnectionStatus('pending')
+      
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'connect',
+          user_id: 'current-user-id', // This would come from auth context
+          connected_user_id: user?.id
+        }),
+      })
+      
+      if (response.ok) {
+        setConnectionStatus('connected')
+        alert('Connection request sent successfully!')
+      } else {
+        setConnectionStatus('none')
+        alert('Failed to send connection request')
+      }
+    } catch (error) {
+      console.error('Error connecting:', error)
+      setConnectionStatus('none')
+      alert('Failed to send connection request')
+    }
   }
 
   const handleSendMessage = async () => {
     if (!message.trim()) return
     
-    // In production, this would send a message
-    console.log('Sending message:', message)
-    setMessage('')
-    setShowMessageForm(false)
-    
-    // Show success feedback
-    alert('Message sent successfully!')
+    try {
+      const response = await fetch('/api/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'send',
+          sender_id: 'current-user-id', // This would come from auth context
+          recipient_id: user?.id,
+          message_content: message
+        }),
+      })
+      
+      if (response.ok) {
+        setMessage('')
+        setShowMessageForm(false)
+        alert('Message sent successfully!')
+      } else {
+        alert('Failed to send message')
+      }
+    } catch (error) {
+      console.error('Error sending message:', error)
+      alert('Failed to send message')
+    }
   }
 
   if (loading) {
