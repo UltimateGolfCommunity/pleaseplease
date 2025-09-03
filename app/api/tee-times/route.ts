@@ -711,29 +711,8 @@ export async function POST(request: NextRequest) {
       if (usingMockMode) {
         console.log('🔧 APPLY: Using mock mode for application')
         
-        // Create mock notification
-        try {
-          await fetch('/api/notifications', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'create',
-              user_id: data.tee_time_creator_id || 'mock-creator',
-              type: 'tee_time_application',
-              title: 'New Tee Time Application',
-              message: `${data.applicant_name || 'Someone'} applied to join your tee time`,
-              notification_data: {
-                tee_time_id: data.tee_time_id,
-                applicant_id: data.applicant_id,
-                applicant_name: data.applicant_name,
-                tee_time_date: data.tee_time_date,
-                tee_time_time: data.tee_time_time
-              }
-            })
-          })
-        } catch (notifError) {
-          console.log('⚠️ Failed to create notification in mock mode')
-        }
+        // Create mock notification (no database operation needed in mock mode)
+        console.log('🔧 APPLY: Mock notification would be created for user:', data.tee_time_creator_id || 'mock-creator')
         
         return NextResponse.json({ 
           success: true, 
@@ -812,37 +791,34 @@ export async function POST(request: NextRequest) {
         }, { status: 400 })
       }
       
-      // Create notification for tee time creator
+      // Create notification for tee time creator directly in database
       if (teeTimeDetails && applicantDetails) {
         try {
           const applicantName = applicantDetails.first_name && applicantDetails.last_name 
             ? `${applicantDetails.first_name} ${applicantDetails.last_name}`
             : applicantDetails.username || 'Someone'
           
-          await fetch('/api/notifications', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'create',
-              user_id: teeTimeDetails.creator_id,
-              type: 'tee_time_application',
-              title: 'New Tee Time Application',
-              message: `${applicantName} applied to join your tee time on ${teeTimeDetails.tee_time_date} at ${teeTimeDetails.tee_time_time}`,
-              notification_data: {
-                tee_time_id: data.tee_time_id,
-                applicant_id: data.applicant_id,
-                applicant_name: applicantName,
-                application_id: application.id,
-                tee_time_date: teeTimeDetails.tee_time_date,
-                tee_time_time: teeTimeDetails.tee_time_time,
-                course_name: teeTimeDetails.course_name
-              }
-            })
-          })
+          // Insert notification directly into database
+          const notificationData = {
+            user_id: teeTimeDetails.creator_id,
+            type: 'tee_time_application',
+            title: 'New Tee Time Application',
+            message: `${applicantName} applied to join your tee time on ${teeTimeDetails.tee_time_date} at ${teeTimeDetails.tee_time_time}`,
+            related_id: application.id,
+            is_read: false
+          }
           
-          console.log('✅ Notification sent to tee time creator')
+          const { error: notifError } = await supabase
+            .from('notifications')
+            .insert(notificationData)
+          
+          if (notifError) {
+            console.error('❌ Error creating notification:', notifError)
+          } else {
+            console.log('✅ Notification created successfully for user:', teeTimeDetails.creator_id)
+          }
         } catch (notifError) {
-          console.log('⚠️ Failed to send notification, but application was successful')
+          console.log('⚠️ Failed to create notification, but application was successful:', notifError)
         }
       }
       

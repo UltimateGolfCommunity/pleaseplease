@@ -150,8 +150,8 @@ export async function POST(request: NextRequest) {
           type: data.type,
           title: data.title,
           message: data.message,
-          data: data.notification_data || {},
-          read: false
+          related_id: data.related_id || null,
+          is_read: false
         })
         .select()
         .single()
