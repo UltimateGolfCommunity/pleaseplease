@@ -183,7 +183,7 @@ export async function POST(request: NextRequest) {
 
       const { error } = await supabase
         .from('notifications')
-        .update({ read: true })
+        .update({ is_read: true })
         .eq('id', data.notification_id)
 
       if (error) {

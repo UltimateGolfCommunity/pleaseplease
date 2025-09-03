@@ -400,6 +400,14 @@ export default function Dashboard() {
       fetchPendingApplications()
       // Check if user profile exists
       checkUserProfile()
+      
+      // Set up periodic refresh for notifications and applications (every 30 seconds)
+      const refreshInterval = setInterval(() => {
+        fetchNotifications()
+        fetchPendingApplications()
+      }, 30000)
+      
+      return () => clearInterval(refreshInterval)
     }
   }, [user?.id])
 
@@ -956,22 +964,16 @@ export default function Dashboard() {
           time: 'Just now'
         }, ...prev.slice(0, 3)])
         
-        // Add notification for the tee time creator
-        const teeTime = availableTeeTimes.find(tt => tt.id === teeTimeId)
-        if (teeTime && teeTime.creator_id !== user?.id) {
-          setNotifications(prev => [{
-            id: Date.now(),
-            type: 'tee_time_application',
-            message: `${profile?.first_name || 'Someone'} applied to join your tee time on ${teeTime.tee_time_date}`,
-            time: 'Just now',
-            read: false
-          }, ...prev.slice(0, 9)]) // Keep max 10 notifications
-        }
+        // Note: Backend handles creating notification for tee time creator
         
         alert('Application submitted successfully! The creator will be notified.')
         
         // Refresh tee times to show updated status
         fetchTeeTimes()
+        
+        // Refresh notifications and pending applications for all users
+        fetchNotifications()
+        fetchPendingApplications()
       } else {
         const errorData = await response.json()
         console.error('Failed to submit application:', errorData)
@@ -1694,6 +1696,8 @@ export default function Dashboard() {
                       <button
                         onClick={() => {
                           setActiveTab('applications')
+                          fetchPendingApplications()
+                          fetchNotifications()
                         }}
                         className="flex items-center w-full px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
                       >
@@ -1776,6 +1780,8 @@ export default function Dashboard() {
                 onClick={() => {
                   setActiveTab('applications')
                   setShowMobileMenu(false)
+                  fetchPendingApplications()
+                  fetchNotifications()
                 }}
                 className="w-full flex items-center space-x-3 px-4 py-4 rounded-xl transition-all duration-300 font-medium touch-manipulation text-slate-300 hover:text-white hover:bg-slate-600/60"
               >
@@ -1957,7 +1963,11 @@ export default function Dashboard() {
                         {teeTime.creator_id === user?.id ? (
                             <>
                               <button
-                                onClick={() => setActiveTab('applications')}
+                                onClick={() => {
+                                  setActiveTab('applications')
+                                  fetchPendingApplications()
+                                  fetchNotifications()
+                                }}
                                 className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-4 px-6 rounded-2xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center gap-2"
                               >
                                 <Bell className="h-5 w-5" />
