@@ -638,10 +638,20 @@ export default function Dashboard() {
       return
     }
 
+    // Validate required fields
+    if (!profileForm.first_name?.trim() || !profileForm.last_name?.trim()) {
+      alert('Please fill in your first and last name')
+      return
+    }
+
     try {
       setProfileSaving(true)
 
-      console.log('🔍 Saving profile with data:', { id: user.id, ...profileForm })
+      console.log('🔍 Mobile-friendly profile save with data:', { id: user.id, ...profileForm })
+      
+      // Add timeout for mobile networks
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
       
       const response = await fetch('/api/profile', {
         method: 'PUT',
@@ -652,25 +662,37 @@ export default function Dashboard() {
           id: user.id,
           email: user.email,
           ...profileForm
-        })
+        }),
+        signal: controller.signal
       })
       
+      clearTimeout(timeoutId)
       console.log('🔍 Profile save response status:', response.status)
 
       if (response.ok) {
         const updatedProfile = await response.json()
         
-        // Update local profile state
-        // Note: In a real app, you'd want to update the AuthContext profile as well
-        alert('Profile saved successfully!')
-        setIsEditingProfile(false) // Exit edit mode after successful save
+        // Show success message that works well on mobile
+        if (window.confirm('Profile saved successfully! Continue editing or view profile?')) {
+          // Stay in edit mode
+        } else {
+          setIsEditingProfile(false) // Exit edit mode
+        }
       } else {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || 'Failed to save profile')
       }
     } catch (error) {
       console.error('❌ Error saving profile:', error)
-      alert('Failed to save profile. Please try again.')
+      
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      const isTimeout = error instanceof Error && error.name === 'AbortError'
+      
+      if (isTimeout) {
+        alert('Profile save timed out. Please check your connection and try again.')
+      } else {
+        alert('Failed to save profile. Please check your connection and try again.')
+      }
     } finally {
       setProfileSaving(false)
     }
@@ -1593,11 +1615,6 @@ export default function Dashboard() {
                 
                 <div className="absolute right-0 mt-2 w-48 bg-slate-800 rounded-xl shadow-lg border border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                   <div className="p-2">
-                    <Link href="/settings" className="flex items-center px-3 py-2 text-slate-200 hover:bg-slate-700 rounded-lg transition-colors">
-                        <Settings className="h-4 w-4 mr-3" />
-                        Settings
-                    </Link>
-                    <hr className="my-2 border-slate-700" />
                       <button
                         onClick={() => {
                           handleSignOut()
@@ -2414,8 +2431,9 @@ export default function Dashboard() {
                             type="text"
                             value={profileForm.first_name || ''}
                             onChange={(e) => setProfileForm(prev => ({ ...prev, first_name: e.target.value }))}
-                            className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300"
+                            className="w-full px-4 py-4 text-lg sm:text-base sm:py-3 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300 touch-manipulation"
                             placeholder="Enter your first name"
+                            autoComplete="given-name"
                           />
                         </div>
                         <div>
@@ -2424,8 +2442,9 @@ export default function Dashboard() {
                             type="text"
                             value={profileForm.last_name || ''}
                             onChange={(e) => setProfileForm(prev => ({ ...prev, last_name: e.target.value }))}
-                            className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300"
+                            className="w-full px-4 py-4 text-lg sm:text-base sm:py-3 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300 touch-manipulation"
                             placeholder="Enter your last name"
+                            autoComplete="family-name"
                           />
                         </div>
                         <div>
@@ -2534,11 +2553,11 @@ export default function Dashboard() {
 
             {/* Action Buttons */}
             {isEditingProfile && (
-              <div className="flex justify-center space-x-4">
+              <div className="flex flex-col sm:flex-row justify-center gap-4 sm:space-x-4 sm:gap-0">
                 <button 
                   onClick={handleSaveProfile}
                   disabled={profileSaving}
-                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-8 py-4 rounded-xl transition-all duration-300 font-medium disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2"
+                  className="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-8 py-4 rounded-xl transition-all duration-300 font-medium disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center space-x-2 min-h-[56px] touch-manipulation"
                 >
                   {profileSaving ? (
                     <>
@@ -2556,7 +2575,7 @@ export default function Dashboard() {
                     setIsEditingProfile(false)
                     handleResetProfile()
                   }}
-                  className="bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white px-8 py-4 rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                  className="w-full sm:w-auto bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white px-8 py-4 rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 min-h-[56px] touch-manipulation"
                 >
                   Cancel
                 </button>
