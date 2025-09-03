@@ -298,12 +298,31 @@ export async function POST(request: NextRequest) {
     if (action === 'create') {
       console.log('🔍 Received tee time creation request with data:', data)
       
-      // Validate required fields
-      if (!data.creator_id) {
+      // Get the authenticated user from the request
+      const authHeader = request.headers.get('authorization')
+      let authenticatedUserId = null
+      
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7)
+        try {
+          const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+          if (!authError && user) {
+            authenticatedUserId = user.id
+            console.log('✅ Authenticated user ID:', authenticatedUserId)
+          }
+        } catch (error) {
+          console.log('⚠️ Could not verify auth token:', error)
+        }
+      }
+      
+      // Use authenticated user ID if available, otherwise fall back to creator_id
+      const creatorId = authenticatedUserId || data.creator_id
+      
+      if (!creatorId) {
         return NextResponse.json({ 
-          error: 'Missing required field: creator_id',
-          details: 'User ID is required to create a tee time'
-        }, { status: 400 })
+          error: 'Authentication required',
+          details: 'You must be logged in to create a tee time'
+        }, { status: 401 })
       }
       
       if (!data.tee_time_date) {
@@ -324,14 +343,14 @@ export async function POST(request: NextRequest) {
       const { data: userProfile, error: profileError } = await supabase
         .from('user_profiles')
         .select('id')
-        .eq('id', data.creator_id)
+        .eq('id', creatorId)
         .single()
 
       if (profileError || !userProfile) {
-        console.log('⚠️ User profile not found for:', data.creator_id)
+        console.log('⚠️ User profile not found for:', creatorId)
         
         // Check if user exists in auth.users first
-        const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(data.creator_id)
+        const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(creatorId)
         
         if (authError || !authUser) {
           console.error('❌ User does not exist in auth.users:', authError)
@@ -345,7 +364,7 @@ export async function POST(request: NextRequest) {
         const { data: newProfile, error: createError } = await supabase
           .from('user_profiles')
           .insert({
-            id: data.creator_id,
+            id: creatorId,
             email: authUser.user.email || 'user@example.com',
             username: authUser.user.email?.split('@')[0] || 'user',
             first_name: 'User',
@@ -363,7 +382,7 @@ export async function POST(request: NextRequest) {
           }, { status: 400 })
         }
         
-        console.log('✅ Created basic user profile for:', data.creator_id)
+        console.log('✅ Created basic user profile for:', creatorId)
       }
 
       // First, try to find or create a course for this tee time
@@ -424,7 +443,7 @@ export async function POST(request: NextRequest) {
       // Use only the fields that exist in the database schema
       const insertData = {
         course_id: courseId,
-        creator_id: data.creator_id,
+        creator_id: creatorId,
         tee_time_date: data.tee_time_date,
         tee_time_time: formattedTime,
         max_players: data.max_players || 4,

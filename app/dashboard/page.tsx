@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
+import { createBrowserClient } from '@/lib/supabase'
 import { 
   Search, 
   Calendar, 
@@ -33,6 +34,7 @@ import Logo from '@/app/components/Logo'
 export default function Dashboard() {
   const { user, profile, signOut, loading } = useAuth()
   const router = useRouter()
+  const supabase = createBrowserClient()
   
 
       const [activeTab, setActiveTab] = useState<'overview' | 'find-someone' | 'courses' | 'groups' | 'profile'>('overview')
@@ -771,10 +773,15 @@ export default function Dashboard() {
 
   const handleApplyToTeeTime = async (teeTimeId: string) => {
     try {
+      // Get the current session token
+      const { data: { session } } = await supabase.auth.getSession()
+      const authToken = session?.access_token
+      
       const response = await fetch('/api/tee-times', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
         },
         body: JSON.stringify({
           action: 'apply',
@@ -828,10 +835,15 @@ export default function Dashboard() {
     }
 
     try {
+      // Get the current session token
+      const { data: { session } } = await supabase.auth.getSession()
+      const authToken = session?.access_token
+      
       const response = await fetch('/api/tee-times', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
+          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
         },
         body: JSON.stringify({
           action: 'delete',
@@ -1137,10 +1149,15 @@ export default function Dashboard() {
   const handleTeeTimeSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
+      // Get the current session token
+      const { data: { session } } = await supabase.auth.getSession()
+      const authToken = session?.access_token
+      
       const response = await fetch('/api/tee-times', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
         },
         body: JSON.stringify({
           action: 'create',
