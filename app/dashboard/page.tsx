@@ -974,6 +974,23 @@ export default function Dashboard() {
     }
   }
 
+  const handleMessageCreator = (creator: any) => {
+    if (!creator) {
+      alert('Creator information not available')
+      return
+    }
+    
+    // Switch to messages tab and pre-select the creator for messaging
+    setActiveTab('messages')
+    
+    // Add a small delay to ensure the messaging component is mounted
+    setTimeout(() => {
+      // The MessagingSystem component should handle pre-selecting this user
+      // We could pass this via a prop or state if needed
+      console.log('📧 Opening message composer for:', creator.first_name, creator.last_name)
+    }, 100)
+  }
+
   const handleDeleteTeeTime = async (teeTimeId: string) => {
     if (!confirm('Are you sure you want to delete this tee time? This action cannot be undone.')) {
       return
@@ -1782,7 +1799,10 @@ export default function Dashboard() {
                             Apply to Join
                           </button>
                         )}
-                        <button className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-3 px-6 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1">
+                        <button 
+                          onClick={() => handleMessageCreator(teeTime.creator)}
+                          className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-3 px-6 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                        >
                           Message Creator
                         </button>
                       </div>

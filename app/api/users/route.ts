@@ -425,16 +425,64 @@ export async function POST(request: NextRequest) {
     console.log('🔍 USERS POST: Using database for operations')
 
     if (action === 'connect') {
-      const { error } = await supabase
-        .from('user_connections')
-        .insert({
-          requester_id: data.user_id,
-          recipient_id: data.connected_user_id,
-          status: 'pending'
-        })
+      console.log('🔗 USERS POST: Creating connection between:', data.user_id, 'and', data.connected_user_id)
+      
+      try {
+        // First check if connection already exists
+        const { data: existingConnection, error: checkError } = await supabase
+          .from('user_connections')
+          .select('*')
+          .or(`and(requester_id.eq.${data.user_id},recipient_id.eq.${data.connected_user_id}),and(requester_id.eq.${data.connected_user_id},recipient_id.eq.${data.user_id})`)
+          .single()
 
-      if (error) throw error
-      return NextResponse.json({ success: true, message: 'Connection request sent' })
+        if (checkError && checkError.code !== 'PGRST116') {
+          console.error('❌ Error checking existing connection:', checkError)
+          return NextResponse.json({ 
+            error: 'Failed to check existing connection', 
+            details: checkError.message 
+          }, { status: 400 })
+        }
+
+        if (existingConnection) {
+          console.log('⚠️ Connection already exists:', existingConnection)
+          return NextResponse.json({ 
+            error: 'Connection already exists', 
+            details: `Connection status: ${existingConnection.status}` 
+          }, { status: 409 })
+        }
+
+        // Create new connection
+        const { data: newConnection, error } = await supabase
+          .from('user_connections')
+          .insert({
+            requester_id: data.user_id,
+            recipient_id: data.connected_user_id,
+            status: 'pending'
+          })
+          .select()
+          .single()
+
+        if (error) {
+          console.error('❌ Error creating connection:', error)
+          return NextResponse.json({ 
+            error: 'Failed to create connection', 
+            details: error.message 
+          }, { status: 400 })
+        }
+
+        console.log('✅ Connection created successfully:', newConnection.id)
+        return NextResponse.json({ 
+          success: true, 
+          message: 'Connection request sent successfully',
+          connection: newConnection
+        })
+      } catch (connectError) {
+        console.error('❌ Connection creation failed:', connectError)
+        return NextResponse.json({ 
+          error: 'Failed to create connection', 
+          details: connectError instanceof Error ? connectError.message : 'Unknown error'
+        }, { status: 500 })
+      }
     }
 
     if (action === 'accept_connection') {
