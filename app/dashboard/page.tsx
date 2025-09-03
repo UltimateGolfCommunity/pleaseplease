@@ -853,6 +853,51 @@ export default function Dashboard() {
     }
   }
 
+  const handleApplicationAction = async (applicationId: string, action: 'accept' | 'reject') => {
+    try {
+      console.log(`🔍 ${action.toUpperCase()}ING application:`, applicationId)
+      
+      const response = await fetch('/api/tee-times', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'manage_application',
+          application_id: applicationId,
+          action_type: action,
+          tee_time_creator_id: user?.id
+        }),
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        console.log(`Application ${action}ed successfully:`, result)
+        
+        // Refresh pending applications
+        fetchPendingApplications()
+        
+        // Add notification for feedback
+        setNotifications(prev => [{
+          id: Date.now(),
+          type: 'application_action',
+          message: `Application ${action}ed successfully`,
+          time: 'Just now',
+          read: false
+        }, ...prev.slice(0, 9)])
+        
+        alert(`Application ${action}ed successfully!`)
+      } else {
+        const errorData = await response.json()
+        console.error(`Failed to ${action} application:`, errorData)
+        alert(`Failed to ${action} application: ` + (errorData.error || 'Unknown error'))
+      }
+    } catch (error) {
+      console.error(`Error ${action}ing application:`, error)
+      alert(`Failed to ${action} application`)
+    }
+  }
+
   const handleApplyToTeeTime = async (teeTimeId: string) => {
     try {
       const response = await fetch('/api/tee-times', {
@@ -1413,6 +1458,7 @@ export default function Dashboard() {
               { id: 'find-someone', label: 'Find Someone', icon: Users },
               { id: 'courses', label: 'Courses', icon: Target },
               { id: 'groups', label: 'Groups', icon: Users },
+              { id: 'applications', label: 'Applications', icon: Bell },
               { id: 'profile', label: 'Profile', icon: User }
             ].map((tab) => {
                   const Icon = tab.icon
@@ -2044,6 +2090,148 @@ export default function Dashboard() {
                     </button>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Applications Tab */}
+        {activeTab === 'applications' && (
+          <div className="space-y-6">
+            {/* Applications Header */}
+            <div className="bg-gradient-to-br from-blue-900/20 to-purple-900/20 backdrop-blur-md rounded-2xl border border-blue-700/30 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-white mb-2">Tee Time Applications</h2>
+                  <p className="text-blue-300">Manage applications to your posted tee times</p>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-white">{pendingApplications.length}</div>
+                    <div className="text-blue-300 text-sm">Pending</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-white">{notifications.filter(n => n.type === 'tee_time_application').length}</div>
+                    <div className="text-blue-300 text-sm">Notifications</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Pending Applications */}
+            <div className="bg-white/95 backdrop-blur-sm border border-gray-200/50 rounded-2xl shadow-xl">
+              <div className="p-6 border-b border-gray-200">
+                <h3 className="text-xl font-semibold text-gray-800">Pending Applications</h3>
+                <p className="text-gray-600 mt-1">Review and manage applications to your tee times</p>
+              </div>
+              
+              <div className="p-6">
+                {pendingApplicationsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span className="ml-3 text-gray-600">Loading applications...</span>
+                  </div>
+                ) : pendingApplications.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Bell className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h4 className="text-lg font-medium text-gray-600 mb-2">No Pending Applications</h4>
+                    <p className="text-gray-500">You don't have any pending applications for your tee times.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {pendingApplications.map((application: any) => (
+                      <div key={application.id} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3 mb-2">
+                              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                                <span className="text-white font-semibold text-sm">
+                                  {application.applicant?.first_name?.[0] || '?'}
+                                </span>
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-800">
+                                  {application.applicant?.first_name} {application.applicant?.last_name}
+                                </h4>
+                                <p className="text-sm text-gray-600">@{application.applicant?.username}</p>
+                              </div>
+                            </div>
+                            
+                            <div className="ml-13">
+                              <div className="text-sm text-gray-700 mb-2">
+                                <strong>Tee Time:</strong> {application.tee_times?.course_name} on {application.tee_times?.tee_time_date} at {application.tee_times?.tee_time_time}
+                              </div>
+                              {application.message && (
+                                <div className="text-sm text-gray-600 bg-white rounded-lg p-3 border">
+                                  <strong>Message:</strong> {application.message}
+                                </div>
+                              )}
+                              <div className="text-xs text-gray-500 mt-2">
+                                Applied {formatTimeAgo(application.applied_at)}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex space-x-2 ml-4">
+                            <button
+                              onClick={() => handleApplicationAction(application.id, 'accept')}
+                              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                            >
+                              Accept
+                            </button>
+                            <button
+                              onClick={() => handleApplicationAction(application.id, 'reject')}
+                              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Notifications */}
+            <div className="bg-white/95 backdrop-blur-sm border border-gray-200/50 rounded-2xl shadow-xl">
+              <div className="p-6 border-b border-gray-200">
+                <h3 className="text-xl font-semibold text-gray-800">Recent Notifications</h3>
+                <p className="text-gray-600 mt-1">Stay updated on tee time applications</p>
+              </div>
+              
+              <div className="p-6">
+                {notificationsLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    <span className="ml-3 text-gray-600">Loading notifications...</span>
+                  </div>
+                ) : notifications.length === 0 ? (
+                  <div className="text-center py-6">
+                    <Bell className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-gray-500">No notifications yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {notifications.slice(0, 5).map((notification: any) => (
+                      <div key={notification.id} className={`p-3 rounded-lg border transition-colors ${
+                        notification.read ? 'bg-gray-50 border-gray-200' : 'bg-blue-50 border-blue-200'
+                      }`}>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="text-gray-700 text-sm font-medium">{notification.title}</p>
+                            <p className="text-gray-600 text-sm mt-1">{notification.message}</p>
+                            <p className="text-gray-500 text-xs mt-2">{notification.time}</p>
+                          </div>
+                          {!notification.read && (
+                            <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
