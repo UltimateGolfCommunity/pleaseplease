@@ -55,37 +55,28 @@ export async function PUT(request: NextRequest) {
     
     console.log('🔍 User ID (valid UUID):', id)
 
-    // Use smart fallback logic like tee-times API
+    // Use real Supabase with correct service role key
     let supabase: any = null
     let usingMockMode = false
     
     try {
-      console.log('🔍 PROFILE: Attempting to create admin client...')
+      console.log('🔍 PROFILE: Creating admin client with service role key...')
       supabase = createAdminClient()
       console.log('✅ PROFILE: Admin client created successfully')
     } catch (adminError) {
-      console.log('⚠️ PROFILE: Admin client failed, trying server client')
+      console.log('⚠️ PROFILE: Admin client failed, trying server client:', adminError)
       try {
         supabase = createServerClient()
         console.log('✅ PROFILE: Server client created as fallback')
       } catch (serverError) {
-        console.log('❌ PROFILE: Both clients failed, using mock mode')
+        console.log('❌ PROFILE: Both clients failed:', serverError)
         usingMockMode = true
       }
     }
     
-    // Test database connection if we have a client
-    if (!usingMockMode && supabase) {
-      try {
-        const { error: testError } = await supabase.from('user_profiles').select('id').limit(1)
-        if (testError && testError.message.includes('Invalid API key')) {
-          console.log('⚠️ PROFILE: Database test failed with Invalid API key, switching to mock mode')
-          usingMockMode = true
-        }
-      } catch (testQueryError) {
-        console.log('⚠️ PROFILE: Database test query failed, switching to mock mode')
-        usingMockMode = true
-      }
+    // Only use mock mode if no client could be created
+    if (!supabase) {
+      usingMockMode = true
     }
     
     // If using mock mode or no supabase client, return success without database operations

@@ -38,30 +38,28 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Use smart fallback logic
+    // Use real Supabase with correct service role key
     let supabase: any = null
     let usingMockMode = false
     
     try {
+      console.log('🔍 NOTIFICATIONS GET: Creating admin client with service role key...')
       supabase = createAdminClient()
+      console.log('✅ NOTIFICATIONS GET: Admin client created successfully')
     } catch (adminError) {
+      console.log('⚠️ NOTIFICATIONS GET: Admin client failed, trying server client:', adminError)
       try {
         supabase = createServerClient()
+        console.log('✅ NOTIFICATIONS GET: Server client created as fallback')
       } catch (serverError) {
+        console.log('❌ NOTIFICATIONS GET: Both clients failed:', serverError)
         usingMockMode = true
       }
     }
     
-    // Test database connection
-    if (!usingMockMode && supabase) {
-      try {
-        const { error: testError } = await supabase.from('notifications').select('id').limit(1)
-        if (testError && testError.message.includes('Invalid API key')) {
-          usingMockMode = true
-        }
-      } catch (testQueryError) {
-        usingMockMode = true
-      }
+    // Only use mock mode if no client could be created
+    if (!supabase) {
+      usingMockMode = true
     }
     
     if (usingMockMode || !supabase) {
@@ -110,30 +108,28 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Use smart fallback logic
+    // Use real Supabase with correct service role key
     let supabase: any = null
     let usingMockMode = false
     
     try {
+      console.log('🔍 NOTIFICATIONS POST: Creating admin client with service role key...')
       supabase = createAdminClient()
+      console.log('✅ NOTIFICATIONS POST: Admin client created successfully')
     } catch (adminError) {
+      console.log('⚠️ NOTIFICATIONS POST: Admin client failed, trying server client:', adminError)
       try {
         supabase = createServerClient()
+        console.log('✅ NOTIFICATIONS POST: Server client created as fallback')
       } catch (serverError) {
+        console.log('❌ NOTIFICATIONS POST: Both clients failed:', serverError)
         usingMockMode = true
       }
     }
     
-    // Test database connection
-    if (!usingMockMode && supabase) {
-      try {
-        const { error: testError } = await supabase.from('notifications').select('id').limit(1)
-        if (testError && testError.message.includes('Invalid API key')) {
-          usingMockMode = true
-        }
-      } catch (testQueryError) {
-        usingMockMode = true
-      }
+    // Only use mock mode if no client could be created
+    if (!supabase) {
+      usingMockMode = true
     }
     
     if (action === 'create') {

@@ -46,37 +46,28 @@ export async function GET(request: NextRequest) {
   const userId = searchParams.get('user_id')
 
   try {
-    // Use smart fallback logic like POST/DELETE methods
+    // Try admin client first (should work now with correct service role key)
     let supabase: any = null
     let usingMockMode = false
     
     try {
-      console.log('🔍 GET: Attempting to create admin client...')
+      console.log('🔍 GET: Creating admin client with service role key...')
       supabase = createAdminClient()
       console.log('✅ GET: Admin client created successfully')
     } catch (adminError) {
-      console.log('⚠️ GET: Admin client failed, trying server client')
+      console.log('⚠️ GET: Admin client failed, trying server client:', adminError)
       try {
         supabase = createServerClient()
         console.log('✅ GET: Server client created as fallback')
       } catch (serverError) {
-        console.log('❌ GET: Both clients failed, using mock mode')
+        console.log('❌ GET: Both clients failed:', serverError)
         usingMockMode = true
       }
     }
     
-    // Test database connection if we have a client
-    if (!usingMockMode && supabase) {
-      try {
-        const { error: testError } = await supabase.from('tee_times').select('id').limit(1)
-        if (testError && testError.message.includes('Invalid API key')) {
-          console.log('⚠️ GET: Database test failed with Invalid API key, switching to mock mode')
-          usingMockMode = true
-        }
-      } catch (testQueryError) {
-        console.log('⚠️ GET: Database test query failed, switching to mock mode')
-        usingMockMode = true
-      }
+    // Only use mock mode if no client could be created
+    if (!supabase) {
+      usingMockMode = true
     }
     
     // Handle mock mode responses
@@ -274,21 +265,28 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     }
 
-    // Use real Supabase if configured - with fallback logic like POST
-    let supabase
+    // Use real Supabase with correct service role key
+    let supabase: any = null
     let usingMockMode = false
     
     try {
-      console.log('🔍 DELETE: Attempting to create admin client...')
+      console.log('🔍 DELETE: Creating admin client with service role key...')
       supabase = createAdminClient()
+      console.log('✅ DELETE: Admin client created successfully')
     } catch (adminError) {
-      console.log('⚠️ DELETE: Admin client failed, trying server client')
+      console.log('⚠️ DELETE: Admin client failed, trying server client:', adminError)
       try {
         supabase = createServerClient()
+        console.log('✅ DELETE: Server client created as fallback')
       } catch (serverError) {
-        console.log('❌ DELETE: Both clients failed, using mock mode')
+        console.log('❌ DELETE: Both clients failed:', serverError)
         usingMockMode = true
       }
+    }
+    
+    // Only use mock mode if no client could be created
+    if (!supabase) {
+      usingMockMode = true
     }
     
     // Check if this is a mock tee time (starts with 'mock-')
@@ -319,23 +317,6 @@ export async function DELETE(request: NextRequest) {
     }
 
     if (action === 'delete') {
-      // Test database connection first
-      try {
-        const { error: testError } = await supabase.from('tee_times').select('id').limit(1)
-        if (testError && testError.message.includes('Invalid API key')) {
-          console.log('⚠️ DELETE: Database test failed, using mock deletion')
-          return NextResponse.json({ 
-            success: true, 
-            message: 'Tee time deleted successfully (backup system)'
-          })
-        }
-      } catch (testQueryError) {
-        console.log('⚠️ DELETE: Database test query failed, using mock deletion')
-        return NextResponse.json({ 
-          success: true, 
-          message: 'Tee time deleted successfully (backup system)'
-        })
-      }
       
       // First verify the user owns this tee time
       const { data: teeTime, error: checkError } = await supabase
@@ -434,40 +415,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     }
 
-    // Use real Supabase if configured - try admin client first, fall back to server client
-    let supabase
+    // Use real Supabase with correct service role key
+    let supabase: any = null
     let usingMockMode = false
     
     try {
-      console.log('🔍 Attempting to create admin client...')
+      console.log('🔍 POST: Creating admin client with service role key...')
       supabase = createAdminClient()
-      console.log('✅ Admin client created successfully')
+      console.log('✅ POST: Admin client created successfully')
     } catch (adminError) {
       const adminErrorMessage = adminError instanceof Error ? adminError.message : String(adminError)
-      console.log('⚠️ Admin client failed, trying server client:', adminErrorMessage)
+      console.log('⚠️ POST: Admin client failed, trying server client:', adminErrorMessage)
       try {
         supabase = createServerClient()
-        console.log('✅ Server client created as fallback')
+        console.log('✅ POST: Server client created as fallback')
       } catch (serverError) {
         const serverErrorMessage = serverError instanceof Error ? serverError.message : String(serverError)
-        console.log('❌ Both admin and server clients failed, using mock mode:', serverErrorMessage)
+        console.log('❌ POST: Both clients failed:', serverErrorMessage)
         usingMockMode = true
       }
     }
     
-    // Temporary fallback: if we still get "Invalid API key" errors, use mock mode
-    if (!usingMockMode && action === 'create') {
-      console.log('🔍 Testing database connection with simple query...')
-      try {
-        const { error: testError } = await supabase.from('user_profiles').select('id').limit(1)
-        if (testError && testError.message.includes('Invalid API key')) {
-          console.log('⚠️ Database test failed with Invalid API key, switching to mock mode')
-          usingMockMode = true
-        }
-      } catch (testQueryError) {
-        console.log('⚠️ Database test query failed, switching to mock mode')
-        usingMockMode = true
-      }
+    // Only use mock mode if no client could be created
+    if (!supabase) {
+      usingMockMode = true
     }
     
     // If both clients failed, use mock responses
