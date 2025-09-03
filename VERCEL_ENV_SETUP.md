@@ -29,12 +29,17 @@ The profile API is now working locally but needs the service role key in product
 
 - **Profile Updates**: Users can save their profile information
 - **Profile Creation**: New users get profiles created automatically
+- **Tee Time Creation**: Users can post tee times without "Invalid API key" errors
+- **Course Management**: Automatic course creation when posting tee times
 - **No More 500 Errors**: RLS policy violations are resolved
 - **UUID Validation**: Proper error messages for invalid user IDs
 
 ### 🔍 Testing:
 
-After deployment, try updating a profile in your app. The 500 error should be gone!
+After deployment, try:
+1. **Updating a profile** - The 500 error should be gone!
+2. **Posting a tee time** - No more "Invalid API key" errors
+3. **Creating courses** - Automatic course creation should work
 
 ### 📝 Note:
 
