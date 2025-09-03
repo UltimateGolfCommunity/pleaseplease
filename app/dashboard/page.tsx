@@ -1763,78 +1763,170 @@ export default function Dashboard() {
                     </button>
                   </div>
                 ) : (
-                  availableTeeTimes?.map((teeTime) => (
-                    <div key={teeTime.id} className="bg-gradient-to-br from-slate-700 to-slate-600/40 border border-slate-500/60 rounded-2xl p-4 sm:p-8 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] backdrop-blur-sm relative overflow-hidden group">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-500/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                      <div className="relative flex flex-col sm:flex-row sm:items-start justify-between mb-4 sm:mb-6 gap-4">
-                        <div className="flex-1">
-                          <h3 className="text-white font-bold text-lg sm:text-xl mb-2">{teeTime.course_name}</h3>
-                          <div className="space-y-1">
-                            <p className="text-slate-300 text-sm flex items-center">
-                              <Calendar className="h-4 w-4 mr-2 text-emerald-400" />
-                              {teeTime.tee_time_date} at {teeTime.tee_time_time}
-                            </p>
-                            <div className="flex items-center space-x-2">
-                              <div className="h-8 w-8 rounded-full overflow-hidden border-2 border-emerald-500/30">
-                                <img
-                                  src={teeTime.creator?.avatar_url || '/default-avatar.svg'}
-                                  alt={`${teeTime.creator?.first_name || 'Unknown'} ${teeTime.creator?.last_name || ''}`}
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    e.currentTarget.src = '/default-avatar.svg'
-                                  }}
-                                />
+                  availableTeeTimes?.map((teeTime) => {
+                    const daysUntilTeeTime = Math.ceil((new Date(teeTime.tee_time_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+                    const isToday = new Date(teeTime.tee_time_date).toDateString() === new Date().toDateString()
+                    const isTomorrow = daysUntilTeeTime === 1
+                    const spotsRemaining = teeTime.max_players - (teeTime.current_players || 1)
+                    const isAlmostFull = spotsRemaining <= 1
+                    const isNew = new Date(teeTime.created_at).getTime() > Date.now() - (24 * 60 * 60 * 1000) // Less than 24 hours old
+                    
+                    return (
+                    <div key={teeTime.id} className="bg-gradient-to-br from-slate-800/90 via-slate-700/80 to-slate-600/70 border-2 border-slate-500/40 rounded-3xl p-6 sm:p-8 shadow-2xl hover:shadow-emerald-500/10 transition-all duration-500 hover:scale-[1.02] hover:border-emerald-500/30 backdrop-blur-md relative overflow-hidden group">
+                      {/* Animated Background Elements */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 transform translate-x-[-100%] group-hover:translate-x-[100%] duration-1000"></div>
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-400/10 to-transparent rounded-full transform translate-x-16 -translate-y-16 group-hover:scale-150 transition-transform duration-700"></div>
+                      
+                      {/* Status Badges */}
+                      <div className="absolute top-4 right-4 flex flex-col gap-2">
+                        {isNew && (
+                          <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 py-1 rounded-full text-xs font-bold animate-pulse shadow-lg">
+                            NEW
+                          </div>
+                        )}
+                        {isToday && (
+                          <div className="bg-gradient-to-r from-red-500 to-orange-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+                            TODAY
+                          </div>
+                        )}
+                        {isTomorrow && (
+                          <div className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+                            TOMORROW
+                          </div>
+                        )}
+                        {isAlmostFull && (
+                          <div className="bg-gradient-to-r from-red-600 to-pink-600 text-white px-3 py-1 rounded-full text-xs font-bold animate-bounce shadow-lg">
+                            ALMOST FULL
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="relative">
+                        {/* Header Section */}
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-6 gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-3">
+                              <div className="p-2 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl shadow-lg">
+                                <Flag className="h-6 w-6 text-white" />
                               </div>
-                              <p className="text-slate-300 text-sm flex items-center">
-                                <User className="h-4 w-4 mr-2 text-blue-400" />
-                                Created by{' '}
-                                <button
-                                  onClick={() => router.push(`/users/${teeTime.creator?.id}`)}
-                                  className="text-emerald-400 hover:text-emerald-300 transition-colors duration-200 ml-1 underline"
-                                >
-                                  {teeTime.creator?.first_name || 'Unknown'} {teeTime.creator?.last_name || ''}
-                                </button>
-                              </p>
+                              <h3 className="text-white font-bold text-xl sm:text-2xl bg-gradient-to-r from-white to-slate-200 bg-clip-text">{teeTime.course_name}</h3>
+                            </div>
+                            
+                            <div className="space-y-3">
+                              {/* Date and Time */}
+                              <div className="flex items-center gap-3 p-3 bg-slate-700/50 rounded-xl border border-slate-600/30">
+                                <Calendar className="h-5 w-5 text-emerald-400" />
+                                <div>
+                                  <p className="text-white font-semibold">{new Date(teeTime.tee_time_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+                                  <p className="text-slate-300 text-sm">{teeTime.tee_time_time} • {daysUntilTeeTime > 0 ? `${daysUntilTeeTime} days away` : isToday ? 'Today' : 'Past date'}</p>
+                                </div>
+                              </div>
+
+                              {/* Creator Info */}
+                              <div className="flex items-center gap-3 p-3 bg-slate-700/50 rounded-xl border border-slate-600/30">
+                                <div className="relative">
+                                  <div className="h-10 w-10 rounded-full overflow-hidden border-2 border-emerald-500/50 shadow-lg">
+                                    <img
+                                      src={teeTime.creator?.avatar_url || '/default-avatar.svg'}
+                                      alt={`${teeTime.creator?.first_name || 'Unknown'} ${teeTime.creator?.last_name || ''}`}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        e.currentTarget.src = '/default-avatar.svg'
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-green-500 border-2 border-slate-800 rounded-full"></div>
+                                </div>
+                                <div>
+                                  <p className="text-slate-300 text-sm">Hosted by</p>
+                                  <button
+                                    onClick={() => router.push(`/users/${teeTime.creator?.id}`)}
+                                    className="text-emerald-400 hover:text-emerald-300 transition-colors duration-200 font-semibold hover:underline"
+                                  >
+                                    {teeTime.creator?.first_name || 'Unknown'} {teeTime.creator?.last_name || ''}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Player and Handicap Info */}
+                          <div className="flex flex-col gap-3 sm:text-right min-w-[180px]">
+                            <div className="relative">
+                              <div className={`bg-gradient-to-r ${isAlmostFull ? 'from-red-500 to-red-600' : 'from-emerald-500 to-teal-600'} text-white px-4 py-3 rounded-2xl shadow-lg text-center`}>
+                                <div className="text-lg font-bold">{teeTime.current_players || 1}/{teeTime.max_players}</div>
+                                <div className="text-xs opacity-90">Players</div>
+                              </div>
+                              {spotsRemaining > 0 && (
+                                <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center animate-pulse">
+                                  {spotsRemaining}
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div className="bg-slate-700/60 px-4 py-3 rounded-2xl border border-slate-600/40 text-center">
+                              <div className="text-slate-300 text-sm">Skill Level</div>
+                              <div className="text-white font-semibold capitalize">{teeTime.handicap_requirement}</div>
+                            </div>
+
+                            {/* Weather Widget Placeholder */}
+                            <div className="bg-gradient-to-br from-blue-500/20 to-cyan-500/20 px-4 py-3 rounded-2xl border border-blue-500/30 text-center">
+                              <div className="text-xs text-blue-300 mb-1">Weather</div>
+                              <div className="text-white text-sm font-semibold">☀️ 72°F</div>
                             </div>
                           </div>
                         </div>
-                        <div className="text-right sm:text-right">
-                          <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-3 sm:px-4 py-2 rounded-full text-sm font-semibold mb-2">
-                            {teeTime.current_players}/{teeTime.max_players} players
+
+                        {/* Description */}
+                        {teeTime.description && (
+                          <div className="mb-6 p-4 bg-slate-700/30 rounded-2xl border border-slate-600/20">
+                            <p className="text-slate-200 text-base leading-relaxed italic">&quot;{teeTime.description}&quot;</p>
                           </div>
-                          <div className="text-sm text-slate-300 bg-slate-600 px-3 py-1 rounded-full">
-                            Handicap: {teeTime.handicap_requirement}
-                          </div>
+                        )}
+
+                        {/* Action Buttons */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {teeTime.creator_id === user?.id ? (
+                            <>
+                              <button
+                                onClick={() => setActiveTab('applications')}
+                                className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-4 px-6 rounded-2xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center gap-2"
+                              >
+                                <Bell className="h-5 w-5" />
+                                Manage Applications
+                              </button>
+                              <button
+                                onClick={() => handleDeleteTeeTime(teeTime.id)}
+                                className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white py-4 px-6 rounded-2xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center gap-2"
+                              >
+                                <X className="h-5 w-5" />
+                                Delete Tee Time
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => handleApplyToTeeTime(teeTime.id)}
+                                disabled={spotsRemaining <= 0}
+                                className={`${spotsRemaining <= 0 ? 'bg-gray-500 cursor-not-allowed' : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700'} text-white py-4 px-6 rounded-2xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center gap-2`}
+                              >
+                                <Plus className="h-5 w-5" />
+                                {spotsRemaining <= 0 ? 'Tee Time Full' : 'Apply to Join'}
+                              </button>
+                              <button 
+                                onClick={() => handleMessageCreator(teeTime.creator)}
+                                className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white py-4 px-6 rounded-2xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center gap-2"
+                              >
+                                <MessageCircle className="h-5 w-5" />
+                                Message Host
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
-                      <p className="text-slate-200 mb-4 sm:mb-6 text-base sm:text-lg leading-relaxed">{teeTime.description}</p>
-                      <div className="flex flex-col sm:flex-row gap-3 sm:space-x-4">
-                        {teeTime.creator_id === user?.id ? (
-                          // Show delete button for tee time creator
-                          <button
-                            onClick={() => handleDeleteTeeTime(teeTime.id)}
-                            className="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white py-3 px-6 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-                          >
-                            Delete Tee Time
-                          </button>
-                        ) : (
-                          // Show apply button for other users
-                          <button
-                            onClick={() => handleApplyToTeeTime(teeTime.id)}
-                            className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white py-3 px-6 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-                          >
-                            Apply to Join
-                          </button>
-                        )}
-                        <button 
-                          onClick={() => handleMessageCreator(teeTime.creator)}
-                          className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-3 px-6 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-                        >
-                          Message Creator
-                        </button>
-                      </div>
                     </div>
-                  ))
+                    )
+                  })
                 )}
               </div>
 
@@ -2827,83 +2919,187 @@ export default function Dashboard() {
       )}
 
       {showTeeTimeModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-2xl p-8 max-w-md w-full border border-slate-600">
-            <h3 className="text-xl font-bold text-white mb-4">Post Tee Time</h3>
-            <form onSubmit={handleTeeTimeSubmit} className="space-y-4">
-                <input
-                  type="text"
-                  placeholder="Course name"
-                  value={teeTimeForm.course}
-                  onChange={(e) => setTeeTimeForm({...teeTimeForm, course: e.target.value})}
-                  className="w-full p-3 border border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-700 text-white placeholder-slate-400"
-                />
-                <input
-                  type="date"
-                  value={teeTimeForm.date}
-                  onChange={(e) => setTeeTimeForm({...teeTimeForm, date: e.target.value})}
-                  className="w-full p-3 border border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-700 text-white"
-                />
-                <input
-                  type="time"
-                  value={teeTimeForm.time}
-                  onChange={(e) => setTeeTimeForm({...teeTimeForm, time: e.target.value})}
-                  className="w-full p-3 border border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-700 text-white"
-                />
-                <div className="flex space-x-2">
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-slate-300 mb-1">Number of Players</label>
-                    <select
-                      value={teeTimeForm.players}
-                      onChange={(e) => setTeeTimeForm({...teeTimeForm, players: parseInt(e.target.value)})}
-                      className="w-full p-3 border border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-700 text-white"
-                    >
-                      <option value={2}>2 Players</option>
-                      <option value={3}>3 Players</option>
-                      <option value={4}>4 Players</option>
-                      <option value={5}>5 Players</option>
-                      <option value={6}>6 Players</option>
-                      <option value={7}>7 Players</option>
-                      <option value={8}>8 Players</option>
-                    </select>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 rounded-3xl p-8 max-w-2xl w-full border-2 border-emerald-500/20 shadow-2xl relative overflow-hidden">
+            {/* Background Animation */}
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-teal-500/5 animate-pulse"></div>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-400/10 to-transparent rounded-full transform translate-x-16 -translate-y-16"></div>
+            
+            <div className="relative">
+              {/* Header */}
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center gap-3 mb-4">
+                  <div className="p-3 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl shadow-lg">
+                    <Flag className="h-8 w-8 text-white" />
                   </div>
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-slate-300 mb-1">Handicap Level</label>
-                    <select
-                      value={teeTimeForm.handicap}
-                      onChange={(e) => setTeeTimeForm({...teeTimeForm, handicap: e.target.value})}
-                      className="w-full p-3 border border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-700 text-white"
-                    >
-                      <option value="any">Any Level</option>
-                      <option value="beginner">Beginner</option>
-                      <option value="intermediate">Intermediate</option>
-                      <option value="advanced">Advanced</option>
-                    </select>
+                  <h3 className="text-3xl font-bold bg-gradient-to-r from-white to-slate-200 bg-clip-text text-transparent">Create Tee Time</h3>
+                </div>
+                <p className="text-slate-400">Set up your perfect golf outing and invite others to join</p>
+              </div>
+
+              <form onSubmit={handleTeeTimeSubmit} className="space-y-6">
+                {/* Course Name */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-emerald-400 mb-2">Golf Course</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <Flag className="h-5 w-5 text-emerald-500" />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Enter course name (e.g., Pebble Beach Golf Links)"
+                      value={teeTimeForm.course}
+                      onChange={(e) => setTeeTimeForm({...teeTimeForm, course: e.target.value})}
+                      className="w-full pl-12 pr-4 py-4 border-2 border-slate-600 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-slate-700/50 text-white placeholder-slate-400 text-lg transition-all duration-300"
+                      required
+                    />
                   </div>
                 </div>
-                <textarea
-                  placeholder="Description (optional)"
-                  value={teeTimeForm.description}
-                  onChange={(e) => setTeeTimeForm({...teeTimeForm, description: e.target.value})}
-                  className="w-full p-3 border border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-700 text-white placeholder-slate-400"
-                  rows={3}
-                />
-              <div className="flex space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setShowTeeTimeModal(false)}
-                  className="flex-1 py-3 px-4 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-3 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors font-semibold"
-                >
-                  Post to Feed
-                </button>
-              </div>
-            </form>
+
+                {/* Date and Time */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-emerald-400 mb-2">Date</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Calendar className="h-5 w-5 text-emerald-500" />
+                      </div>
+                      <input
+                        type="date"
+                        value={teeTimeForm.date}
+                        onChange={(e) => setTeeTimeForm({...teeTimeForm, date: e.target.value})}
+                        min={new Date().toISOString().split('T')[0]}
+                        className="w-full pl-12 pr-4 py-4 border-2 border-slate-600 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-slate-700/50 text-white text-lg transition-all duration-300"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-emerald-400 mb-2">Tee Time</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Clock className="h-5 w-5 text-emerald-500" />
+                      </div>
+                      <input
+                        type="time"
+                        value={teeTimeForm.time}
+                        onChange={(e) => setTeeTimeForm({...teeTimeForm, time: e.target.value})}
+                        className="w-full pl-12 pr-4 py-4 border-2 border-slate-600 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-slate-700/50 text-white text-lg transition-all duration-300"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Players and Skill Level */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-emerald-400 mb-2">Group Size</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Users className="h-5 w-5 text-emerald-500" />
+                      </div>
+                      <select
+                        value={teeTimeForm.players}
+                        onChange={(e) => setTeeTimeForm({...teeTimeForm, players: parseInt(e.target.value)})}
+                        className="w-full pl-12 pr-4 py-4 border-2 border-slate-600 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-slate-700/50 text-white text-lg transition-all duration-300 appearance-none"
+                      >
+                        <option value={2}>2 Players</option>
+                        <option value={3}>3 Players</option>
+                        <option value={4}>4 Players (Foursome)</option>
+                        <option value={5}>5 Players</option>
+                        <option value={6}>6 Players</option>
+                        <option value={7}>7 Players</option>
+                        <option value={8}>8 Players</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-emerald-400 mb-2">Skill Level</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <TrendingUp className="h-5 w-5 text-emerald-500" />
+                      </div>
+                      <select
+                        value={teeTimeForm.handicap}
+                        onChange={(e) => setTeeTimeForm({...teeTimeForm, handicap: e.target.value})}
+                        className="w-full pl-12 pr-4 py-4 border-2 border-slate-600 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-slate-700/50 text-white text-lg transition-all duration-300 appearance-none"
+                      >
+                        <option value="any">All Skill Levels Welcome</option>
+                        <option value="beginner">Beginner Friendly (30+ Handicap)</option>
+                        <option value="intermediate">Intermediate (15-30 Handicap)</option>
+                        <option value="advanced">Advanced Players (Under 15)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-emerald-400 mb-2">Description (Optional)</label>
+                  <div className="relative">
+                    <textarea
+                      placeholder="Tell potential players about your round... (e.g., Casual Saturday morning round, looking for friendly players to enjoy a great course!)"
+                      value={teeTimeForm.description}
+                      onChange={(e) => setTeeTimeForm({...teeTimeForm, description: e.target.value})}
+                      className="w-full p-4 border-2 border-slate-600 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-slate-700/50 text-white placeholder-slate-400 text-lg transition-all duration-300 resize-none"
+                      rows={4}
+                      maxLength={300}
+                    />
+                    <div className="absolute bottom-3 right-3 text-xs text-slate-400">
+                      {teeTimeForm.description.length}/300
+                    </div>
+                  </div>
+                </div>
+
+                {/* Preview Section */}
+                <div className="bg-slate-700/30 rounded-2xl p-6 border border-slate-600/30">
+                  <h4 className="text-lg font-semibold text-white mb-4">Preview</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Flag className="h-4 w-4 text-emerald-400" />
+                      <span className="text-slate-300">{teeTimeForm.course || 'Course name'}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-emerald-400" />
+                      <span className="text-slate-300">
+                        {teeTimeForm.date ? new Date(teeTimeForm.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : 'Select date'}
+                        {teeTimeForm.time && ` at ${teeTimeForm.time}`}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-emerald-400" />
+                      <span className="text-slate-300">Looking for {teeTimeForm.players - 1} more player{teeTimeForm.players - 1 !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-emerald-400" />
+                      <span className="text-slate-300 capitalize">{teeTimeForm.handicap} skill level</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowTeeTimeModal(false)}
+                    className="flex-1 py-4 px-6 border-2 border-slate-500 rounded-2xl text-slate-300 hover:bg-slate-600/30 hover:border-slate-400 transition-all duration-300 font-semibold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!teeTimeForm.course || !teeTimeForm.date || !teeTimeForm.time}
+                    className="flex-1 py-4 px-6 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 disabled:from-gray-500 disabled:to-gray-600 disabled:cursor-not-allowed text-white rounded-2xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:transform-none disabled:shadow-none flex items-center justify-center gap-2"
+                  >
+                    <Plus className="h-5 w-5" />
+                    Create Tee Time
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
