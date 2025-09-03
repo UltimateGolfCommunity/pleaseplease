@@ -304,15 +304,26 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (profileError || !userProfile) {
-        console.log('⚠️ User profile not found, attempting to create one...')
+        console.log('⚠️ User profile not found for:', data.creator_id)
         
-        // Try to create a basic user profile
+        // Check if user exists in auth.users first
+        const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(data.creator_id)
+        
+        if (authError || !authUser) {
+          console.error('❌ User does not exist in auth.users:', authError)
+          return NextResponse.json({ 
+            error: 'User not found. Please sign in again.',
+            details: 'User does not exist in the authentication system'
+          }, { status: 400 })
+        }
+        
+        // Try to create a user profile with proper data
         const { data: newProfile, error: createError } = await supabase
           .from('user_profiles')
           .insert({
             id: data.creator_id,
-            email: 'user@example.com',
-            username: 'user',
+            email: authUser.user.email || 'user@example.com',
+            username: authUser.user.email?.split('@')[0] || 'user',
             first_name: 'User',
             last_name: 'Profile',
             full_name: 'User Profile'
@@ -324,24 +335,54 @@ export async function POST(request: NextRequest) {
           console.error('❌ Failed to create user profile:', createError)
           return NextResponse.json({ 
             error: 'User profile not found. Please complete your profile first.',
-            details: 'User profile does not exist and could not be created'
+            details: 'User profile does not exist and could not be created: ' + createError.message
           }, { status: 400 })
         }
         
         console.log('✅ Created basic user profile for:', data.creator_id)
       }
 
+      // First, try to find or create a course for this tee time
+      let courseId = null
+      if (data.course) {
+        // Try to find existing course
+        const { data: existingCourse } = await supabase
+          .from('golf_courses')
+          .select('id')
+          .eq('name', data.course)
+          .single()
+        
+        if (existingCourse) {
+          courseId = existingCourse.id
+        } else {
+          // Create a new course
+          const { data: newCourse, error: courseError } = await supabase
+            .from('golf_courses')
+            .insert({
+              name: data.course,
+              location: 'TBD',
+              description: 'Course created automatically'
+            })
+            .select('id')
+            .single()
+          
+          if (!courseError && newCourse) {
+            courseId = newCourse.id
+          }
+        }
+      }
+
       // Use only the fields that exist in the database schema
       const insertData = {
-        course_name: data.course || 'TBD',
+        course_id: courseId,
         creator_id: data.creator_id,
         tee_time_date: data.tee_time_date,
         tee_time_time: data.tee_time_time,
         max_players: data.max_players || 4,
         current_players: 1,
-        handicap_requirement: data.handicap_requirement || 'Any level',
+        handicap_requirement: data.handicap_requirement || 'any',
         description: data.description || '',
-        status: 'active'
+        status: 'open'
       }
       
       console.log('🔍 Creating tee time with data:', insertData)

@@ -26,6 +26,21 @@ export async function GET(request: NextRequest) {
     // Use admin client to bypass RLS
     const supabase = createAdminClient()
 
+    // First check if the group_invitations table exists
+    const { error: tableCheckError } = await supabase
+      .from('group_invitations')
+      .select('id')
+      .limit(1)
+
+    if (tableCheckError) {
+      console.log('⚠️ group_invitations table does not exist or is not accessible:', tableCheckError.message)
+      return NextResponse.json({ 
+        success: true, 
+        invitations: [],
+        message: 'Group invitations feature not yet available'
+      })
+    }
+
     // Get pending invitations for the user
     const { data, error } = await supabase
       .from('group_invitations')
