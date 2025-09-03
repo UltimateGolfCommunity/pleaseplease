@@ -2488,13 +2488,13 @@ export default function Dashboard() {
                     </div>
                     <div>
                       <h2 className="text-3xl font-bold text-white">
-                        {profile && profile.first_name && profile.last_name 
-                          ? `${profile.first_name} ${profile.last_name}`
+                        {(profile as any)?.first_name && (profile as any)?.last_name 
+                          ? `${(profile as any).first_name} ${(profile as any).last_name}`
                           : 'Your Profile'
                         }
                       </h2>
                       <p className="text-slate-300 text-lg">
-                        {profile && profile.location ? `${profile.location} • Handicap: ${profile.handicap || 0}` : 'Complete your profile to get started'}
+                        {(profile as any)?.location ? `${(profile as any).location} • Handicap: ${(profile as any).handicap || 0}` : 'Complete your profile to get started'}
                       </p>
                     </div>
                   </div>
@@ -2540,7 +2540,7 @@ export default function Dashboard() {
                         <div>
                           <label className="block text-sm font-medium text-slate-400 mb-2">Handicap</label>
                           <div className="px-4 py-3 bg-slate-800/30 border border-slate-600/30 rounded-lg text-white font-medium">
-                            {profile && profile.handicap !== null && profile.handicap !== undefined ? `${profile.handicap}` : 'Not set'}
+                            {(profile as any)?.handicap ? `${(profile as any).handicap}` : 'Not set'}
                           </div>
                         </div>
                       </div>
