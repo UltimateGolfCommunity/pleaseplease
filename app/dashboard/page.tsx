@@ -1529,7 +1529,7 @@ export default function Dashboard() {
                       }`}
                     >
                     <Icon className={`h-4 w-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                    <span className="font-semibold text-sm">{tab.label}</span>
+                    <span className="font-semibold text-base">{tab.label}</span>
                     </button>
                   )
                 })}
@@ -1739,7 +1739,7 @@ export default function Dashboard() {
                   }`}
                 >
                   <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                  <span className="font-semibold">{tab.label}</span>
+                  <span className="font-semibold text-base">{tab.label}</span>
                 </button>
               )
             })}
