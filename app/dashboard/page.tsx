@@ -30,6 +30,7 @@ import {
 import WeatherWidget from '@/app/components/WeatherWidget'
 import GolfRoundForm from '@/app/components/GolfRoundForm'
 import MessagingSystem from '@/app/components/MessagingSystem'
+import BadgeManagement from '@/app/components/BadgeManagement'
 import Logo from '@/app/components/Logo'
 
 export default function Dashboard() {
@@ -38,7 +39,7 @@ export default function Dashboard() {
   const supabase = createBrowserClient()
   
 
-      const [activeTab, setActiveTab] = useState<'overview' | 'find-someone' | 'courses' | 'groups' | 'profile' | 'applications' | 'messages'>('overview')
+      const [activeTab, setActiveTab] = useState<'overview' | 'find-someone' | 'courses' | 'groups' | 'profile' | 'applications' | 'messages' | 'badges'>('overview')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
@@ -1499,6 +1500,7 @@ export default function Dashboard() {
               { id: 'courses', label: 'Courses', icon: Target },
               { id: 'groups', label: 'Groups', icon: Users },
               { id: 'messages', label: 'Messages', icon: MessageCircle },
+              { id: 'badges', label: 'Badges', icon: Trophy },
               { id: 'applications', label: 'Applications', icon: Bell },
               { id: 'profile', label: 'Profile', icon: User }
             ].map((tab) => {
@@ -2157,6 +2159,13 @@ export default function Dashboard() {
         {activeTab === 'messages' && (
           <div className="space-y-6">
             <MessagingSystem />
+          </div>
+        )}
+
+        {/* Badges Tab */}
+        {activeTab === 'badges' && (
+          <div className="space-y-6">
+            <BadgeManagement />
           </div>
         )}
 
