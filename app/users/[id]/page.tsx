@@ -32,6 +32,7 @@ interface UserProfile {
   home_course: string | null
   location: string | null
   avatar_url: string | null
+  header_image_url: string | null
   created_at: string
   updated_at: string
 }
@@ -194,12 +195,40 @@ export default function UserProfilePage() {
       {/* Profile Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Profile Header */}
-        <div className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-8 mb-8">
+        <div className="relative bg-gradient-to-r from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl overflow-hidden shadow-xl mb-8">
+          {/* Background Header Image */}
+          {user.header_image_url && (
+            <div className="absolute inset-0">
+              <img
+                src={user.header_image_url}
+                alt="Profile Header"
+                className="w-full h-48 object-cover opacity-30"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none'
+                }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-gray-900/60 to-gray-800/60"></div>
+            </div>
+          )}
+          <div className="relative p-8">
           <div className="flex items-start space-x-6">
             {/* Profile Picture */}
             <div className="relative">
-              <div className="h-24 w-24 bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-full flex items-center justify-center">
-                <User className="h-12 w-12 text-black" />
+              <div className="h-24 w-24 rounded-full overflow-hidden border-4 border-emerald-500/30 bg-gradient-to-r from-emerald-400 to-cyan-400 shadow-lg">
+                {user.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt={`${user.first_name} ${user.last_name}`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = '/default-avatar.svg'
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-r from-emerald-400 to-cyan-400 flex items-center justify-center">
+                    <User className="h-12 w-12 text-black" />
+                  </div>
+                )}
               </div>
             </div>
 
@@ -277,6 +306,7 @@ export default function UserProfilePage() {
                 </button>
               </div>
             </div>
+          </div>
           </div>
         </div>
 
