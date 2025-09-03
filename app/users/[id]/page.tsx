@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
 import { 
   User, 
   MapPin, 
@@ -40,6 +41,7 @@ interface UserProfile {
 export default function UserProfilePage() {
   const params = useParams()
   const router = useRouter()
+  const { user: currentUser } = useAuth()
   const [user, setUser] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'connected'>('none')
@@ -85,8 +87,15 @@ export default function UserProfilePage() {
   }, [params.id])
 
   const handleConnect = async () => {
+    if (!currentUser?.id) {
+      alert('You must be logged in to send connection requests')
+      return
+    }
+
     try {
       setConnectionStatus('pending')
+      
+      console.log('🔗 Sending connection request from:', currentUser.id, 'to:', user?.id)
       
       const response = await fetch('/api/users', {
         method: 'POST',
@@ -95,17 +104,21 @@ export default function UserProfilePage() {
         },
         body: JSON.stringify({
           action: 'connect',
-          user_id: 'current-user-id', // This would come from auth context
+          user_id: currentUser.id,
           connected_user_id: user?.id
         }),
       })
       
       if (response.ok) {
+        const result = await response.json()
+        console.log('✅ Connection request successful:', result)
         setConnectionStatus('connected')
         alert('Connection request sent successfully!')
       } else {
+        const errorData = await response.json()
+        console.error('❌ Connection request failed:', errorData)
         setConnectionStatus('none')
-        alert('Failed to send connection request')
+        alert('Failed to send connection request: ' + (errorData.error || 'Unknown error'))
       }
     } catch (error) {
       console.error('Error connecting:', error)
@@ -117,7 +130,14 @@ export default function UserProfilePage() {
   const handleSendMessage = async () => {
     if (!message.trim()) return
     
+    if (!currentUser?.id) {
+      alert('You must be logged in to send messages')
+      return
+    }
+    
     try {
+      console.log('💬 Sending message from:', currentUser.id, 'to:', user?.id)
+      
       const response = await fetch('/api/messages', {
         method: 'POST',
         headers: {
@@ -125,18 +145,22 @@ export default function UserProfilePage() {
         },
         body: JSON.stringify({
           action: 'send',
-          sender_id: 'current-user-id', // This would come from auth context
+          sender_id: currentUser.id,
           recipient_id: user?.id,
           message_content: message
         }),
       })
       
       if (response.ok) {
+        const result = await response.json()
+        console.log('✅ Message sent successfully:', result)
         setMessage('')
         setShowMessageForm(false)
         alert('Message sent successfully!')
       } else {
-        alert('Failed to send message')
+        const errorData = await response.json()
+        console.error('❌ Message failed:', errorData)
+        alert('Failed to send message: ' + (errorData.error || 'Unknown error'))
       }
     } catch (error) {
       console.error('Error sending message:', error)
@@ -210,11 +234,11 @@ export default function UserProfilePage() {
               <div className="absolute inset-0 bg-gradient-to-r from-gray-900/60 to-gray-800/60"></div>
             </div>
           )}
-          <div className="relative p-8">
-          <div className="flex items-start space-x-6">
+          <div className="relative p-4 sm:p-8">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
             {/* Profile Picture */}
-            <div className="relative">
-              <div className="h-24 w-24 rounded-full overflow-hidden border-4 border-emerald-500/30 bg-gradient-to-r from-emerald-400 to-cyan-400 shadow-lg">
+            <div className="relative flex-shrink-0">
+              <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full overflow-hidden border-4 border-emerald-500/30 bg-gradient-to-r from-emerald-400 to-cyan-400 shadow-lg">
                 {user.avatar_url ? (
                   <img
                     src={user.avatar_url}
@@ -233,26 +257,28 @@ export default function UserProfilePage() {
             </div>
 
             {/* Profile Info */}
-            <div className="flex-1">
-              <div className="flex items-center space-x-4 mb-4">
-                <h1 className="text-3xl font-bold text-white">
+            <div className="flex-1 text-center sm:text-left">
+              <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 mb-4">
+                <h1 className="text-2xl sm:text-3xl font-bold text-white">
                   {user.first_name} {user.last_name}
                 </h1>
-                {user.handicap && (
-                  <span className="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-sm border border-emerald-400/30">
-                    Handicap: {user.handicap}
+                <div className="flex flex-wrap justify-center sm:justify-start gap-2">
+                  {user.handicap && (
+                    <span className="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-sm border border-emerald-400/30">
+                      Handicap: {user.handicap}
+                    </span>
+                  )}
+                  <span className="bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full text-sm border border-blue-400/30">
+                    @{user.username}
                   </span>
-                )}
-                <span className="bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full text-sm border border-blue-400/30">
-                  @{user.username}
-                </span>
+                </div>
               </div>
               
               {user.bio && (
                 <p className="text-gray-300 text-lg mb-4">{user.bio}</p>
               )}
 
-              <div className="flex items-center space-x-6 text-sm text-gray-400 mb-6">
+              <div className="flex flex-wrap justify-center sm:justify-start items-center gap-4 sm:gap-6 text-sm text-gray-400 mb-6">
                 {user.location && (
                   <div className="flex items-center">
                     <MapPin className="h-4 w-4 mr-2" />
@@ -272,11 +298,11 @@ export default function UserProfilePage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center space-x-4">
+              <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
                 {connectionStatus === 'none' && (
                   <button
                     onClick={handleConnect}
-                    className="bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-semibold px-6 py-3 rounded-lg transition-all duration-300 flex items-center"
+                    className="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-semibold px-6 py-3 rounded-lg transition-all duration-300 flex items-center justify-center"
                   >
                     <UserPlus className="h-5 w-5 mr-2" />
                     Connect
@@ -284,14 +310,14 @@ export default function UserProfilePage() {
                 )}
                 
                 {connectionStatus === 'pending' && (
-                  <button className="bg-gray-600/20 text-gray-300 border border-gray-600/30 px-6 py-3 rounded-lg flex items-center" disabled>
+                  <button className="w-full sm:w-auto bg-gray-600/20 text-gray-300 border border-gray-600/30 px-6 py-3 rounded-lg flex items-center justify-center" disabled>
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-300 mr-2"></div>
                     Request Sent
                   </button>
                 )}
                 
                 {connectionStatus === 'connected' && (
-                  <button className="bg-emerald-500/20 text-emerald-400 border border-emerald-400/30 px-6 py-3 rounded-lg flex items-center">
+                  <button className="w-full sm:w-auto bg-emerald-500/20 text-emerald-400 border border-emerald-400/30 px-6 py-3 rounded-lg flex items-center justify-center">
                     <Users className="h-5 w-5 mr-2" />
                     Connected
                   </button>
@@ -299,7 +325,7 @@ export default function UserProfilePage() {
 
                 <button
                   onClick={() => setShowMessageForm(!showMessageForm)}
-                  className="bg-gray-600/20 text-gray-300 border border-gray-600/30 px-6 py-3 rounded-lg hover:bg-gray-600/30 transition-colors duration-300 flex items-center"
+                  className="w-full sm:w-auto bg-gray-600/20 text-gray-300 border border-gray-600/30 px-6 py-3 rounded-lg hover:bg-gray-600/30 transition-colors duration-300 flex items-center justify-center"
                 >
                   <MessageCircle className="h-5 w-5 mr-2" />
                   Message
@@ -341,7 +367,7 @@ export default function UserProfilePage() {
         )}
 
         {/* Profile Sections */}
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Main Profile Info */}
           <div className="lg:col-span-2 space-y-6">
             {/* Golf Information */}
@@ -351,7 +377,7 @@ export default function UserProfilePage() {
                 Golf Information
               </h2>
               
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Handicap</label>
                   <p className="text-white">{user.handicap ? user.handicap : 'Not specified'}</p>
