@@ -136,6 +136,7 @@ export async function GET(request: NextRequest) {
           creator:user_profiles(id, first_name, last_name, avatar_url)
         `)
         .eq('creator_id', userId)
+        .order('tee_time_date', { ascending: true })
 
       if (error) throw error
       return NextResponse.json(data || [])
@@ -149,6 +150,7 @@ export async function GET(request: NextRequest) {
           creator:user_profiles(id, first_name, last_name, avatar_url)
         `)
         .eq('status', 'active')
+        .order('tee_time_date', { ascending: true })
 
       if (error) throw error
       return NextResponse.json(data || [])
@@ -231,6 +233,7 @@ export async function GET(request: NextRequest) {
         *,
         creator:user_profiles(id, first_name, last_name, avatar_url)
       `)
+      .order('tee_time_date', { ascending: true })
 
     if (error) throw error
     return NextResponse.json(data || [])
@@ -638,7 +641,7 @@ export async function POST(request: NextRequest) {
         current_players: 1,
         handicap_requirement: data.handicap_requirement || 'any',
         description: data.description || '',
-        status: 'open'
+        status: 'active'
       }
       
       console.log('🔍 Creating tee time with data:', insertData)
