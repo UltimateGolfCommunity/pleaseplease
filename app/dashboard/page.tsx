@@ -2998,14 +2998,14 @@ export default function Dashboard() {
 
       {showTeeTimeModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 rounded-3xl p-8 max-w-2xl w-full border-2 border-emerald-500/20 shadow-2xl relative overflow-hidden">
+          <div className="bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 rounded-3xl p-6 max-w-2xl w-full max-h-[90vh] border-2 border-emerald-500/20 shadow-2xl relative overflow-hidden flex flex-col">
             {/* Background Animation */}
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-teal-500/5 animate-pulse"></div>
             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-400/10 to-transparent rounded-full transform translate-x-16 -translate-y-16"></div>
             
-            <div className="relative">
+            <div className="relative flex flex-col h-full">
               {/* Header */}
-              <div className="text-center mb-8">
+              <div className="text-center mb-6 flex-shrink-0">
                 <div className="inline-flex items-center gap-3 mb-4">
                   <div className="p-3 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl shadow-lg">
                     <Flag className="h-8 w-8 text-white" />
@@ -3015,7 +3015,8 @@ export default function Dashboard() {
                 <p className="text-slate-400">Set up your perfect golf outing and invite others to join</p>
               </div>
 
-              <form onSubmit={handleTeeTimeSubmit} className="space-y-6">
+              <form onSubmit={handleTeeTimeSubmit} className="flex flex-col h-full">
+                <div className="overflow-y-auto flex-1 pr-2 space-y-5">
                 {/* Course Name */}
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-emerald-400 mb-2">Golf Course</label>
@@ -3028,7 +3029,7 @@ export default function Dashboard() {
                       placeholder="Enter course name (e.g., Pebble Beach Golf Links)"
                   value={teeTimeForm.course}
                   onChange={(e) => setTeeTimeForm({...teeTimeForm, course: e.target.value})}
-                      className="w-full pl-12 pr-4 py-4 border-2 border-slate-600 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-slate-700/50 text-white placeholder-slate-400 text-lg transition-all duration-300"
+                      className="w-full pl-12 pr-4 py-3 border-2 border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-slate-700/50 text-white placeholder-slate-400 transition-all duration-300"
                       required
                     />
                   </div>
@@ -3047,7 +3048,7 @@ export default function Dashboard() {
                   value={teeTimeForm.date}
                   onChange={(e) => setTeeTimeForm({...teeTimeForm, date: e.target.value})}
                         min={new Date().toISOString().split('T')[0]}
-                        className="w-full pl-12 pr-4 py-4 border-2 border-slate-600 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-slate-700/50 text-white text-lg transition-all duration-300"
+                        className="w-full pl-12 pr-4 py-3 border-2 border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-slate-700/50 text-white transition-all duration-300"
                         required
                       />
                     </div>
@@ -3063,7 +3064,7 @@ export default function Dashboard() {
                   type="time"
                   value={teeTimeForm.time}
                   onChange={(e) => setTeeTimeForm({...teeTimeForm, time: e.target.value})}
-                        className="w-full pl-12 pr-4 py-4 border-2 border-slate-600 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-slate-700/50 text-white text-lg transition-all duration-300"
+                        className="w-full pl-12 pr-4 py-3 border-2 border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-slate-700/50 text-white transition-all duration-300"
                         required
                       />
                     </div>
@@ -3122,8 +3123,8 @@ export default function Dashboard() {
                       placeholder="Tell potential players about your round... (e.g., Casual Saturday morning round, looking for friendly players to enjoy a great course!)"
                   value={teeTimeForm.description}
                   onChange={(e) => setTeeTimeForm({...teeTimeForm, description: e.target.value})}
-                      className="w-full p-4 border-2 border-slate-600 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-slate-700/50 text-white placeholder-slate-400 text-lg transition-all duration-300 resize-none"
-                      rows={4}
+                      className="w-full p-3 border-2 border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-slate-700/50 text-white placeholder-slate-400 transition-all duration-300 resize-none"
+                      rows={3}
                       maxLength={300}
                     />
                     <div className="absolute bottom-3 right-3 text-xs text-slate-400">
@@ -3133,8 +3134,8 @@ export default function Dashboard() {
                 </div>
 
                 {/* Preview Section */}
-                <div className="bg-slate-700/30 rounded-2xl p-6 border border-slate-600/30">
-                  <h4 className="text-lg font-semibold text-white mb-4">Preview</h4>
+                <div className="bg-slate-700/30 rounded-xl p-4 border border-slate-600/30">
+                  <h4 className="text-base font-semibold text-white mb-3">Preview</h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center gap-2">
                       <Flag className="h-4 w-4 text-emerald-400" />
@@ -3157,20 +3158,21 @@ export default function Dashboard() {
                     </div>
                   </div>
                 </div>
+                </div>
 
-                {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                {/* Action Buttons - Fixed at bottom */}
+                <div className="flex flex-col sm:flex-row gap-3 pt-4 flex-shrink-0 border-t border-slate-600/30 mt-4">
                 <button
                   type="button"
                   onClick={() => setShowTeeTimeModal(false)}
-                    className="flex-1 py-4 px-6 border-2 border-slate-500 rounded-2xl text-slate-300 hover:bg-slate-600/30 hover:border-slate-400 transition-all duration-300 font-semibold"
+                    className="flex-1 py-3 px-4 border-2 border-slate-500 rounded-xl text-slate-300 hover:bg-slate-600/30 hover:border-slate-400 transition-all duration-300 font-semibold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                     disabled={!teeTimeForm.course || !teeTimeForm.date || !teeTimeForm.time}
-                    className="flex-1 py-4 px-6 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 disabled:from-gray-500 disabled:to-gray-600 disabled:cursor-not-allowed text-white rounded-2xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:transform-none disabled:shadow-none flex items-center justify-center gap-2"
+                    className="flex-1 py-3 px-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 disabled:from-gray-500 disabled:to-gray-600 disabled:cursor-not-allowed text-white rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:transform-none disabled:shadow-none flex items-center justify-center gap-2"
                 >
                     <Plus className="h-5 w-5" />
                     Create Tee Time
