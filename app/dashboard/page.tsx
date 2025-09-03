@@ -975,7 +975,13 @@ export default function Dashboard() {
       } else {
         const errorData = await response.json()
         console.error('Failed to submit application:', errorData)
-        alert('Failed to submit application: ' + (errorData.error || 'Unknown error'))
+        
+        // Handle duplicate application specifically
+        if (response.status === 409) {
+          alert('You have already applied to this tee time. Check the Applications tab to see your application status.')
+        } else {
+          alert('Failed to submit application: ' + (errorData.details || errorData.error || 'Unknown error'))
+        }
       }
     } catch (error) {
       console.error('Error applying to tee time:', error)
@@ -1567,10 +1573,10 @@ export default function Dashboard() {
                 </button>
                 
                 {/* Notifications */}
-                <div className="relative notifications-container">
-                  <button 
+              <div className="relative notifications-container">
+                <button 
                     className="p-2 sm:p-3 text-slate-300 hover:text-white transition-all duration-300 hover:scale-110 relative group"
-                    onClick={() => setShowNotifications(!showNotifications)}
+                  onClick={() => setShowNotifications(!showNotifications)}
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-red-400 to-pink-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
                   <Bell className="h-5 w-5 sm:h-6 sm:w-6 relative z-10" />
@@ -1705,10 +1711,10 @@ export default function Dashboard() {
                         Sign Out
                       </button>
                   </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
           </div>
         </div>
       </nav>

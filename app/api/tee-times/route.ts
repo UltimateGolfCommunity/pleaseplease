@@ -760,6 +760,23 @@ export async function POST(request: NextRequest) {
         console.log('⚠️ Could not fetch applicant details')
       }
       
+      // Check if user has already applied to this tee time
+      const { data: existingApplication, error: checkError } = await supabase
+        .from('tee_time_applications')
+        .select('id, status')
+        .eq('tee_time_id', data.tee_time_id)
+        .eq('applicant_id', data.applicant_id)
+        .single()
+
+      if (existingApplication) {
+        console.log('⚠️ User has already applied to this tee time:', existingApplication)
+        return NextResponse.json({ 
+          error: 'Application already exists', 
+          details: `You have already applied to this tee time. Your application status is: ${existingApplication.status}`,
+          existing_application: existingApplication
+        }, { status: 409 })
+      }
+
       // Insert application
       const { data: application, error } = await supabase
         .from('tee_time_applications')
@@ -774,6 +791,14 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         console.error('❌ Error applying to tee time:', error)
+        
+        // Handle duplicate key error specifically
+        if (error.message.includes('duplicate key value violates unique constraint')) {
+          return NextResponse.json({ 
+            error: 'Application already exists', 
+            details: 'You have already applied to this tee time.',
+          }, { status: 409 })
+        }
         
         // Fallback to mock success if database fails
         if (error.message.includes('Invalid API key')) {
