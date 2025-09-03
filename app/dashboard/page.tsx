@@ -3161,7 +3161,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Action Buttons - Fixed at bottom */}
-                <div className="flex flex-col sm:flex-row gap-3 pt-4 flex-shrink-0 border-t border-slate-600/30 mt-4 bg-slate-800/50">
+                <div className="flex flex-col sm:flex-row gap-3 pt-4 flex-shrink-0 border-t border-slate-600/30 mt-4">
                 <button
                   type="button"
                   onClick={() => setShowTeeTimeModal(false)}
