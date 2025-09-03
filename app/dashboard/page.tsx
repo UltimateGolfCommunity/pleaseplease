@@ -1788,13 +1788,7 @@ export default function Dashboard() {
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Weather Widget at Top */}
-            <div className="bg-gradient-to-br from-blue-600/10 via-indigo-500/15 to-purple-600/10 backdrop-blur-xl rounded-3xl border border-white/30 shadow-2xl p-8 relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent transform -skew-x-12"></div>
-              <div className="relative flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-400/30 border-t-blue-600 shadow-lg"></div>
-                <span className="ml-4 text-blue-700 font-semibold text-lg">Loading weather...</span>
-          </div>
-        </div>
+            <WeatherWidget />
 
             {/* Tee Time Feed */}
             <div className="bg-gradient-to-br from-slate-800 via-slate-700/30 to-slate-600/20 rounded-3xl p-4 sm:p-8 shadow-xl border border-slate-600/40 backdrop-blur-sm relative overflow-hidden">
