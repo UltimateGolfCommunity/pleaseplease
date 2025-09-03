@@ -79,6 +79,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check if Supabase is configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      console.log('Using mock data for group invitations API')
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Mock response - Supabase not configured' 
+      })
+    }
+
+    // Use admin client to bypass RLS
+    const supabase = createAdminClient()
+
     if (action === 'accept') {
       // Accept the invitation
       const { data: invitation, error: fetchError } = await supabase
