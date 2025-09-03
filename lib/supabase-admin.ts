@@ -29,6 +29,7 @@ export function createAdminClient() {
     return client
   } catch (error) {
     console.error('❌ Failed to create Supabase admin client:', error)
-    throw new Error(`Failed to create admin client: ${error.message}`)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    throw new Error(`Failed to create admin client: ${errorMessage}`)
   }
 }

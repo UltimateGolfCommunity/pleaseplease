@@ -301,12 +301,14 @@ export async function POST(request: NextRequest) {
       supabase = createAdminClient()
       console.log('✅ Admin client created successfully')
     } catch (adminError) {
-      console.log('⚠️ Admin client failed, trying server client:', adminError.message)
+      const adminErrorMessage = adminError instanceof Error ? adminError.message : String(adminError)
+      console.log('⚠️ Admin client failed, trying server client:', adminErrorMessage)
       try {
         supabase = createServerClient()
         console.log('✅ Server client created as fallback')
       } catch (serverError) {
-        console.log('❌ Both admin and server clients failed, using mock mode:', serverError.message)
+        const serverErrorMessage = serverError instanceof Error ? serverError.message : String(serverError)
+        console.log('❌ Both admin and server clients failed, using mock mode:', serverErrorMessage)
         usingMockMode = true
       }
     }
