@@ -296,6 +296,30 @@ export async function POST(request: NextRequest) {
     const supabase = createAdminClient()
 
     if (action === 'create') {
+      console.log('🔍 Received tee time creation request with data:', data)
+      
+      // Validate required fields
+      if (!data.creator_id) {
+        return NextResponse.json({ 
+          error: 'Missing required field: creator_id',
+          details: 'User ID is required to create a tee time'
+        }, { status: 400 })
+      }
+      
+      if (!data.tee_time_date) {
+        return NextResponse.json({ 
+          error: 'Missing required field: tee_time_date',
+          details: 'Tee time date is required'
+        }, { status: 400 })
+      }
+      
+      if (!data.tee_time_time) {
+        return NextResponse.json({ 
+          error: 'Missing required field: tee_time_time',
+          details: 'Tee time is required'
+        }, { status: 400 })
+      }
+      
       // First check if user profile exists
       const { data: userProfile, error: profileError } = await supabase
         .from('user_profiles')
@@ -372,12 +396,37 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Format the time properly for PostgreSQL TIME type
+      let formattedTime = data.tee_time_time
+      if (typeof data.tee_time_time === 'string') {
+        // Handle various time formats
+        if (data.tee_time_time.includes('AM') || data.tee_time_time.includes('PM')) {
+          // Convert "9:00 AM" to "09:00:00"
+          const timeMatch = data.tee_time_time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i)
+          if (timeMatch) {
+            let hours = parseInt(timeMatch[1])
+            const minutes = timeMatch[2]
+            const period = timeMatch[3].toUpperCase()
+            
+            if (period === 'PM' && hours !== 12) hours += 12
+            if (period === 'AM' && hours === 12) hours = 0
+            
+            formattedTime = `${hours.toString().padStart(2, '0')}:${minutes}:00`
+          }
+        } else if (data.tee_time_time.includes(':')) {
+          // Already in HH:MM format, add seconds
+          if (!data.tee_time_time.includes(':')) {
+            formattedTime = `${data.tee_time_time}:00`
+          }
+        }
+      }
+      
       // Use only the fields that exist in the database schema
       const insertData = {
         course_id: courseId,
         creator_id: data.creator_id,
         tee_time_date: data.tee_time_date,
-        tee_time_time: data.tee_time_time,
+        tee_time_time: formattedTime,
         max_players: data.max_players || 4,
         current_players: 1,
         handicap_requirement: data.handicap_requirement || 'any',
@@ -395,9 +444,27 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         console.error('❌ Error creating tee time:', error)
+        console.error('❌ Error details:', error)
+        console.error('❌ Attempted data:', insertData)
+        
+        // Provide more specific error messages
+        let errorMessage = 'Failed to create tee time'
+        let errorDetails = error.message
+        
+        if (error.message.includes('foreign key')) {
+          errorMessage = 'Invalid course or user reference'
+          errorDetails = 'The course or user does not exist in the database'
+        } else if (error.message.includes('invalid input syntax')) {
+          errorMessage = 'Invalid date or time format'
+          errorDetails = 'Please check the date and time format'
+        } else if (error.message.includes('not null')) {
+          errorMessage = 'Missing required field'
+          errorDetails = 'A required field is missing or empty'
+        }
+        
         return NextResponse.json({ 
-          error: 'Failed to create tee time', 
-          details: (error as any).message,
+          error: errorMessage, 
+          details: errorDetails,
           attemptedData: insertData
         }, { status: 400 })
       }
