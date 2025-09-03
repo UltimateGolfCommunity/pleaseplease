@@ -1500,15 +1500,15 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Clean Navigation */}
       <nav className="bg-slate-800/90 backdrop-blur-xl border-b border-slate-700/60 sticky top-0 z-50 shadow-xl">
-        <div className="max-w-7xl mx-auto pl-2 pr-4 sm:pl-4 sm:pr-6">
+        <div className="max-w-7xl mx-auto pl-1 pr-4 sm:pl-2 sm:pr-6">
           <div className="flex items-center justify-between h-20 sm:h-24">
             {/* Logo - Far Left */}
-            <div className="flex-shrink-0 -ml-2 sm:-ml-1">
+            <div className="flex-shrink-0 -ml-4 sm:-ml-3">
               <Logo size="lg" />
             </div>
 
-            {/* Navigation Tabs - Absolute Center */}
-            <div className="absolute left-1/2 transform -translate-x-1/2">
+            {/* Navigation Tabs - Right of Center */}
+            <div className="absolute left-1/2 transform -translate-x-1/2 translate-x-8 sm:translate-x-12">
               <div className="hidden md:flex items-center space-x-1 bg-gradient-to-r from-slate-700/90 to-slate-600/80 backdrop-blur-xl rounded-2xl p-2 shadow-lg border border-slate-600/40">
                           {[
               { id: 'overview', label: 'Tee Times', icon: Home },
