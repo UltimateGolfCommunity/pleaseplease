@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Use smart fallback logic
-    let supabase
+    let supabase: any = null
     let usingMockMode = false
     
     try {
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     }
     
     // Test database connection
-    if (!usingMockMode) {
+    if (!usingMockMode && supabase) {
       try {
         const { error: testError } = await supabase.from('notifications').select('id').limit(1)
         if (testError && testError.message.includes('Invalid API key')) {
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    if (usingMockMode) {
+    if (usingMockMode || !supabase) {
       console.log('🔧 NOTIFICATIONS: Using mock mode')
       return NextResponse.json({ 
         notifications: mockNotifications.filter(n => n.user_id === userId) 
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Use smart fallback logic
-    let supabase
+    let supabase: any = null
     let usingMockMode = false
     
     try {
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Test database connection
-    if (!usingMockMode) {
+    if (!usingMockMode && supabase) {
       try {
         const { error: testError } = await supabase.from('notifications').select('id').limit(1)
         if (testError && testError.message.includes('Invalid API key')) {
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
     }
     
     if (action === 'create') {
-      if (usingMockMode) {
+      if (usingMockMode || !supabase) {
         console.log('🔧 NOTIFICATIONS: Creating notification in mock mode')
         return NextResponse.json({ 
           success: true, 
@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'mark_read') {
-      if (usingMockMode) {
+      if (usingMockMode || !supabase) {
         return NextResponse.json({ 
           success: true, 
           message: 'Notification marked as read (backup system)' 
