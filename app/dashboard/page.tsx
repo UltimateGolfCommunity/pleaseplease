@@ -39,7 +39,7 @@ export default function Dashboard() {
   const supabase = createBrowserClient()
   
 
-      const [activeTab, setActiveTab] = useState<'overview' | 'find-someone' | 'courses' | 'groups' | 'profile' | 'applications' | 'messages' | 'badges'>('overview')
+      const [activeTab, setActiveTab] = useState<'overview' | 'find-someone' | 'courses' | 'groups' | 'applications' | 'messages' | 'badges'>('overview')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
@@ -1517,8 +1517,7 @@ export default function Dashboard() {
               { id: 'groups', label: 'Groups', icon: Users },
               { id: 'messages', label: 'Messages', icon: MessageCircle },
               { id: 'badges', label: 'Badges', icon: Trophy },
-              { id: 'applications', label: 'Applications', icon: Bell },
-              { id: 'profile', label: 'Profile', icon: User }
+              { id: 'applications', label: 'Applications', icon: Bell }
             ].map((tab) => {
                   const Icon = tab.icon
                   const isActive = activeTab === tab.id
@@ -1661,6 +1660,15 @@ export default function Dashboard() {
                   <div className="p-2">
                       <button
                         onClick={() => {
+                          router.push('/profile')
+                        }}
+                        className="flex items-center w-full px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+                      >
+                        <User className="h-4 w-4 mr-3" />
+                        My Profile
+                      </button>
+                      <button
+                        onClick={() => {
                           handleSignOut()
                         }}
                         className="flex items-center w-full px-3 py-2 text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
@@ -1687,8 +1695,7 @@ export default function Dashboard() {
               { id: 'groups', label: 'Groups', icon: Users },
               { id: 'messages', label: 'Messages', icon: MessageCircle },
               { id: 'badges', label: 'Badges', icon: Trophy },
-              { id: 'applications', label: 'Applications', icon: Bell },
-              { id: 'profile', label: 'Profile', icon: User }
+              { id: 'applications', label: 'Applications', icon: Bell }
             ].map((tab) => {
               const Icon = tab.icon
               const isActive = activeTab === tab.id
@@ -1710,6 +1717,20 @@ export default function Dashboard() {
                 </button>
               )
             })}
+            
+            {/* Profile Link for Mobile */}
+            <div className="border-t border-slate-700 pt-2 mt-2">
+              <button
+                onClick={() => {
+                  router.push('/profile')
+                  setShowMobileMenu(false)
+                }}
+                className="w-full flex items-center space-x-3 px-4 py-4 rounded-xl transition-all duration-300 font-medium touch-manipulation text-slate-300 hover:text-white hover:bg-slate-600/60"
+              >
+                <User className="h-5 w-5 text-slate-400" />
+                <span className="font-semibold">My Profile</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -2432,8 +2453,8 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Profile Tab */}
-        {activeTab === 'profile' && (
+        {/* Profile Tab - Removed (Now accessible via user dropdown menu) */}
+        {false && (
           <div className="space-y-8">
             {/* Profile Header */}
             <div className="relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl overflow-hidden shadow-xl">
