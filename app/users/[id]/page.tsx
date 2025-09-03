@@ -201,17 +201,26 @@ export default function UserProfilePage() {
       {/* Navigation */}
       <nav className="bg-gray-900/95 backdrop-blur-md border-b border-gray-800 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            <div className="flex items-center">
+          <div className="flex items-center h-20">
+            <div className="flex items-center w-48">
               <button
                 onClick={() => router.push('/dashboard')}
                 className="flex items-center text-gray-300 hover:text-emerald-400 transition-colors duration-300 mr-4"
               >
                 <ArrowLeft className="h-5 w-5 mr-2" />
-                Back to Dashboard
+                <span className="hidden sm:block">Back to Dashboard</span>
+                <span className="sm:hidden">Back</span>
               </button>
               <Logo size="lg" />
             </div>
+            
+            {/* Center space */}
+            <div className="flex-1 flex justify-center">
+              <h1 className="text-xl font-semibold text-white">User Profile</h1>
+            </div>
+            
+            {/* Right space for balance */}
+            <div className="w-48"></div>
           </div>
         </div>
       </nav>
