@@ -39,7 +39,7 @@ export default function Dashboard() {
   const supabase = createBrowserClient()
   
 
-      const [activeTab, setActiveTab] = useState<'overview' | 'find-someone' | 'courses' | 'groups' | 'applications' | 'messages' | 'badges'>('overview')
+      const [activeTab, setActiveTab] = useState<'overview' | 'find-someone' | 'courses' | 'groups' | 'messages' | 'badges' | 'applications'>('overview')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
@@ -1500,10 +1500,10 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Clean Navigation */}
       <nav className="bg-slate-800/90 backdrop-blur-xl border-b border-slate-700/60 sticky top-0 z-50 shadow-xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto pl-2 pr-4 sm:pl-4 sm:pr-6">
           <div className="flex items-center justify-between h-20 sm:h-24">
             {/* Logo - Far Left */}
-            <div className="flex-shrink-0">
+            <div className="flex-shrink-0 -ml-2 sm:-ml-1">
               <Logo size="lg" />
             </div>
 
@@ -1515,9 +1515,7 @@ export default function Dashboard() {
               { id: 'find-someone', label: 'Find Someone', icon: Users },
               { id: 'courses', label: 'Courses', icon: Target },
               { id: 'groups', label: 'Groups', icon: Users },
-              { id: 'messages', label: 'Messages', icon: MessageCircle },
-              { id: 'badges', label: 'Badges', icon: Trophy },
-              { id: 'applications', label: 'Applications', icon: Bell }
+              { id: 'messages', label: 'Messages', icon: MessageCircle }
             ].map((tab) => {
                   const Icon = tab.icon
                   const isActive = activeTab === tab.id
@@ -1669,6 +1667,25 @@ export default function Dashboard() {
                       </button>
                       <button
                         onClick={() => {
+                          setActiveTab('badges')
+                        }}
+                        className="flex items-center w-full px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+                      >
+                        <Trophy className="h-4 w-4 mr-3" />
+                        Badges
+                      </button>
+                      <button
+                        onClick={() => {
+                          setActiveTab('applications')
+                        }}
+                        className="flex items-center w-full px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+                      >
+                        <Bell className="h-4 w-4 mr-3" />
+                        Applications
+                      </button>
+                      <div className="border-t border-slate-700 my-2"></div>
+                      <button
+                        onClick={() => {
                           handleSignOut()
                         }}
                         className="flex items-center w-full px-3 py-2 text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
@@ -1693,9 +1710,7 @@ export default function Dashboard() {
               { id: 'find-someone', label: 'Find Someone', icon: Users },
               { id: 'courses', label: 'Courses', icon: Target },
               { id: 'groups', label: 'Groups', icon: Users },
-              { id: 'messages', label: 'Messages', icon: MessageCircle },
-              { id: 'badges', label: 'Badges', icon: Trophy },
-              { id: 'applications', label: 'Applications', icon: Bell }
+              { id: 'messages', label: 'Messages', icon: MessageCircle }
             ].map((tab) => {
               const Icon = tab.icon
               const isActive = activeTab === tab.id
@@ -1718,8 +1733,8 @@ export default function Dashboard() {
               )
             })}
             
-            {/* Profile Link for Mobile */}
-            <div className="border-t border-slate-700 pt-2 mt-2">
+            {/* User Menu Links for Mobile */}
+            <div className="border-t border-slate-700 pt-2 mt-2 space-y-2">
               <button
                 onClick={() => {
                   router.push('/profile')
@@ -1729,6 +1744,26 @@ export default function Dashboard() {
               >
                 <User className="h-5 w-5 text-slate-400" />
                 <span className="font-semibold">My Profile</span>
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab('badges')
+                  setShowMobileMenu(false)
+                }}
+                className="w-full flex items-center space-x-3 px-4 py-4 rounded-xl transition-all duration-300 font-medium touch-manipulation text-slate-300 hover:text-white hover:bg-slate-600/60"
+              >
+                <Trophy className="h-5 w-5 text-slate-400" />
+                <span className="font-semibold">Badges</span>
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab('applications')
+                  setShowMobileMenu(false)
+                }}
+                className="w-full flex items-center space-x-3 px-4 py-4 rounded-xl transition-all duration-300 font-medium touch-manipulation text-slate-300 hover:text-white hover:bg-slate-600/60"
+              >
+                <Bell className="h-5 w-5 text-slate-400" />
+                <span className="font-semibold">Applications</span>
               </button>
             </div>
           </div>
