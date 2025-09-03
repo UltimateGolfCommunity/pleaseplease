@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import WeatherWidget from '@/app/components/WeatherWidget'
 import GolfRoundForm from '@/app/components/GolfRoundForm'
+import MessagingSystem from '@/app/components/MessagingSystem'
 import Logo from '@/app/components/Logo'
 
 export default function Dashboard() {
@@ -37,7 +38,7 @@ export default function Dashboard() {
   const supabase = createBrowserClient()
   
 
-      const [activeTab, setActiveTab] = useState<'overview' | 'find-someone' | 'courses' | 'groups' | 'profile' | 'applications'>('overview')
+      const [activeTab, setActiveTab] = useState<'overview' | 'find-someone' | 'courses' | 'groups' | 'profile' | 'applications' | 'messages'>('overview')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
@@ -1480,6 +1481,7 @@ export default function Dashboard() {
               { id: 'find-someone', label: 'Find Someone', icon: Users },
               { id: 'courses', label: 'Courses', icon: Target },
               { id: 'groups', label: 'Groups', icon: Users },
+              { id: 'messages', label: 'Messages', icon: MessageCircle },
               { id: 'applications', label: 'Applications', icon: Bell },
               { id: 'profile', label: 'Profile', icon: User }
             ].map((tab) => {
@@ -2128,6 +2130,13 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Messages Tab */}
+        {activeTab === 'messages' && (
+          <div className="space-y-6">
+            <MessagingSystem />
           </div>
         )}
 
