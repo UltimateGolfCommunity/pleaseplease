@@ -32,6 +32,7 @@ import GolfRoundForm from '@/app/components/GolfRoundForm'
 import MessagingSystem from '@/app/components/MessagingSystem'
 import BadgeManagement from '@/app/components/BadgeManagement'
 import Logo from '@/app/components/Logo'
+import ThemeToggle from '@/app/components/ThemeToggle'
 
 export default function Dashboard() {
   const { user, profile, signOut, loading } = useAuth()
@@ -1505,9 +1506,9 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen bg-theme-gradient transition-colors duration-300">
       {/* Clean Navigation */}
-      <nav className="bg-slate-800/90 backdrop-blur-xl border-b border-slate-700/60 sticky top-0 z-50 shadow-xl">
+      <nav className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border-b border-gray-200/60 dark:border-slate-700/60 sticky top-0 z-50 shadow-xl transition-colors duration-300">
         <div className="max-w-6xl mx-auto px-2 sm:px-4">
           <div className="flex items-center justify-between h-20 sm:h-24">
             {/* Logo - Far Left */}
@@ -1517,7 +1518,7 @@ export default function Dashboard() {
 
             {/* Navigation Tabs - Absolute Center */}
             <div className="absolute left-1/2 transform -translate-x-1/2">
-            <div className="hidden md:flex items-center space-x-1 bg-gradient-to-r from-slate-700/90 to-slate-600/80 backdrop-blur-xl rounded-2xl p-2 shadow-lg border border-slate-600/40">
+            <div className="hidden md:flex items-center space-x-1 bg-gray-100/90 dark:bg-gradient-to-r dark:from-slate-700/90 dark:to-slate-600/80 backdrop-blur-xl rounded-2xl p-2 shadow-lg border border-gray-300/40 dark:border-slate-600/40 transition-colors duration-300">
                           {[
               { id: 'overview', label: 'Tee Times', icon: Home },
               { id: 'courses', label: 'Courses', icon: Target },
@@ -1533,10 +1534,10 @@ export default function Dashboard() {
                     className={`flex items-center space-x-2 px-6 py-3 rounded-xl transition-all duration-300 font-medium ${
                         isActive
                         ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg transform scale-105'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-600/60 hover:scale-105'
+                        : 'text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200/60 dark:hover:bg-slate-600/60 hover:scale-105'
                       }`}
                     >
-                    <Icon className={`h-4 w-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                    <Icon className={`h-4 w-4 ${isActive ? 'text-white' : 'text-gray-500 dark:text-slate-400'}`} />
                     <span className="font-semibold text-base">{tab.label}</span>
                     </button>
                   )
@@ -1567,17 +1568,23 @@ export default function Dashboard() {
               <div className="flex items-center space-x-2">
                 {/* Search */}
                 <button 
-                  className="p-2 sm:p-3 text-slate-300 hover:text-white transition-all duration-300 hover:scale-110 relative group"
+                  className="p-2 sm:p-3 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white transition-all duration-300 hover:scale-110 relative group"
                   onClick={() => setActiveTab('find-someone')}
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
                   <Search className="h-5 w-5 sm:h-6 sm:w-6 relative z-10" />
                 </button>
                 
+                {/* Theme Toggle */}
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
+                  <ThemeToggle className="relative z-10 bg-transparent border-slate-600/50 hover:bg-slate-700/50" size="sm" />
+                </div>
+                
                 {/* Notifications */}
               <div className="relative notifications-container">
                 <button 
-                    className="p-2 sm:p-3 text-slate-300 hover:text-white transition-all duration-300 hover:scale-110 relative group"
+                    className="p-2 sm:p-3 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white transition-all duration-300 hover:scale-110 relative group"
                   onClick={() => setShowNotifications(!showNotifications)}
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-red-400 to-pink-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
