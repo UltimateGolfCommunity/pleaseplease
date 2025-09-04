@@ -1170,6 +1170,8 @@ export default function Dashboard() {
   }
 
   const handleCreateCourse = async () => {
+    console.log('🔍 handleCreateCourse called with form data:', createCourseForm)
+    
     if (!createCourseForm.name || !createCourseForm.location) {
       alert('Course name and location are required')
       return
@@ -1177,6 +1179,7 @@ export default function Dashboard() {
 
     try {
       setCreateCourseSubmitting(true)
+      console.log('🔍 Making API call to /api/golf-courses')
       const response = await fetch('/api/golf-courses', {
         method: 'POST',
         headers: {
@@ -1191,8 +1194,11 @@ export default function Dashboard() {
         })
       })
 
+      console.log('🔍 API response status:', response.status)
+      
       if (response.ok) {
         const data = await response.json()
+        console.log('✅ Course created successfully:', data)
         alert('Course created successfully!')
         setShowCreateCourseModal(false)
         setCreateCourseForm({ name: '', location: '', description: '', par: '', holes: 18 })
@@ -1200,10 +1206,11 @@ export default function Dashboard() {
         handleCourseSearch()
       } else {
         const errorData = await response.json()
+        console.error('❌ Failed to create course:', errorData)
         alert(errorData.error || 'Failed to create course')
       }
     } catch (error) {
-      console.error('Error creating course:', error)
+      console.error('❌ Error creating course:', error)
       alert('Failed to create course. Please try again.')
     } finally {
       setCreateCourseSubmitting(false)
