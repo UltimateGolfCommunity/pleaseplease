@@ -1845,25 +1845,22 @@ export default function Dashboard() {
                     const isAlmostFull = spotsRemaining <= 1
                     
                     return (
-                    <div key={teeTime.id} className="bg-gradient-to-br from-slate-800/90 via-slate-700/80 to-slate-600/70 border-2 border-slate-500/40 rounded-3xl p-6 sm:p-8 shadow-2xl hover:shadow-emerald-500/10 transition-all duration-500 hover:scale-[1.02] hover:border-emerald-500/30 backdrop-blur-md relative overflow-hidden group">
-                      {/* Animated Background Elements */}
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 transform translate-x-[-100%] group-hover:translate-x-[100%] duration-1000"></div>
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-400/10 to-transparent rounded-full transform translate-x-16 -translate-y-16 group-hover:scale-150 transition-transform duration-700"></div>
+                    <div key={teeTime.id} className="bg-white/95 backdrop-blur-sm border border-gray-200/50 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 p-4 sm:p-6 relative">
                       
                       {/* Status Badges */}
-                      <div className="absolute top-4 right-4 flex flex-col gap-2">
+                      <div className="absolute top-3 right-3 flex flex-col gap-1">
                         {isToday && (
-                          <div className="bg-gradient-to-r from-red-500 to-orange-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+                          <div className="bg-red-500 text-white px-2 py-1 rounded-md text-xs font-medium">
                             TODAY
                           </div>
                         )}
                         {isTomorrow && (
-                          <div className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+                          <div className="bg-orange-500 text-white px-2 py-1 rounded-md text-xs font-medium">
                             TOMORROW
                           </div>
                         )}
                         {isAlmostFull && (
-                          <div className="bg-gradient-to-r from-red-600 to-pink-600 text-white px-3 py-1 rounded-full text-xs font-bold animate-bounce shadow-lg">
+                          <div className="bg-red-600 text-white px-2 py-1 rounded-md text-xs font-medium">
                             ALMOST FULL
                           </div>
                         )}
@@ -1871,29 +1868,29 @@ export default function Dashboard() {
 
                       <div className="relative">
                         {/* Header Section */}
-                        <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-6 gap-4">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-4 gap-4">
                         <div className="flex-1">
                             <div className="flex items-center gap-3 mb-3">
-                              <div className="p-2 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl shadow-lg">
-                                <Flag className="h-6 w-6 text-white" />
+                              <div className="p-2 bg-emerald-500 rounded-lg">
+                                <Flag className="h-4 w-4 text-white" />
                               </div>
-                              <h3 className="text-white font-bold text-xl sm:text-2xl bg-gradient-to-r from-white to-slate-200 bg-clip-text">{teeTime.course_name}</h3>
+                              <h3 className="text-gray-900 font-bold text-lg sm:text-xl">{teeTime.course_name}</h3>
                             </div>
                             
                             <div className="space-y-3">
                               {/* Date and Time */}
-                              <div className="flex items-center gap-3 p-3 bg-slate-700/50 rounded-xl border border-slate-600/30">
-                                <Calendar className="h-5 w-5 text-emerald-400" />
+                              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                <Calendar className="h-4 w-4 text-emerald-500" />
                                 <div>
-                                  <p className="text-white font-semibold">{new Date(teeTime.tee_time_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-                                  <p className="text-slate-300 text-sm">{teeTime.tee_time_time} • {daysUntilTeeTime > 0 ? `${daysUntilTeeTime} days away` : isToday ? 'Today' : 'Past date'}</p>
+                                  <p className="text-gray-900 font-medium text-sm">{new Date(teeTime.tee_time_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+                                  <p className="text-gray-500 text-xs">{teeTime.tee_time_time} • {daysUntilTeeTime > 0 ? `${daysUntilTeeTime} days away` : isToday ? 'Today' : 'Past date'}</p>
                                 </div>
                               </div>
 
                               {/* Creator Info */}
-                              <div className="flex items-center gap-3 p-3 bg-slate-700/50 rounded-xl border border-slate-600/30">
+                              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                                 <div className="relative">
-                                  <div className="h-10 w-10 rounded-full overflow-hidden border-2 border-emerald-500/50 shadow-lg">
+                                  <div className="h-8 w-8 rounded-full overflow-hidden border-2 border-emerald-500/50">
                                 <img
                                   src={teeTime.creator?.avatar_url || '/default-avatar.svg'}
                                   alt={`${teeTime.creator?.first_name || 'Unknown'} ${teeTime.creator?.last_name || ''}`}
@@ -1903,13 +1900,13 @@ export default function Dashboard() {
                                   }}
                                 />
                               </div>
-                                  <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-green-500 border-2 border-slate-800 rounded-full"></div>
+                                  <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-green-500 border-2 border-white rounded-full"></div>
                             </div>
                                 <div>
-                                  <p className="text-slate-300 text-sm">Hosted by</p>
+                                  <p className="text-gray-500 text-xs">Hosted by</p>
                                   <button
                                     onClick={() => router.push(`/users/${teeTime.creator?.id}`)}
-                                    className="text-emerald-400 hover:text-emerald-300 transition-colors duration-200 font-semibold hover:underline"
+                                    className="text-emerald-600 hover:text-emerald-700 transition-colors duration-200 font-medium hover:underline text-sm"
                                   >
                                     {teeTime.creator?.first_name || 'Unknown'} {teeTime.creator?.last_name || ''}
                                   </button>
@@ -1919,41 +1916,41 @@ export default function Dashboard() {
                           </div>
 
                           {/* Player and Handicap Info */}
-                          <div className="flex flex-col gap-3 sm:text-right min-w-[180px]">
+                          <div className="flex flex-col gap-2 sm:text-right sm:min-w-[140px]">
                             <div className="relative">
-                              <div className={`bg-gradient-to-r ${isAlmostFull ? 'from-red-500 to-red-600' : 'from-emerald-500 to-teal-600'} text-white px-4 py-3 rounded-2xl shadow-lg text-center`}>
-                                <div className="text-lg font-bold">{teeTime.current_players || 1}/{teeTime.max_players}</div>
+                              <div className={`${isAlmostFull ? 'bg-red-500' : 'bg-emerald-500'} text-white px-3 py-2 rounded-lg text-center`}>
+                                <div className="text-base font-bold">{teeTime.current_players || 1}/{teeTime.max_players}</div>
                                 <div className="text-xs opacity-90">Players</div>
                         </div>
                               {spotsRemaining > 0 && (
-                                <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center animate-pulse">
+                                <div className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs font-medium rounded-full h-5 w-5 flex items-center justify-center">
                                   {spotsRemaining}
                       </div>
                               )}
                             </div>
                             
-                            <div className="bg-slate-700/60 px-4 py-3 rounded-2xl border border-slate-600/40 text-center">
-                              <div className="text-slate-300 text-sm">Skill Level</div>
-                              <div className="text-white font-semibold capitalize">{teeTime.handicap_requirement}</div>
+                            <div className="bg-gray-50 border border-gray-200 px-3 py-2 rounded-lg text-center">
+                              <div className="text-gray-500 text-xs">Skill Level</div>
+                              <div className="text-gray-900 font-medium text-sm capitalize">{teeTime.handicap_requirement}</div>
                             </div>
 
                             {/* Weather Widget Placeholder */}
-                            <div className="bg-gradient-to-br from-blue-500/20 to-cyan-500/20 px-4 py-3 rounded-2xl border border-blue-500/30 text-center">
-                              <div className="text-xs text-blue-300 mb-1">Weather</div>
-                              <div className="text-white text-sm font-semibold">☀️ 72°F</div>
+                            <div className="bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg text-center">
+                              <div className="text-xs text-blue-600 mb-1">Weather</div>
+                              <div className="text-blue-900 text-xs font-medium">☀️ 72°F</div>
                             </div>
                           </div>
                         </div>
 
                         {/* Description */}
                         {teeTime.description && (
-                          <div className="mb-6 p-4 bg-slate-700/30 rounded-2xl border border-slate-600/20">
-                            <p className="text-slate-200 text-base leading-relaxed italic">&quot;{teeTime.description}&quot;</p>
+                          <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                            <p className="text-gray-700 text-sm leading-relaxed italic">&quot;{teeTime.description}&quot;</p>
                           </div>
                         )}
 
                         {/* Action Buttons */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {teeTime.creator_id === user?.id ? (
                             <>
                               <button
@@ -1962,16 +1959,16 @@ export default function Dashboard() {
                                   fetchPendingApplications()
                                   fetchNotifications()
                                 }}
-                                className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-4 px-6 rounded-2xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center gap-2"
+                                className="bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
                               >
-                                <Bell className="h-5 w-5" />
+                                <Bell className="h-4 w-4" />
                                 Manage Applications
                               </button>
                           <button
                             onClick={() => handleDeleteTeeTime(teeTime.id)}
-                                className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white py-4 px-6 rounded-2xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center gap-2"
+                            className="bg-red-500 hover:bg-red-600 text-white py-3 px-4 rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
                           >
-                                <X className="h-5 w-5" />
+                            <X className="h-4 w-4" />
                             Delete Tee Time
                           </button>
                             </>
@@ -1980,16 +1977,16 @@ export default function Dashboard() {
                           <button
                             onClick={() => handleApplyToTeeTime(teeTime.id)}
                                 disabled={spotsRemaining <= 0}
-                                className={`${spotsRemaining <= 0 ? 'bg-gray-500 cursor-not-allowed' : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700'} text-white py-4 px-6 rounded-2xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center gap-2`}
+                                className={`${spotsRemaining <= 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-emerald-500 hover:bg-emerald-600'} text-white py-3 px-4 rounded-lg transition-colors font-medium flex items-center justify-center gap-2`}
                           >
-                                <Plus className="h-5 w-5" />
+                                <Plus className="h-4 w-4" />
                                 {spotsRemaining <= 0 ? 'Tee Time Full' : 'Apply to Join'}
                           </button>
                               <button 
                                 onClick={() => handleMessageCreator(teeTime.creator)}
-                                className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white py-4 px-6 rounded-2xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center gap-2"
+                                className="bg-purple-500 hover:bg-purple-600 text-white py-3 px-4 rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
                               >
-                                <MessageCircle className="h-5 w-5" />
+                                <MessageCircle className="h-4 w-4" />
                                 Message Host
                         </button>
                             </>

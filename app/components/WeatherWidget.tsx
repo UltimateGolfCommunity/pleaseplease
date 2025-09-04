@@ -96,17 +96,17 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
   const getWeatherIcon = (description: string) => {
     const desc = description.toLowerCase()
     if (desc.includes('clear') || desc.includes('sun')) {
-      return <Sun className="w-8 h-8 text-yellow-400" />
+      return <Sun className="w-6 h-6 text-yellow-500" />
     } else if (desc.includes('cloud')) {
-      return <Cloud className="w-8 h-8 text-gray-400" />
+      return <Cloud className="w-6 h-6 text-gray-500" />
     } else if (desc.includes('rain') || desc.includes('drizzle')) {
-      return <CloudRain className="w-8 h-8 text-blue-400" />
+      return <CloudRain className="w-6 h-6 text-blue-500" />
     } else if (desc.includes('snow')) {
-      return <CloudSnow className="w-8 h-8 text-blue-200" />
+      return <CloudSnow className="w-6 h-6 text-blue-400" />
     } else if (desc.includes('thunder')) {
-      return <CloudRain className="w-8 h-8 text-purple-400" />
+      return <CloudRain className="w-6 h-6 text-purple-500" />
     } else {
-      return <Sun className="w-8 h-8 text-yellow-400" />
+      return <Sun className="w-6 h-6 text-yellow-500" />
     }
   }
 
@@ -146,10 +146,10 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
 
   if (loading) {
     return (
-      <div className={`bg-gradient-to-br from-blue-900/20 to-blue-800/20 backdrop-blur-md rounded-2xl border border-blue-700/30 p-6 ${className}`}>
+      <div className={`bg-white/95 backdrop-blur-sm border border-gray-200/50 rounded-xl shadow-sm p-4 ${className}`}>
         <div className="flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
-          <span className="ml-3 text-blue-300">Loading weather...</span>
+          <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent"></div>
+          <span className="ml-3 text-gray-600 text-sm">Loading weather...</span>
         </div>
       </div>
     )
@@ -157,14 +157,13 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
 
   if (error || !weather) {
     return (
-      <div className={`bg-gradient-to-br from-red-900/20 to-red-800/20 backdrop-blur-md rounded-2xl border border-red-700/30 p-6 ${className}`}>
+      <div className={`bg-white/95 backdrop-blur-sm border border-red-200/50 rounded-xl shadow-sm p-4 ${className}`}>
         <div className="text-center">
-          <Cloud className="w-8 h-8 text-red-400 mx-auto mb-2" />
-          <p className="text-red-300 font-medium">Weather Unavailable</p>
-          <p className="text-red-400 text-sm mt-1">{error || 'Unable to fetch weather data'}</p>
+          <Cloud className="w-6 h-6 text-red-500 mx-auto mb-2" />
+          <p className="text-gray-800 font-medium text-sm">Weather Unavailable</p>
           <button
             onClick={fetchWeather}
-            className="mt-3 px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-300 rounded-lg transition-colors text-sm"
+            className="mt-2 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors text-sm border border-red-200"
           >
             Retry
           </button>
@@ -174,104 +173,75 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
   }
 
   return (
-    <div className={`bg-gradient-to-br from-blue-900/20 to-blue-800/20 backdrop-blur-md rounded-2xl border border-blue-700/30 p-6 ${className}`}>
+    <div className={`bg-white/95 backdrop-blur-sm border border-gray-200/50 rounded-xl shadow-sm p-4 ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-2">
-          <MapPin className="w-5 h-5 text-blue-400" />
-          <h3 className="text-white font-semibold">{weather.location}</h3>
+          <MapPin className="w-4 h-4 text-gray-500" />
+          <h3 className="text-gray-900 font-medium text-sm">{weather.location}</h3>
         </div>
         <button
           onClick={fetchWeather}
-          className="text-blue-400 hover:text-blue-300 transition-colors"
+          className="text-gray-400 hover:text-gray-600 transition-colors p-1"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
         </button>
       </div>
 
       {/* Main Weather Display */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-4">
-          {getWeatherIcon(weather.description)}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-3">
+          <div className="flex-shrink-0">
+            {getWeatherIcon(weather.description)}
+          </div>
           <div>
-            <div className="text-3xl font-bold text-white">
+            <div className="text-2xl font-bold text-gray-900">
               {formatTemperature(weather.temperature)}
             </div>
-            <div className="text-blue-300 text-sm capitalize">
+            <div className="text-gray-500 text-xs capitalize">
               {weather.description}
             </div>
           </div>
         </div>
         
         <div className="text-right">
-          <div className="text-blue-300 text-sm">Feels like</div>
-          <div className="text-white font-medium">
+          <div className="text-gray-400 text-xs">Feels like</div>
+          <div className="text-gray-700 font-medium text-sm">
             {formatTemperature(weather.feelsLike)}
           </div>
         </div>
       </div>
 
-      {/* Weather Details */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="flex items-center space-x-3">
-          <Wind className="w-5 h-5 text-blue-400" />
+      {/* Weather Details - Compact */}
+      <div className="grid grid-cols-2 gap-3 mb-3">
+        <div className="flex items-center space-x-2 bg-gray-50 rounded-lg p-2">
+          <Wind className="w-3.5 h-3.5 text-gray-500" />
           <div>
-            <div className="text-blue-300 text-xs">Wind</div>
-            <div className="text-white font-medium">{formatWindSpeed(weather.windSpeed)}</div>
+            <div className="text-gray-400 text-xs">Wind</div>
+            <div className="text-gray-700 font-medium text-xs">{formatWindSpeed(weather.windSpeed)}</div>
           </div>
         </div>
         
-        <div className="flex items-center space-x-3">
-          <Droplets className="w-5 h-5 text-blue-400" />
+        <div className="flex items-center space-x-2 bg-gray-50 rounded-lg p-2">
+          <Droplets className="w-3.5 h-3.5 text-gray-500" />
           <div>
-            <div className="text-blue-300 text-xs">Humidity</div>
-            <div className="text-white font-medium">{weather.humidity}%</div>
+            <div className="text-gray-400 text-xs">Humidity</div>
+            <div className="text-gray-700 font-medium text-xs">{weather.humidity}%</div>
           </div>
         </div>
       </div>
 
-      {/* Golf Recommendation */}
-      <div className="bg-blue-800/20 rounded-xl p-4 border border-blue-600/30">
-        <div className="flex items-center space-x-2 mb-2">
-          <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      {/* Golf Recommendation - Compact */}
+      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+        <div className="flex items-center space-x-2 mb-1">
+          <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <span className="text-green-400 font-medium text-sm">Golf Conditions</span>
+          <span className="text-green-700 font-medium text-xs">Golf Conditions</span>
         </div>
-        <p className="text-blue-200 text-sm">{getGolfRecommendation(weather)}</p>
-      </div>
-
-      {/* Location Input */}
-      <div className="mt-4">
-        <div className="flex space-x-2 mb-2">
-          <button
-            onClick={getCurrentLocation}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm flex items-center space-x-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            <span>Use Current Location</span>
-          </button>
-        </div>
-        <div className="flex space-x-2">
-          <input
-            type="text"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            placeholder="Enter city name..."
-            className="flex-1 bg-blue-800/20 border border-blue-600/30 rounded-lg px-3 py-2 text-white placeholder-blue-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-          />
-          <button
-            onClick={fetchWeather}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
-          >
-            Update
-          </button>
-        </div>
+        <p className="text-green-600 text-xs">{getGolfRecommendation(weather)}</p>
       </div>
     </div>
   )
