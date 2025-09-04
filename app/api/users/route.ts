@@ -451,6 +451,41 @@ export async function POST(request: NextRequest) {
 
     console.log('🔍 USERS POST: Using database for operations')
 
+    if (action === 'search') {
+      const { query } = data
+      console.log('🔍 USERS POST: Database search for:', query)
+      
+      if (!query) {
+        return NextResponse.json([])
+      }
+      
+      try {
+        // Use admin client to search users
+        const { data: searchResults, error } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,username.ilike.%${query}%`)
+          .limit(20)
+
+        if (error) {
+          console.error('❌ Database search error:', error)
+          return NextResponse.json({ 
+            error: 'Search failed', 
+            details: error.message 
+          }, { status: 400 })
+        }
+
+        console.log('✅ USERS POST: Database search results:', searchResults?.length || 0)
+        return NextResponse.json(searchResults || [])
+      } catch (searchError) {
+        console.error('❌ Search operation failed:', searchError)
+        return NextResponse.json({ 
+          error: 'Search failed', 
+          details: searchError instanceof Error ? searchError.message : 'Unknown error'
+        }, { status: 500 })
+      }
+    }
+
     if (action === 'connect') {
       console.log('🔗 USERS POST: Creating connection between:', data.user_id, 'and', data.connected_user_id)
       
