@@ -1843,7 +1843,6 @@ export default function Dashboard() {
                     const isTomorrow = daysUntilTeeTime === 1
                     const spotsRemaining = teeTime.max_players - (teeTime.current_players || 1)
                     const isAlmostFull = spotsRemaining <= 1
-                    const isNew = new Date(teeTime.created_at).getTime() > Date.now() - (24 * 60 * 60 * 1000) // Less than 24 hours old
                     
                     return (
                     <div key={teeTime.id} className="bg-gradient-to-br from-slate-800/90 via-slate-700/80 to-slate-600/70 border-2 border-slate-500/40 rounded-3xl p-6 sm:p-8 shadow-2xl hover:shadow-emerald-500/10 transition-all duration-500 hover:scale-[1.02] hover:border-emerald-500/30 backdrop-blur-md relative overflow-hidden group">
@@ -1853,11 +1852,6 @@ export default function Dashboard() {
                       
                       {/* Status Badges */}
                       <div className="absolute top-4 right-4 flex flex-col gap-2">
-                        {isNew && (
-                          <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 py-1 rounded-full text-xs font-bold animate-pulse shadow-lg">
-                            NEW
-                          </div>
-                        )}
                         {isToday && (
                           <div className="bg-gradient-to-r from-red-500 to-orange-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
                             TODAY
