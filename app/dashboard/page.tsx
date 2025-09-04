@@ -120,7 +120,9 @@ export default function Dashboard() {
 
   // Load courses when Courses tab is opened
   useEffect(() => {
-    if (activeTab === 'courses' && courseSearchResults.length === 0) {
+    console.log('🔍 Courses tab useEffect triggered:', { activeTab, courseSearchResultsLength: courseSearchResults.length })
+    if (activeTab === 'courses') {
+      console.log('🔄 Loading courses for Courses tab...')
       handleCourseSearch()
     }
   }, [activeTab])
