@@ -184,6 +184,16 @@ CREATE TABLE IF NOT EXISTS notifications (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Direct Messages Table (for user-to-user messaging)
+CREATE TABLE IF NOT EXISTS direct_messages (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    sender_id UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+    recipient_id UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+    message_content TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Golf Rounds Table (for tracking achievements)
 CREATE TABLE IF NOT EXISTS golf_rounds (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
@@ -225,6 +235,10 @@ CREATE INDEX IF NOT EXISTS idx_user_connections_recipient ON user_connections(re
 CREATE INDEX IF NOT EXISTS idx_course_reviews_course ON course_reviews(course_id);
 CREATE INDEX IF NOT EXISTS idx_course_reviews_user ON course_reviews(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_direct_messages_sender ON direct_messages(sender_id);
+CREATE INDEX IF NOT EXISTS idx_direct_messages_recipient ON direct_messages(recipient_id);
+CREATE INDEX IF NOT EXISTS idx_direct_messages_created_at ON direct_messages(created_at);
+CREATE INDEX IF NOT EXISTS idx_direct_messages_conversation ON direct_messages(sender_id, recipient_id);
 CREATE INDEX IF NOT EXISTS idx_user_badges_user ON user_badges(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_badges_badge ON user_badges(badge_id);
 CREATE INDEX IF NOT EXISTS idx_user_achievements_user ON user_achievements(user_id);
@@ -418,6 +432,7 @@ ALTER TABLE group_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_connections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE course_reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE direct_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE badges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_badges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_achievements ENABLE ROW LEVEL SECURITY;
@@ -473,6 +488,23 @@ CREATE POLICY "Users can delete own course reviews" ON course_reviews FOR DELETE
 -- RLS Policies for notifications
 CREATE POLICY "Users can view own notifications" ON notifications FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can update own notifications" ON notifications FOR UPDATE USING (auth.uid() = user_id);
+
+-- RLS Policies for direct_messages
+CREATE POLICY "Users can read their own messages" ON direct_messages
+    FOR SELECT USING (
+        auth.uid() = sender_id OR 
+        auth.uid() = recipient_id
+    );
+CREATE POLICY "Users can send messages" ON direct_messages
+    FOR INSERT WITH CHECK (
+        auth.uid() = sender_id
+    );
+CREATE POLICY "Users can mark received messages as read" ON direct_messages
+    FOR UPDATE USING (
+        auth.uid() = recipient_id
+    ) WITH CHECK (
+        auth.uid() = recipient_id
+    );
 
 -- RLS Policies for badges
 CREATE POLICY "Anyone can view badges" ON badges FOR SELECT USING (true);
