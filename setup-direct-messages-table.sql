@@ -21,18 +21,18 @@ CREATE INDEX IF NOT EXISTS idx_direct_messages_conversation ON direct_messages(s
 ALTER TABLE direct_messages ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies
-CREATE POLICY IF NOT EXISTS "Users can read their own messages" ON direct_messages
+CREATE POLICY "Users can read their own messages" ON direct_messages
     FOR SELECT USING (
         auth.uid() = sender_id OR 
         auth.uid() = recipient_id
     );
 
-CREATE POLICY IF NOT EXISTS "Users can send messages" ON direct_messages
+CREATE POLICY "Users can send messages" ON direct_messages
     FOR INSERT WITH CHECK (
         auth.uid() = sender_id
     );
 
-CREATE POLICY IF NOT EXISTS "Users can mark received messages as read" ON direct_messages
+CREATE POLICY "Users can mark received messages as read" ON direct_messages
     FOR UPDATE USING (
         auth.uid() = recipient_id
     ) WITH CHECK (
