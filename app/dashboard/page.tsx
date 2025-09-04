@@ -1108,10 +1108,12 @@ export default function Dashboard() {
   const handleCourseSearch = async () => {
     try {
       setCourseSearchLoading(true)
-      const response = await fetch(`/api/golf-courses?query=${encodeURIComponent(courseSearchQuery)}`)
+      const query = courseSearchQuery ? `?query=${encodeURIComponent(courseSearchQuery)}` : ''
+      const response = await fetch(`/api/golf-courses${query}`)
       
       if (response.ok) {
         const data = await response.json()
+        console.log('🔍 Course search results:', data.courses?.length || 0, 'courses found')
         setCourseSearchResults(data.courses || [])
       } else {
         console.error('Failed to search courses')
@@ -1203,6 +1205,7 @@ export default function Dashboard() {
         setShowCreateCourseModal(false)
         setCreateCourseForm({ name: '', location: '', description: '', par: '', holes: 18 })
         // Refresh course search results to show the new course
+        console.log('🔄 Refreshing course list after creation...')
         handleCourseSearch()
       } else {
         const errorData = await response.json()
