@@ -1676,16 +1676,16 @@ export default function Dashboard() {
     <div className="min-h-screen bg-theme-gradient transition-colors duration-300">
       {/* Clean Navigation */}
       <nav className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border-b border-gray-200/60 dark:border-slate-700/60 sticky top-0 z-50 shadow-xl transition-colors duration-300">
-        <div className="max-w-8xl mx-auto px-6 sm:px-8 lg:px-12">
-          <div className="flex items-center justify-between h-28 sm:h-32">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-20 sm:h-24">
             {/* Logo - Far Left */}
-            <div className="flex-shrink-0 -ml-6 sm:-ml-4">
-              <Logo size="lg" />
+            <div className="flex-shrink-0 -ml-2 sm:-ml-1">
+              <Logo size="md" />
             </div>
 
             {/* Navigation Tabs - Absolute Center */}
             <div className="absolute left-1/2 transform -translate-x-1/2">
-            <div className="hidden md:flex items-center space-x-4 bg-gray-100/90 dark:bg-gradient-to-r dark:from-slate-700/90 dark:to-slate-600/80 backdrop-blur-xl rounded-2xl p-4 shadow-lg border border-gray-300/40 dark:border-slate-600/40 transition-colors duration-300">
+            <div className="hidden md:flex items-center space-x-2 bg-gray-100/90 dark:bg-gradient-to-r dark:from-slate-700/90 dark:to-slate-600/80 backdrop-blur-xl rounded-xl p-2 shadow-lg border border-gray-300/40 dark:border-slate-600/40 transition-colors duration-300">
                           {[
               { id: 'overview', label: 'Tee Times', icon: Home },
               { id: 'courses', label: 'Courses', icon: Target },
@@ -1698,14 +1698,14 @@ export default function Dashboard() {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as any)}
-                    className={`flex items-center space-x-3 px-10 py-5 rounded-xl transition-all duration-300 font-medium ${
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-300 font-medium ${
                         isActive
                         ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg transform scale-105'
                         : 'text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200/60 dark:hover:bg-slate-600/60 hover:scale-105'
                       }`}
                     >
-                    <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-gray-500 dark:text-slate-400'}`} />
-                    <span className="font-semibold text-lg">{tab.label}</span>
+                    <Icon className={`h-4 w-4 ${isActive ? 'text-white' : 'text-gray-500 dark:text-slate-400'}`} />
+                    <span className="font-semibold text-sm">{tab.label}</span>
                     </button>
                   )
                 })}
@@ -1713,18 +1713,18 @@ export default function Dashboard() {
               </div>
               
             {/* Right Side Container */}
-            <div className="flex items-center space-x-6 sm:space-x-8">
+            <div className="flex items-center space-x-3 sm:space-x-4">
               {/* Mobile Navigation */}
               <div className="md:hidden">
                 <button
                   onClick={() => setShowMobileMenu(!showMobileMenu)}
-                  className="p-3 text-slate-300 hover:text-white transition-colors rounded-lg hover:bg-slate-700/50 touch-manipulation"
+                  className="p-2 text-slate-300 hover:text-white transition-colors rounded-lg hover:bg-slate-700/50 touch-manipulation"
                   aria-label="Toggle navigation menu"
                 >
                   {showMobileMenu ? (
-                    <X className="w-6 h-6" />
+                    <X className="w-5 h-5" />
                   ) : (
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                   </svg>
                   )}
@@ -1732,14 +1732,14 @@ export default function Dashboard() {
               </div>
 
               {/* User Menu - Far Right */}
-              <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-3">
                 {/* Search */}
                 <button 
-                  className="p-4 sm:p-5 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white transition-all duration-300 hover:scale-110 relative group"
+                  className="p-2 sm:p-3 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white transition-all duration-300 hover:scale-110 relative group"
                   onClick={() => setActiveTab('find-someone')}
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
-                  <Search className="h-6 w-6 sm:h-7 sm:w-7 relative z-10" />
+                  <Search className="h-5 w-5 sm:h-6 sm:w-6 relative z-10" />
                 </button>
                 
                 {/* Theme Toggle */}
@@ -1751,11 +1751,11 @@ export default function Dashboard() {
                 {/* Notifications */}
               <div className="relative notifications-container">
                 <button 
-                    className="p-4 sm:p-5 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white transition-all duration-300 hover:scale-110 relative group"
+                    className="p-2 sm:p-3 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white transition-all duration-300 hover:scale-110 relative group"
                   onClick={() => setShowNotifications(!showNotifications)}
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-red-400 to-pink-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
-                  <Bell className="h-6 w-6 sm:h-7 sm:w-7 relative z-10" />
+                  <Bell className="h-5 w-5 sm:h-6 sm:w-6 relative z-10" />
                   {(pendingInvitations.length > 0 || notifications.filter(n => !n.read).length > 0) && (
                     <div className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 bg-gradient-to-r from-red-500 to-pink-600 rounded-full shadow-lg animate-pulse flex items-center justify-center">
                       <span className="text-white text-xs font-bold">
@@ -1827,8 +1827,8 @@ export default function Dashboard() {
                 
                 {/* User Profile */}
                 <div className="relative group">
-                <button className="flex items-center space-x-4 sm:space-x-5 p-4 sm:p-5 rounded-xl hover:bg-gradient-to-r hover:from-slate-700/80 hover:to-slate-600/60 transition-all duration-300 group-hover:scale-105">
-                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full overflow-hidden shadow-lg relative">
+                <button className="flex items-center space-x-2 sm:space-x-3 p-2 sm:p-3 rounded-lg hover:bg-gradient-to-r hover:from-slate-700/80 hover:to-slate-600/60 transition-all duration-300 group-hover:scale-105">
+                  <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full overflow-hidden shadow-lg relative">
                     {profile?.avatar_url ? (
                       <img 
                         src={profile.avatar_url} 
@@ -1968,7 +1968,7 @@ export default function Dashboard() {
       )}
 
       {/* Main Content */}
-      <div className="max-w-8xl mx-auto px-6 sm:px-8 py-6 sm:py-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
 
         {/* Overview Tab */}
         {activeTab === 'overview' && (
