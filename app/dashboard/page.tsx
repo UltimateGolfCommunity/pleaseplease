@@ -41,7 +41,7 @@ export default function Dashboard() {
   const supabase = createBrowserClient()
   
 
-      const [activeTab, setActiveTab] = useState<'overview' | 'find-someone' | 'courses' | 'course-management' | 'groups' | 'messages' | 'badges' | 'applications'>('overview')
+      const [activeTab, setActiveTab] = useState<'overview' | 'find-someone' | 'courses' | 'groups' | 'messages' | 'badges' | 'applications'>('overview')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
@@ -1354,7 +1354,7 @@ export default function Dashboard() {
       })
 
       console.log('🔍 API response status:', response.status)
-      
+
       if (response.ok) {
         const data = await response.json()
         console.log('✅ Course created successfully:', data)
@@ -1689,7 +1689,6 @@ export default function Dashboard() {
                           {[
               { id: 'overview', label: 'Tee Times', icon: Home },
               { id: 'courses', label: 'Courses', icon: Target },
-              { id: 'course-management', label: 'Manage', icon: Settings },
               { id: 'groups', label: 'Groups', icon: Users },
               { id: 'messages', label: 'Messages', icon: MessageCircle }
             ].map((tab) => {
@@ -2552,8 +2551,8 @@ export default function Dashboard() {
                               </div>
                             )}
                             <div className="flex-1">
-                              <h3 className="text-white font-semibold text-xl">{course.name}</h3>
-                              <p className="text-slate-300 text-sm">{course.location}</p>
+                          <h3 className="text-white font-semibold text-xl">{course.name}</h3>
+                          <p className="text-slate-300 text-sm">{course.location}</p>
                               {course.distance && (
                                 <div className="flex items-center space-x-1 mt-1">
                                   <MapPin className="h-3 w-3 text-emerald-400" />
@@ -2562,10 +2561,10 @@ export default function Dashboard() {
                                   </span>
                                 </div>
                               )}
-                              <p className="text-slate-200 mt-2">{course.description}</p>
+                          <p className="text-slate-200 mt-2">{course.description}</p>
                             </div>
                           </div>
-                        </div>
+                            </div>
                         <div className="text-right">
                           <div className="text-2xl font-bold text-emerald-400">{course.average_rating}</div>
                           <div className="text-sm text-slate-400">{course.review_count} reviews</div>
@@ -3488,7 +3487,7 @@ export default function Dashboard() {
                   value={teeTimeForm.description}
                   onChange={(e) => setTeeTimeForm({...teeTimeForm, description: e.target.value})}
                       className="w-full p-3 border-2 border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-slate-700/50 text-white placeholder-slate-400 transition-all duration-300 resize-none"
-                      rows={3}
+                  rows={3}
                       maxLength={300}
                     />
                     <div className="absolute bottom-3 right-3 text-xs text-slate-400">
