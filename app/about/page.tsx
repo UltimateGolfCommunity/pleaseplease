@@ -72,7 +72,7 @@ export default function AboutPage() {
             <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-slate-700/50 rounded-3xl p-8 sm:p-12 shadow-xl">
               <div className="space-y-8">
                 {/* Founder Video Widget */}
-                <div className="flex justify-center">
+                <div className="flex justify-center mt-8">
                   <div className="relative">
                     <video
                       src="/todd-phillips-video.mov"
@@ -181,6 +181,62 @@ export default function AboutPage() {
                       Under Carden's financial leadership, Ultimate Golf Community is positioned to become 
                       the premier destination for golfers seeking meaningful connections and memorable experiences 
                       on and off the course.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Director of Logistics Section */}
+            <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-slate-700/50 rounded-3xl p-8 sm:p-12 shadow-xl">
+              <div className="space-y-8">
+                {/* Director Photo Widget */}
+                <div className="flex justify-center">
+                  <div className="relative">
+                    <img
+                      src="/dylan-carl-photo.png"
+                      alt="Dylan Carl - Director of Logistics"
+                      className="w-[28rem] h-80 sm:w-[32rem] sm:h-96 rounded-2xl object-cover shadow-2xl border-4 border-purple-500/20"
+                    />
+                    
+                    {/* Name and Title Overlay */}
+                    <div className="absolute inset-0 flex flex-col justify-center items-center bg-black/30 rounded-2xl">
+                      <div className="text-center">
+                        <h2 className="text-4xl sm:text-5xl font-bold text-white mb-2 drop-shadow-lg">
+                          Dylan Carl
+                        </h2>
+                        <p className="text-xl sm:text-2xl text-purple-400 font-semibold drop-shadow-lg">
+                          Director of Logistics
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Director Badge */}
+                    <div className="absolute -bottom-4 -right-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white px-4 py-2 rounded-xl shadow-lg">
+                      <span className="font-semibold text-sm">Our Director</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Director Story */}
+                <div className="max-w-4xl mx-auto space-y-6">
+                  <div className="space-y-4 text-gray-700 dark:text-slate-300 leading-relaxed text-center">
+                    <p className="text-lg">
+                      Dylan brings exceptional organizational skills and strategic planning expertise to Ultimate Golf Community. 
+                      With a keen eye for detail and a passion for creating seamless experiences, Dylan ensures that every 
+                      aspect of our platform operates smoothly and efficiently.
+                    </p>
+                    
+                    <p className="text-lg">
+                      His background in logistics and operations management makes him the perfect leader for coordinating 
+                      our community events, managing tee time logistics, and ensuring that every golfer has an exceptional 
+                      experience from start to finish.
+                    </p>
+                    
+                    <p className="text-lg">
+                      Under Dylan's leadership, Ultimate Golf Community maintains the highest standards of organization 
+                      and efficiency, making it easier than ever for golfers to connect, play, and build lasting relationships 
+                      through the game we all love.
                     </p>
                   </div>
                 </div>
