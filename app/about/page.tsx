@@ -76,7 +76,7 @@ export default function AboutPage() {
                   <div className="relative">
                     <img
                       src="/founder-photo.jpeg"
-                      alt="Luke Restall - Founder"
+                      alt="Todd Phillips - Founder"
                       className="w-64 h-64 sm:w-80 sm:h-80 rounded-2xl object-cover shadow-2xl border-4 border-emerald-500/20"
                     />
                     <div className="absolute -bottom-4 -right-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-4 py-2 rounded-xl shadow-lg">
@@ -89,7 +89,7 @@ export default function AboutPage() {
                 <div className="flex-1 space-y-6">
                   <div>
                     <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2">
-                      Luke Restall
+                      Todd Phillips
                     </h2>
                     <p className="text-xl text-emerald-600 dark:text-emerald-400 font-medium">
                       Founder & CEO
@@ -98,13 +98,13 @@ export default function AboutPage() {
 
                   <div className="space-y-4 text-gray-700 dark:text-slate-300 leading-relaxed">
                     <p className="text-lg">
-                      Luke's journey into golf began like many others - showing up at a municipal golf course, 
+                      Todd's journey into golf began like many others - showing up at a municipal golf course, 
                       getting paired with strangers, and hoping for the best. What he discovered was something 
                       magical: the power of golf to bring people together.
                     </p>
                     
                     <p className="text-lg">
-                      Through countless rounds with random playing partners, Luke built a network of friends 
+                      Through countless rounds with random playing partners, Todd built a network of friends 
                       that would become some of his closest relationships. These weren't just golf buddies - 
                       they became lifelong friends, business partners, and even family.
                     </p>
