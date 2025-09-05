@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 interface WeatherData {
   location: string
@@ -449,10 +450,32 @@ export default function HomePage() {
           </div>
 
           {/* Footer */}
-          <div className="mt-16 pt-8 border-t border-gray-800 text-center">
-            <p className="text-gray-500 text-sm">
-              © 2024 Ultimate Golf Community. All rights reserved.
-            </p>
+          <div className="mt-16 pt-8 border-t border-gray-800">
+            <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+              <div className="flex items-center space-x-6">
+                <Link
+                  href="/about"
+                  className="text-gray-400 hover:text-emerald-400 transition-colors duration-300 text-sm font-medium"
+                >
+                  About Us
+                </Link>
+                <a
+                  href="mailto:support@ultimategolfcommunity.com"
+                  className="text-gray-400 hover:text-emerald-400 transition-colors duration-300 text-sm font-medium"
+                >
+                  Support
+                </a>
+                <a
+                  href="/privacy"
+                  className="text-gray-400 hover:text-emerald-400 transition-colors duration-300 text-sm font-medium"
+                >
+                  Privacy Policy
+                </a>
+              </div>
+              <p className="text-gray-500 text-sm">
+                © 2024 Ultimate Golf Community. All rights reserved.
+              </p>
+            </div>
           </div>
         </div>
       </div>
