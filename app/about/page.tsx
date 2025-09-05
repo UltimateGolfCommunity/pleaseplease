@@ -355,6 +355,62 @@ export default function AboutPage() {
               </div>
             </div>
 
+            {/* Chief of Operations Section */}
+            <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-slate-700/50 rounded-3xl p-8 sm:p-12 shadow-xl">
+              <div className="space-y-8">
+                {/* COO Photo Widget */}
+                <div className="flex justify-center">
+                  <div className="relative">
+                    <img
+                      src="/peyton-mitchell-photo.png"
+                      alt="Peyton Mitchell - Chief of Operations"
+                      className="w-[28rem] h-80 sm:w-[32rem] sm:h-96 rounded-2xl object-cover shadow-2xl border-4 border-teal-500/20"
+                    />
+                    
+                    {/* Name and Title Overlay */}
+                    <div className="absolute inset-0 flex flex-col justify-center items-center bg-black/30 rounded-2xl">
+                      <div className="text-center">
+                        <h2 className="text-4xl sm:text-5xl font-bold text-white mb-2 drop-shadow-lg">
+                          Peyton Mitchell
+                        </h2>
+                        <p className="text-xl sm:text-2xl text-teal-400 font-semibold drop-shadow-lg">
+                          Chief of Operations
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* COO Badge */}
+                    <div className="absolute -bottom-4 -right-4 bg-gradient-to-r from-teal-500 to-cyan-600 text-white px-4 py-2 rounded-xl shadow-lg">
+                      <span className="font-semibold text-sm">Our COO</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* COO Story */}
+                <div className="max-w-4xl mx-auto space-y-6">
+                  <div className="space-y-4 text-gray-700 dark:text-slate-300 leading-relaxed text-center">
+                    <p className="text-lg">
+                      Peyton brings exceptional operational excellence and process optimization expertise to Ultimate Golf Community. 
+                      With a keen eye for efficiency and a passion for delivering seamless experiences, Peyton ensures that 
+                      every aspect of our platform operates smoothly and reliably for our growing community.
+                    </p>
+                    
+                    <p className="text-lg">
+                      His background in operations management and systems optimization makes him the perfect leader for 
+                      streamlining our platform performance, managing technical infrastructure, and ensuring that our 
+                      community features work flawlessly for golfers worldwide.
+                    </p>
+                    
+                    <p className="text-lg">
+                      Under Peyton's leadership, Ultimate Golf Community maintains the highest standards of operational 
+                      excellence, providing golfers with a reliable, fast, and intuitive platform that enhances their 
+                      golfing experience every time they use it.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Key Values */}
             <div className="bg-gradient-to-br from-emerald-500/10 to-blue-500/10 backdrop-blur-sm border border-emerald-200/50 dark:border-emerald-700/50 rounded-3xl p-8 sm:p-12 shadow-xl">
               <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-8 text-center">
