@@ -33,6 +33,7 @@ import MessagingSystem from '@/app/components/MessagingSystem'
 import BadgeManagement from '@/app/components/BadgeManagement'
 import Logo from '@/app/components/Logo'
 import ThemeToggle from '@/app/components/ThemeToggle'
+import GolfCourseManagement from '@/app/components/GolfCourseManagement'
 
 export default function Dashboard() {
   const { user, profile, signOut, loading } = useAuth()
@@ -40,7 +41,7 @@ export default function Dashboard() {
   const supabase = createBrowserClient()
   
 
-      const [activeTab, setActiveTab] = useState<'overview' | 'find-someone' | 'courses' | 'groups' | 'messages' | 'badges' | 'applications'>('overview')
+      const [activeTab, setActiveTab] = useState<'overview' | 'find-someone' | 'courses' | 'course-management' | 'groups' | 'messages' | 'badges' | 'applications'>('overview')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
@@ -1534,6 +1535,7 @@ export default function Dashboard() {
                           {[
               { id: 'overview', label: 'Tee Times', icon: Home },
               { id: 'courses', label: 'Courses', icon: Target },
+              { id: 'course-management', label: 'Manage', icon: Settings },
               { id: 'groups', label: 'Groups', icon: Users },
               { id: 'messages', label: 'Messages', icon: MessageCircle }
             ].map((tab) => {
