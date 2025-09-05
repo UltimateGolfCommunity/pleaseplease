@@ -1522,16 +1522,16 @@ export default function Dashboard() {
     <div className="min-h-screen bg-theme-gradient transition-colors duration-300">
       {/* Clean Navigation */}
       <nav className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border-b border-gray-200/60 dark:border-slate-700/60 sticky top-0 z-50 shadow-xl transition-colors duration-300">
-        <div className="max-w-6xl mx-auto px-2 sm:px-4">
-          <div className="flex items-center justify-between h-20 sm:h-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-24 sm:h-28">
             {/* Logo - Far Left */}
-            <div className="flex-shrink-0 -ml-8 sm:-ml-6">
+            <div className="flex-shrink-0 -ml-4 sm:-ml-2">
               <Logo size="lg" />
             </div>
 
             {/* Navigation Tabs - Absolute Center */}
             <div className="absolute left-1/2 transform -translate-x-1/2">
-            <div className="hidden md:flex items-center space-x-1 bg-gray-100/90 dark:bg-gradient-to-r dark:from-slate-700/90 dark:to-slate-600/80 backdrop-blur-xl rounded-2xl p-2 shadow-lg border border-gray-300/40 dark:border-slate-600/40 transition-colors duration-300">
+            <div className="hidden md:flex items-center space-x-2 bg-gray-100/90 dark:bg-gradient-to-r dark:from-slate-700/90 dark:to-slate-600/80 backdrop-blur-xl rounded-2xl p-3 shadow-lg border border-gray-300/40 dark:border-slate-600/40 transition-colors duration-300">
                           {[
               { id: 'overview', label: 'Tee Times', icon: Home },
               { id: 'courses', label: 'Courses', icon: Target },
@@ -1545,7 +1545,7 @@ export default function Dashboard() {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as any)}
-                    className={`flex items-center space-x-2 px-6 py-3 rounded-xl transition-all duration-300 font-medium ${
+                    className={`flex items-center space-x-3 px-8 py-4 rounded-xl transition-all duration-300 font-medium ${
                         isActive
                         ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg transform scale-105'
                         : 'text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200/60 dark:hover:bg-slate-600/60 hover:scale-105'
@@ -1560,7 +1560,7 @@ export default function Dashboard() {
               </div>
               
             {/* Right Side Container */}
-            <div className="flex items-center space-x-2 sm:space-x-4">
+            <div className="flex items-center space-x-4 sm:space-x-6">
               {/* Mobile Navigation */}
               <div className="md:hidden">
                 <button
@@ -1579,10 +1579,10 @@ export default function Dashboard() {
               </div>
 
               {/* User Menu - Far Right */}
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-4">
                 {/* Search */}
                 <button 
-                  className="p-2 sm:p-3 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white transition-all duration-300 hover:scale-110 relative group"
+                  className="p-3 sm:p-4 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white transition-all duration-300 hover:scale-110 relative group"
                   onClick={() => setActiveTab('find-someone')}
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
@@ -1598,7 +1598,7 @@ export default function Dashboard() {
                 {/* Notifications */}
               <div className="relative notifications-container">
                 <button 
-                    className="p-2 sm:p-3 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white transition-all duration-300 hover:scale-110 relative group"
+                    className="p-3 sm:p-4 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white transition-all duration-300 hover:scale-110 relative group"
                   onClick={() => setShowNotifications(!showNotifications)}
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-red-400 to-pink-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
@@ -1674,7 +1674,7 @@ export default function Dashboard() {
                 
                 {/* User Profile */}
                 <div className="relative group">
-                <button className="flex items-center space-x-2 sm:space-x-3 p-2 sm:p-3 rounded-xl hover:bg-gradient-to-r hover:from-slate-700/80 hover:to-slate-600/60 transition-all duration-300 group-hover:scale-105">
+                <button className="flex items-center space-x-3 sm:space-x-4 p-3 sm:p-4 rounded-xl hover:bg-gradient-to-r hover:from-slate-700/80 hover:to-slate-600/60 transition-all duration-300 group-hover:scale-105">
                   <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full overflow-hidden shadow-lg relative">
                     {profile?.avatar_url ? (
                       <img 
