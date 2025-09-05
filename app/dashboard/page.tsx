@@ -100,6 +100,13 @@ export default function Dashboard() {
   const [courseSearchLoading, setCourseSearchLoading] = useState(false)
   const [courseSearchResults, setCourseSearchResults] = useState<any[]>([])
   
+  // Location-based filtering state
+  const [locationFilter, setLocationFilter] = useState('')
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null)
+  const [locationLoading, setLocationLoading] = useState(false)
+  const [nearbyCourses, setNearbyCourses] = useState<any[]>([])
+  const [showNearbyOnly, setShowNearbyOnly] = useState(false)
+  
   // Course review state
   const [showReviewModal, setShowReviewModal] = useState(false)
   const [selectedCourse, setSelectedCourse] = useState<any>(null)
@@ -125,6 +132,12 @@ export default function Dashboard() {
     if (activeTab === 'courses') {
       console.log('🔄 Loading courses for Courses tab...')
       handleCourseSearch()
+      
+      // Automatically get user location for nearby courses
+      if (!userLocation && navigator.geolocation) {
+        console.log('📍 Getting user location for nearby courses...')
+        getUserLocation()
+      }
     }
   }, [activeTab])
   const [createCourseSubmitting, setCreateCourseSubmitting] = useState(false)
@@ -1128,6 +1141,88 @@ export default function Dashboard() {
     } finally {
       setCourseSearchLoading(false)
     }
+  }
+
+  // Geolocation functionality
+  const getUserLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by this browser.')
+      return
+    }
+
+    setLocationLoading(true)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const location = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        }
+        setUserLocation(location)
+        console.log('📍 User location:', location)
+        findNearbyCourses(location)
+        setLocationLoading(false)
+      },
+      (error) => {
+        console.error('Error getting location:', error)
+        alert('Unable to get your location. Please enable location services.')
+        setLocationLoading(false)
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000 // 5 minutes
+      }
+    )
+  }
+
+  // Calculate distance between two points using Haversine formula
+  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+    const R = 3959 // Earth's radius in miles
+    const dLat = (lat2 - lat1) * Math.PI / 180
+    const dLng = (lng2 - lng1) * Math.PI / 180
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLng/2) * Math.sin(dLng/2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+    return R * c
+  }
+
+  // Find courses within a certain radius
+  const findNearbyCourses = (location: {lat: number, lng: number}) => {
+    const radius = 50 // 50 miles radius
+    const coursesWithDistance = courseSearchResults.map(course => {
+      if (course.latitude && course.longitude) {
+        const distance = calculateDistance(
+          location.lat, 
+          location.lng, 
+          course.latitude, 
+          course.longitude
+        )
+        return { ...course, distance }
+      }
+      return { ...course, distance: null }
+    }).filter(course => course.distance !== null && course.distance <= radius)
+      .sort((a, b) => a.distance - b.distance)
+
+    setNearbyCourses(coursesWithDistance)
+    console.log('🏌️ Found', coursesWithDistance.length, 'courses within', radius, 'miles')
+  }
+
+  // Filter courses by location
+  const handleLocationFilter = (location: string) => {
+    setLocationFilter(location)
+    if (location === '') {
+      setShowNearbyOnly(false)
+      return
+    }
+    
+    const filtered = courseSearchResults.filter(course => 
+      course.location?.toLowerCase().includes(location.toLowerCase()) ||
+      course.city?.toLowerCase().includes(location.toLowerCase()) ||
+      course.state?.toLowerCase().includes(location.toLowerCase())
+    )
+    
+    setCourseSearchResults(filtered)
   }
 
   const handleWriteReview = (course: any) => {
@@ -2203,10 +2298,92 @@ export default function Dashboard() {
                         </button>
                 </div>
 
+                {/* Location Filtering */}
+                <div className="flex flex-wrap gap-3 mb-6">
+                  <div className="flex items-center space-x-2">
+                    <MapPin className="h-5 w-5 text-emerald-400" />
+                    <span className="text-white font-medium">Filter by Location:</span>
+                  </div>
+                  
+                  <select
+                    value={locationFilter}
+                    onChange={(e) => handleLocationFilter(e.target.value)}
+                    className="px-4 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 transition-all duration-300"
+                  >
+                    <option value="">All Locations</option>
+                    <option value="california">California</option>
+                    <option value="florida">Florida</option>
+                    <option value="texas">Texas</option>
+                    <option value="new york">New York</option>
+                    <option value="georgia">Georgia</option>
+                    <option value="washington">Washington</option>
+                    <option value="oregon">Oregon</option>
+                    <option value="illinois">Illinois</option>
+                    <option value="minnesota">Minnesota</option>
+                    <option value="north carolina">North Carolina</option>
+                    <option value="pennsylvania">Pennsylvania</option>
+                    <option value="scotland">Scotland</option>
+                    <option value="ireland">Ireland</option>
+                    <option value="australia">Australia</option>
+                  </select>
+
+                  <button
+                    onClick={getUserLocation}
+                    disabled={locationLoading}
+                    className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed flex items-center space-x-2"
+                  >
+                    {locationLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Getting Location...</span>
+                      </>
+                    ) : (
+                      <>
+                        <MapPin className="h-4 w-4" />
+                        <span>Find Nearby</span>
+                      </>
+                    )}
+                  </button>
+
+                  {userLocation && (
+                    <button
+                      onClick={() => setShowNearbyOnly(!showNearbyOnly)}
+                      className={`px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2 ${
+                        showNearbyOnly 
+                          ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white' 
+                          : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50'
+                      }`}
+                    >
+                      <span>{showNearbyOnly ? 'Show All' : 'Show Nearby Only'}</span>
+                      {nearbyCourses.length > 0 && (
+                        <span className="bg-emerald-500 text-white text-xs px-2 py-1 rounded-full">
+                          {nearbyCourses.length}
+                        </span>
+                      )}
+                    </button>
+                  )}
+                </div>
+
+                {/* Location Status */}
+                {userLocation && (
+                  <div className="mb-4 p-3 bg-emerald-500/20 border border-emerald-500/30 rounded-lg">
+                    <div className="flex items-center space-x-2 text-emerald-300">
+                      <MapPin className="h-4 w-4" />
+                      <span className="text-sm">
+                        Location: {userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)}
+                      </span>
+                      <span className="text-slate-400">•</span>
+                      <span className="text-sm">
+                        {nearbyCourses.length} courses within 50 miles
+                      </span>
+                    </div>
+                  </div>
+                )}
+
               {/* Course Results */}
-              {courseSearchResults && courseSearchResults.length > 0 ? (
+              {(showNearbyOnly ? nearbyCourses : courseSearchResults) && (showNearbyOnly ? nearbyCourses : courseSearchResults).length > 0 ? (
                 <div className="space-y-4">
-                  {courseSearchResults?.map((course) => (
+                  {(showNearbyOnly ? nearbyCourses : courseSearchResults)?.map((course) => (
                     <div key={course.id} className="bg-slate-800/50 border border-slate-600/50 rounded-xl p-6">
                         <div className="flex items-start justify-between mb-4">
                         <div className="flex-1">
@@ -2224,6 +2401,14 @@ export default function Dashboard() {
                             <div className="flex-1">
                               <h3 className="text-white font-semibold text-xl">{course.name}</h3>
                               <p className="text-slate-300 text-sm">{course.location}</p>
+                              {course.distance && (
+                                <div className="flex items-center space-x-1 mt-1">
+                                  <MapPin className="h-3 w-3 text-emerald-400" />
+                                  <span className="text-emerald-400 text-xs font-medium">
+                                    {course.distance.toFixed(1)} miles away
+                                  </span>
+                                </div>
+                              )}
                               <p className="text-slate-200 mt-2">{course.description}</p>
                             </div>
                           </div>
