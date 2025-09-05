@@ -12,23 +12,7 @@ export default function AboutPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/auth/login')
-    }
-  }, [user, loading, router])
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-theme-gradient flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-500 border-t-transparent"></div>
-      </div>
-    )
-  }
-
-  if (!user) {
-    return null
-  }
+  // No authentication required - anyone can view the About page
 
   return (
     <div className="min-h-screen bg-theme-gradient transition-colors duration-300">
@@ -43,15 +27,25 @@ export default function AboutPage() {
               </Link>
             </div>
 
-            {/* Back Button */}
+            {/* Navigation */}
             <div className="flex items-center space-x-4">
-              <Link
-                href="/dashboard"
-                className="flex items-center space-x-2 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white transition-colors duration-300"
-              >
-                <ArrowLeft className="h-5 w-5" />
-                <span className="font-medium">Back to Dashboard</span>
-              </Link>
+              {user ? (
+                <Link
+                  href="/dashboard"
+                  className="flex items-center space-x-2 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white transition-colors duration-300"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                  <span className="font-medium">Back to Dashboard</span>
+                </Link>
+              ) : (
+                <Link
+                  href="/"
+                  className="flex items-center space-x-2 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white transition-colors duration-300"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                  <span className="font-medium">Back to Home</span>
+                </Link>
+              )}
               
               <ThemeToggle size="sm" />
             </div>
@@ -164,13 +158,23 @@ export default function AboutPage() {
               </p>
               
               <div className="pt-6">
-                <Link
-                  href="/dashboard"
-                  className="inline-flex items-center space-x-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-8 py-4 rounded-2xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-                >
-                  <span>Join Our Community</span>
-                  <ArrowLeft className="h-5 w-5 rotate-180" />
-                </Link>
+                {user ? (
+                  <Link
+                    href="/dashboard"
+                    className="inline-flex items-center space-x-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-8 py-4 rounded-2xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                  >
+                    <span>Go to Dashboard</span>
+                    <ArrowLeft className="h-5 w-5 rotate-180" />
+                  </Link>
+                ) : (
+                  <Link
+                    href="/auth/signup"
+                    className="inline-flex items-center space-x-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-8 py-4 rounded-2xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                  >
+                    <span>Join Our Community</span>
+                    <ArrowLeft className="h-5 w-5 rotate-180" />
+                  </Link>
+                )}
               </div>
             </div>
           </div>
