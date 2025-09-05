@@ -132,15 +132,29 @@ export default function AboutPage() {
 
             {/* CFO Section */}
             <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-slate-700/50 rounded-3xl p-8 sm:p-12 shadow-xl">
-              <div className="flex flex-col lg:flex-row-reverse items-center gap-8 lg:gap-12">
-                {/* CFO Photo */}
-                <div className="flex-shrink-0">
+              <div className="space-y-8">
+                {/* CFO Photo Widget */}
+                <div className="flex justify-center">
                   <div className="relative">
                     <img
                       src="/cfo-photo.jpeg"
                       alt="Carden Ridge - CFO"
-                      className="w-64 h-64 sm:w-80 sm:h-80 rounded-2xl object-cover shadow-2xl border-4 border-blue-500/20"
+                      className="w-[28rem] h-80 sm:w-[32rem] sm:h-96 rounded-2xl object-cover shadow-2xl border-4 border-blue-500/20"
                     />
+                    
+                    {/* Name and Title Overlay */}
+                    <div className="absolute inset-0 flex flex-col justify-center items-center bg-black/30 rounded-2xl">
+                      <div className="text-center">
+                        <h2 className="text-4xl sm:text-5xl font-bold text-white mb-2 drop-shadow-lg">
+                          Carden Ridge
+                        </h2>
+                        <p className="text-xl sm:text-2xl text-blue-400 font-semibold drop-shadow-lg">
+                          Chief Financial Officer
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* CFO Badge */}
                     <div className="absolute -bottom-4 -right-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-2 rounded-xl shadow-lg">
                       <span className="font-semibold text-sm">Our CFO</span>
                     </div>
@@ -148,17 +162,8 @@ export default function AboutPage() {
                 </div>
 
                 {/* CFO Story */}
-                <div className="flex-1 space-y-6">
-                  <div>
-                    <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2">
-                      Carden Ridge
-                    </h2>
-                    <p className="text-xl text-blue-600 dark:text-blue-400 font-medium">
-                      Chief Financial Officer
-                    </p>
-                  </div>
-
-                  <div className="space-y-4 text-gray-700 dark:text-slate-300 leading-relaxed">
+                <div className="max-w-4xl mx-auto space-y-6">
+                  <div className="space-y-4 text-gray-700 dark:text-slate-300 leading-relaxed text-center">
                     <p className="text-lg">
                       Carden brings a wealth of financial expertise and strategic vision to Ultimate Golf Community. 
                       With a deep understanding of both traditional finance and emerging technology markets, 
