@@ -364,7 +364,7 @@ export default function AboutPage() {
                     <img
                       src="/peyton-mitchell-photo.png"
                       alt="Peyton Mitchell - Chief of Operations"
-                      className="w-[28rem] h-80 sm:w-[32rem] sm:h-96 rounded-2xl object-cover shadow-2xl border-4 border-teal-500/20"
+                      className="w-[28rem] h-80 sm:w-[32rem] sm:h-96 rounded-2xl object-cover object-top shadow-2xl border-4 border-teal-500/20"
                     />
                     
                     {/* Name and Title Overlay */}
