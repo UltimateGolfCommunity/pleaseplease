@@ -2209,11 +2209,25 @@ export default function Dashboard() {
                   {courseSearchResults?.map((course) => (
                     <div key={course.id} className="bg-slate-800/50 border border-slate-600/50 rounded-xl p-6">
                         <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <h3 className="text-white font-semibold text-xl">{course.name}</h3>
-                          <p className="text-slate-300 text-sm">{course.location}</p>
-                          <p className="text-slate-200 mt-2">{course.description}</p>
+                        <div className="flex-1">
+                          <div className="flex items-start gap-4">
+                            {/* Course Image */}
+                            {course.course_image_url && (
+                              <div className="flex-shrink-0">
+                                <img
+                                  src={course.course_image_url}
+                                  alt={course.name}
+                                  className="w-20 h-20 rounded-lg object-cover border border-slate-600/50"
+                                />
+                              </div>
+                            )}
+                            <div className="flex-1">
+                              <h3 className="text-white font-semibold text-xl">{course.name}</h3>
+                              <p className="text-slate-300 text-sm">{course.location}</p>
+                              <p className="text-slate-200 mt-2">{course.description}</p>
                             </div>
+                          </div>
+                        </div>
                         <div className="text-right">
                           <div className="text-2xl font-bold text-emerald-400">{course.average_rating}</div>
                           <div className="text-sm text-slate-400">{course.review_count} reviews</div>
