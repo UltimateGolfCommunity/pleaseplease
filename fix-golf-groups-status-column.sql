@@ -14,7 +14,8 @@ WHERE status IS NULL;
 CREATE INDEX IF NOT EXISTS idx_golf_groups_status ON golf_groups(status);
 
 -- Add RLS policy for status column
-CREATE POLICY IF NOT EXISTS "Users can view active groups" ON golf_groups
+DROP POLICY IF EXISTS "Users can view active groups" ON golf_groups;
+CREATE POLICY "Users can view active groups" ON golf_groups
 FOR SELECT USING (status = 'active');
 
 -- Update existing RLS policies to include status check
@@ -47,10 +48,12 @@ WHERE status IS NULL;
 CREATE INDEX IF NOT EXISTS idx_group_invitations_status ON group_invitations(status);
 
 -- Add RLS policies for group_invitations
-CREATE POLICY IF NOT EXISTS "Users can view their own invitations" ON group_invitations
+DROP POLICY IF EXISTS "Users can view their own invitations" ON group_invitations;
+CREATE POLICY "Users can view their own invitations" ON group_invitations
 FOR SELECT USING (invited_user_id = auth.uid());
 
-CREATE POLICY IF NOT EXISTS "Group admins can create invitations" ON group_invitations
+DROP POLICY IF EXISTS "Group admins can create invitations" ON group_invitations;
+CREATE POLICY "Group admins can create invitations" ON group_invitations
 FOR INSERT WITH CHECK (
   EXISTS (
     SELECT 1 FROM group_members 
@@ -61,7 +64,8 @@ FOR INSERT WITH CHECK (
   )
 );
 
-CREATE POLICY IF NOT EXISTS "Users can update their own invitations" ON group_invitations
+DROP POLICY IF EXISTS "Users can update their own invitations" ON group_invitations;
+CREATE POLICY "Users can update their own invitations" ON group_invitations
 FOR UPDATE USING (invited_user_id = auth.uid());
 
 -- Verify the changes
