@@ -134,7 +134,7 @@ export default function AboutPage() {
             <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-slate-700/50 rounded-3xl p-8 sm:p-12 shadow-xl">
               <div className="space-y-8">
                 {/* CFO Photo Widget */}
-                <div className="flex justify-center mt-8">
+                <div className="flex justify-center mt-12">
                   <div className="relative">
                     <img
                       src="/cfo-photo.jpeg"
