@@ -186,15 +186,7 @@ export default function HomePage() {
             Connect with fellow golfers, book tee times, track your game, and join the most vibrant golf community online.
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center">
-            <a
-              href="/explore"
-              className="group bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white px-6 sm:px-10 py-3 sm:py-4 rounded-xl text-base sm:text-lg font-semibold transition-all duration-300 shadow-2xl hover:shadow-emerald-500/25 transform hover:scale-105 flex items-center w-full sm:w-auto justify-center"
-            >
-              <Play className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              Explore Courses
-              <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
-            </a>
+          <div className="flex justify-center items-center">
             <a
               href="/auth/signup"
               className="group border-2 border-emerald-400/50 text-emerald-400 hover:bg-emerald-400/10 hover:border-emerald-400 px-10 py-4 rounded-xl text-lg font-semibold transition-all duration-300 backdrop-blur-sm flex items-center"
