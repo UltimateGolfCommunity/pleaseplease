@@ -66,79 +66,139 @@ export default function AboutPage() {
             </p>
           </div>
 
-          {/* Founder Section */}
-          <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-slate-700/50 rounded-3xl p-8 sm:p-12 shadow-xl">
-            <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-12">
-              {/* Founder Photo */}
-              <div className="flex-shrink-0">
-                <div className="relative">
-                  <img
-                    src="/founder-photo.jpeg"
-                    alt="Luke Restall - Founder"
-                    className="w-64 h-64 sm:w-80 sm:h-80 rounded-2xl object-cover shadow-2xl border-4 border-emerald-500/20"
-                  />
-                  <div className="absolute -bottom-4 -right-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-4 py-2 rounded-xl shadow-lg">
-                    <span className="font-semibold text-sm">Our Founder</span>
+          {/* Leadership Team */}
+          <div className="space-y-8">
+            {/* Founder Section */}
+            <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-slate-700/50 rounded-3xl p-8 sm:p-12 shadow-xl">
+              <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-12">
+                {/* Founder Photo */}
+                <div className="flex-shrink-0">
+                  <div className="relative">
+                    <img
+                      src="/founder-photo.jpeg"
+                      alt="Luke Restall - Founder"
+                      className="w-64 h-64 sm:w-80 sm:h-80 rounded-2xl object-cover shadow-2xl border-4 border-emerald-500/20"
+                    />
+                    <div className="absolute -bottom-4 -right-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-4 py-2 rounded-xl shadow-lg">
+                      <span className="font-semibold text-sm">Our Founder</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Founder Story */}
+                <div className="flex-1 space-y-6">
+                  <div>
+                    <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2">
+                      Luke Restall
+                    </h2>
+                    <p className="text-xl text-emerald-600 dark:text-emerald-400 font-medium">
+                      Founder & CEO
+                    </p>
+                  </div>
+
+                  <div className="space-y-4 text-gray-700 dark:text-slate-300 leading-relaxed">
+                    <p className="text-lg">
+                      Luke's journey into golf began like many others - showing up at a municipal golf course, 
+                      getting paired with strangers, and hoping for the best. What he discovered was something 
+                      magical: the power of golf to bring people together.
+                    </p>
+                    
+                    <p className="text-lg">
+                      Through countless rounds with random playing partners, Luke built a network of friends 
+                      that would become some of his closest relationships. These weren't just golf buddies - 
+                      they became lifelong friends, business partners, and even family.
+                    </p>
+                    
+                    <p className="text-lg">
+                      This experience inspired him to create Ultimate Golf Community, a platform that makes 
+                      it easier for golfers to connect, find playing partners, and build meaningful relationships 
+                      through the game we all love.
+                    </p>
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* Founder Story */}
-              <div className="flex-1 space-y-6">
-                <div>
-                  <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2">
-                    Luke Restall
-                  </h2>
-                  <p className="text-xl text-emerald-600 dark:text-emerald-400 font-medium">
-                    Founder & CEO
-                  </p>
+            {/* CFO Section */}
+            <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-slate-700/50 rounded-3xl p-8 sm:p-12 shadow-xl">
+              <div className="flex flex-col lg:flex-row-reverse items-center gap-8 lg:gap-12">
+                {/* CFO Photo */}
+                <div className="flex-shrink-0">
+                  <div className="relative">
+                    <img
+                      src="/cfo-photo.jpeg"
+                      alt="Carden Ridge - CFO"
+                      className="w-64 h-64 sm:w-80 sm:h-80 rounded-2xl object-cover shadow-2xl border-4 border-blue-500/20"
+                    />
+                    <div className="absolute -bottom-4 -right-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-2 rounded-xl shadow-lg">
+                      <span className="font-semibold text-sm">Our CFO</span>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="space-y-4 text-gray-700 dark:text-slate-300 leading-relaxed">
-                  <p className="text-lg">
-                    Luke's journey into golf began like many others - showing up at a municipal golf course, 
-                    getting paired with strangers, and hoping for the best. What he discovered was something 
-                    magical: the power of golf to bring people together.
-                  </p>
-                  
-                  <p className="text-lg">
-                    Through countless rounds with random playing partners, Luke built a network of friends 
-                    that would become some of his closest relationships. These weren't just golf buddies - 
-                    they became lifelong friends, business partners, and even family.
-                  </p>
-                  
-                  <p className="text-lg">
-                    This experience inspired him to create Ultimate Golf Community, a platform that makes 
-                    it easier for golfers to connect, find playing partners, and build meaningful relationships 
-                    through the game we all love.
+                {/* CFO Story */}
+                <div className="flex-1 space-y-6">
+                  <div>
+                    <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2">
+                      Carden Ridge
+                    </h2>
+                    <p className="text-xl text-blue-600 dark:text-blue-400 font-medium">
+                      Chief Financial Officer
+                    </p>
+                  </div>
+
+                  <div className="space-y-4 text-gray-700 dark:text-slate-300 leading-relaxed">
+                    <p className="text-lg">
+                      Carden brings a wealth of financial expertise and strategic vision to Ultimate Golf Community. 
+                      With a deep understanding of both traditional finance and emerging technology markets, 
+                      Carden ensures our platform remains financially sound while scaling to serve golfers worldwide.
+                    </p>
+                    
+                    <p className="text-lg">
+                      His passion for golf and commitment to building sustainable business models makes him 
+                      the perfect partner in our mission to revolutionize how golfers connect and play together. 
+                      Carden's strategic thinking helps us balance growth with the community values that make 
+                      our platform special.
+                    </p>
+                    
+                    <p className="text-lg">
+                      Under Carden's financial leadership, Ultimate Golf Community is positioned to become 
+                      the premier destination for golfers seeking meaningful connections and memorable experiences 
+                      on and off the course.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Key Values */}
+            <div className="bg-gradient-to-br from-emerald-500/10 to-blue-500/10 backdrop-blur-sm border border-emerald-200/50 dark:border-emerald-700/50 rounded-3xl p-8 sm:p-12 shadow-xl">
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-8 text-center">
+                Our Core Values
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div className="text-center p-6 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl">
+                  <MapPin className="h-12 w-12 text-emerald-500 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Community</h3>
+                  <p className="text-gray-600 dark:text-slate-400">
+                    Building connections through shared experiences and mutual respect
                   </p>
                 </div>
-
-                {/* Key Values */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
-                  <div className="text-center p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl">
-                    <MapPin className="h-8 w-8 text-emerald-500 mx-auto mb-2" />
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Community</h3>
-                    <p className="text-sm text-gray-600 dark:text-slate-400">
-                      Building connections through shared experiences
-                    </p>
-                  </div>
-                  
-                  <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
-                    <Users className="h-8 w-8 text-blue-500 mx-auto mb-2" />
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Inclusivity</h3>
-                    <p className="text-sm text-gray-600 dark:text-slate-400">
-                      Welcoming golfers of all skill levels
-                    </p>
-                  </div>
-                  
-                  <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
-                    <Heart className="h-8 w-8 text-purple-500 mx-auto mb-2" />
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Passion</h3>
-                    <p className="text-sm text-gray-600 dark:text-slate-400">
-                      Fueled by love for the game
-                    </p>
-                  </div>
+                
+                <div className="text-center p-6 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+                  <Users className="h-12 w-12 text-blue-500 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Inclusivity</h3>
+                  <p className="text-gray-600 dark:text-slate-400">
+                    Welcoming golfers of all skill levels, backgrounds, and experiences
+                  </p>
+                </div>
+                
+                <div className="text-center p-6 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
+                  <Heart className="h-12 w-12 text-purple-500 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Passion</h3>
+                  <p className="text-gray-600 dark:text-slate-400">
+                    Fueled by love for the game and dedication to our community
+                  </p>
                 </div>
               </div>
             </div>
