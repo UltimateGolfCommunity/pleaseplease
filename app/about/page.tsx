@@ -243,6 +243,62 @@ export default function AboutPage() {
               </div>
             </div>
 
+            {/* Chief of Human Resources Section */}
+            <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-slate-700/50 rounded-3xl p-8 sm:p-12 shadow-xl">
+              <div className="space-y-8">
+                {/* HR Chief Photo Widget */}
+                <div className="flex justify-center">
+                  <div className="relative">
+                    <img
+                      src="/sidney-gillett-photo.png"
+                      alt="Sidney Gillett - Chief of Human Resources"
+                      className="w-[28rem] h-80 sm:w-[32rem] sm:h-96 rounded-2xl object-cover shadow-2xl border-4 border-orange-500/20"
+                    />
+                    
+                    {/* Name and Title Overlay */}
+                    <div className="absolute inset-0 flex flex-col justify-center items-center bg-black/30 rounded-2xl">
+                      <div className="text-center">
+                        <h2 className="text-4xl sm:text-5xl font-bold text-white mb-2 drop-shadow-lg">
+                          Sidney Gillett
+                        </h2>
+                        <p className="text-xl sm:text-2xl text-orange-400 font-semibold drop-shadow-lg">
+                          Chief of Human Resources
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* HR Chief Badge */}
+                    <div className="absolute -bottom-4 -right-4 bg-gradient-to-r from-orange-500 to-red-600 text-white px-4 py-2 rounded-xl shadow-lg">
+                      <span className="font-semibold text-sm">Our HR Chief</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* HR Chief Story */}
+                <div className="max-w-4xl mx-auto space-y-6">
+                  <div className="space-y-4 text-gray-700 dark:text-slate-300 leading-relaxed text-center">
+                    <p className="text-lg">
+                      Sidney brings exceptional people skills and organizational development expertise to Ultimate Golf Community. 
+                      With a deep understanding of team dynamics and community building, Sidney ensures that our platform 
+                      fosters meaningful connections and positive relationships among golfers worldwide.
+                    </p>
+                    
+                    <p className="text-lg">
+                      Her background in human resources and community engagement makes her the perfect leader for developing 
+                      our user experience, managing community guidelines, and creating an inclusive environment where every 
+                      golfer feels welcome and valued.
+                    </p>
+                    
+                    <p className="text-lg">
+                      Under Sidney's leadership, Ultimate Golf Community maintains a supportive, inclusive culture that 
+                      celebrates diversity and encourages golfers of all backgrounds to connect, learn, and grow together 
+                      through their shared passion for the game.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Key Values */}
             <div className="bg-gradient-to-br from-emerald-500/10 to-blue-500/10 backdrop-blur-sm border border-emerald-200/50 dark:border-emerald-700/50 rounded-3xl p-8 sm:p-12 shadow-xl">
               <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-8 text-center">
