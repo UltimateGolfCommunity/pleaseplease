@@ -133,9 +133,23 @@ export default function Dashboard() {
       console.log('🔄 Loading courses for Courses tab...')
       handleCourseSearch()
       
-      // Automatically get user location for nearby courses
+      // Automatically get user location for nearby courses and tee times
       if (!userLocation && navigator.geolocation) {
-        console.log('📍 Getting user location for nearby courses...')
+        console.log('📍 Getting user location for nearby courses and tee times...')
+        getUserLocation()
+      }
+    }
+  }, [activeTab])
+
+  // Load tee times when Overview tab is opened
+  useEffect(() => {
+    if (activeTab === 'overview') {
+      console.log('🔄 Loading tee times for Overview tab...')
+      fetchTeeTimes()
+      
+      // Automatically get user location for nearby tee times
+      if (!userLocation && navigator.geolocation) {
+        console.log('📍 Getting user location for nearby tee times...')
         getUserLocation()
       }
     }
@@ -150,6 +164,11 @@ export default function Dashboard() {
 
   // Tee time loading state
   const [teeTimesLoading, setTeeTimesLoading] = useState(false)
+  
+  // Tee time location filtering state
+  const [teeTimeLocationFilter, setTeeTimeLocationFilter] = useState('')
+  const [nearbyTeeTimes, setNearbyTeeTimes] = useState<any[]>([])
+  const [showNearbyTeeTimesOnly, setShowNearbyTeeTimesOnly] = useState(false)
   
   // Applications state
   const [applications, setApplications] = useState<any[]>([])
@@ -1160,6 +1179,7 @@ export default function Dashboard() {
         setUserLocation(location)
         console.log('📍 User location:', location)
         findNearbyCourses(location)
+        findNearbyTeeTimes(location)
         setLocationLoading(false)
       },
       (error) => {
@@ -1223,6 +1243,45 @@ export default function Dashboard() {
     )
     
     setCourseSearchResults(filtered)
+  }
+
+  // Find nearby tee times
+  const findNearbyTeeTimes = (location: {lat: number, lng: number}) => {
+    const radius = 50 // 50 miles radius
+    const teeTimesWithDistance = availableTeeTimes.map(teeTime => {
+      if (teeTime.latitude && teeTime.longitude) {
+        const distance = calculateDistance(
+          location.lat, 
+          location.lng, 
+          teeTime.latitude, 
+          teeTime.longitude
+        )
+        return { ...teeTime, distance }
+      }
+      return { ...teeTime, distance: null }
+    }).filter(teeTime => teeTime.distance !== null && teeTime.distance <= radius)
+      .sort((a, b) => a.distance - b.distance)
+
+    setNearbyTeeTimes(teeTimesWithDistance)
+    console.log('🏌️ Found', teeTimesWithDistance.length, 'tee times within', radius, 'miles')
+  }
+
+  // Filter tee times by location
+  const handleTeeTimeLocationFilter = (location: string) => {
+    setTeeTimeLocationFilter(location)
+    if (location === '') {
+      setShowNearbyTeeTimesOnly(false)
+      return
+    }
+    
+    const filtered = availableTeeTimes.filter(teeTime => 
+      teeTime.course?.toLowerCase().includes(location.toLowerCase()) ||
+      teeTime.location?.toLowerCase().includes(location.toLowerCase()) ||
+      teeTime.city?.toLowerCase().includes(location.toLowerCase()) ||
+      teeTime.state?.toLowerCase().includes(location.toLowerCase())
+    )
+    
+    setAvailableTeeTimes(filtered)
   }
 
   const handleWriteReview = (course: any) => {
@@ -1930,6 +1989,90 @@ export default function Dashboard() {
                   Post Tee Time
                 </button>
               </div>
+
+              {/* Tee Time Location Filtering */}
+              <div className="relative mb-6">
+                <div className="flex flex-wrap gap-3 mb-4">
+                  <div className="flex items-center space-x-2">
+                    <MapPin className="h-5 w-5 text-emerald-400" />
+                    <span className="text-white font-medium">Filter Tee Times by Location:</span>
+                  </div>
+                  
+                  <select
+                    value={teeTimeLocationFilter}
+                    onChange={(e) => handleTeeTimeLocationFilter(e.target.value)}
+                    className="px-4 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 transition-all duration-300"
+                  >
+                    <option value="">All Locations</option>
+                    <option value="california">California</option>
+                    <option value="florida">Florida</option>
+                    <option value="texas">Texas</option>
+                    <option value="new york">New York</option>
+                    <option value="georgia">Georgia</option>
+                    <option value="washington">Washington</option>
+                    <option value="oregon">Oregon</option>
+                    <option value="illinois">Illinois</option>
+                    <option value="minnesota">Minnesota</option>
+                    <option value="north carolina">North Carolina</option>
+                    <option value="pennsylvania">Pennsylvania</option>
+                    <option value="scotland">Scotland</option>
+                    <option value="ireland">Ireland</option>
+                    <option value="australia">Australia</option>
+                  </select>
+
+                  <button
+                    onClick={getUserLocation}
+                    disabled={locationLoading}
+                    className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed flex items-center space-x-2"
+                  >
+                    {locationLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Getting Location...</span>
+                      </>
+                    ) : (
+                      <>
+                        <MapPin className="h-4 w-4" />
+                        <span>Find Nearby</span>
+                      </>
+                    )}
+                  </button>
+
+                  {userLocation && (
+                    <button
+                      onClick={() => setShowNearbyTeeTimesOnly(!showNearbyTeeTimesOnly)}
+                      className={`px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2 ${
+                        showNearbyTeeTimesOnly 
+                          ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white' 
+                          : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50'
+                      }`}
+                    >
+                      <span>{showNearbyTeeTimesOnly ? 'Show All' : 'Show Nearby Only'}</span>
+                      {nearbyTeeTimes.length > 0 && (
+                        <span className="bg-emerald-500 text-white text-xs px-2 py-1 rounded-full">
+                          {nearbyTeeTimes.length}
+                        </span>
+                      )}
+                    </button>
+                  )}
+                </div>
+
+                {/* Location Status for Tee Times */}
+                {userLocation && (
+                  <div className="mb-4 p-3 bg-emerald-500/20 border border-emerald-500/30 rounded-lg">
+                    <div className="flex items-center space-x-2 text-emerald-300">
+                      <MapPin className="h-4 w-4" />
+                      <span className="text-sm">
+                        Location: {userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)}
+                      </span>
+                      <span className="text-slate-400">•</span>
+                      <span className="text-sm">
+                        {nearbyTeeTimes.length} tee times within 50 miles
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
             
               {/* Tee Times List */}
               <div className="space-y-6">
@@ -1953,7 +2096,7 @@ export default function Dashboard() {
                     </button>
                   </div>
                 ) : (
-                  availableTeeTimes?.map((teeTime) => {
+                  (showNearbyTeeTimesOnly ? nearbyTeeTimes : availableTeeTimes)?.map((teeTime) => {
                     const daysUntilTeeTime = Math.ceil((new Date(teeTime.tee_time_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
                     const isToday = new Date(teeTime.tee_time_date).toDateString() === new Date().toDateString()
                     const isTomorrow = daysUntilTeeTime === 1
@@ -1990,7 +2133,17 @@ export default function Dashboard() {
                               <div className="p-2 bg-emerald-500 rounded-lg">
                                 <Flag className="h-4 w-4 text-white" />
                               </div>
-                              <h3 className="text-gray-900 font-bold text-lg sm:text-xl">{teeTime.course_name}</h3>
+                              <div className="flex-1">
+                                <h3 className="text-gray-900 font-bold text-lg sm:text-xl">{teeTime.course_name}</h3>
+                                {teeTime.distance && (
+                                  <div className="flex items-center space-x-1 mt-1">
+                                    <MapPin className="h-3 w-3 text-emerald-500" />
+                                    <span className="text-emerald-600 text-xs font-medium">
+                                      {teeTime.distance.toFixed(1)} miles away
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                             
                             <div className="space-y-3">
