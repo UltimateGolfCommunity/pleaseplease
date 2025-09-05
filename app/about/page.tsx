@@ -80,7 +80,7 @@ export default function AboutPage() {
                       loop
                       muted
                       playsInline
-                      className="w-96 h-80 sm:w-[28rem] sm:h-96 rounded-2xl object-cover shadow-2xl border-4 border-emerald-500/20"
+                      className="w-[28rem] h-80 sm:w-[32rem] sm:h-96 rounded-2xl object-cover shadow-2xl border-4 border-emerald-500/20"
                       poster="/founder-photo.jpeg"
                     >
                       Your browser does not support the video tag.
