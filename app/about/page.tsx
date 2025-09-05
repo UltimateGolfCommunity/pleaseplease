@@ -284,7 +284,7 @@ export default function AboutPage() {
                     </p>
                     
                     <p className="text-lg">
-                      Her background in human resources and community engagement makes her the perfect leader for developing 
+                      His background in human resources and community engagement makes him the perfect leader for developing 
                       our user experience, managing community guidelines, and creating an inclusive environment where every 
                       golfer feels welcome and valued.
                     </p>
@@ -293,6 +293,62 @@ export default function AboutPage() {
                       Under Sidney's leadership, Ultimate Golf Community maintains a supportive, inclusive culture that 
                       celebrates diversity and encourages golfers of all backgrounds to connect, learn, and grow together 
                       through their shared passion for the game.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Vice President of Sales Section */}
+            <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-slate-700/50 rounded-3xl p-8 sm:p-12 shadow-xl">
+              <div className="space-y-8">
+                {/* VP Sales Photo Widget */}
+                <div className="flex justify-center">
+                  <div className="relative">
+                    <img
+                      src="/ashton-griffith-photo.png"
+                      alt="Ashton Griffith - Vice President of Sales"
+                      className="w-[28rem] h-80 sm:w-[32rem] sm:h-96 rounded-2xl object-cover shadow-2xl border-4 border-red-500/20"
+                    />
+                    
+                    {/* Name and Title Overlay */}
+                    <div className="absolute inset-0 flex flex-col justify-center items-center bg-black/30 rounded-2xl">
+                      <div className="text-center">
+                        <h2 className="text-4xl sm:text-5xl font-bold text-white mb-2 drop-shadow-lg">
+                          Ashton Griffith
+                        </h2>
+                        <p className="text-xl sm:text-2xl text-red-400 font-semibold drop-shadow-lg">
+                          Vice President of Sales
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* VP Sales Badge */}
+                    <div className="absolute -bottom-4 -right-4 bg-gradient-to-r from-red-500 to-pink-600 text-white px-4 py-2 rounded-xl shadow-lg">
+                      <span className="font-semibold text-sm">Our VP Sales</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* VP Sales Story */}
+                <div className="max-w-4xl mx-auto space-y-6">
+                  <div className="space-y-4 text-gray-700 dark:text-slate-300 leading-relaxed text-center">
+                    <p className="text-lg">
+                      Ashton brings exceptional sales expertise and relationship-building skills to Ultimate Golf Community. 
+                      With a proven track record in driving growth and expanding market reach, Ashton leads our sales 
+                      initiatives to connect with golf courses, partners, and premium users worldwide.
+                    </p>
+                    
+                    <p className="text-lg">
+                      His background in sales strategy and business development makes him the perfect leader for 
+                      establishing partnerships with golf courses, managing premium subscriptions, and growing our 
+                      community through strategic outreach and relationship management.
+                    </p>
+                    
+                    <p className="text-lg">
+                      Under Ashton's leadership, Ultimate Golf Community continues to expand its reach and impact, 
+                      bringing more golfers together while building strong partnerships with courses and organizations 
+                      that share our vision for the future of golf.
                     </p>
                   </div>
                 </div>
