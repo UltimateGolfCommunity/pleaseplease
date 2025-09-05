@@ -71,14 +71,17 @@ export default function AboutPage() {
             {/* Founder Section */}
             <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-slate-700/50 rounded-3xl p-8 sm:p-12 shadow-xl">
               <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-12">
-                {/* Founder Photo */}
+                {/* Founder Media */}
                 <div className="flex-shrink-0">
                   <div className="relative">
-                    <img
-                      src="/founder-photo.jpeg"
-                      alt="Todd Phillips - Founder"
+                    <video
+                      src="/todd-phillips-video.mov"
+                      controls
                       className="w-64 h-64 sm:w-80 sm:h-80 rounded-2xl object-cover shadow-2xl border-4 border-emerald-500/20"
-                    />
+                      poster="/founder-photo.jpeg"
+                    >
+                      Your browser does not support the video tag.
+                    </video>
                     <div className="absolute -bottom-4 -right-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-4 py-2 rounded-xl shadow-lg">
                       <span className="font-semibold text-sm">Our Founder</span>
                     </div>
