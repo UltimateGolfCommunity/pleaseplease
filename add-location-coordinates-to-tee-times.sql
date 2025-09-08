@@ -188,12 +188,15 @@ $$ LANGUAGE plpgsql;
 -- STEP 7: Create view for tee times with distance
 -- ===========================================
 
+-- Drop existing view if it exists to avoid column conflicts
+DROP VIEW IF EXISTS tee_times_with_distance;
+
 -- Create a view that includes distance calculation for tee times
-CREATE OR REPLACE VIEW tee_times_with_distance AS
+CREATE VIEW tee_times_with_distance AS
 SELECT 
     tt.*,
     gc.name as course_name,
-    gc.location as course_location,
+    COALESCE(tt.course_location, gc.location) as course_location,
     gc.latitude as course_latitude,
     gc.longitude as course_longitude,
     gc.course_image_url,
