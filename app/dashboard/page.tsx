@@ -575,6 +575,19 @@ export default function Dashboard() {
     // This is a simple implementation that can be enhanced later
     console.log('Filtering tee times by location:', location)
   }
+
+  // Filter courses by location
+  const handleLocationFilter = (location: string) => {
+    setLocationFilter(location)
+    if (location === '') {
+      setShowNearbyOnly(false)
+      return
+    }
+    
+    // For now, just set the filter - the actual filtering will be handled by the API
+    // This is a simple implementation that can be enhanced later
+    console.log('Filtering courses by location:', location)
+  }
   
   const fetchApplications = async () => {
     try {
