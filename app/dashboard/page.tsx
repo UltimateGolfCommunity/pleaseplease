@@ -933,16 +933,24 @@ export default function Dashboard() {
     
     setGroupInviteLoading(true)
     try {
-      const response = await fetch(`/api/users?search=${encodeURIComponent(groupInviteQuery)}`)
+      console.log('🔍 Searching for users to invite:', groupInviteQuery)
+      const response = await fetch(`/api/users?action=search&q=${encodeURIComponent(groupInviteQuery)}`)
+      console.log('📡 Group invite search response status:', response.status)
+      
       if (response.ok) {
         const data = await response.json()
+        console.log('📊 Group invite search results:', data?.length || 0)
+        
         // Filter out the current user and already selected users
-        const filteredUsers = data.users?.filter((user: any) => 
-          user.id !== profile?.id && 
-          !selectedInvitees.some(invitee => invitee.id === user.id)
-        ) || []
+        const filteredUsers = data.filter((searchedUser: any) => 
+          searchedUser.id !== user?.id && 
+          !selectedInvitees.some(invitee => invitee.id === searchedUser.id)
+        )
+        console.log('🔍 Filtered group invite results:', filteredUsers?.length || 0)
         setGroupInviteResults(filteredUsers)
       } else {
+        const errorText = await response.text()
+        console.error('❌ Group invite search failed:', response.status, errorText)
         setGroupInviteResults([])
       }
     } catch (error) {
@@ -950,6 +958,45 @@ export default function Dashboard() {
       setGroupInviteResults([])
     } finally {
       setGroupInviteLoading(false)
+    }
+  }
+
+  const handleJoinGroup = async (groupId: string) => {
+    if (!user?.id) {
+      alert('You must be logged in to join groups')
+      return
+    }
+    
+    try {
+      const response = await fetch('/api/groups', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'join',
+          group_id: groupId,
+          user_id: user.id
+        }),
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        console.log('✅ Joined group successfully:', result)
+        alert('Successfully joined the group!')
+        
+        // Refresh search results to update the UI
+        if (searchPerformed) {
+          handleSearch()
+        }
+      } else {
+        const errorData = await response.json()
+        console.error('❌ Failed to join group:', errorData)
+        alert('Failed to join group: ' + (errorData.error || 'Unknown error'))
+      }
+    } catch (error) {
+      console.error('Error joining group:', error)
+      alert('Failed to join group. Please try again.')
     }
   }
   
@@ -1392,18 +1439,30 @@ export default function Dashboard() {
     setSearchPerformed(true)
     
     try {
-      const response = await fetch(`/api/users?action=search&q=${encodeURIComponent(searchQuery)}`)
+      let response
+      
+      // If we're in the groups tab, search for groups instead of users
+      if (activeTab === 'groups') {
+        response = await fetch(`/api/groups?action=search&q=${encodeURIComponent(searchQuery)}`)
+      } else {
+        response = await fetch(`/api/users?action=search&q=${encodeURIComponent(searchQuery)}`)
+      }
+      
       console.log('📡 Search response status:', response.status)
       
       if (response.ok) {
         const data = await response.json()
         console.log('📊 Search results:', data?.length || 0)
         
-        // Filter out the current user from search results
-        const filteredData = data.filter((searchedUser: any) => searchedUser.id !== user?.id)
-        console.log('🔍 Filtered results:', filteredData?.length || 0)
-        
-        setSearchResults(filteredData)
+        if (activeTab === 'groups') {
+          // For groups, no filtering needed
+          setSearchResults(data || [])
+        } else {
+          // Filter out the current user from user search results
+          const filteredData = data.filter((searchedUser: any) => searchedUser.id !== user?.id)
+          console.log('🔍 Filtered results:', filteredData?.length || 0)
+          setSearchResults(filteredData)
+        }
       } else {
         const errorText = await response.text()
         console.error('❌ Search failed:', response.status, errorText)
@@ -2772,41 +2831,138 @@ export default function Dashboard() {
                 </button>
               </div>
               
-              {/* Group Info */}
-              <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-600/50">
-                <h3 className="text-lg font-semibold text-white mb-3">Weekend Warriors</h3>
-                <p className="text-slate-300 mb-4">Your active golf group with 8 members</p>
+              {/* Search Groups */}
+              <div className="mb-6">
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    placeholder="Search groups..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleSearch())}
+                    className="flex-1 p-3 border border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-700 text-white placeholder-slate-400"
+                  />
+                  <button
+                    onClick={handleSearch}
+                    disabled={searchLoading}
+                    className="px-4 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {searchLoading ? '...' : 'Search'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Search Results */}
+              {searchPerformed && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Search Results</h3>
+                  {searchLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
+                      <span className="ml-3 text-slate-300">Searching...</span>
+                    </div>
+                  ) : searchResults.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Users className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                      <h4 className="text-lg font-medium text-slate-300 mb-2">No Groups Found</h4>
+                      <p className="text-slate-400">Try a different search term or create a new group.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {searchResults.map((group: any) => (
+                        <div key={group.id} className="bg-slate-700/50 rounded-xl p-4 border border-slate-600/50">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-lg font-semibold text-white">{group.name}</h4>
+                            <span className="text-xs text-slate-400">{group.member_count || 0} members</span>
+                          </div>
+                          <p className="text-slate-300 text-sm mb-3">{group.description}</p>
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => handleJoinGroup(group.id)}
+                              className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                            >
+                              Join Group
+                            </button>
+                            <button
+                              onClick={() => router.push(`/groups/${group.id}`)}
+                              className="flex-1 bg-slate-600 hover:bg-slate-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                            >
+                              View Details
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* My Groups */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-white">My Groups</h3>
                 
-                {/* Group Chat */}
-                <div className="bg-slate-700/50 rounded-lg p-4 mb-4 border border-slate-600/50">
-                  <h4 className="font-medium text-white mb-3">Group Chat</h4>
-                  <div className="space-y-3 mb-4 max-h-40 overflow-y-auto">
-                    {groupMessages.map((message) => (
-                      <div key={message.id} className="flex items-start space-x-2">
-                        <div className="h-6 w-6 bg-emerald-500/20 rounded-full flex items-center justify-center text-xs font-medium text-emerald-400">
-                          {message.sender.first_name[0]}
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm text-slate-200">{message.message_content}</p>
-                          <p className="text-xs text-slate-400">{message.timestamp}</p>
-                        </div>
-                      </div>
-                    ))}
+                {/* Group Info */}
+                <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-600/50">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-lg font-semibold text-white">Weekend Warriors</h4>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-slate-400">8 members</span>
+                      <button
+                        onClick={() => setShowGroupModal(true)}
+                        className="text-emerald-400 hover:text-emerald-300 text-sm font-medium"
+                      >
+                        Manage
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex space-x-2">
-                    <input
-                      type="text"
-                      placeholder="Type a message..."
-                      value={groupMessageText}
-                      onChange={(e) => setGroupMessageText(e.target.value)}
-                      className="flex-1 px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300"
-                    />
-                    <button
-                      onClick={handleSendGroupMessage}
-                      className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-4 py-2 rounded-lg transition-all duration-300 text-sm font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-                    >
-                      Send
-                    </button>
+                  <p className="text-slate-300 mb-4">Your active golf group for weekend rounds</p>
+                  
+                  {/* Group Members */}
+                  <div className="mb-4">
+                    <h5 className="text-sm font-medium text-white mb-2">Members</h5>
+                    <div className="flex flex-wrap gap-2">
+                      {['John', 'Sarah', 'Mike', 'Lisa', 'Tom', 'Emma', 'Alex', 'You'].map((name, index) => (
+                        <div key={index} className="flex items-center space-x-1 bg-slate-700/50 px-2 py-1 rounded-lg">
+                          <div className="w-6 h-6 bg-emerald-500/20 rounded-full flex items-center justify-center text-xs font-medium text-emerald-400">
+                            {name[0]}
+                          </div>
+                          <span className="text-xs text-slate-300">{name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Group Chat */}
+                  <div className="bg-slate-700/50 rounded-lg p-4 border border-slate-600/50">
+                    <h5 className="font-medium text-white mb-3">Group Chat</h5>
+                    <div className="space-y-3 mb-4 max-h-40 overflow-y-auto">
+                      {groupMessages.map((message) => (
+                        <div key={message.id} className="flex items-start space-x-2">
+                          <div className="h-6 w-6 bg-emerald-500/20 rounded-full flex items-center justify-center text-xs font-medium text-emerald-400">
+                            {message.sender.first_name[0]}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm text-slate-200">{message.message_content}</p>
+                            <p className="text-xs text-slate-400">{message.timestamp}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex space-x-2">
+                      <input
+                        type="text"
+                        placeholder="Type a message..."
+                        value={groupMessageText}
+                        onChange={(e) => setGroupMessageText(e.target.value)}
+                        className="flex-1 px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300"
+                      />
+                      <button
+                        onClick={handleSendGroupMessage}
+                        className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-4 py-2 rounded-lg transition-all duration-300 text-sm font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                      >
+                        Send
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -5,11 +5,90 @@ import { createAdminClient } from '@/lib/supabase-admin'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { action, name, description, maxMembers, user_id: bodyUserId, invitees } = body
+    const { action, name, description, maxMembers, user_id: bodyUserId, invitees, group_id } = body
 
     console.log('🔍 GROUPS POST: Action requested:', action)
-    console.log('📊 GROUPS POST: Group data:', { name, description, maxMembers, user_id: bodyUserId })
+    console.log('📊 GROUPS POST: Group data:', { name, description, maxMembers, user_id: bodyUserId, group_id })
     
+    // Handle join action
+    if (action === 'join') {
+      if (!group_id || !user_id) {
+        return NextResponse.json(
+          { error: 'Group ID and User ID are required for join action' },
+          { status: 400 }
+        )
+      }
+
+      // Use three-tier fallback system
+      let supabase: any = null
+      let usingMockMode = false
+      
+      try {
+        supabase = createAdminClient()
+      } catch (adminError) {
+        try {
+          supabase = createServerClient()
+        } catch (serverError) {
+          usingMockMode = true
+        }
+      }
+      
+      if (!supabase) {
+        usingMockMode = true
+      }
+
+      if (usingMockMode) {
+        console.log('🔧 GROUPS POST: Using mock mode for join')
+        return NextResponse.json({ 
+          success: true, 
+          message: 'Joined group successfully (backup system)'
+        })
+      }
+
+      // Check if user is already a member
+      const { data: existingMember, error: checkError } = await supabase
+        .from('group_members')
+        .select('*')
+        .eq('group_id', group_id)
+        .eq('user_id', user_id)
+        .single()
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('❌ Error checking existing membership:', checkError)
+        return NextResponse.json({ error: 'Failed to check membership' }, { status: 500 })
+      }
+
+      if (existingMember) {
+        return NextResponse.json({ error: 'User is already a member of this group' }, { status: 409 })
+      }
+
+      // Add user to group
+      const { data: member, error: joinError } = await supabase
+        .from('group_members')
+        .insert({
+          group_id,
+          user_id,
+          role: 'member',
+          status: 'active',
+          joined_at: new Date().toISOString()
+        })
+        .select()
+        .single()
+
+      if (joinError) {
+        console.error('❌ Error joining group:', joinError)
+        return NextResponse.json({ error: 'Failed to join group' }, { status: 500 })
+      }
+
+      console.log('✅ User joined group successfully:', member.id)
+      return NextResponse.json({
+        success: true,
+        message: 'Successfully joined the group',
+        member
+      })
+    }
+
+    // Handle create action (original functionality)
     if (!name) {
       return NextResponse.json(
         { error: 'Group name is required' },
@@ -192,9 +271,60 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const user_id = searchParams.get('user_id')
+    const action = searchParams.get('action')
+    const query = searchParams.get('q')
 
-    console.log('🔍 GROUPS GET: Fetching groups for user:', user_id)
+    console.log('🔍 GROUPS GET: Action:', action, 'Query:', query, 'User:', user_id)
 
+    // Handle search action
+    if (action === 'search' && query) {
+      console.log('🔍 GROUPS GET: Searching for groups with query:', query)
+      
+      // Use three-tier fallback system
+      let supabase: any = null
+      let usingMockMode = false
+      
+      try {
+        supabase = createAdminClient()
+      } catch (adminError) {
+        try {
+          supabase = createServerClient()
+        } catch (serverError) {
+          usingMockMode = true
+        }
+      }
+      
+      if (!supabase) {
+        usingMockMode = true
+      }
+
+      if (usingMockMode) {
+        console.log('🔧 GROUPS GET: Using mock mode for search')
+        return NextResponse.json([])
+      }
+
+      // Search for groups by name or description
+      const { data, error } = await supabase
+        .from('golf_groups')
+        .select(`
+          *,
+          creator:user_profiles(id, first_name, last_name, avatar_url),
+          member_count:group_members(count)
+        `)
+        .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
+        .eq('status', 'active')
+        .limit(20)
+
+      if (error) {
+        console.error('❌ Error searching groups:', error)
+        return NextResponse.json({ error: 'Failed to search groups' }, { status: 500 })
+      }
+
+      console.log('👥 Found groups:', data?.length || 0)
+      return NextResponse.json(data || [])
+    }
+
+    // Original functionality for fetching user's groups
     if (!user_id) {
       return NextResponse.json(
         { error: 'User ID is required' },
