@@ -18,13 +18,15 @@ CREATE INDEX IF NOT EXISTS idx_golf_courses_location ON golf_courses(location);
 -- STEP 2: Add coordinate columns to tee_times
 -- ===========================================
 
--- Add latitude and longitude columns to tee_times table
+-- Add latitude, longitude, and course_location columns to tee_times table
 ALTER TABLE tee_times 
 ADD COLUMN IF NOT EXISTS latitude DECIMAL(10, 8),
-ADD COLUMN IF NOT EXISTS longitude DECIMAL(11, 8);
+ADD COLUMN IF NOT EXISTS longitude DECIMAL(11, 8),
+ADD COLUMN IF NOT EXISTS course_location TEXT;
 
 -- Add indexes for better performance on location queries
 CREATE INDEX IF NOT EXISTS idx_tee_times_coordinates ON tee_times(latitude, longitude);
+CREATE INDEX IF NOT EXISTS idx_tee_times_course_location ON tee_times(course_location);
 
 -- ===========================================
 -- STEP 3: Update existing golf courses with coordinates
@@ -150,7 +152,7 @@ BEGIN
         tt.updated_at,
         COALESCE(tt.latitude, gc.latitude) as latitude,
         COALESCE(tt.longitude, gc.longitude) as longitude,
-        gc.location as course_location,
+        COALESCE(tt.course_location, gc.location) as course_location,
         calculate_distance(
             user_lat, 
             user_lon, 

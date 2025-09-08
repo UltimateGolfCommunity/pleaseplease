@@ -673,6 +673,7 @@ export async function POST(request: NextRequest) {
         current_players: 1,
         handicap_requirement: data.handicap_requirement || 'any',
         description: data.description || '',
+        course_location: data.location || '',
         status: 'active'
       }
       

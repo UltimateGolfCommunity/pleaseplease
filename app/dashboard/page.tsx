@@ -58,6 +58,7 @@ export default function Dashboard() {
   // Form states
   const [teeTimeForm, setTeeTimeForm] = useState({
     course: '',
+    location: '',
     date: '',
     time: '',
     players: 4,
@@ -1469,6 +1470,7 @@ export default function Dashboard() {
           action: 'create',
           creator_id: user?.id,
           course: teeTimeForm.course,
+          location: teeTimeForm.location,
           tee_time_date: teeTimeForm.date,
           tee_time_time: teeTimeForm.time,
           max_players: teeTimeForm.players,
@@ -1493,6 +1495,7 @@ export default function Dashboard() {
         setShowTeeTimeModal(false)
         setTeeTimeForm({
           course: '',
+          location: '',
           date: '',
           time: '',
           players: 4,
@@ -3373,6 +3376,24 @@ export default function Dashboard() {
                   </div>
                 </div>
 
+                {/* Location */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-emerald-400 mb-2">Location</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <MapPin className="h-5 w-5 text-emerald-500" />
+                    </div>
+                <input
+                  type="text"
+                      placeholder="Enter city, state (e.g., Pebble Beach, CA)"
+                  value={teeTimeForm.location}
+                  onChange={(e) => setTeeTimeForm({...teeTimeForm, location: e.target.value})}
+                      className="w-full pl-12 pr-4 py-3 border-2 border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-slate-700/50 text-white placeholder-slate-400 transition-all duration-300"
+                      required
+                    />
+                  </div>
+                </div>
+
                 {/* Date and Time */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -3478,6 +3499,10 @@ export default function Dashboard() {
                     <div className="flex items-center gap-2">
                       <Flag className="h-4 w-4 text-emerald-400" />
                       <span className="text-slate-300">{teeTimeForm.course || 'Course name'}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-emerald-400" />
+                      <span className="text-slate-300">{teeTimeForm.location || 'Location'}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-emerald-400" />
