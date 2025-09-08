@@ -146,10 +146,10 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
 
   if (loading) {
     return (
-      <div className={`bg-white/95 backdrop-blur-sm border border-gray-200/50 rounded-xl shadow-sm p-4 ${className}`}>
+      <div className={`bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl shadow-sm p-4 ${className}`}>
         <div className="flex items-center justify-center">
-          <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent"></div>
-          <span className="ml-3 text-gray-600 text-sm">Loading weather...</span>
+          <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-400 border-t-transparent"></div>
+          <span className="ml-3 text-slate-300 text-sm">Loading weather...</span>
         </div>
       </div>
     )
@@ -157,13 +157,13 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
 
   if (error || !weather) {
     return (
-      <div className={`bg-white/95 backdrop-blur-sm border border-red-200/50 rounded-xl shadow-sm p-4 ${className}`}>
+      <div className={`bg-slate-800/50 backdrop-blur-sm border border-red-500/50 rounded-xl shadow-sm p-4 ${className}`}>
         <div className="text-center">
-          <Cloud className="w-6 h-6 text-red-500 mx-auto mb-2" />
-          <p className="text-gray-800 font-medium text-sm">Weather Unavailable</p>
+          <Cloud className="w-6 h-6 text-red-400 mx-auto mb-2" />
+          <p className="text-slate-200 font-medium text-sm">Weather Unavailable</p>
           <button
             onClick={fetchWeather}
-            className="mt-2 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors text-sm border border-red-200"
+            className="mt-2 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors text-sm border border-red-500/30"
           >
             Retry
           </button>
@@ -173,16 +173,16 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
   }
 
   return (
-    <div className={`bg-white/95 backdrop-blur-sm border border-gray-200/50 rounded-xl shadow-sm p-4 ${className}`}>
+    <div className={`bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl shadow-sm p-4 ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-2">
-          <MapPin className="w-4 h-4 text-gray-500" />
-          <h3 className="text-gray-900 font-medium text-sm">{weather.location}</h3>
+          <MapPin className="w-4 h-4 text-slate-400" />
+          <h3 className="text-white font-medium text-sm">{weather.location}</h3>
         </div>
         <button
           onClick={fetchWeather}
-          className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+          className="text-slate-400 hover:text-slate-300 transition-colors p-1"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -197,18 +197,18 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
             {getWeatherIcon(weather.description)}
           </div>
           <div>
-            <div className="text-2xl font-bold text-gray-900">
+            <div className="text-2xl font-bold text-white">
               {formatTemperature(weather.temperature)}
             </div>
-            <div className="text-gray-500 text-xs capitalize">
+            <div className="text-slate-400 text-xs capitalize">
               {weather.description}
             </div>
           </div>
         </div>
         
         <div className="text-right">
-          <div className="text-gray-400 text-xs">Feels like</div>
-          <div className="text-gray-700 font-medium text-sm">
+          <div className="text-slate-400 text-xs">Feels like</div>
+          <div className="text-slate-300 font-medium text-sm">
             {formatTemperature(weather.feelsLike)}
           </div>
         </div>
@@ -216,32 +216,32 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
 
       {/* Weather Details - Compact */}
       <div className="grid grid-cols-2 gap-3 mb-3">
-        <div className="flex items-center space-x-2 bg-gray-50 rounded-lg p-2">
-          <Wind className="w-3.5 h-3.5 text-gray-500" />
+        <div className="flex items-center space-x-2 bg-slate-700/50 rounded-lg p-2">
+          <Wind className="w-3.5 h-3.5 text-slate-400" />
           <div>
-            <div className="text-gray-400 text-xs">Wind</div>
-            <div className="text-gray-700 font-medium text-xs">{formatWindSpeed(weather.windSpeed)}</div>
+            <div className="text-slate-400 text-xs">Wind</div>
+            <div className="text-slate-300 font-medium text-xs">{formatWindSpeed(weather.windSpeed)}</div>
           </div>
         </div>
         
-        <div className="flex items-center space-x-2 bg-gray-50 rounded-lg p-2">
-          <Droplets className="w-3.5 h-3.5 text-gray-500" />
+        <div className="flex items-center space-x-2 bg-slate-700/50 rounded-lg p-2">
+          <Droplets className="w-3.5 h-3.5 text-slate-400" />
           <div>
-            <div className="text-gray-400 text-xs">Humidity</div>
-            <div className="text-gray-700 font-medium text-xs">{weather.humidity}%</div>
+            <div className="text-slate-400 text-xs">Humidity</div>
+            <div className="text-slate-300 font-medium text-xs">{weather.humidity}%</div>
           </div>
         </div>
       </div>
 
       {/* Golf Recommendation - Compact */}
-      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+      <div className="bg-emerald-500/20 border border-emerald-500/30 rounded-lg p-3">
         <div className="flex items-center space-x-2 mb-1">
-          <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <span className="text-green-700 font-medium text-xs">Golf Conditions</span>
+          <span className="text-emerald-300 font-medium text-xs">Golf Conditions</span>
         </div>
-        <p className="text-green-600 text-xs">{getGolfRecommendation(weather)}</p>
+        <p className="text-emerald-200 text-xs">{getGolfRecommendation(weather)}</p>
       </div>
     </div>
   )
