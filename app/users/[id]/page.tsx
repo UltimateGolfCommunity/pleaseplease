@@ -18,9 +18,12 @@ import {
   TrendingUp,
   Mail,
   Phone,
-  Globe
+  Globe,
+  QrCode
 } from 'lucide-react'
 import Logo from '@/app/components/Logo'
+import QRCodeGenerator from '@/app/components/QRCodeGenerator'
+import QRCodeScanner from '@/app/components/QRCodeScanner'
 
 interface UserProfile {
   id: string
@@ -47,6 +50,8 @@ export default function UserProfilePage() {
   const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'connected'>('none')
   const [showMessageForm, setShowMessageForm] = useState(false)
   const [message, setMessage] = useState('')
+  const [showQRCode, setShowQRCode] = useState(false)
+  const [showQRScanner, setShowQRScanner] = useState(false)
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -165,6 +170,50 @@ export default function UserProfilePage() {
     } catch (error) {
       console.error('Error sending message:', error)
       alert('Failed to send message')
+    }
+  }
+
+  const handleQRScan = async (qrData: any) => {
+    try {
+      console.log('📱 QR Code scanned:', qrData)
+      
+      if (qrData.type !== 'golf_connection') {
+        alert('Invalid QR code. Please scan a golf connection QR code.')
+        return
+      }
+
+      if (qrData.userId === currentUser?.id) {
+        alert('Cannot connect to yourself!')
+        return
+      }
+
+      // Send connection request via QR code API
+      const response = await fetch('/api/connections/qr', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          targetUserId: qrData.userId,
+          qrData: JSON.stringify(qrData)
+        }),
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        console.log('✅ QR connection request sent:', result)
+        alert(`Connection request sent to ${qrData.userName}!`)
+        setShowQRScanner(false)
+        // Refresh connection status
+        fetchConnectionStatus()
+      } else {
+        const errorData = await response.json()
+        console.error('❌ QR connection failed:', errorData)
+        alert('Failed to send connection request: ' + (errorData.error || 'Unknown error'))
+      }
+    } catch (error) {
+      console.error('Error processing QR scan:', error)
+      alert('Failed to process QR code')
     }
   }
 
@@ -340,6 +389,23 @@ export default function UserProfilePage() {
                   <MessageCircle className="h-5 w-5 mr-2" />
                   Message
                 </button>
+
+                {/* QR Code Buttons */}
+                <button
+                  onClick={() => setShowQRCode(!showQRCode)}
+                  className="w-full sm:w-auto bg-blue-600/20 text-blue-300 border border-blue-600/30 px-6 py-3 rounded-lg hover:bg-blue-600/30 transition-colors duration-300 flex items-center justify-center"
+                >
+                  <QrCode className="h-5 w-5 mr-2" />
+                  My QR Code
+                </button>
+
+                <button
+                  onClick={() => setShowQRScanner(true)}
+                  className="w-full sm:w-auto bg-purple-600/20 text-purple-300 border border-purple-600/30 px-6 py-3 rounded-lg hover:bg-purple-600/30 transition-colors duration-300 flex items-center justify-center"
+                >
+                  <QrCode className="h-5 w-5 mr-2" />
+                  Scan QR Code
+                </button>
               </div>
             </div>
           </div>
@@ -374,6 +440,39 @@ export default function UserProfilePage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* QR Code Display */}
+        {showQRCode && currentUser && (
+          <div className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-6 mb-8">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">My QR Code</h3>
+              <button
+                onClick={() => setShowQRCode(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex justify-center">
+              <QRCodeGenerator
+                userId={currentUser.id}
+                userName={`${currentUser.user_metadata?.first_name || ''} ${currentUser.user_metadata?.last_name || ''}`.trim()}
+                size={200}
+              />
+            </div>
+            <p className="text-center text-gray-400 text-sm mt-4">
+              Share this QR code with other golfers to connect instantly!
+            </p>
+          </div>
+        )}
+
+        {/* QR Code Scanner */}
+        {showQRScanner && (
+          <QRCodeScanner
+            onScan={handleQRScan}
+            onClose={() => setShowQRScanner(false)}
+          />
         )}
 
         {/* Profile Sections */}

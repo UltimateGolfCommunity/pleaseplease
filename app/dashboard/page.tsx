@@ -25,7 +25,8 @@ import {
   Trophy,
   Target,
   Camera,
-  X
+  X,
+  QrCode
 } from 'lucide-react'
 import WeatherWidget from '@/app/components/WeatherWidget'
 import GolfRoundForm from '@/app/components/GolfRoundForm'
@@ -34,6 +35,8 @@ import BadgeManagement from '@/app/components/BadgeManagement'
 import Logo from '@/app/components/Logo'
 import ThemeToggle from '@/app/components/ThemeToggle'
 import GolfCourseManagement from '@/app/components/GolfCourseManagement'
+import QRCodeGenerator from '@/app/components/QRCodeGenerator'
+import QRCodeScanner from '@/app/components/QRCodeScanner'
 
 export default function Dashboard() {
   const { user, profile, signOut, loading } = useAuth()
@@ -54,6 +57,8 @@ export default function Dashboard() {
   const [showRatingModal, setShowRatingModal] = useState(false)
   const [showGolfRoundModal, setShowGolfRoundModal] = useState(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [showQRCode, setShowQRCode] = useState(false)
+  const [showQRScanner, setShowQRScanner] = useState(false)
   
   // Form states
   const [teeTimeForm, setTeeTimeForm] = useState({
@@ -1637,6 +1642,50 @@ export default function Dashboard() {
     }
   }
 
+  const handleQRScan = async (qrData: any) => {
+    try {
+      console.log('📱 QR Code scanned:', qrData)
+      
+      if (qrData.type !== 'golf_connection') {
+        alert('Invalid QR code. Please scan a golf connection QR code.')
+        return
+      }
+
+      if (qrData.userId === user?.id) {
+        alert('Cannot connect to yourself!')
+        return
+      }
+
+      // Send connection request via QR code API
+      const response = await fetch('/api/connections/qr', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          targetUserId: qrData.userId,
+          qrData: JSON.stringify(qrData)
+        }),
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        console.log('✅ QR connection request sent:', result)
+        alert(`Connection request sent to ${qrData.userName}!`)
+        setShowQRScanner(false)
+        // Refresh connections
+        fetchConnections()
+      } else {
+        const errorData = await response.json()
+        console.error('❌ QR connection failed:', errorData)
+        alert('Failed to send connection request: ' + (errorData.error || 'Unknown error'))
+      }
+    } catch (error) {
+      console.error('Error processing QR scan:', error)
+      alert('Failed to process QR code')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-theme-gradient transition-colors duration-300">
       {/* Clean Navigation */}
@@ -1842,6 +1891,20 @@ export default function Dashboard() {
                       >
                         <Bell className="h-4 w-4 mr-3" />
                         Applications
+                      </button>
+                      <button
+                        onClick={() => setShowQRCode(true)}
+                        className="flex items-center w-full px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+                      >
+                        <QrCode className="h-4 w-4 mr-3" />
+                        My QR Code
+                      </button>
+                      <button
+                        onClick={() => setShowQRScanner(true)}
+                        className="flex items-center w-full px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+                      >
+                        <QrCode className="h-4 w-4 mr-3" />
+                        Scan QR Code
                       </button>
                       <div className="border-t border-slate-700 my-2"></div>
                       <button
@@ -3875,6 +3938,41 @@ export default function Dashboard() {
             )}
           </div>
         </div>
+      )}
+
+      {/* QR Code Display */}
+      {showQRCode && user && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-sm mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-white">My QR Code</h3>
+              <button
+                onClick={() => setShowQRCode(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex justify-center">
+              <QRCodeGenerator
+                userId={user.id}
+                userName={`${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || user.email?.split('@')[0] || 'Golfer'}
+                size={200}
+              />
+            </div>
+            <p className="text-center text-gray-600 dark:text-gray-400 text-sm mt-4">
+              Share this QR code with other golfers to connect instantly!
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* QR Code Scanner */}
+      {showQRScanner && (
+        <QRCodeScanner
+          onScan={handleQRScan}
+          onClose={() => setShowQRScanner(false)}
+        />
       )}
     </div>
   )
