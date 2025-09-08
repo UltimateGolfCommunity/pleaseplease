@@ -18,9 +18,17 @@ import {
   Star,
   TrendingUp,
   Users,
-  Clock
+  Clock,
+  QrCode,
+  Menu,
+  Home,
+  Search,
+  MessageCircle,
+  Bell
 } from 'lucide-react'
 import Logo from '@/app/components/Logo'
+import QRCodeGenerator from '@/app/components/QRCodeGenerator'
+import SimpleQRScanner from '@/app/components/SimpleQRScanner'
 
 
 interface ProfileFormData {
@@ -56,6 +64,9 @@ export default function ProfilePage() {
   })
   const [saving, setSaving] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [showQRCode, setShowQRCode] = useState(false)
+  const [showQRScanner, setShowQRScanner] = useState(false)
+  const [showNavigationMenu, setShowNavigationMenu] = useState(false)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -222,6 +233,48 @@ export default function ProfilePage() {
     setIsEditing(false)
   }
 
+  const handleQRScan = async (qrData: any) => {
+    try {
+      console.log('📱 QR Code scanned:', qrData)
+      
+      if (qrData.type !== 'golf_connection') {
+        alert('Invalid QR code. Please scan a golf connection QR code.')
+        return
+      }
+
+      if (qrData.userId === user?.id) {
+        alert('Cannot connect to yourself!')
+        return
+      }
+
+      // Send connection request via QR code API
+      const response = await fetch('/api/connections/qr', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          targetUserId: qrData.userId,
+          qrData: JSON.stringify(qrData)
+        }),
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        console.log('✅ QR connection request sent:', result)
+        alert(`Connection request sent to ${qrData.userName}!`)
+        setShowQRScanner(false)
+      } else {
+        const errorData = await response.json()
+        console.error('❌ QR connection failed:', errorData)
+        alert('Failed to send connection request: ' + (errorData.error || 'Unknown error'))
+      }
+    } catch (error) {
+      console.error('Error processing QR scan:', error)
+      alert('Failed to process QR code')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
       {/* Animated Background Elements */}
@@ -247,37 +300,128 @@ export default function ProfilePage() {
             </div>
             
             <div className="flex items-center space-x-4">
-              {isEditing ? (
-                <>
-                  <button
-                    onClick={handleCancel}
-                    className="flex items-center text-gray-300 hover:text-red-400 transition-colors duration-300"
-                  >
-                    <X className="h-5 w-5 mr-2" />
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="flex items-center bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-semibold px-4 py-2 rounded-lg transition-all duration-300 disabled:opacity-50"
-                  >
-                    {saving ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    ) : (
-                      <Save className="h-5 w-5 mr-2" />
-                    )}
-                    {saving ? 'Saving...' : 'Save Changes'}
-                  </button>
-                </>
-              ) : (
+              {/* QR Code Buttons */}
+              <button
+                onClick={() => setShowQRCode(true)}
+                className="flex items-center bg-blue-500/20 text-blue-400 border border-blue-400/30 px-3 py-2 rounded-lg hover:bg-blue-500/30 transition-all duration-300"
+              >
+                <QrCode className="h-4 w-4 mr-2" />
+                My QR Code
+              </button>
+              
+              <button
+                onClick={() => setShowQRScanner(true)}
+                className="flex items-center bg-purple-500/20 text-purple-400 border border-purple-400/30 px-3 py-2 rounded-lg hover:bg-purple-500/30 transition-all duration-300"
+              >
+                <QrCode className="h-4 w-4 mr-2" />
+                Scan QR
+              </button>
+
+              {/* Navigation Menu */}
+              <div className="relative">
                 <button
-                  onClick={() => setIsEditing(true)}
-                  className="flex items-center bg-emerald-500/20 text-emerald-400 border border-emerald-400/30 px-4 py-2 rounded-lg hover:bg-emerald-500/30 transition-all duration-300"
+                  onClick={() => setShowNavigationMenu(!showNavigationMenu)}
+                  className="flex items-center bg-gray-500/20 text-gray-300 border border-gray-400/30 px-3 py-2 rounded-lg hover:bg-gray-500/30 transition-all duration-300"
                 >
-                  <Edit3 className="h-5 w-5 mr-2" />
-                  Edit Profile
+                  <Menu className="h-4 w-4 mr-2" />
+                  Menu
                 </button>
-              )}
+                
+                {showNavigationMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-slate-800 rounded-xl shadow-lg border border-slate-700 z-50">
+                    <div className="p-2">
+                      <button
+                        onClick={() => {
+                          router.push('/dashboard')
+                          setShowNavigationMenu(false)
+                        }}
+                        className="flex items-center w-full px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+                      >
+                        <Home className="h-4 w-4 mr-3" />
+                        Dashboard
+                      </button>
+                      <button
+                        onClick={() => {
+                          router.push('/dashboard?tab=find-someone')
+                          setShowNavigationMenu(false)
+                        }}
+                        className="flex items-center w-full px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+                      >
+                        <Search className="h-4 w-4 mr-3" />
+                        Find Golfers
+                      </button>
+                      <button
+                        onClick={() => {
+                          router.push('/dashboard?tab=courses')
+                          setShowNavigationMenu(false)
+                        }}
+                        className="flex items-center w-full px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+                      >
+                        <Flag className="h-4 w-4 mr-3" />
+                        Golf Courses
+                      </button>
+                      <button
+                        onClick={() => {
+                          router.push('/dashboard?tab=messages')
+                          setShowNavigationMenu(false)
+                        }}
+                        className="flex items-center w-full px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+                      >
+                        <MessageCircle className="h-4 w-4 mr-3" />
+                        Messages
+                      </button>
+                      <button
+                        onClick={() => {
+                          router.push('/dashboard?tab=badges')
+                          setShowNavigationMenu(false)
+                        }}
+                        className="flex items-center w-full px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+                      >
+                        <Trophy className="h-4 w-4 mr-3" />
+                        Badges
+                      </button>
+                      <div className="border-t border-slate-700 my-2"></div>
+                      {isEditing ? (
+                        <>
+                          <button
+                            onClick={handleCancel}
+                            className="flex items-center w-full px-3 py-2 text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
+                          >
+                            <X className="h-4 w-4 mr-3" />
+                            Cancel Edit
+                          </button>
+                          <button
+                            onClick={() => {
+                              handleSave()
+                              setShowNavigationMenu(false)
+                            }}
+                            disabled={saving}
+                            className="flex items-center w-full px-3 py-2 text-emerald-400 hover:bg-emerald-900/20 rounded-lg transition-colors disabled:opacity-50"
+                          >
+                            {saving ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-400 mr-3"></div>
+                            ) : (
+                              <Save className="h-4 w-4 mr-3" />
+                            )}
+                            {saving ? 'Saving...' : 'Save Changes'}
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setIsEditing(true)
+                            setShowNavigationMenu(false)
+                          }}
+                          className="flex items-center w-full px-3 py-2 text-emerald-400 hover:bg-emerald-900/20 rounded-lg transition-colors"
+                        >
+                          <Edit3 className="h-4 w-4 mr-3" />
+                          Edit Profile
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -609,8 +753,41 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
-      
 
+      {/* QR Code Display */}
+      {showQRCode && user && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-sm mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-white">My QR Code</h3>
+              <button
+                onClick={() => setShowQRCode(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex justify-center">
+              <QRCodeGenerator
+                userId={user.id}
+                userName={`${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || user.email?.split('@')[0] || 'Golfer'}
+                size={200}
+              />
+            </div>
+            <p className="text-center text-gray-600 dark:text-gray-400 text-sm mt-4">
+              Share this QR code with other golfers to connect instantly!
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* QR Code Scanner */}
+      {showQRScanner && (
+        <SimpleQRScanner
+          onScan={handleQRScan}
+          onClose={() => setShowQRScanner(false)}
+        />
+      )}
     </div>
   )
 }
