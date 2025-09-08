@@ -102,7 +102,7 @@ export default function Dashboard() {
   
   // Location-based filtering state
   const [locationFilter, setLocationFilter] = useState('')
-  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null)
+  const [userLocation, setUserLocation] = useState<{lat: number, lon: number} | null>(null)
   const [locationLoading, setLocationLoading] = useState(false)
   const [nearbyCourses, setNearbyCourses] = useState<any[]>([])
   const [showNearbyOnly, setShowNearbyOnly] = useState(false)
@@ -169,8 +169,6 @@ export default function Dashboard() {
   const [teeTimeLocationFilter, setTeeTimeLocationFilter] = useState('')
   const [nearbyTeeTimes, setNearbyTeeTimes] = useState<any[]>([])
   const [showNearbyTeeTimesOnly, setShowNearbyTeeTimesOnly] = useState(false)
-  const [userLocation, setUserLocation] = useState<{lat: number, lon: number} | null>(null)
-  const [locationLoading, setLocationLoading] = useState(false)
   
   // Applications state
   const [applications, setApplications] = useState<any[]>([])
