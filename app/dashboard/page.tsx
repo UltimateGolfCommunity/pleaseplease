@@ -934,19 +934,31 @@ export default function Dashboard() {
     setGroupInviteLoading(true)
     try {
       console.log('🔍 Searching for users to invite:', groupInviteQuery)
+      console.log('🔍 Current user ID:', user?.id)
+      console.log('🔍 Selected invitees:', selectedInvitees.map(i => i.id))
+      
       const response = await fetch(`/api/users?action=search&q=${encodeURIComponent(groupInviteQuery)}`)
       console.log('📡 Group invite search response status:', response.status)
       
       if (response.ok) {
         const data = await response.json()
-        console.log('📊 Group invite search results:', data?.length || 0)
+        console.log('📊 Group invite search results (raw):', data)
+        console.log('📊 Group invite search results count:', data?.length || 0)
         
         // Filter out the current user and already selected users
-        const filteredUsers = data.filter((searchedUser: any) => 
-          searchedUser.id !== user?.id && 
-          !selectedInvitees.some(invitee => invitee.id === searchedUser.id)
-        )
-        console.log('🔍 Filtered group invite results:', filteredUsers?.length || 0)
+        const filteredUsers = data.filter((searchedUser: any) => {
+          const isNotCurrentUser = searchedUser.id !== user?.id
+          const isNotAlreadySelected = !selectedInvitees.some(invitee => invitee.id === searchedUser.id)
+          console.log(`🔍 User ${searchedUser.first_name} ${searchedUser.last_name}:`, {
+            id: searchedUser.id,
+            isNotCurrentUser,
+            isNotAlreadySelected,
+            willInclude: isNotCurrentUser && isNotAlreadySelected
+          })
+          return isNotCurrentUser && isNotAlreadySelected
+        })
+        console.log('🔍 Filtered group invite results:', filteredUsers)
+        console.log('🔍 Filtered group invite results count:', filteredUsers?.length || 0)
         setGroupInviteResults(filteredUsers)
       } else {
         const errorText = await response.text()
