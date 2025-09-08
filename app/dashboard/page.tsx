@@ -562,6 +562,19 @@ export default function Dashboard() {
       setTeeTimesLoading(false)
     }
   }
+
+  // Filter tee times by location
+  const handleTeeTimeLocationFilter = (location: string) => {
+    setTeeTimeLocationFilter(location)
+    if (location === '') {
+      setShowNearbyTeeTimesOnly(false)
+      return
+    }
+    
+    // For now, just set the filter - the actual filtering will be handled by the API
+    // This is a simple implementation that can be enhanced later
+    console.log('Filtering tee times by location:', location)
+  }
   
   const fetchApplications = async () => {
     try {
