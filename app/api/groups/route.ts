@@ -10,6 +10,17 @@ export async function POST(request: NextRequest) {
     console.log('🔍 GROUPS POST: Action requested:', action)
     console.log('📊 GROUPS POST: Group data:', { name, description, maxMembers, user_id: bodyUserId, group_id })
     
+    // Get the current user from the request
+    let user_id = bodyUserId
+    
+    // Try to get user_id from Authorization header if not in body
+    if (!user_id) {
+      const authHeader = request.headers.get('authorization')
+      if (authHeader) {
+        user_id = authHeader.replace('Bearer ', '')
+      }
+    }
+    
     // Handle join action
     if (action === 'join') {
       if (!group_id || !user_id) {
@@ -94,17 +105,6 @@ export async function POST(request: NextRequest) {
         { error: 'Group name is required' },
         { status: 400 }
       )
-    }
-
-    // Get the current user from the request
-    let user_id = bodyUserId
-    
-    // Try to get user_id from Authorization header if not in body
-    if (!user_id) {
-      const authHeader = request.headers.get('authorization')
-      if (authHeader) {
-        user_id = authHeader.replace('Bearer ', '')
-      }
     }
     
     // If still no user_id, return error
