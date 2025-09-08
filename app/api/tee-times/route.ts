@@ -136,7 +136,8 @@ export async function GET(request: NextRequest) {
         .from('tee_times')
         .select(`
           *,
-          creator:user_profiles(id, first_name, last_name, avatar_url)
+          creator:user_profiles(id, first_name, last_name, avatar_url),
+          golf_courses(name, location, course_image_url, logo_url, latitude, longitude)
         `)
         .eq('creator_id', userId)
         .order('tee_time_date', { ascending: true })
@@ -150,7 +151,8 @@ export async function GET(request: NextRequest) {
         .from('tee_times')
         .select(`
           *,
-          creator:user_profiles(id, first_name, last_name, avatar_url)
+          creator:user_profiles(id, first_name, last_name, avatar_url),
+          golf_courses(name, location, course_image_url, logo_url, latitude, longitude)
         `)
         .eq('status', 'active')
         .order('tee_time_date', { ascending: true })
@@ -176,7 +178,7 @@ export async function GET(request: NextRequest) {
           .select(`
             *,
             creator:user_profiles(id, first_name, last_name, avatar_url),
-            golf_courses(name, location, latitude, longitude)
+            golf_courses(name, location, course_image_url, logo_url, latitude, longitude)
           `)
           .eq('status', 'active')
           .order('tee_time_date', { ascending: true })
@@ -263,7 +265,8 @@ export async function GET(request: NextRequest) {
       .from('tee_times')
       .select(`
         *,
-        creator:user_profiles(id, first_name, last_name, avatar_url)
+        creator:user_profiles(id, first_name, last_name, avatar_url),
+        golf_courses(name, location, course_image_url, logo_url, latitude, longitude)
       `)
       .order('tee_time_date', { ascending: true })
 

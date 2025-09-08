@@ -543,22 +543,22 @@ export default function Dashboard() {
         }
       } else {
         // Fetch all available tee times
-        const response = await fetch('/api/tee-times?action=available')
-        if (response.ok) {
-          const data = await response.json()
-          // Handle both array format and object format
-          const teeTimes = Array.isArray(data) ? data : (data.tee_times || [])
-          // Sort by date (earliest first)
-          const sortedTeeTimes = teeTimes.sort((a: any, b: any) => {
-            const dateA = new Date(a.tee_time_date + ' ' + a.tee_time_time)
-            const dateB = new Date(b.tee_time_date + ' ' + b.tee_time_time)
-            return dateA.getTime() - dateB.getTime()
-          })
-          setAvailableTeeTimes(sortedTeeTimes)
-          console.log('Fetched and sorted tee times:', sortedTeeTimes)
-        } else {
-          console.error('Failed to fetch tee times')
-          setAvailableTeeTimes([])
+      const response = await fetch('/api/tee-times?action=available')
+      if (response.ok) {
+        const data = await response.json()
+        // Handle both array format and object format
+        const teeTimes = Array.isArray(data) ? data : (data.tee_times || [])
+        // Sort by date (earliest first)
+        const sortedTeeTimes = teeTimes.sort((a: any, b: any) => {
+          const dateA = new Date(a.tee_time_date + ' ' + a.tee_time_time)
+          const dateB = new Date(b.tee_time_date + ' ' + b.tee_time_time)
+          return dateA.getTime() - dateB.getTime()
+        })
+        setAvailableTeeTimes(sortedTeeTimes)
+        console.log('Fetched and sorted tee times:', sortedTeeTimes)
+      } else {
+        console.error('Failed to fetch tee times')
+        setAvailableTeeTimes([])
         }
       }
     } catch (error) {
@@ -2144,10 +2144,50 @@ export default function Dashboard() {
                     const isAlmostFull = spotsRemaining <= 1
                     
                     return (
-                    <div key={teeTime.id} className="bg-white/95 backdrop-blur-sm border border-gray-200/50 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 p-4 sm:p-6 relative">
+                    <div key={teeTime.id} className="bg-white/95 backdrop-blur-sm border border-gray-200/50 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden relative">
                       
+                      {/* Course Image Header */}
+                      <div className="relative h-32 sm:h-40 bg-gradient-to-r from-emerald-500 to-teal-600">
+                        {(teeTime.golf_courses?.course_image_url || teeTime.golf_courses?.logo_url) ? (
+                          <>
+                            <img
+                              src={teeTime.golf_courses?.course_image_url || teeTime.golf_courses?.logo_url}
+                              alt={teeTime.course_name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none'
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black/20"></div>
+                          </>
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <div className="text-center text-white">
+                              <Flag className="h-12 w-12 mx-auto mb-2 opacity-80" />
+                              <p className="text-lg font-semibold opacity-90">{teeTime.course_name}</p>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Course Logo Overlay */}
+                        {teeTime.golf_courses?.logo_url && (
+                          <div className="absolute top-3 left-3">
+                            <div className="h-12 w-12 bg-white/90 rounded-lg p-2 shadow-lg">
+                              <img
+                                src={teeTime.golf_courses.logo_url}
+                                alt={`${teeTime.course_name} logo`}
+                                className="w-full h-full object-contain"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none'
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
                       {/* Status Badges */}
-                      <div className="absolute top-3 right-3 flex flex-col gap-1">
+                      <div className="absolute top-3 right-3 flex flex-col gap-1 z-10">
                         {isToday && (
                           <div className="bg-red-500 text-white px-2 py-1 rounded-md text-xs font-medium">
                             TODAY
@@ -2165,16 +2205,36 @@ export default function Dashboard() {
                         )}
                       </div>
 
-                      <div className="relative">
+                      <div className="relative p-4 sm:p-6">
                         {/* Header Section */}
                         <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-4 gap-4">
                         <div className="flex-1">
                             <div className="flex items-center gap-3 mb-3">
-                              <div className="p-2 bg-emerald-500 rounded-lg">
-                                <Flag className="h-4 w-4 text-white" />
+                              {/* Course Icon/Logo */}
+                              <div className="flex-shrink-0">
+                                {teeTime.golf_courses?.logo_url ? (
+                                  <div className="h-12 w-12 bg-white rounded-lg p-2 shadow-md border border-gray-200">
+                                    <img
+                                      src={teeTime.golf_courses.logo_url}
+                                      alt={`${teeTime.course_name} logo`}
+                                      className="w-full h-full object-contain"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none'
+                                        e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full bg-emerald-500 rounded flex items-center justify-center"><svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></div>'
+                                      }}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="h-12 w-12 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center shadow-md">
+                                    <Flag className="h-6 w-6 text-white" />
+                                  </div>
+                                )}
                               </div>
                               <div className="flex-1">
                                 <h3 className="text-gray-900 font-bold text-lg sm:text-xl">{teeTime.course_name}</h3>
+                                {teeTime.golf_courses?.location && (
+                                  <p className="text-gray-600 text-sm mt-1">{teeTime.golf_courses.location}</p>
+                                )}
                                 {(teeTime.distance_km || teeTime.distance) && (
                                   <div className="flex items-center space-x-1 mt-1">
                                     <MapPin className="h-3 w-3 text-emerald-500" />
