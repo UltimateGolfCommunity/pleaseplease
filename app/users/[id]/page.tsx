@@ -204,8 +204,6 @@ export default function UserProfilePage() {
         console.log('✅ QR connection request sent:', result)
         alert(`Connection request sent to ${qrData.userName}!`)
         setShowQRScanner(false)
-        // Refresh connection status
-        fetchConnectionStatus()
       } else {
         const errorData = await response.json()
         console.error('❌ QR connection failed:', errorData)
