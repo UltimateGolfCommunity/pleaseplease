@@ -36,7 +36,7 @@ import Logo from '@/app/components/Logo'
 import ThemeToggle from '@/app/components/ThemeToggle'
 import GolfCourseManagement from '@/app/components/GolfCourseManagement'
 import QRCodeGenerator from '@/app/components/QRCodeGenerator'
-import QRCodeScanner from '@/app/components/QRCodeScanner'
+import SimpleQRScanner from '@/app/components/SimpleQRScanner'
 
 export default function Dashboard() {
   const { user, profile, signOut, loading } = useAuth()
@@ -4029,7 +4029,7 @@ export default function Dashboard() {
 
       {/* QR Code Scanner */}
       {showQRScanner && (
-        <QRCodeScanner
+        <SimpleQRScanner
           onScan={handleQRScan}
           onClose={() => setShowQRScanner(false)}
         />

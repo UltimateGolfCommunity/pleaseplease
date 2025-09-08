@@ -23,7 +23,7 @@ import {
 } from 'lucide-react'
 import Logo from '@/app/components/Logo'
 import QRCodeGenerator from '@/app/components/QRCodeGenerator'
-import QRCodeScanner from '@/app/components/QRCodeScanner'
+import SimpleQRScanner from '@/app/components/SimpleQRScanner'
 
 interface UserProfile {
   id: string
@@ -469,7 +469,7 @@ export default function UserProfilePage() {
 
         {/* QR Code Scanner */}
         {showQRScanner && (
-          <QRCodeScanner
+          <SimpleQRScanner
             onScan={handleQRScan}
             onClose={() => setShowQRScanner(false)}
           />
