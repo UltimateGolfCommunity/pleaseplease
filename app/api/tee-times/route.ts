@@ -44,6 +44,9 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const action = searchParams.get('action')
   const userId = searchParams.get('user_id')
+  const userLat = searchParams.get('user_lat')
+  const userLon = searchParams.get('user_lon')
+  const radiusKm = searchParams.get('radius_km') || '50' // Default 50km radius
 
   try {
     // Try admin client first (should work now with correct service role key)
@@ -153,6 +156,35 @@ export async function GET(request: NextRequest) {
         .order('tee_time_date', { ascending: true })
 
       if (error) throw error
+      return NextResponse.json(data || [])
+    }
+
+    if (action === 'nearby' && userLat && userLon) {
+      // Get tee times within specified radius using the distance function
+      const { data, error } = await supabase
+        .rpc('get_nearby_tee_times', {
+          user_lat: parseFloat(userLat),
+          user_lon: parseFloat(userLon),
+          radius_km: parseFloat(radiusKm)
+        })
+
+      if (error) {
+        console.error('Error fetching nearby tee times:', error)
+        // Fallback to regular available tee times
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('tee_times')
+          .select(`
+            *,
+            creator:user_profiles(id, first_name, last_name, avatar_url),
+            golf_courses(name, location, latitude, longitude)
+          `)
+          .eq('status', 'active')
+          .order('tee_time_date', { ascending: true })
+
+        if (fallbackError) throw fallbackError
+        return NextResponse.json(fallbackData || [])
+      }
+
       return NextResponse.json(data || [])
     }
     

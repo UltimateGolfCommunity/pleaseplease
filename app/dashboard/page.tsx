@@ -169,6 +169,8 @@ export default function Dashboard() {
   const [teeTimeLocationFilter, setTeeTimeLocationFilter] = useState('')
   const [nearbyTeeTimes, setNearbyTeeTimes] = useState<any[]>([])
   const [showNearbyTeeTimesOnly, setShowNearbyTeeTimesOnly] = useState(false)
+  const [userLocation, setUserLocation] = useState<{lat: number, lon: number} | null>(null)
+  const [locationLoading, setLocationLoading] = useState(false)
   
   // Applications state
   const [applications, setApplications] = useState<any[]>([])
@@ -478,25 +480,82 @@ export default function Dashboard() {
     setShowTeeTimeModal(true)
   }
 
+  const getUserLocation = async () => {
+    if (!navigator.geolocation) {
+      console.log('Geolocation is not supported by this browser')
+      return null
+    }
+
+    return new Promise<{lat: number, lon: number} | null>((resolve) => {
+      setLocationLoading(true)
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const location = {
+            lat: position.coords.latitude,
+            lon: position.coords.longitude
+          }
+          setUserLocation(location)
+          setLocationLoading(false)
+          resolve(location)
+        },
+        (error) => {
+          console.log('Error getting location:', error)
+          setLocationLoading(false)
+          resolve(null)
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 300000 // 5 minutes
+        }
+      )
+    })
+  }
+
   const fetchTeeTimes = async () => {
     try {
       setTeeTimesLoading(true)
-      const response = await fetch('/api/tee-times?action=available')
-      if (response.ok) {
-        const data = await response.json()
-        // Handle both array format and object format
-        const teeTimes = Array.isArray(data) ? data : (data.tee_times || [])
-        // Sort by date (earliest first)
-        const sortedTeeTimes = teeTimes.sort((a: any, b: any) => {
-          const dateA = new Date(a.tee_time_date + ' ' + a.tee_time_time)
-          const dateB = new Date(b.tee_time_date + ' ' + b.tee_time_time)
-          return dateA.getTime() - dateB.getTime()
-        })
-        setAvailableTeeTimes(sortedTeeTimes)
-        console.log('Fetched and sorted tee times:', sortedTeeTimes)
+      
+      // Check if we should fetch nearby tee times
+      if (showNearbyTeeTimesOnly && userLocation) {
+        const response = await fetch(`/api/tee-times?action=nearby&user_lat=${userLocation.lat}&user_lon=${userLocation.lon}&radius_km=50`)
+        if (response.ok) {
+          const data = await response.json()
+          const teeTimes = Array.isArray(data) ? data : (data.tee_times || [])
+          // Sort by distance first, then by date
+          const sortedTeeTimes = teeTimes.sort((a: any, b: any) => {
+            if (a.distance_km !== undefined && b.distance_km !== undefined) {
+              return a.distance_km - b.distance_km
+            }
+            const dateA = new Date(a.tee_time_date + ' ' + a.tee_time_time)
+            const dateB = new Date(b.tee_time_date + ' ' + b.tee_time_time)
+            return dateA.getTime() - dateB.getTime()
+          })
+          setAvailableTeeTimes(sortedTeeTimes)
+          console.log('Fetched nearby tee times:', sortedTeeTimes)
+        } else {
+          console.error('Failed to fetch nearby tee times')
+          setAvailableTeeTimes([])
+        }
       } else {
-        console.error('Failed to fetch tee times')
-        setAvailableTeeTimes([])
+        // Fetch all available tee times
+        const response = await fetch('/api/tee-times?action=available')
+        if (response.ok) {
+          const data = await response.json()
+          // Handle both array format and object format
+          const teeTimes = Array.isArray(data) ? data : (data.tee_times || [])
+          // Sort by date (earliest first)
+          const sortedTeeTimes = teeTimes.sort((a: any, b: any) => {
+            const dateA = new Date(a.tee_time_date + ' ' + a.tee_time_time)
+            const dateB = new Date(b.tee_time_date + ' ' + b.tee_time_time)
+            return dateA.getTime() - dateB.getTime()
+          })
+          setAvailableTeeTimes(sortedTeeTimes)
+          console.log('Fetched and sorted tee times:', sortedTeeTimes)
+        } else {
+          console.error('Failed to fetch tee times')
+          setAvailableTeeTimes([])
+        }
       }
     } catch (error) {
       console.error('Error fetching tee times:', error)
@@ -2039,7 +2098,20 @@ export default function Dashboard() {
 
                   {userLocation && (
                     <button
-                      onClick={() => setShowNearbyTeeTimesOnly(!showNearbyTeeTimesOnly)}
+                      onClick={async () => {
+                        const newValue = !showNearbyTeeTimesOnly
+                        setShowNearbyTeeTimesOnly(newValue)
+                        
+                        if (newValue && !userLocation) {
+                          // Get user's location if not already available
+                          await getUserLocation()
+                        }
+                        
+                        // Refresh tee times with new filter
+                        setTimeout(() => {
+                          fetchTeeTimes()
+                        }, 100)
+                      }}
                       className={`px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2 ${
                         showNearbyTeeTimesOnly 
                           ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white' 
@@ -2134,11 +2206,11 @@ export default function Dashboard() {
                               </div>
                               <div className="flex-1">
                                 <h3 className="text-gray-900 font-bold text-lg sm:text-xl">{teeTime.course_name}</h3>
-                                {teeTime.distance && (
+                                {(teeTime.distance_km || teeTime.distance) && (
                                   <div className="flex items-center space-x-1 mt-1">
                                     <MapPin className="h-3 w-3 text-emerald-500" />
                                     <span className="text-emerald-600 text-xs font-medium">
-                                      {teeTime.distance.toFixed(1)} miles away
+                                      {teeTime.distance_km ? `${teeTime.distance_km.toFixed(1)} km away` : `${teeTime.distance.toFixed(1)} miles away`}
                                     </span>
                                   </div>
                                 )}
