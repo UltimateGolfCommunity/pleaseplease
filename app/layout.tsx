@@ -29,16 +29,10 @@ export const metadata: Metadata = {
     siteName: 'Ultimate Golf Community',
     images: [
       {
-        url: '/NEWLOGOREAL.png',
+        url: '/NEWLOGOREAL.png?v=2',
         width: 1200,
         height: 630,
         alt: 'Ultimate Golf Community Logo',
-      },
-      {
-        url: '/logoreal.png',
-        width: 800,
-        height: 600,
-        alt: 'Ultimate Golf Community',
       }
     ],
     locale: 'en_US',
@@ -48,7 +42,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Ultimate Golf Community - Connect, Play, Improve',
     description: 'Connect with golfers, book tee times, track your game, and join the ultimate golf community.',
-    images: ['/NEWLOGOREAL.png'],
+    images: ['/NEWLOGOREAL.png?v=2'],
     creator: '@UltimateGolfCommunity',
     site: '@UltimateGolfCommunity',
   },
@@ -83,12 +77,16 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/NEWLOGOREAL.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/NEWLOGOREAL.png" />
-        <link rel="shortcut icon" href="/NEWLOGOREAL.png" />
+        <link rel="icon" href="/NEWLOGOREAL.png?v=2" type="image/png" />
+        <link rel="apple-touch-icon" href="/NEWLOGOREAL.png?v=2" />
+        <link rel="shortcut icon" href="/NEWLOGOREAL.png?v=2" />
         <meta name="theme-color" content="#1f2937" />
         <meta name="msapplication-TileColor" content="#1f2937" />
-        <meta name="msapplication-TileImage" content="/NEWLOGOREAL.png" />
+        <meta name="msapplication-TileImage" content="/NEWLOGOREAL.png?v=2" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:type" content="image/png" />
+        <meta name="twitter:image:alt" content="Ultimate Golf Community Logo" />
       </head>
       <body className={`${inter.className} bg-theme-gradient text-theme-primary transition-colors duration-300`}>
         <ThemeProvider>
