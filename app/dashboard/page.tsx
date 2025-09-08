@@ -2024,7 +2024,7 @@ export default function Dashboard() {
                     <div className="flex items-center space-x-2 text-emerald-300">
                       <MapPin className="h-4 w-4" />
                       <span className="text-sm">
-                        Location: {userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)}
+                        Location: {userLocation.lat.toFixed(4)}, {userLocation.lon.toFixed(4)}
                       </span>
                       <span className="text-slate-400">•</span>
                       <span className="text-sm">
@@ -2484,7 +2484,7 @@ export default function Dashboard() {
                     <div className="flex items-center space-x-2 text-emerald-300">
                       <MapPin className="h-4 w-4" />
                       <span className="text-sm">
-                        Location: {userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)}
+                        Location: {userLocation.lat.toFixed(4)}, {userLocation.lon.toFixed(4)}
                       </span>
                       <span className="text-slate-400">•</span>
                       <span className="text-sm">
