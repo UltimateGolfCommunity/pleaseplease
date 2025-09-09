@@ -187,15 +187,15 @@ export default function AboutPage() {
               </div>
             </div>
 
-            {/* Director of Logistics Section */}
+            {/* Chief of Design Section */}
             <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-slate-700/50 rounded-3xl p-8 sm:p-12 shadow-xl">
               <div className="space-y-8">
-                {/* Director Photo Widget */}
+                {/* Chief of Design Photo Widget */}
                 <div className="flex justify-center">
                   <div className="relative">
                     <img
-                      src="/dylan-carl-photo.png"
-                      alt="Dylan Carl - Director of Logistics"
+                      src="/grant-slater-photo.jpeg"
+                      alt="Grant Slater - Chief of Design"
                       className="w-[28rem] h-80 sm:w-[32rem] sm:h-96 rounded-2xl object-cover shadow-2xl border-4 border-purple-500/20"
                     />
                     
@@ -203,208 +203,40 @@ export default function AboutPage() {
                     <div className="absolute inset-0 flex flex-col justify-center items-center bg-black/30 rounded-2xl">
                       <div className="text-center">
                         <h2 className="text-4xl sm:text-5xl font-bold text-white mb-2 drop-shadow-lg">
-                          Dylan Carl
+                          Grant Slater
                         </h2>
                         <p className="text-xl sm:text-2xl text-purple-400 font-semibold drop-shadow-lg">
-                          Director of Logistics
+                          Chief of Design
                         </p>
                       </div>
                     </div>
                     
-                    {/* Director Badge */}
+                    {/* Chief of Design Badge */}
                     <div className="absolute -bottom-4 -right-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white px-4 py-2 rounded-xl shadow-lg">
-                      <span className="font-semibold text-sm">Our Director</span>
+                      <span className="font-semibold text-sm">Our Chief of Design</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Director Story */}
+                {/* Chief of Design Story */}
                 <div className="max-w-4xl mx-auto space-y-6">
                   <div className="space-y-4 text-gray-700 dark:text-slate-300 leading-relaxed text-center">
                     <p className="text-lg">
-                      Dylan brings exceptional organizational skills and strategic planning expertise to Ultimate Golf Community. 
-                      With a keen eye for detail and a passion for creating seamless experiences, Dylan ensures that every 
-                      aspect of our platform operates smoothly and efficiently.
+                      Grant brings exceptional design expertise and creative vision to Ultimate Golf Community. 
+                      With a keen eye for aesthetics and user experience, Grant ensures that our platform not only 
+                      functions flawlessly but also provides a beautiful, intuitive interface that golfers love to use.
                     </p>
                     
                     <p className="text-lg">
-                      His background in logistics and operations management makes him the perfect leader for coordinating 
-                      our community events, managing tee time logistics, and ensuring that every golfer has an exceptional 
-                      experience from start to finish.
+                      His background in user interface design and creative direction makes him the perfect leader for 
+                      crafting our visual identity, designing seamless user experiences, and ensuring that every 
+                      interaction with our platform feels polished and professional.
                     </p>
                     
                     <p className="text-lg">
-                      Under Dylan's leadership, Ultimate Golf Community maintains the highest standards of organization 
-                      and efficiency, making it easier than ever for golfers to connect, play, and build lasting relationships 
-                      through the game we all love.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Chief of Human Resources Section */}
-            <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-slate-700/50 rounded-3xl p-8 sm:p-12 shadow-xl">
-              <div className="space-y-8">
-                {/* HR Chief Photo Widget */}
-                <div className="flex justify-center">
-                  <div className="relative">
-                    <img
-                      src="/sidney-gillett-photo.png"
-                      alt="Sidney Gillett - Chief of Human Resources"
-                      className="w-[28rem] h-80 sm:w-[32rem] sm:h-96 rounded-2xl object-cover shadow-2xl border-4 border-orange-500/20"
-                    />
-                    
-                    {/* Name and Title Overlay */}
-                    <div className="absolute inset-0 flex flex-col justify-center items-center bg-black/30 rounded-2xl">
-                      <div className="text-center">
-                        <h2 className="text-4xl sm:text-5xl font-bold text-white mb-2 drop-shadow-lg">
-                          Sidney Gillett
-                        </h2>
-                        <p className="text-xl sm:text-2xl text-orange-400 font-semibold drop-shadow-lg">
-                          Chief of Human Resources
-                        </p>
-                      </div>
-                    </div>
-                    
-                    {/* HR Chief Badge */}
-                    <div className="absolute -bottom-4 -right-4 bg-gradient-to-r from-orange-500 to-red-600 text-white px-4 py-2 rounded-xl shadow-lg">
-                      <span className="font-semibold text-sm">Our HR Chief</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* HR Chief Story */}
-                <div className="max-w-4xl mx-auto space-y-6">
-                  <div className="space-y-4 text-gray-700 dark:text-slate-300 leading-relaxed text-center">
-                    <p className="text-lg">
-                      Sidney brings exceptional people skills and organizational development expertise to Ultimate Golf Community. 
-                      With a deep understanding of team dynamics and community building, Sidney ensures that our platform 
-                      fosters meaningful connections and positive relationships among golfers worldwide.
-                    </p>
-                    
-                    <p className="text-lg">
-                      His background in human resources and community engagement makes him the perfect leader for developing 
-                      our user experience, managing community guidelines, and creating an inclusive environment where every 
-                      golfer feels welcome and valued.
-                    </p>
-                    
-                    <p className="text-lg">
-                      Under Sidney's leadership, Ultimate Golf Community maintains a supportive, inclusive culture that 
-                      celebrates diversity and encourages golfers of all backgrounds to connect, learn, and grow together 
-                      through their shared passion for the game.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Vice President of Sales Section */}
-            <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-slate-700/50 rounded-3xl p-8 sm:p-12 shadow-xl">
-              <div className="space-y-8">
-                {/* VP Sales Photo Widget */}
-                <div className="flex justify-center">
-                  <div className="relative">
-                    <img
-                      src="/ashton-griffith-photo.png"
-                      alt="Ashton Griffith - Vice President of Sales"
-                      className="w-[28rem] h-80 sm:w-[32rem] sm:h-96 rounded-2xl object-cover shadow-2xl border-4 border-red-500/20"
-                    />
-                    
-                    {/* Name and Title Overlay */}
-                    <div className="absolute inset-0 flex flex-col justify-center items-center bg-black/30 rounded-2xl">
-                      <div className="text-center">
-                        <h2 className="text-4xl sm:text-5xl font-bold text-white mb-2 drop-shadow-lg">
-                          Ashton Griffith
-                        </h2>
-                        <p className="text-xl sm:text-2xl text-red-400 font-semibold drop-shadow-lg">
-                          Vice President of Sales
-                        </p>
-                      </div>
-                    </div>
-                    
-                    {/* VP Sales Badge */}
-                    <div className="absolute -bottom-4 -right-4 bg-gradient-to-r from-red-500 to-pink-600 text-white px-4 py-2 rounded-xl shadow-lg">
-                      <span className="font-semibold text-sm">Our VP Sales</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* VP Sales Story */}
-                <div className="max-w-4xl mx-auto space-y-6">
-                  <div className="space-y-4 text-gray-700 dark:text-slate-300 leading-relaxed text-center">
-                    <p className="text-lg">
-                      Ashton brings exceptional sales expertise and relationship-building skills to Ultimate Golf Community. 
-                      With a proven track record in driving growth and expanding market reach, Ashton leads our sales 
-                      initiatives to connect with golf courses, partners, and premium users worldwide.
-                    </p>
-                    
-                    <p className="text-lg">
-                      His background in sales strategy and business development makes him the perfect leader for 
-                      establishing partnerships with golf courses, managing premium subscriptions, and growing our 
-                      community through strategic outreach and relationship management.
-                    </p>
-                    
-                    <p className="text-lg">
-                      Under Ashton's leadership, Ultimate Golf Community continues to expand its reach and impact, 
-                      bringing more golfers together while building strong partnerships with courses and organizations 
-                      that share our vision for the future of golf.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Chief of Operations Section */}
-            <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-slate-700/50 rounded-3xl p-8 sm:p-12 shadow-xl">
-              <div className="space-y-8">
-                {/* COO Photo Widget */}
-                <div className="flex justify-center">
-                  <div className="relative">
-                    <img
-                      src="/peyton-mitchell-photo.png"
-                      alt="Peyton Mitchell - Chief of Operations"
-                      className="w-[28rem] h-80 sm:w-[32rem] sm:h-96 rounded-2xl object-cover object-top shadow-2xl border-4 border-teal-500/20"
-                    />
-                    
-                    {/* Name and Title Overlay */}
-                    <div className="absolute inset-0 flex flex-col justify-center items-center bg-black/30 rounded-2xl">
-                      <div className="text-center">
-                        <h2 className="text-4xl sm:text-5xl font-bold text-white mb-2 drop-shadow-lg">
-                          Peyton Mitchell
-                        </h2>
-                        <p className="text-xl sm:text-2xl text-teal-400 font-semibold drop-shadow-lg">
-                          Chief of Operations
-                        </p>
-                      </div>
-                    </div>
-                    
-                    {/* COO Badge */}
-                    <div className="absolute -bottom-4 -right-4 bg-gradient-to-r from-teal-500 to-cyan-600 text-white px-4 py-2 rounded-xl shadow-lg">
-                      <span className="font-semibold text-sm">Our COO</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* COO Story */}
-                <div className="max-w-4xl mx-auto space-y-6">
-                  <div className="space-y-4 text-gray-700 dark:text-slate-300 leading-relaxed text-center">
-                    <p className="text-lg">
-                      Peyton brings exceptional operational excellence and process optimization expertise to Ultimate Golf Community. 
-                      With a keen eye for efficiency and a passion for delivering seamless experiences, Peyton ensures that 
-                      every aspect of our platform operates smoothly and reliably for our growing community.
-                    </p>
-                    
-                    <p className="text-lg">
-                      His background in operations management and systems optimization makes him the perfect leader for 
-                      streamlining our platform performance, managing technical infrastructure, and ensuring that our 
-                      community features work flawlessly for golfers worldwide.
-                    </p>
-                    
-                    <p className="text-lg">
-                      Under Peyton's leadership, Ultimate Golf Community maintains the highest standards of operational 
-                      excellence, providing golfers with a reliable, fast, and intuitive platform that enhances their 
-                      golfing experience every time they use it.
+                      Under Grant's design leadership, Ultimate Golf Community maintains a cohesive, modern aesthetic 
+                      that reflects the elegance and sophistication of the game we all love, while remaining accessible 
+                      and enjoyable for golfers of all backgrounds.
                     </p>
                   </div>
                 </div>
