@@ -520,14 +520,23 @@ export default function Dashboard() {
     try {
       setTeeTimesLoading(true)
       
+      // Get today's date for filtering
+      const today = new Date().toISOString().split('T')[0]
+      
       // Check if we should fetch nearby tee times
       if (showNearbyTeeTimesOnly && userLocation) {
         const response = await fetch(`/api/tee-times?action=nearby&user_lat=${userLocation.lat}&user_lon=${userLocation.lon}&radius_km=50`)
         if (response.ok) {
           const data = await response.json()
           const teeTimes = Array.isArray(data) ? data : (data.tee_times || [])
+          
+          // Filter to only show tee times from today forward (client-side backup)
+          const filteredTeeTimes = teeTimes.filter((teeTime: any) => {
+            return teeTime.tee_time_date >= today
+          })
+          
           // Sort by distance first, then by date
-          const sortedTeeTimes = teeTimes.sort((a: any, b: any) => {
+          const sortedTeeTimes = filteredTeeTimes.sort((a: any, b: any) => {
             if (a.distance_km !== undefined && b.distance_km !== undefined) {
               return a.distance_km - b.distance_km
             }
@@ -536,29 +545,35 @@ export default function Dashboard() {
             return dateA.getTime() - dateB.getTime()
           })
           setAvailableTeeTimes(sortedTeeTimes)
-          console.log('Fetched nearby tee times:', sortedTeeTimes)
+          console.log('Fetched nearby tee times (today+):', sortedTeeTimes)
         } else {
           console.error('Failed to fetch nearby tee times')
           setAvailableTeeTimes([])
         }
       } else {
         // Fetch all available tee times
-      const response = await fetch('/api/tee-times?action=available')
-      if (response.ok) {
-        const data = await response.json()
-        // Handle both array format and object format
-        const teeTimes = Array.isArray(data) ? data : (data.tee_times || [])
-        // Sort by date (earliest first)
-        const sortedTeeTimes = teeTimes.sort((a: any, b: any) => {
-          const dateA = new Date(a.tee_time_date + ' ' + a.tee_time_time)
-          const dateB = new Date(b.tee_time_date + ' ' + b.tee_time_time)
-          return dateA.getTime() - dateB.getTime()
-        })
-        setAvailableTeeTimes(sortedTeeTimes)
-        console.log('Fetched and sorted tee times:', sortedTeeTimes)
-      } else {
-        console.error('Failed to fetch tee times')
-        setAvailableTeeTimes([])
+        const response = await fetch('/api/tee-times?action=available')
+        if (response.ok) {
+          const data = await response.json()
+          // Handle both array format and object format
+          const teeTimes = Array.isArray(data) ? data : (data.tee_times || [])
+          
+          // Filter to only show tee times from today forward (client-side backup)
+          const filteredTeeTimes = teeTimes.filter((teeTime: any) => {
+            return teeTime.tee_time_date >= today
+          })
+          
+          // Sort by date (earliest first)
+          const sortedTeeTimes = filteredTeeTimes.sort((a: any, b: any) => {
+            const dateA = new Date(a.tee_time_date + ' ' + a.tee_time_time)
+            const dateB = new Date(b.tee_time_date + ' ' + b.tee_time_time)
+            return dateA.getTime() - dateB.getTime()
+          })
+          setAvailableTeeTimes(sortedTeeTimes)
+          console.log('Fetched and sorted tee times (today+):', sortedTeeTimes)
+        } else {
+          console.error('Failed to fetch tee times')
+          setAvailableTeeTimes([])
         }
       }
     } catch (error) {

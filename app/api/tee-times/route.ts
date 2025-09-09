@@ -132,6 +132,9 @@ export async function GET(request: NextRequest) {
     console.log('🔍 GET: Using database for tee time operations')
 
     if (action === 'user' && userId) {
+      // Get today's date in YYYY-MM-DD format
+      const today = new Date().toISOString().split('T')[0]
+      
       const { data, error } = await supabase
         .from('tee_times')
         .select(`
@@ -140,6 +143,7 @@ export async function GET(request: NextRequest) {
           golf_courses(name, location, course_image_url, logo_url, latitude, longitude)
         `)
         .eq('creator_id', userId)
+        .gte('tee_time_date', today) // Only get tee times from today forward
         .order('tee_time_date', { ascending: true })
 
       if (error) throw error
@@ -147,6 +151,9 @@ export async function GET(request: NextRequest) {
     }
 
     if (action === 'available') {
+      // Get today's date in YYYY-MM-DD format
+      const today = new Date().toISOString().split('T')[0]
+      
       const { data, error } = await supabase
         .from('tee_times')
         .select(`
@@ -155,6 +162,7 @@ export async function GET(request: NextRequest) {
           golf_courses(name, location, course_image_url, logo_url, latitude, longitude)
         `)
         .eq('status', 'active')
+        .gte('tee_time_date', today) // Only get tee times from today forward
         .order('tee_time_date', { ascending: true })
 
       if (error) throw error
@@ -162,6 +170,9 @@ export async function GET(request: NextRequest) {
     }
 
     if (action === 'nearby' && userLat && userLon) {
+      // Get today's date in YYYY-MM-DD format
+      const today = new Date().toISOString().split('T')[0]
+      
       // Get tee times within specified radius using the distance function
       const { data, error } = await supabase
         .rpc('get_nearby_tee_times', {
@@ -172,7 +183,7 @@ export async function GET(request: NextRequest) {
 
       if (error) {
         console.error('Error fetching nearby tee times:', error)
-        // Fallback to regular available tee times
+        // Fallback to regular available tee times with date filter
         const { data: fallbackData, error: fallbackError } = await supabase
           .from('tee_times')
           .select(`
@@ -181,13 +192,19 @@ export async function GET(request: NextRequest) {
             golf_courses(name, location, course_image_url, logo_url, latitude, longitude)
           `)
           .eq('status', 'active')
+          .gte('tee_time_date', today) // Only get tee times from today forward
           .order('tee_time_date', { ascending: true })
 
         if (fallbackError) throw fallbackError
         return NextResponse.json(fallbackData || [])
       }
 
-      return NextResponse.json(data || [])
+      // Filter the nearby tee times to only include today and forward
+      const filteredData = (data || []).filter((teeTime: any) => {
+        return teeTime.tee_time_date >= today
+      })
+
+      return NextResponse.json(filteredData)
     }
     
     if (action === 'get-applications' && userId) {
