@@ -2692,37 +2692,39 @@ export default function Dashboard() {
                 </div>
 
                 {/* Location Filter */}
-                <div className="flex space-x-3 items-center">
-                  <div className="flex items-center space-x-2">
+                <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                  <div className="flex items-center space-x-2 flex-shrink-0">
                     <MapPin className="h-5 w-5 text-slate-400" />
-                    <span className="text-slate-300 font-medium">Find courses near:</span>
+                    <span className="text-slate-300 font-medium whitespace-nowrap">Find courses near:</span>
                   </div>
-                  <input
-                    type="text"
-                    placeholder="Enter ZIP code (e.g., 12345)"
-                    value={zipCode}
-                    onChange={(e) => setZipCode(e.target.value)}
-                    className="px-4 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300"
-                  />
-                  <select
-                    value={searchRadius}
-                    onChange={(e) => setSearchRadius(parseInt(e.target.value))}
-                    className="px-4 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white transition-all duration-300"
-                  >
-                    <option value={50}>50 miles</option>
-                    <option value={100}>100 miles</option>
-                    <option value={150}>150 miles</option>
-                    <option value={200}>200 miles</option>
-                    <option value={250}>250 miles</option>
-                    <option value={500}>500 miles</option>
-                  </select>
-                  <button
-                    onClick={handleCourseSearch}
-                    disabled={courseSearchLoading || !zipCode}
-                    className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed"
-                  >
-                    Find Nearby
-                  </button>
+                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <input
+                      type="text"
+                      placeholder="Enter ZIP code (e.g., 12345)"
+                      value={zipCode}
+                      onChange={(e) => setZipCode(e.target.value)}
+                      className="px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300 w-full sm:w-48"
+                    />
+                    <select
+                      value={searchRadius}
+                      onChange={(e) => setSearchRadius(parseInt(e.target.value))}
+                      className="px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white transition-all duration-300 w-full sm:w-32"
+                    >
+                      <option value={50}>50 miles</option>
+                      <option value={100}>100 miles</option>
+                      <option value={150}>150 miles</option>
+                      <option value={200}>200 miles</option>
+                      <option value={250}>250 miles</option>
+                      <option value={500}>500 miles</option>
+                    </select>
+                    <button
+                      onClick={handleCourseSearch}
+                      disabled={courseSearchLoading || !zipCode}
+                      className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed whitespace-nowrap w-full sm:w-auto"
+                    >
+                      Find Nearby
+                    </button>
+                  </div>
                 </div>
 
                 {/* Active Filters Display */}
