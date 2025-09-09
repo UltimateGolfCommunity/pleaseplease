@@ -43,6 +43,12 @@ interface ProfileFormData {
   preferred_playing_times: string[]
   golf_goals: string[]
   avatar_url: string
+  header_image_url: string
+  home_club: string
+  years_playing: number | null
+  favorite_course: string
+  playing_style: string
+  goals: string
 }
 
 export default function ProfilePage() {
@@ -60,10 +66,17 @@ export default function ProfilePage() {
     preferred_playing_days: [],
     preferred_playing_times: [],
     golf_goals: [],
-    avatar_url: ''
+    avatar_url: '',
+    header_image_url: '',
+    home_club: '',
+    years_playing: null,
+    favorite_course: '',
+    playing_style: '',
+    goals: ''
   })
   const [saving, setSaving] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [uploadingHeaderImage, setUploadingHeaderImage] = useState(false)
   const [showQRCode, setShowQRCode] = useState(false)
   const [showQRScanner, setShowQRScanner] = useState(false)
   const [showNavigationMenu, setShowNavigationMenu] = useState(false)
@@ -83,11 +96,17 @@ export default function ProfilePage() {
         bio: profile.bio || '',
         handicap: profile.handicap,
         location: profile.location || '',
-        experience_level: '',
-        preferred_playing_days: [],
-        preferred_playing_times: [],
-        golf_goals: [],
-        avatar_url: profile.avatar_url || ''
+        experience_level: profile.experience_level || '',
+        preferred_playing_days: profile.preferred_playing_days || [],
+        preferred_playing_times: profile.preferred_playing_times || [],
+        golf_goals: profile.golf_goals || [],
+        avatar_url: profile.avatar_url || '',
+        header_image_url: profile.header_image_url || '',
+        home_club: profile.home_club || '',
+        years_playing: profile.years_playing || null,
+        favorite_course: profile.favorite_course || '',
+        playing_style: profile.playing_style || '',
+        goals: profile.goals || ''
       })
     }
   }, [user, profile, loading, router])
@@ -184,6 +203,80 @@ export default function ProfilePage() {
     }
   }
 
+  const handleHeaderImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file')
+      return
+    }
+
+    // Validate file size (max 5MB for header images)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image size must be less than 5MB')
+      return
+    }
+
+    setUploadingHeaderImage(true)
+    try {
+      // Compress image before converting to base64
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      const img = new Image()
+      
+      img.onload = () => {
+        // Set canvas size (max 1200x400 for header images)
+        const maxWidth = 1200
+        const maxHeight = 400
+        let { width, height } = img
+        
+        if (width > height) {
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width
+            width = maxWidth
+          }
+        } else {
+          if (height > maxHeight) {
+            width = (width * maxHeight) / height
+            height = maxHeight
+          }
+        }
+        
+        canvas.width = width
+        canvas.height = height
+        
+        // Draw and compress image
+        ctx?.drawImage(img, 0, 0, width, height)
+        
+        // Convert to base64 with compression
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8) // 80% quality
+        
+        console.log('🔍 Compressed header image uploaded:', compressedDataUrl.substring(0, 50) + '...')
+        setFormData(prev => ({ ...prev, header_image_url: compressedDataUrl }))
+        setUploadingHeaderImage(false)
+      }
+      
+      img.onerror = () => {
+        console.error('Error loading header image')
+        alert('Failed to process header image. Please try again.')
+        setUploadingHeaderImage(false)
+      }
+      
+      // Load image from file
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        img.src = e.target?.result as string
+      }
+      reader.readAsDataURL(file)
+    } catch (error) {
+      console.error('Error uploading header image:', error)
+      alert('Failed to upload header image. Please try again.')
+      setUploadingHeaderImage(false)
+    }
+  }
+
   const handleSave = async () => {
     setSaving(true)
     try {
@@ -200,7 +293,17 @@ export default function ProfilePage() {
         bio: formData.bio,
         handicap: formData.handicap,
         location: formData.location,
-        avatar_url: formData.avatar_url
+        avatar_url: formData.avatar_url,
+        header_image_url: formData.header_image_url,
+        home_club: formData.home_club,
+        years_playing: formData.years_playing,
+        favorite_course: formData.favorite_course,
+        playing_style: formData.playing_style,
+        goals: formData.goals,
+        experience_level: formData.experience_level,
+        preferred_playing_days: formData.preferred_playing_days,
+        preferred_playing_times: formData.preferred_playing_times,
+        golf_goals: formData.golf_goals
       })
       
       
@@ -223,11 +326,17 @@ export default function ProfilePage() {
         bio: profile.bio || '',
         handicap: profile.handicap,
         location: profile.location || '',
-        experience_level: '',
-        preferred_playing_days: [],
-        preferred_playing_times: [],
-        golf_goals: [],
-        avatar_url: profile.avatar_url || ''
+        experience_level: profile.experience_level || '',
+        preferred_playing_days: profile.preferred_playing_days || [],
+        preferred_playing_times: profile.preferred_playing_times || [],
+        golf_goals: profile.golf_goals || [],
+        avatar_url: profile.avatar_url || '',
+        header_image_url: profile.header_image_url || '',
+        home_club: profile.home_club || '',
+        years_playing: profile.years_playing || null,
+        favorite_course: profile.favorite_course || '',
+        playing_style: profile.playing_style || '',
+        goals: profile.goals || ''
       })
     }
     setIsEditing(false)
@@ -429,6 +538,61 @@ export default function ProfilePage() {
 
       {/* Profile Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header Image */}
+        {(formData.header_image_url || profile?.header_image_url) && (
+          <div className="relative mb-8 rounded-2xl overflow-hidden">
+            <img 
+              src={formData.header_image_url || profile?.header_image_url} 
+              alt="Profile Header" 
+              className="w-full h-64 object-cover"
+            />
+            {isEditing && (
+              <div className="absolute top-4 right-4">
+                <label className="bg-emerald-500/90 hover:bg-emerald-600/90 text-white p-3 rounded-full transition-colors duration-300 cursor-pointer backdrop-blur-sm">
+                  <Camera className="h-5 w-5" />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleHeaderImageUpload}
+                    className="hidden"
+                    disabled={uploadingHeaderImage}
+                  />
+                </label>
+                {uploadingHeaderImage && (
+                  <div className="absolute inset-0 bg-black/50 rounded-2xl flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Add Header Image Button (when no header image) */}
+        {isEditing && !(formData.header_image_url || profile?.header_image_url) && (
+          <div className="mb-8">
+            <label className="block w-full h-32 border-2 border-dashed border-gray-600 rounded-2xl cursor-pointer hover:border-emerald-400 transition-colors duration-300 bg-gray-800/50 backdrop-blur-sm">
+              <div className="flex flex-col items-center justify-center h-full text-gray-400 hover:text-emerald-400">
+                <Camera className="h-8 w-8 mb-2" />
+                <span className="text-lg font-medium">Add Header Photo</span>
+                <span className="text-sm">Click to upload a header image</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleHeaderImageUpload}
+                  className="hidden"
+                  disabled={uploadingHeaderImage}
+                />
+              </div>
+              {uploadingHeaderImage && (
+                <div className="absolute inset-0 bg-black/50 rounded-2xl flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                </div>
+              )}
+            </label>
+          </div>
+        )}
+
         {/* Profile Header */}
         <div className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-8 mb-8">
           <div className="flex items-start space-x-6">
@@ -648,10 +812,10 @@ export default function ProfilePage() {
 
             {/* Golf Information */}
             <div className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-6">
-                             <h2 className="text-xl font-bold text-white mb-4 flex items-center">
-                 <Flag className="h-5 w-5 mr-2 text-emerald-400" />
-                 Golf Information
-               </h2>
+              <h2 className="text-xl font-bold text-white mb-4 flex items-center">
+                <Flag className="h-5 w-5 mr-2 text-emerald-400" />
+                Golf Information
+              </h2>
               
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
@@ -670,7 +834,70 @@ export default function ProfilePage() {
                   )}
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Years Playing</label>
+                  {isEditing ? (
+                    <input
+                      type="number"
+                      value={formData.years_playing || ''}
+                      onChange={(e) => handleInputChange('years_playing', e.target.value ? parseInt(e.target.value) : null)}
+                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300"
+                      placeholder="How many years?"
+                    />
+                  ) : (
+                    <p className="text-white">{profile?.years_playing ? `${profile.years_playing} years` : 'Not set'}</p>
+                  )}
+                </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Home Club</label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={formData.home_club}
+                      onChange={(e) => handleInputChange('home_club', e.target.value)}
+                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300"
+                      placeholder="Your home golf club"
+                    />
+                  ) : (
+                    <p className="text-white">{profile?.home_club || 'Not set'}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Favorite Course</label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={formData.favorite_course}
+                      onChange={(e) => handleInputChange('favorite_course', e.target.value)}
+                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300"
+                      placeholder="Your favorite golf course"
+                    />
+                  ) : (
+                    <p className="text-white">{profile?.favorite_course || 'Not set'}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Playing Style</label>
+                  {isEditing ? (
+                    <select
+                      value={formData.playing_style}
+                      onChange={(e) => handleInputChange('playing_style', e.target.value)}
+                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white transition-all duration-300"
+                    >
+                      <option value="">Select playing style</option>
+                      <option value="competitive">Competitive</option>
+                      <option value="casual">Casual</option>
+                      <option value="social">Social</option>
+                      <option value="beginner">Beginner</option>
+                      <option value="professional">Professional</option>
+                    </select>
+                  ) : (
+                    <p className="text-white">{profile?.playing_style || 'Not set'}</p>
+                  )}
+                </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Location</label>
@@ -686,6 +913,21 @@ export default function ProfilePage() {
                     <p className="text-white">{profile?.location || 'Not set'}</p>
                   )}
                 </div>
+              </div>
+
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-300 mb-2">Golf Goals</label>
+                {isEditing ? (
+                  <textarea
+                    value={formData.goals}
+                    onChange={(e) => handleInputChange('goals', e.target.value)}
+                    rows={3}
+                    className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300"
+                    placeholder="What are your golf goals and aspirations?"
+                  />
+                ) : (
+                  <p className="text-white">{profile?.goals || 'No goals set yet'}</p>
+                )}
               </div>
             </div>
           </div>
