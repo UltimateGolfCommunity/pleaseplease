@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Logo Collector</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .course-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .course-card {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .course-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+        .course-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+        .course-website {
+            color: #e0e0e0;
+            margin-bottom: 15px;
+        }
+        .course-website a {
+            color: #4fc3f7;
+            text-decoration: none;
+        }
+        .course-website a:hover {
+            text-decoration: underline;
+        }
+        .logo-preview {
+            width: 100%;
+            height: 150px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+        }
+        .logo-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 8px;
+        }
+        .logo-preview.placeholder {
+            color: #ccc;
+            font-style: italic;
+        }
+        .upload-section {
+            margin-bottom: 20px;
+        }
+        .upload-section h3 {
+            margin-bottom: 10px;
+            color: #4fc3f7;
+        }
+        .file-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            margin-bottom: 10px;
+        }
+        .file-input::file-selector-button {
+            background: #4fc3f7;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-left: 4px solid #4fc3f7;
+        }
+        .instructions h3 {
+            color: #4fc3f7;
+            margin-bottom: 15px;
+        }
+        .instructions ol {
+            margin-left: 20px;
+        }
+        .instructions li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+        .status {
+            text-align: center;
+            padding: 20px;
+            background: rgba(76, 175, 80, 0.2);
+            border-radius: 10px;
+            margin-top: 20px;
+            border: 1px solid rgba(76, 175, 80, 0.5);
+        }
+        .course-card.completed {
+            border-color: #4caf50;
+            background: rgba(76, 175, 80, 0.2);
+        }
+        .course-card.completed .course-name::after {
+            content: " ✅";
+            color: #4caf50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏌️ Course Logo Collector</h1>
+        
+        <div class="instructions">
+            <h3>📋 How to Use This Tool</h3>
+            <ol>
+                <li><strong>Visit each course website</strong> by clicking the links below</li>
+                <li><strong>Find the course logo</strong> (usually in header, footer, or about page)</li>
+                <li><strong>Right-click on the logo</strong> and "Save image as..."</li>
+                <li><strong>Upload the logo</strong> using the file input below each course</li>
+                <li><strong>Check the preview</strong> to make sure it looks good</li>
+                <li><strong>Repeat for all courses</strong> until you have all logos</li>
+            </ol>
+        </div>
+
+        <div class="course-grid">
+            <!-- Canton Area Courses -->
+            <div class="course-card" id="canton-golf-club">
+                <div class="course-name">Canton Golf Club</div>
+                <div class="course-website">
+                    <a href="https://www.cantongolfclub.com" target="_blank">Visit Website</a>
+                </div>
+                <div class="logo-preview placeholder" id="canton-preview">
+                    Upload logo to see preview
+                </div>
+                <div class="upload-section">
+                    <h3>Upload Logo</h3>
+                    <input type="file" class="file-input" accept="image/*" onchange="previewLogo(this, 'canton-preview', 'canton-golf-club')">
+                </div>
+            </div>
+
+            <div class="course-card" id="woodstock-golf-club">
+                <div class="course-name">Woodstock Golf Club</div>
+                <div class="course-website">
+                    <a href="https://www.woodstockgolfclub.com" target="_blank">Visit Website</a>
+                </div>
+                <div class="logo-preview placeholder" id="woodstock-preview">
+                    Upload logo to see preview
+                </div>
+                <div class="upload-section">
+                    <h3>Upload Logo</h3>
+                    <input type="file" class="file-input" accept="image/*" onchange="previewLogo(this, 'woodstock-preview', 'woodstock-golf-club')">
+                </div>
+            </div>
+
+            <div class="course-card" id="lake-arrowhead-club">
+                <div class="course-name">The Club at Lake Arrowhead</div>
+                <div class="course-website">
+                    <a href="https://www.lakearrowheadclub.com" target="_blank">Visit Website</a>
+                </div>
+                <div class="logo-preview placeholder" id="lake-arrowhead-preview">
+                    Upload logo to see preview
+                </div>
+                <div class="upload-section">
+                    <h3>Upload Logo</h3>
+                    <input type="file" class="file-input" accept="image/*" onchange="previewLogo(this, 'lake-arrowhead-preview', 'lake-arrowhead-club')">
+                </div>
+            </div>
+
+            <div class="course-card" id="cherokee-golf-club">
+                <div class="course-name">Cherokee Golf & Country Club</div>
+                <div class="course-website">
+                    <a href="https://www.cherokeegcc.com" target="_blank">Visit Website</a>
+                </div>
+                <div class="logo-preview placeholder" id="cherokee-preview">
+                    Upload logo to see preview
+                </div>
+                <div class="upload-section">
+                    <h3>Upload Logo</h3>
+                    <input type="file" class="file-input" accept="image/*" onchange="previewLogo(this, 'cherokee-preview', 'cherokee-golf-club')">
+                </div>
+            </div>
+
+            <!-- Tennessee Courses -->
+            <div class="course-card" id="the-grove">
+                <div class="course-name">The Grove</div>
+                <div class="course-website">
+                    <a href="https://www.thegrove.com" target="_blank">Visit Website</a>
+                </div>
+                <div class="logo-preview placeholder" id="grove-preview">
+                    Upload logo to see preview
+                </div>
+                <div class="upload-section">
+                    <h3>Upload Logo</h3>
+                    <input type="file" class="file-input" accept="image/*" onchange="previewLogo(this, 'grove-preview', 'the-grove')">
+                </div>
+            </div>
+
+            <div class="course-card" id="vanderbilt-legends">
+                <div class="course-name">Vanderbilt Legends Club</div>
+                <div class="course-website">
+                    <a href="https://www.vanderbiltlegends.com" target="_blank">Visit Website</a>
+                </div>
+                <div class="logo-preview placeholder" id="vanderbilt-preview">
+                    Upload logo to see preview
+                </div>
+                <div class="upload-section">
+                    <h3>Upload Logo</h3>
+                    <input type="file" class="file-input" accept="image/*" onchange="previewLogo(this, 'vanderbilt-preview', 'vanderbilt-legends')">
+                </div>
+            </div>
+
+            <div class="course-card" id="tennessee-national">
+                <div class="course-name">Tennessee National Golf Club</div>
+                <div class="course-website">
+                    <a href="https://www.tennesseenational.com" target="_blank">Visit Website</a>
+                </div>
+                <div class="logo-preview placeholder" id="tennessee-preview">
+                    Upload logo to see preview
+                </div>
+                <div class="upload-section">
+                    <h3>Upload Logo</h3>
+                    <input type="file" class="file-input" accept="image/*" onchange="previewLogo(this, 'tennessee-preview', 'tennessee-national')">
+                </div>
+            </div>
+
+            <div class="course-card" id="belle-meade">
+                <div class="course-name">Belle Meade Country Club</div>
+                <div class="course-website">
+                    <a href="https://www.bellemeadecc.com" target="_blank">Visit Website</a>
+                </div>
+                <div class="logo-preview placeholder" id="belle-meade-preview">
+                    Upload logo to see preview
+                </div>
+                <div class="upload-section">
+                    <h3>Upload Logo</h3>
+                    <input type="file" class="file-input" accept="image/*" onchange="previewLogo(this, 'belle-meade-preview', 'belle-meade')">
+                </div>
+            </div>
+        </div>
+
+        <div class="status" id="status">
+            <h3>📊 Progress</h3>
+            <p>Upload logos for all courses to complete the collection!</p>
+        </div>
+    </div>
+
+    <script>
+        let completedCourses = 0;
+        const totalCourses = 8;
+
+        function previewLogo(input, previewId, courseId) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById(previewId);
+                    preview.innerHTML = `<img src="${e.target.result}" alt="Course logo">`;
+                    preview.classList.remove('placeholder');
+                    
+                    // Mark course as completed
+                    const courseCard = document.getElementById(courseId);
+                    courseCard.classList.add('completed');
+                    
+                    // Update progress
+                    completedCourses++;
+                    updateProgress();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function updateProgress() {
+            const status = document.getElementById('status');
+            if (completedCourses === totalCourses) {
+                status.innerHTML = `
+                    <h3>🎉 All Logos Collected!</h3>
+                    <p>You've successfully collected all ${totalCourses} course logos!</p>
+                    <p>Next step: Upload these to your Supabase storage bucket.</p>
+                `;
+                status.style.background = 'rgba(76, 175, 80, 0.3)';
+                status.style.borderColor = 'rgba(76, 175, 80, 0.7)';
+            } else {
+                status.innerHTML = `
+                    <h3>📊 Progress</h3>
+                    <p>${completedCourses} of ${totalCourses} logos collected</p>
+                    <p>Keep going! You're ${Math.round((completedCourses / totalCourses) * 100)}% complete.</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

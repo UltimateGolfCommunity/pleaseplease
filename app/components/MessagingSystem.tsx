@@ -272,36 +272,36 @@ export default function MessagingSystem() {
   }
 
   return (
-    <div className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-6 h-[600px] flex flex-col">
+    <div className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-4 sm:p-6 h-[500px] sm:h-[600px] flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-white flex items-center">
-          <MessageCircle className="h-6 w-6 mr-2 text-emerald-400" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-4">
+        <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center">
+          <MessageCircle className="h-5 w-5 sm:h-6 sm:w-6 mr-2 text-emerald-400" />
           Messages
         </h2>
         
         <div className="flex space-x-2">
           <button
             onClick={() => setActiveTab('conversations')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
+            className={`px-3 py-2 sm:px-4 rounded-lg transition-colors text-sm sm:text-base ${
               activeTab === 'conversations'
                 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-400/30'
                 : 'bg-gray-600/20 text-gray-300 hover:bg-gray-600/30'
             }`}
           >
-            <Inbox className="h-4 w-4 mr-2 inline" />
-            Inbox
+            <Inbox className="h-4 w-4 mr-1 sm:mr-2 inline" />
+            <span className="hidden sm:inline">Inbox</span>
           </button>
           <button
             onClick={() => setActiveTab('compose')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
+            className={`px-3 py-2 sm:px-4 rounded-lg transition-colors text-sm sm:text-base ${
               activeTab === 'compose'
                 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-400/30'
                 : 'bg-gray-600/20 text-gray-300 hover:bg-gray-600/30'
             }`}
           >
-            <Mail className="h-4 w-4 mr-2 inline" />
-            Compose
+            <Mail className="h-4 w-4 mr-1 sm:mr-2 inline" />
+            <span className="hidden sm:inline">Compose</span>
           </button>
         </div>
       </div>
@@ -311,43 +311,43 @@ export default function MessagingSystem() {
         {activeTab === 'conversations' && (
           <>
             {/* Conversations List */}
-            <div className="w-1/3 border-r border-gray-700/50 pr-4">
+            <div className="w-full sm:w-1/3 border-r-0 sm:border-r border-gray-700/50 pr-0 sm:pr-4 mb-4 sm:mb-0">
               {loading ? (
-                <div className="text-center text-gray-400 py-4">Loading conversations...</div>
+                <div className="text-center text-gray-400 py-4 text-sm sm:text-base">Loading conversations...</div>
               ) : conversations.length === 0 ? (
-                <div className="text-center text-gray-400 py-4">No conversations yet</div>
+                <div className="text-center text-gray-400 py-4 text-sm sm:text-base">No conversations yet</div>
               ) : (
-                <div className="space-y-2 max-h-full overflow-y-auto">
+                <div className="space-y-2 max-h-32 sm:max-h-full overflow-y-auto">
                   {conversations.map((conversation) => (
                     <div
                       key={conversation.user.id}
                       onClick={() => fetchConversation(conversation.user.id)}
-                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                      className={`p-2 sm:p-3 rounded-lg cursor-pointer transition-colors ${
                         selectedConversation === conversation.user.id
                           ? 'bg-emerald-500/20 border border-emerald-400/30'
                           : 'bg-gray-700/30 hover:bg-gray-700/50'
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-full flex items-center justify-center">
-                            <User className="h-5 w-5 text-black" />
+                        <div className="flex items-center space-x-2 sm:space-x-3">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-full flex items-center justify-center">
+                            <User className="h-4 w-4 sm:h-5 sm:w-5 text-black" />
                           </div>
-                          <div>
-                            <div className="text-white font-medium">
+                          <div className="min-w-0 flex-1">
+                            <div className="text-white font-medium text-sm sm:text-base truncate">
                               {conversation.user.first_name} {conversation.user.last_name}
                             </div>
-                            <div className="text-gray-400 text-sm truncate max-w-32">
+                            <div className="text-gray-400 text-xs sm:text-sm truncate max-w-24 sm:max-w-32">
                               {conversation.lastMessage.message_content}
                             </div>
                           </div>
                         </div>
-                        <div className="text-right">
+                        <div className="text-right flex-shrink-0">
                           <div className="text-xs text-gray-400 mb-1">
                             {formatTimeAgo(conversation.lastMessage.created_at)}
                           </div>
                           {conversation.unreadCount > 0 && (
-                            <div className="bg-emerald-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                            <div className="bg-emerald-500 text-white text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center">
                               {conversation.unreadCount}
                             </div>
                           )}
@@ -360,7 +360,7 @@ export default function MessagingSystem() {
             </div>
 
             {/* Messages View */}
-            <div className="flex-1 pl-4 flex flex-col">
+            <div className="flex-1 pl-2 sm:pl-4 flex flex-col">
               {selectedConversation ? (
                 <>
                   {/* Messages */}
@@ -373,13 +373,13 @@ export default function MessagingSystem() {
                         }`}
                       >
                         <div
-                          className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                          className={`max-w-xs sm:max-w-sm lg:max-w-md px-3 py-2 sm:px-4 sm:py-2 rounded-lg ${
                             message.sender.id === currentUser.id
                               ? 'bg-emerald-500 text-white'
                               : 'bg-gray-700 text-white'
                           }`}
                         >
-                          <div className="text-sm">{message.message_content}</div>
+                          <div className="text-xs sm:text-sm">{message.message_content}</div>
                           <div className="text-xs opacity-70 mt-1">
                             {formatTimeAgo(message.created_at)}
                             {message.sender.id === currentUser.id && (
@@ -401,12 +401,12 @@ export default function MessagingSystem() {
                       onChange={(e) => setNewMessage(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
                       placeholder="Type a message..."
-                      className="flex-1 bg-gray-700/50 text-white placeholder-gray-400 border border-gray-600/50 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="flex-1 bg-gray-700/50 text-white placeholder-gray-400 border border-gray-600/50 rounded-lg px-3 py-2 sm:px-4 sm:py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm sm:text-base"
                     />
                     <button
                       onClick={sendMessage}
                       disabled={!newMessage.trim()}
-                      className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors"
+                      className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-colors"
                     >
                       <Send className="h-4 w-4" />
                     </button>
@@ -436,13 +436,13 @@ export default function MessagingSystem() {
                     searchUsers(e.target.value)
                   }}
                   placeholder="Search for users to message..."
-                  className="w-full bg-gray-700/50 text-white placeholder-gray-400 border border-gray-600/50 rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full bg-gray-700/50 text-white placeholder-gray-400 border border-gray-600/50 rounded-lg pl-10 pr-4 py-2 sm:py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm sm:text-base"
                 />
               </div>
 
               {/* Search Results */}
               {searchResults.length > 0 && (
-                <div className="mt-2 max-h-40 overflow-y-auto bg-gray-700/50 rounded-lg border border-gray-600/50">
+                <div className="mt-2 max-h-32 sm:max-h-40 overflow-y-auto bg-gray-700/50 rounded-lg border border-gray-600/50">
                   {searchResults.map((user) => (
                     <div
                       key={user.id}
@@ -451,12 +451,12 @@ export default function MessagingSystem() {
                         setSearchQuery('')
                         setSearchResults([])
                       }}
-                      className="p-3 hover:bg-gray-600/50 cursor-pointer flex items-center space-x-3"
+                      className="p-2 sm:p-3 hover:bg-gray-600/50 cursor-pointer flex items-center space-x-2 sm:space-x-3"
                     >
-                      <div className="w-8 h-8 bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-full flex items-center justify-center">
-                        <User className="h-4 w-4 text-black" />
+                      <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-full flex items-center justify-center">
+                        <User className="h-3 w-3 sm:h-4 sm:w-4 text-black" />
                       </div>
-                      <div className="text-white">
+                      <div className="text-white text-sm sm:text-base truncate">
                         {user.first_name} {user.last_name} (@{user.username})
                       </div>
                     </div>

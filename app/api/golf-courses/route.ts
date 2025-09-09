@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { createAdminClient } from '@/lib/supabase-admin'
+import { getZipCodeCoordinates, filterCoursesByRadius } from '@/lib/location-utils'
 
 // Mock course data for when database is not available
 const mockCourses = [
@@ -34,9 +35,11 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const query = searchParams.get('query')
+    const zipCode = searchParams.get('zipCode')
+    const radius = parseInt(searchParams.get('radius') || '250')
     const limit = parseInt(searchParams.get('limit') || '20')
 
-    console.log('🔍 GOLF-COURSES GET:', { query, limit })
+    console.log('🔍 GOLF-COURSES GET:', { query, zipCode, radius, limit })
 
     // Use real Supabase with fallback pattern
     let supabase: any = null
@@ -126,7 +129,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculate average ratings and review counts
-    const coursesWithStats = courses?.map((course: any) => {
+    let coursesWithStats = courses?.map((course: any) => {
       const reviews = course.course_reviews || []
       const totalRating = reviews.reduce((sum: number, review: any) => sum + review.rating, 0)
       const averageRating = reviews.length > 0 ? (totalRating / reviews.length).toFixed(1) : '0.0'
@@ -138,6 +141,29 @@ export async function GET(request: NextRequest) {
         recent_reviews: reviews.slice(0, 3) // Get last 3 reviews
       }
     })
+
+    // Apply location-based filtering if zip code is provided
+    if (zipCode && coursesWithStats) {
+      try {
+        console.log('📍 Getting coordinates for zip code:', zipCode)
+        const location = await getZipCodeCoordinates(zipCode)
+        
+        if (location) {
+          console.log('📍 Found location:', location)
+          coursesWithStats = filterCoursesByRadius(
+            coursesWithStats,
+            location.latitude,
+            location.longitude,
+            radius
+          )
+          console.log(`📍 Filtered to ${coursesWithStats.length} courses within ${radius} miles`)
+        } else {
+          console.log('❌ Could not find coordinates for zip code:', zipCode)
+        }
+      } catch (error) {
+        console.error('❌ Error filtering by location:', error)
+      }
+    }
 
     return NextResponse.json({ courses: coursesWithStats })
 

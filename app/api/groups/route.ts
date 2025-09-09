@@ -308,8 +308,7 @@ export async function GET(request: NextRequest) {
         .from('golf_groups')
         .select(`
           *,
-          creator:user_profiles(id, first_name, last_name, avatar_url),
-          member_count:group_members(count)
+          creator:user_profiles(id, first_name, last_name, avatar_url)
         `)
         .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
         .eq('status', 'active')
@@ -320,8 +319,23 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to search groups' }, { status: 500 })
       }
 
-      console.log('👥 Found groups:', data?.length || 0)
-      return NextResponse.json(data || [])
+      // Get member count for each group
+      const groupsWithMemberCount = await Promise.all(
+        (data || []).map(async (group: any) => {
+          const { count } = await supabase
+            .from('group_members')
+            .select('*', { count: 'exact', head: true })
+            .eq('group_id', group.id)
+          
+          return {
+            ...group,
+            member_count: count || 0
+          }
+        })
+      )
+
+      console.log('👥 Found groups:', groupsWithMemberCount?.length || 0)
+      return NextResponse.json(groupsWithMemberCount || [])
     }
 
     // Original functionality for fetching user's groups

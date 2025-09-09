@@ -107,7 +107,13 @@ export default function Dashboard() {
   const [courseSearchResults, setCourseSearchResults] = useState<any[]>([])
   
   // Location-based filtering state
+  const [zipCode, setZipCode] = useState('')
+  const [searchRadius, setSearchRadius] = useState(250)
   const [locationFilter, setLocationFilter] = useState('')
+  
+  // Groups state
+  const [userGroups, setUserGroups] = useState<any[]>([])
+  const [groupsLoading, setGroupsLoading] = useState(false)
   const [userLocation, setUserLocation] = useState<{lat: number, lon: number} | null>(null)
   const [locationLoading, setLocationLoading] = useState(false)
   const [nearbyCourses, setNearbyCourses] = useState<any[]>([])
@@ -146,6 +152,14 @@ export default function Dashboard() {
       }
     }
   }, [activeTab])
+
+  // Load user groups when Groups tab is opened
+  useEffect(() => {
+    if (activeTab === 'groups') {
+      console.log('🔄 Loading user groups for Groups tab...')
+      fetchUserGroups()
+    }
+  }, [activeTab, user?.id])
 
   // Load tee times when Overview tab is opened
   useEffect(() => {
@@ -1306,8 +1320,22 @@ export default function Dashboard() {
   const handleCourseSearch = async () => {
     try {
       setCourseSearchLoading(true)
-      const query = courseSearchQuery ? `?query=${encodeURIComponent(courseSearchQuery)}` : ''
-      const response = await fetch(`/api/golf-courses${query}`)
+      
+      // Build query parameters
+      const params = new URLSearchParams()
+      if (courseSearchQuery) {
+        params.append('query', courseSearchQuery)
+      }
+      if (zipCode) {
+        params.append('zipCode', zipCode)
+        params.append('radius', searchRadius.toString())
+      }
+      
+      const queryString = params.toString()
+      const url = queryString ? `/api/golf-courses?${queryString}` : '/api/golf-courses'
+      
+      console.log('🔍 Course search URL:', url)
+      const response = await fetch(url)
       
       if (response.ok) {
         const data = await response.json()
@@ -1458,6 +1486,29 @@ export default function Dashboard() {
     }
   }
   
+  // Fetch user's groups
+  const fetchUserGroups = async () => {
+    if (!user?.id) return
+    
+    setGroupsLoading(true)
+    try {
+      const response = await fetch(`/api/groups?user_id=${user.id}`)
+      if (response.ok) {
+        const data = await response.json()
+        setUserGroups(data.groups || [])
+        console.log('👥 Fetched user groups:', data.groups?.length || 0)
+      } else {
+        console.error('❌ Failed to fetch user groups')
+        setUserGroups([])
+      }
+    } catch (error) {
+      console.error('❌ Error fetching user groups:', error)
+      setUserGroups([])
+    } finally {
+      setGroupsLoading(false)
+    }
+  }
+
   const handleSearch = async () => {
     if (!searchQuery.trim()) return
     
@@ -2610,32 +2661,104 @@ export default function Dashboard() {
               </div>
                 
                 {/* Course Search */}
-              <div className="flex space-x-3 mb-6">
-                        <input
-                          type="text"
-                  placeholder="Search courses by name or location..."
-                          value={courseSearchQuery}
-                          onChange={(e) => setCourseSearchQuery(e.target.value)}
-                  className="flex-1 px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300"
-                        />
-                        <button
-                          onClick={handleCourseSearch}
-                          disabled={courseSearchLoading}
-                  className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-6 py-3 rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed"
-                >
-                  {courseSearchLoading ? 'Searching...' : 'Search'}
-                        </button>
+              <div className="space-y-4 mb-6">
+                {/* Search Input */}
+                <div className="flex space-x-3">
+                  <input
+                    type="text"
+                    placeholder="Search courses by name or location..."
+                    value={courseSearchQuery}
+                    onChange={(e) => setCourseSearchQuery(e.target.value)}
+                    className="flex-1 px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300"
+                  />
+                  <button
+                    onClick={handleCourseSearch}
+                    disabled={courseSearchLoading}
+                    className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-6 py-3 rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed"
+                  >
+                    {courseSearchLoading ? 'Searching...' : 'Search'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCourseSearchQuery('')
+                      setZipCode('')
+                      handleCourseSearch()
+                    }}
+                    disabled={courseSearchLoading}
+                    className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-6 py-3 rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed"
+                  >
+                    Show All
+                  </button>
+                </div>
+
+                {/* Location Filter */}
+                <div className="flex space-x-3 items-center">
+                  <div className="flex items-center space-x-2">
+                    <MapPin className="h-5 w-5 text-slate-400" />
+                    <span className="text-slate-300 font-medium">Find courses near:</span>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Enter ZIP code (e.g., 12345)"
+                    value={zipCode}
+                    onChange={(e) => setZipCode(e.target.value)}
+                    className="px-4 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300"
+                  />
+                  <select
+                    value={searchRadius}
+                    onChange={(e) => setSearchRadius(parseInt(e.target.value))}
+                    className="px-4 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white transition-all duration-300"
+                  >
+                    <option value={50}>50 miles</option>
+                    <option value={100}>100 miles</option>
+                    <option value={150}>150 miles</option>
+                    <option value={200}>200 miles</option>
+                    <option value={250}>250 miles</option>
+                    <option value={500}>500 miles</option>
+                  </select>
+                  <button
+                    onClick={handleCourseSearch}
+                    disabled={courseSearchLoading || !zipCode}
+                    className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed"
+                  >
+                    Find Nearby
+                  </button>
+                </div>
+
+                {/* Active Filters Display */}
+                {(courseSearchQuery || zipCode) && (
+                  <div className="flex flex-wrap gap-2">
+                    {courseSearchQuery && (
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800">
+                        Search: "{courseSearchQuery}"
                         <button
                           onClick={() => {
                             setCourseSearchQuery('')
                             handleCourseSearch()
                           }}
-                          disabled={courseSearchLoading}
-                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-6 py-3 rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed"
-                >
-                  Show All
+                          className="ml-2 text-blue-600 hover:text-blue-800"
+                        >
+                          <X className="h-3 w-3" />
                         </button>
-                </div>
+                      </span>
+                    )}
+                    {zipCode && (
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-purple-100 text-purple-800">
+                        Within {searchRadius}mi of {zipCode}
+                        <button
+                          onClick={() => {
+                            setZipCode('')
+                            handleCourseSearch()
+                          }}
+                          className="ml-2 text-purple-600 hover:text-purple-800"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
 
                 {/* Location Filtering */}
                 <div className="flex flex-wrap gap-3 mb-6">
@@ -2723,61 +2846,61 @@ export default function Dashboard() {
               {(showNearbyOnly ? nearbyCourses : courseSearchResults) && (showNearbyOnly ? nearbyCourses : courseSearchResults).length > 0 ? (
                 <div className="space-y-4">
                   {(showNearbyOnly ? nearbyCourses : courseSearchResults)?.map((course) => (
-                    <div key={course.id} className="bg-slate-800/50 border border-slate-600/50 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
-                        <div className="flex items-start justify-between mb-4">
+                    <div key={course.id} className="bg-slate-800/50 border border-slate-600/50 rounded-xl p-4 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-4 gap-4">
                         <div className="flex-1">
-                          <div className="flex items-start gap-4">
+                          <div className="flex flex-col sm:flex-row sm:items-start gap-4">
                             {/* Golf Course Logo */}
                             {(course.course_image_url || course.logo_url) ? (
-                              <div className="flex-shrink-0">
-                                <div className="w-20 h-20 rounded-xl overflow-hidden border-2 border-emerald-500/30 shadow-lg">
+                              <div className="flex-shrink-0 mx-auto sm:mx-0">
+                                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border-2 border-emerald-500/30 shadow-lg">
                                   <img
                                     src={course.course_image_url || course.logo_url}
                                     alt={`${course.name} logo`}
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
                                       e.currentTarget.style.display = 'none'
-                                      e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center"><svg class="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></div>'
+                                      e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center"><svg class="h-6 w-6 sm:h-8 sm:w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></div>'
                                     }}
                                   />
                                 </div>
                               </div>
                             ) : (
-                              <div className="flex-shrink-0">
-                                <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center border-2 border-emerald-500/30 shadow-lg">
-                                  <Flag className="h-8 w-8 text-white" />
+                              <div className="flex-shrink-0 mx-auto sm:mx-0">
+                                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center border-2 border-emerald-500/30 shadow-lg">
+                                  <Flag className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
                                 </div>
                               </div>
                             )}
-                            <div className="flex-1">
-                              <h3 className="text-white font-bold text-2xl mb-2">{course.name}</h3>
+                            <div className="flex-1 text-center sm:text-left">
+                              <h3 className="text-white font-bold text-xl sm:text-2xl mb-2">{course.name}</h3>
                               
                               {/* Location and Distance */}
-                              <div className="flex items-center space-x-4 text-slate-300 text-sm mb-3">
-                                <div className="flex items-center space-x-1">
+                              <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 text-slate-300 text-sm mb-3">
+                                <div className="flex items-center justify-center sm:justify-start space-x-1">
                                   <MapPin className="h-4 w-4 text-emerald-400" />
                                   <span>{course.location}</span>
                                 </div>
                                 {course.distance && (
-                                  <div className="flex items-center space-x-1">
-                                    <span className="text-emerald-400 font-medium">
-                                      {course.distance.toFixed(1)} miles away
+                                  <div className="flex items-center justify-center sm:justify-start space-x-1">
+                                    <span className="text-purple-400 font-medium">
+                                      {Math.round(course.distance * 10) / 10} mi away
                                     </span>
                                   </div>
                                 )}
                               </div>
                               
                               {/* Course Stats */}
-                              <div className="flex items-center space-x-6 mb-3">
+                              <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-6 mb-3">
                                 {/* Par */}
-                                <div className="flex items-center space-x-2">
+                                <div className="flex items-center justify-center sm:justify-start space-x-2">
                                   <Flag className="h-4 w-4 text-blue-400" />
                                   <span className="text-slate-400 text-sm">Par:</span>
                                   <span className="text-white font-semibold text-lg">{course.par || 'N/A'}</span>
                                 </div>
                                 
                                 {/* Public/Private Status */}
-                                <div className="flex items-center space-x-2">
+                                <div className="flex items-center justify-center sm:justify-start space-x-2">
                                   <div className={`w-3 h-3 rounded-full ${course.course_type === 'private' ? 'bg-red-500' : 'bg-green-500'}`}></div>
                                   <span className="text-slate-400 text-sm">Type:</span>
                                   <span className={`font-semibold text-sm ${course.course_type === 'private' ? 'text-red-400' : 'text-green-400'}`}>
@@ -2787,7 +2910,7 @@ export default function Dashboard() {
                                 
                                 {/* Holes */}
                                 {course.holes && (
-                                  <div className="flex items-center space-x-2">
+                                  <div className="flex items-center justify-center sm:justify-start space-x-2">
                                     <Target className="h-4 w-4 text-purple-400" />
                                     <span className="text-slate-400 text-sm">Holes:</span>
                                     <span className="text-white font-semibold">{course.holes}</span>
@@ -2795,15 +2918,15 @@ export default function Dashboard() {
                                 )}
                               </div>
                               
-                              <p className="text-slate-200 leading-relaxed">{course.description}</p>
+                              <p className="text-slate-200 leading-relaxed text-sm sm:text-base">{course.description}</p>
                             </div>
                           </div>
                             </div>
-                        <div className="text-right">
-                          <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl px-4 py-3 text-center shadow-lg">
+                        <div className="text-center sm:text-right">
+                          <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-center shadow-lg inline-block">
                             <div className="flex items-center justify-center space-x-1 mb-1">
-                              <Star className="h-5 w-5 text-yellow-400 fill-current" />
-                              <span className="text-white font-bold text-xl">{course.average_rating || 'N/A'}</span>
+                              <Star className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-400 fill-current" />
+                              <span className="text-white font-bold text-lg sm:text-xl">{course.average_rating || 'N/A'}</span>
                             </div>
                             <div className="text-emerald-100 text-xs">
                               {course.review_count || 0} reviews
@@ -2982,69 +3105,52 @@ export default function Dashboard() {
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-white">My Groups</h3>
                 
-                {/* Group Info */}
-                <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-600/50">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-lg font-semibold text-white">Weekend Warriors</h4>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm text-slate-400">8 members</span>
-                      <button
-                        onClick={() => setShowGroupModal(true)}
-                        className="text-emerald-400 hover:text-emerald-300 text-sm font-medium"
-                      >
-                        Manage
-                      </button>
-                    </div>
+                {groupsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
+                    <span className="ml-3 text-slate-300">Loading groups...</span>
                   </div>
-                  <p className="text-slate-300 mb-4">Your active golf group for weekend rounds</p>
-                  
-                  {/* Group Members */}
-                  <div className="mb-4">
-                    <h5 className="text-sm font-medium text-white mb-2">Members</h5>
-                    <div className="flex flex-wrap gap-2">
-                      {['John', 'Sarah', 'Mike', 'Lisa', 'Tom', 'Emma', 'Alex', 'You'].map((name, index) => (
-                        <div key={index} className="flex items-center space-x-1 bg-slate-700/50 px-2 py-1 rounded-lg">
-                          <div className="w-6 h-6 bg-emerald-500/20 rounded-full flex items-center justify-center text-xs font-medium text-emerald-400">
-                            {name[0]}
-                          </div>
-                          <span className="text-xs text-slate-300">{name}</span>
-                        </div>
-                      ))}
-                    </div>
+                ) : userGroups.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Users className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                    <h4 className="text-lg font-medium text-slate-300 mb-2">No Groups Yet</h4>
+                    <p className="text-slate-400 mb-4">You haven't joined any groups yet. Create one or search for existing groups.</p>
+                    <button
+                      onClick={handleCreateGroup}
+                      className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 py-3 rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                    >
+                      Create Your First Group
+                    </button>
                   </div>
-                  
-                  {/* Group Chat */}
-                  <div className="bg-slate-700/50 rounded-lg p-4 border border-slate-600/50">
-                    <h5 className="font-medium text-white mb-3">Group Chat</h5>
-                    <div className="space-y-3 mb-4 max-h-40 overflow-y-auto">
-                      {groupMessages.map((message) => (
-                        <div key={message.id} className="flex items-start space-x-2">
-                          <div className="h-6 w-6 bg-emerald-500/20 rounded-full flex items-center justify-center text-xs font-medium text-emerald-400">
-                            {message.sender.first_name[0]}
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm text-slate-200">{message.message_content}</p>
-                            <p className="text-xs text-slate-400">{message.timestamp}</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {userGroups.map((group: any) => (
+                      <div key={group.id} className="bg-slate-800/50 rounded-xl p-6 border border-slate-600/50">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-lg font-semibold text-white">{group.name}</h4>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm text-slate-400">{group.member_count || 0} members</span>
+                            <button
+                              onClick={() => setShowGroupModal(true)}
+                              className="text-emerald-400 hover:text-emerald-300 text-sm font-medium"
+                            >
+                              Manage
+                            </button>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                    <div className="flex space-x-2">
-                      <input
-                        type="text"
-                        placeholder="Type a message..."
-                        value={groupMessageText}
-                        onChange={(e) => setGroupMessageText(e.target.value)}
-                        className="flex-1 px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300"
-                      />
-                      <button
-                        onClick={handleSendGroupMessage}
-                        className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-4 py-2 rounded-lg transition-all duration-300 text-sm font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-                      >
-                        Send
-                      </button>
-                    </div>
+                        <p className="text-slate-300 mb-4">{group.description || 'No description available'}</p>
+                        <div className="flex space-x-2">
+                          <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                            View Group
+                          </button>
+                          <button className="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                            Leave Group
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
+                )}
                 </div>
               </div>
             </div>
