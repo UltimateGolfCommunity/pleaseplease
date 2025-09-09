@@ -39,7 +39,16 @@ export interface UserProfile {
   bio: string | null
   handicap: number | null
   home_course: string | null
+  home_club: string | null
   location: string | null
+  years_playing: number | null
+  favorite_course: string | null
+  playing_style: string | null
+  goals: string | null
+  experience_level: string | null
+  preferred_playing_days: string[] | null
+  preferred_playing_times: string[] | null
+  golf_goals: string[] | null
   total_points: number
   member_since: string
   created_at: string
