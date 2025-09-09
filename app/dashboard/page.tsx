@@ -2855,12 +2855,12 @@ export default function Dashboard() {
                       )}
                       
                       <div className="flex space-x-3 mt-4">
-                          <button 
-                            onClick={() => handleViewCourse(course.id)}
-                          className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white py-2 px-4 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                          <Link 
+                            href={`/courses/${course.id}`}
+                            className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white py-2 px-4 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 text-center"
                           >
                             View Details
-                          </button>
+                          </Link>
                         <button 
                           onClick={() => handleWriteReview(course)}
                           className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-2 px-4 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1"
