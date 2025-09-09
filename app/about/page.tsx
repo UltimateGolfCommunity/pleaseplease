@@ -75,7 +75,7 @@ export default function AboutPage() {
                 <div className="flex justify-center">
                   <div className="relative">
                     <video
-                      src="/todd-phillips-video.mov"
+                      src="/luke-restall-video.mov"
                       autoPlay
                       loop
                       muted
@@ -90,7 +90,7 @@ export default function AboutPage() {
                     <div className="absolute inset-0 flex flex-col justify-center items-center bg-black/30 rounded-2xl">
                       <div className="text-center">
                         <h2 className="text-4xl sm:text-5xl font-bold text-white mb-2 drop-shadow-lg">
-                          Todd Phillips
+                          Luke Restall
                         </h2>
                         <p className="text-xl sm:text-2xl text-emerald-400 font-semibold drop-shadow-lg">
                           Founder & CEO
@@ -109,13 +109,13 @@ export default function AboutPage() {
                 <div className="max-w-4xl mx-auto space-y-6">
                   <div className="space-y-4 text-gray-700 dark:text-slate-300 leading-relaxed text-center">
                     <p className="text-lg">
-                      Todd's journey into golf began like many others - showing up at a municipal golf course, 
+                      Luke's journey into golf began like many others - showing up at a municipal golf course, 
                       getting paired with strangers, and hoping for the best. What he discovered was something 
                       magical: the power of golf to bring people together.
                     </p>
                     
                     <p className="text-lg">
-                      Through countless rounds with random playing partners, Todd built a network of friends 
+                      Through countless rounds with random playing partners, Luke built a network of friends 
                       that would become some of his closest relationships. These weren't just golf buddies - 
                       they became lifelong friends, business partners, and even family.
                     </p>
