@@ -55,6 +55,7 @@ export default function MessagingSystem() {
   const [selectedRecipient, setSelectedRecipient] = useState<any>(null)
   const [composeMessage, setComposeMessage] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showMobileConversation, setShowMobileConversation] = useState(false)
 
   useEffect(() => {
     if (currentUser?.id) {
@@ -136,6 +137,7 @@ export default function MessagingSystem() {
       
       setConversationMessages(filteredMessages)
       setSelectedConversation(userId)
+      setShowMobileConversation(true)
 
       // Mark messages as read
       const unreadMessages = filteredMessages.filter((msg: Message) => 
@@ -310,114 +312,187 @@ export default function MessagingSystem() {
         {/* Conversations Tab */}
         {activeTab === 'conversations' && (
           <>
-            {/* Conversations List */}
-            <div className="w-full sm:w-1/3 border-r-0 sm:border-r border-gray-700/50 pr-0 sm:pr-4 mb-4 sm:mb-0">
-              {loading ? (
-                <div className="text-center text-gray-400 py-6 text-sm sm:text-base">Loading conversations...</div>
-              ) : conversations.length === 0 ? (
-                <div className="text-center text-gray-400 py-6 text-sm sm:text-base">No conversations yet</div>
-              ) : (
-                <div className="space-y-3 max-h-40 sm:max-h-full overflow-y-auto px-1">
-                  {conversations.map((conversation) => (
+            {/* Mobile: Show conversation list or conversation detail */}
+            {showMobileConversation && selectedConversation ? (
+              /* Mobile Conversation Detail View */
+              <div className="w-full flex flex-col">
+                {/* Mobile Header with Back Button */}
+                <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-700/50">
+                  <button
+                    onClick={() => setShowMobileConversation(false)}
+                    className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors"
+                  >
+                    <X className="h-5 w-5" />
+                    <span className="text-sm">Back</span>
+                  </button>
+                  <div className="text-white font-medium">
+                    {conversations.find(c => c.user.id === selectedConversation)?.user.first_name} {conversations.find(c => c.user.id === selectedConversation)?.user.last_name}
+                  </div>
+                  <div className="w-16"></div> {/* Spacer for centering */}
+                </div>
+
+                {/* Messages */}
+                <div className="flex-1 overflow-y-auto space-y-4 mb-6 px-2">
+                  {conversationMessages.map((message) => (
                     <div
-                      key={conversation.user.id}
-                      onClick={() => fetchConversation(conversation.user.id)}
-                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                        selectedConversation === conversation.user.id
-                          ? 'bg-emerald-500/20 border border-emerald-400/30'
-                          : 'bg-gray-700/30 hover:bg-gray-700/50'
+                      key={message.id}
+                      className={`flex ${
+                        message.sender.id === currentUser.id ? 'justify-end' : 'justify-start'
                       }`}
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-full flex items-center justify-center">
-                            <User className="h-5 w-5 text-black" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="text-white font-medium text-sm sm:text-base truncate">
-                              {conversation.user.first_name} {conversation.user.last_name}
-                            </div>
-                            <div className="text-gray-400 text-xs sm:text-sm truncate max-w-28 sm:max-w-36">
-                              {conversation.lastMessage.message_content}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          <div className="text-xs text-gray-400 mb-1">
-                            {formatTimeAgo(conversation.lastMessage.created_at)}
-                          </div>
-                          {conversation.unreadCount > 0 && (
-                            <div className="bg-emerald-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                              {conversation.unreadCount}
-                            </div>
+                      <div
+                        className={`max-w-xs sm:max-w-sm lg:max-w-md px-4 py-3 rounded-lg ${
+                          message.sender.id === currentUser.id
+                            ? 'bg-emerald-500 text-white'
+                            : 'bg-gray-700 text-white'
+                        }`}
+                      >
+                        <div className="text-sm sm:text-base leading-relaxed">{message.message_content}</div>
+                        <div className="text-xs opacity-75 mt-2 flex items-center justify-between">
+                          <span>{formatTimeAgo(message.created_at)}</span>
+                          {message.sender.id === currentUser.id && (
+                            <span className="ml-2">
+                              {message.is_read ? <CheckCircle className="h-3 w-3 inline text-emerald-200" /> : <Clock className="h-3 w-3 inline text-emerald-200" />}
+                            </span>
                           )}
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
 
-            {/* Messages View */}
-            <div className="flex-1 pl-2 sm:pl-4 flex flex-col">
-              {selectedConversation ? (
-                <>
-                  {/* Messages */}
-                  <div className="flex-1 overflow-y-auto space-y-4 mb-6 px-2">
-                    {conversationMessages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={`flex ${
-                          message.sender.id === currentUser.id ? 'justify-end' : 'justify-start'
-                        }`}
-                      >
+                {/* Message Input */}
+                <div className="flex space-x-3 bg-gray-800/30 rounded-xl p-3 border border-gray-600/30">
+                  <input
+                    type="text"
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                    placeholder="Type a message..."
+                    className="flex-1 bg-gray-700/50 text-white placeholder-gray-400 border border-gray-600/50 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm sm:text-base"
+                  />
+                  <button
+                    onClick={sendMessage}
+                    disabled={!newMessage.trim()}
+                    className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center min-w-[50px]"
+                  >
+                    <Send className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Desktop: Side-by-side layout OR Mobile: Conversation list only */
+              <>
+                {/* Conversations List */}
+                <div className="w-full sm:w-1/3 border-r-0 sm:border-r border-gray-700/50 pr-0 sm:pr-4 mb-4 sm:mb-0">
+                  {loading ? (
+                    <div className="text-center text-gray-400 py-6 text-sm sm:text-base">Loading conversations...</div>
+                  ) : conversations.length === 0 ? (
+                    <div className="text-center text-gray-400 py-6 text-sm sm:text-base">No conversations yet</div>
+                  ) : (
+                    <div className="space-y-3 max-h-40 sm:max-h-full overflow-y-auto px-1">
+                      {conversations.map((conversation) => (
                         <div
-                          className={`max-w-xs sm:max-w-sm lg:max-w-md px-4 py-3 rounded-lg ${
-                            message.sender.id === currentUser.id
-                              ? 'bg-emerald-500 text-white'
-                              : 'bg-gray-700 text-white'
+                          key={conversation.user.id}
+                          onClick={() => fetchConversation(conversation.user.id)}
+                          className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                            selectedConversation === conversation.user.id
+                              ? 'bg-emerald-500/20 border border-emerald-400/30'
+                              : 'bg-gray-700/30 hover:bg-gray-700/50'
                           }`}
                         >
-                          <div className="text-sm sm:text-base leading-relaxed">{message.message_content}</div>
-                          <div className="text-xs opacity-75 mt-2 flex items-center justify-between">
-                            <span>{formatTimeAgo(message.created_at)}</span>
-                            {message.sender.id === currentUser.id && (
-                              <span className="ml-2">
-                                {message.is_read ? <CheckCircle className="h-3 w-3 inline text-emerald-200" /> : <Clock className="h-3 w-3 inline text-emerald-200" />}
-                              </span>
-                            )}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-full flex items-center justify-center">
+                                <User className="h-5 w-5 text-black" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="text-white font-medium text-sm sm:text-base truncate">
+                                  {conversation.user.first_name} {conversation.user.last_name}
+                                </div>
+                                <div className="text-gray-400 text-xs sm:text-sm truncate max-w-28 sm:max-w-36">
+                                  {conversation.lastMessage.message_content}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <div className="text-xs text-gray-400 mb-1">
+                                {formatTimeAgo(conversation.lastMessage.created_at)}
+                              </div>
+                              {conversation.unreadCount > 0 && (
+                                <div className="bg-emerald-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                  {conversation.unreadCount}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Message Input */}
-                  <div className="flex space-x-3 bg-gray-800/30 rounded-xl p-3 border border-gray-600/30">
-                    <input
-                      type="text"
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                      placeholder="Type a message..."
-                      className="flex-1 bg-gray-700/50 text-white placeholder-gray-400 border border-gray-600/50 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm sm:text-base"
-                    />
-                    <button
-                      onClick={sendMessage}
-                      disabled={!newMessage.trim()}
-                      className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center min-w-[50px]"
-                    >
-                      <Send className="h-4 w-4" />
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className="flex-1 flex items-center justify-center text-gray-400">
-                  Select a conversation to start messaging
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+
+                {/* Messages View - Desktop Only */}
+                <div className="hidden sm:flex flex-1 pl-4 flex-col">
+                  {selectedConversation ? (
+                    <>
+                      {/* Messages */}
+                      <div className="flex-1 overflow-y-auto space-y-4 mb-6 px-2">
+                        {conversationMessages.map((message) => (
+                          <div
+                            key={message.id}
+                            className={`flex ${
+                              message.sender.id === currentUser.id ? 'justify-end' : 'justify-start'
+                            }`}
+                          >
+                            <div
+                              className={`max-w-xs sm:max-w-sm lg:max-w-md px-4 py-3 rounded-lg ${
+                                message.sender.id === currentUser.id
+                                  ? 'bg-emerald-500 text-white'
+                                  : 'bg-gray-700 text-white'
+                              }`}
+                            >
+                              <div className="text-sm sm:text-base leading-relaxed">{message.message_content}</div>
+                              <div className="text-xs opacity-75 mt-2 flex items-center justify-between">
+                                <span>{formatTimeAgo(message.created_at)}</span>
+                                {message.sender.id === currentUser.id && (
+                                  <span className="ml-2">
+                                    {message.is_read ? <CheckCircle className="h-3 w-3 inline text-emerald-200" /> : <Clock className="h-3 w-3 inline text-emerald-200" />}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Message Input */}
+                      <div className="flex space-x-3 bg-gray-800/30 rounded-xl p-3 border border-gray-600/30">
+                        <input
+                          type="text"
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                          placeholder="Type a message..."
+                          className="flex-1 bg-gray-700/50 text-white placeholder-gray-400 border border-gray-600/50 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm sm:text-base"
+                        />
+                        <button
+                          onClick={sendMessage}
+                          disabled={!newMessage.trim()}
+                          className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center min-w-[50px]"
+                        >
+                          <Send className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center text-gray-400">
+                      Select a conversation to start messaging
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </>
         )}
 
