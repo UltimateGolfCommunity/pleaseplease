@@ -441,8 +441,41 @@ export default function HomePage() {
             </div>
           </div>
 
+          {/* Social Media Section */}
+          <div className="mt-16 mb-8">
+            <div className="text-center mb-8">
+              <h3 className="text-2xl font-bold text-white mb-4">Follow Us on Social Media</h3>
+              <p className="text-gray-400">Stay connected and get the latest golf tips, community updates, and exclusive content</p>
+            </div>
+            
+            <div className="flex justify-center">
+              <a
+                href="https://www.tiktok.com/@ultimategolfcommunity"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group bg-gradient-to-r from-gray-800/50 to-gray-900/50 border border-gray-700/50 rounded-2xl p-6 backdrop-blur-sm hover:border-pink-500/50 transition-all duration-300 hover:transform hover:scale-105 max-w-sm"
+              >
+                <div className="flex items-center space-x-4">
+                  <div className="bg-gradient-to-br from-pink-500/20 to-purple-500/20 w-16 h-16 rounded-2xl flex items-center justify-center group-hover:from-pink-500/30 group-hover:to-purple-500/30 transition-all duration-300">
+                    <svg className="h-8 w-8 text-pink-400" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+                    </svg>
+                  </div>
+                  <div className="text-left">
+                    <h4 className="text-lg font-semibold text-white group-hover:text-pink-300 transition-colors duration-300">
+                      @ultimategolfcommunity
+                    </h4>
+                    <p className="text-gray-400 text-sm group-hover:text-gray-300 transition-colors duration-300">
+                      Follow us on TikTok for golf tips, tricks, and community highlights
+                    </p>
+                  </div>
+                </div>
+              </a>
+            </div>
+          </div>
+
           {/* Footer */}
-          <div className="mt-16 pt-8 border-t border-gray-800">
+          <div className="mt-8 pt-8 border-t border-gray-800">
             <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
               <div className="flex items-center space-x-6">
                 <Link
