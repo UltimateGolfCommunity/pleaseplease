@@ -2723,38 +2723,88 @@ export default function Dashboard() {
               {(showNearbyOnly ? nearbyCourses : courseSearchResults) && (showNearbyOnly ? nearbyCourses : courseSearchResults).length > 0 ? (
                 <div className="space-y-4">
                   {(showNearbyOnly ? nearbyCourses : courseSearchResults)?.map((course) => (
-                    <div key={course.id} className="bg-slate-800/50 border border-slate-600/50 rounded-xl p-6">
+                    <div key={course.id} className="bg-slate-800/50 border border-slate-600/50 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
                         <div className="flex items-start justify-between mb-4">
                         <div className="flex-1">
                           <div className="flex items-start gap-4">
-                            {/* Course Image */}
-                            {course.course_image_url && (
+                            {/* Golf Course Logo */}
+                            {course.course_image_url ? (
                               <div className="flex-shrink-0">
-                                <img
-                                  src={course.course_image_url}
-                                  alt={course.name}
-                                  className="w-20 h-20 rounded-lg object-cover border border-slate-600/50"
-                                />
+                                <div className="w-20 h-20 rounded-xl overflow-hidden border-2 border-emerald-500/30 shadow-lg">
+                                  <img
+                                    src={course.course_image_url}
+                                    alt={`${course.name} logo`}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex-shrink-0">
+                                <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center border-2 border-emerald-500/30 shadow-lg">
+                                  <Flag className="h-8 w-8 text-white" />
+                                </div>
                               </div>
                             )}
                             <div className="flex-1">
-                          <h3 className="text-white font-semibold text-xl">{course.name}</h3>
-                          <p className="text-slate-300 text-sm">{course.location}</p>
-                              {course.distance && (
-                                <div className="flex items-center space-x-1 mt-1">
-                                  <MapPin className="h-3 w-3 text-emerald-400" />
-                                  <span className="text-emerald-400 text-xs font-medium">
-                                    {course.distance.toFixed(1)} miles away
+                              <h3 className="text-white font-bold text-2xl mb-2">{course.name}</h3>
+                              
+                              {/* Location and Distance */}
+                              <div className="flex items-center space-x-4 text-slate-300 text-sm mb-3">
+                                <div className="flex items-center space-x-1">
+                                  <MapPin className="h-4 w-4 text-emerald-400" />
+                                  <span>{course.location}</span>
+                                </div>
+                                {course.distance && (
+                                  <div className="flex items-center space-x-1">
+                                    <span className="text-emerald-400 font-medium">
+                                      {course.distance.toFixed(1)} miles away
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {/* Course Stats */}
+                              <div className="flex items-center space-x-6 mb-3">
+                                {/* Par */}
+                                <div className="flex items-center space-x-2">
+                                  <Flag className="h-4 w-4 text-blue-400" />
+                                  <span className="text-slate-400 text-sm">Par:</span>
+                                  <span className="text-white font-semibold text-lg">{course.par || 'N/A'}</span>
+                                </div>
+                                
+                                {/* Public/Private Status */}
+                                <div className="flex items-center space-x-2">
+                                  <div className={`w-3 h-3 rounded-full ${course.course_type === 'private' ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                                  <span className="text-slate-400 text-sm">Type:</span>
+                                  <span className={`font-semibold text-sm ${course.course_type === 'private' ? 'text-red-400' : 'text-green-400'}`}>
+                                    {course.course_type === 'private' ? 'Private' : 'Public'}
                                   </span>
                                 </div>
-                              )}
-                          <p className="text-slate-200 mt-2">{course.description}</p>
+                                
+                                {/* Holes */}
+                                {course.holes && (
+                                  <div className="flex items-center space-x-2">
+                                    <Target className="h-4 w-4 text-purple-400" />
+                                    <span className="text-slate-400 text-sm">Holes:</span>
+                                    <span className="text-white font-semibold">{course.holes}</span>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <p className="text-slate-200 leading-relaxed">{course.description}</p>
                             </div>
                           </div>
                             </div>
                         <div className="text-right">
-                          <div className="text-2xl font-bold text-emerald-400">{course.average_rating}</div>
-                          <div className="text-sm text-slate-400">{course.review_count} reviews</div>
+                          <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl px-4 py-3 text-center shadow-lg">
+                            <div className="flex items-center justify-center space-x-1 mb-1">
+                              <Star className="h-5 w-5 text-yellow-400 fill-current" />
+                              <span className="text-white font-bold text-xl">{course.average_rating || 'N/A'}</span>
+                            </div>
+                            <div className="text-emerald-100 text-xs">
+                              {course.review_count || 0} reviews
+                            </div>
+                          </div>
                           </div>
                             </div>
                       <div className="grid grid-cols-3 gap-4 text-sm mb-4">
