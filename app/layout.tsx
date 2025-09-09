@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     siteName: 'Ultimate Golf Community',
     images: [
       {
-        url: '/NEWLOGOREAL.png?v=2',
+        url: '/NEWLOGOREAL.png?v=3',
         width: 1200,
         height: 630,
         alt: 'Ultimate Golf Community Logo',
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Ultimate Golf Community - Connect, Play, Improve',
     description: 'Connect with golfers, book tee times, track your game, and join the ultimate golf community.',
-    images: ['/NEWLOGOREAL.png?v=2'],
+    images: ['/NEWLOGOREAL.png?v=3'],
     creator: '@UltimateGolfCommunity',
     site: '@UltimateGolfCommunity',
   },
@@ -77,12 +77,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/NEWLOGOREAL.png?v=2" type="image/png" />
-        <link rel="apple-touch-icon" href="/NEWLOGOREAL.png?v=2" />
-        <link rel="shortcut icon" href="/NEWLOGOREAL.png?v=2" />
+        <link rel="icon" href="/NEWLOGOREAL.png?v=3" type="image/png" />
+        <link rel="apple-touch-icon" href="/NEWLOGOREAL.png?v=3" />
+        <link rel="shortcut icon" href="/NEWLOGOREAL.png?v=3" />
         <meta name="theme-color" content="#1f2937" />
         <meta name="msapplication-TileColor" content="#1f2937" />
-        <meta name="msapplication-TileImage" content="/NEWLOGOREAL.png?v=2" />
+        <meta name="msapplication-TileImage" content="/NEWLOGOREAL.png?v=3" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:image:type" content="image/png" />
