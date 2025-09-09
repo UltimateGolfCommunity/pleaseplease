@@ -208,7 +208,7 @@ export default function HomePage() {
       {/* Floating Stats Section */}
       <div className="relative -mt-20 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             <div className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-md border border-gray-700/50 rounded-2xl p-6 text-center transform hover:scale-105 transition-all duration-300">
               <div className="bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Users className="h-8 w-8 text-emerald-400" />
@@ -223,14 +223,6 @@ export default function HomePage() {
               </div>
               <div className="text-3xl font-bold text-white mb-2">500+</div>
               <div className="text-gray-400">Golf Courses</div>
-            </div>
-            
-            <div className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-md border border-gray-700/50 rounded-2xl p-6 text-center transform hover:scale-105 transition-all duration-300">
-              <div className="bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <TrendingUp className="h-8 w-8 text-emerald-400" />
-              </div>
-              <div className="text-3xl font-bold text-white mb-2">95%</div>
-              <div className="text-gray-400">Satisfaction Rate</div>
             </div>
           </div>
         </div>
