@@ -272,7 +272,7 @@ export default function MessagingSystem() {
   }
 
   return (
-    <div className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-4 sm:p-6 h-[500px] sm:h-[600px] flex flex-col">
+    <div className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-4 sm:p-6 h-[600px] sm:h-[700px] flex flex-col">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-4">
         <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center">
@@ -313,31 +313,31 @@ export default function MessagingSystem() {
             {/* Conversations List */}
             <div className="w-full sm:w-1/3 border-r-0 sm:border-r border-gray-700/50 pr-0 sm:pr-4 mb-4 sm:mb-0">
               {loading ? (
-                <div className="text-center text-gray-400 py-4 text-sm sm:text-base">Loading conversations...</div>
+                <div className="text-center text-gray-400 py-6 text-sm sm:text-base">Loading conversations...</div>
               ) : conversations.length === 0 ? (
-                <div className="text-center text-gray-400 py-4 text-sm sm:text-base">No conversations yet</div>
+                <div className="text-center text-gray-400 py-6 text-sm sm:text-base">No conversations yet</div>
               ) : (
-                <div className="space-y-2 max-h-32 sm:max-h-full overflow-y-auto">
+                <div className="space-y-3 max-h-40 sm:max-h-full overflow-y-auto px-1">
                   {conversations.map((conversation) => (
                     <div
                       key={conversation.user.id}
                       onClick={() => fetchConversation(conversation.user.id)}
-                      className={`p-2 sm:p-3 rounded-lg cursor-pointer transition-colors ${
+                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
                         selectedConversation === conversation.user.id
                           ? 'bg-emerald-500/20 border border-emerald-400/30'
                           : 'bg-gray-700/30 hover:bg-gray-700/50'
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2 sm:space-x-3">
-                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-full flex items-center justify-center">
-                            <User className="h-4 w-4 sm:h-5 sm:w-5 text-black" />
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-full flex items-center justify-center">
+                            <User className="h-5 w-5 text-black" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="text-white font-medium text-sm sm:text-base truncate">
                               {conversation.user.first_name} {conversation.user.last_name}
                             </div>
-                            <div className="text-gray-400 text-xs sm:text-sm truncate max-w-24 sm:max-w-32">
+                            <div className="text-gray-400 text-xs sm:text-sm truncate max-w-28 sm:max-w-36">
                               {conversation.lastMessage.message_content}
                             </div>
                           </div>
@@ -347,7 +347,7 @@ export default function MessagingSystem() {
                             {formatTimeAgo(conversation.lastMessage.created_at)}
                           </div>
                           {conversation.unreadCount > 0 && (
-                            <div className="bg-emerald-500 text-white text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center">
+                            <div className="bg-emerald-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                               {conversation.unreadCount}
                             </div>
                           )}
@@ -364,7 +364,7 @@ export default function MessagingSystem() {
               {selectedConversation ? (
                 <>
                   {/* Messages */}
-                  <div className="flex-1 overflow-y-auto space-y-3 mb-4">
+                  <div className="flex-1 overflow-y-auto space-y-4 mb-6 px-2">
                     {conversationMessages.map((message) => (
                       <div
                         key={message.id}
@@ -373,18 +373,18 @@ export default function MessagingSystem() {
                         }`}
                       >
                         <div
-                          className={`max-w-xs sm:max-w-sm lg:max-w-md px-3 py-2 sm:px-4 sm:py-2 rounded-lg ${
+                          className={`max-w-xs sm:max-w-sm lg:max-w-md px-4 py-3 rounded-lg ${
                             message.sender.id === currentUser.id
                               ? 'bg-emerald-500 text-white'
                               : 'bg-gray-700 text-white'
                           }`}
                         >
-                          <div className="text-xs sm:text-sm">{message.message_content}</div>
-                          <div className="text-xs opacity-70 mt-1">
-                            {formatTimeAgo(message.created_at)}
+                          <div className="text-sm sm:text-base leading-relaxed">{message.message_content}</div>
+                          <div className="text-xs opacity-75 mt-2 flex items-center justify-between">
+                            <span>{formatTimeAgo(message.created_at)}</span>
                             {message.sender.id === currentUser.id && (
-                              <span className="ml-1">
-                                {message.is_read ? <CheckCircle className="h-3 w-3 inline" /> : <Clock className="h-3 w-3 inline" />}
+                              <span className="ml-2">
+                                {message.is_read ? <CheckCircle className="h-3 w-3 inline text-emerald-200" /> : <Clock className="h-3 w-3 inline text-emerald-200" />}
                               </span>
                             )}
                           </div>
@@ -394,19 +394,19 @@ export default function MessagingSystem() {
                   </div>
 
                   {/* Message Input */}
-                  <div className="flex space-x-2">
+                  <div className="flex space-x-3 bg-gray-800/30 rounded-xl p-3 border border-gray-600/30">
                     <input
                       type="text"
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
                       placeholder="Type a message..."
-                      className="flex-1 bg-gray-700/50 text-white placeholder-gray-400 border border-gray-600/50 rounded-lg px-3 py-2 sm:px-4 sm:py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm sm:text-base"
+                      className="flex-1 bg-gray-700/50 text-white placeholder-gray-400 border border-gray-600/50 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm sm:text-base"
                     />
                     <button
                       onClick={sendMessage}
                       disabled={!newMessage.trim()}
-                      className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-colors"
+                      className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center min-w-[50px]"
                     >
                       <Send className="h-4 w-4" />
                     </button>
