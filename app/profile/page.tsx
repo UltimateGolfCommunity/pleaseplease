@@ -542,7 +542,7 @@ export default function ProfilePage() {
         {(formData.header_image_url || profile?.header_image_url) && (
           <div className="relative mb-8 rounded-2xl overflow-hidden">
             <img 
-              src={formData.header_image_url || profile?.header_image_url} 
+              src={formData.header_image_url || profile?.header_image_url || ''} 
               alt="Profile Header" 
               className="w-full h-64 object-cover"
             />
@@ -601,7 +601,7 @@ export default function ProfilePage() {
               {(formData.avatar_url || profile?.avatar_url) ? (
                 <div className="h-24 w-24 rounded-full overflow-hidden border-4 border-emerald-400/30">
                   <img 
-                                            src={formData.avatar_url || profile?.avatar_url || '/default-avatar.svg'} 
+                    src={formData.avatar_url || profile?.avatar_url || '/default-avatar.svg'} 
                     alt="Profile" 
                     className="w-full h-full object-cover"
                   />
