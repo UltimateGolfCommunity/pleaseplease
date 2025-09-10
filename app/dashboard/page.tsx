@@ -194,6 +194,17 @@ export default function Dashboard() {
   const [applications, setApplications] = useState<any[]>([])
   const [applicationsLoading, setApplicationsLoading] = useState(false)
   
+  // Log round state
+  const [logRoundForm, setLogRoundForm] = useState({
+    course: '',
+    date: '',
+    score: '',
+    par: '',
+    handicap: '',
+    notes: ''
+  })
+  const [logRoundSubmitting, setLogRoundSubmitting] = useState(false)
+  
   // Pending applications to user's posted tee times
   const [pendingApplications, setPendingApplications] = useState<any[]>([])
   const [pendingApplicationsLoading, setPendingApplicationsLoading] = useState(false)
@@ -1779,6 +1790,45 @@ export default function Dashboard() {
     }
   }
 
+  const handleLogRound = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user) return
+
+    setLogRoundSubmitting(true)
+    try {
+      const { error } = await supabase
+        .from('golf_rounds')
+        .insert({
+          user_id: user.id,
+          course: logRoundForm.course,
+          date: logRoundForm.date,
+          score: parseInt(logRoundForm.score),
+          par: parseInt(logRoundForm.par),
+          handicap: parseFloat(logRoundForm.handicap) || 0,
+          notes: logRoundForm.notes,
+          created_at: new Date().toISOString()
+        })
+
+      if (error) throw error
+
+      // Reset form
+      setLogRoundForm({
+        course: '',
+        date: '',
+        score: '',
+        par: '',
+        handicap: '',
+        notes: ''
+      })
+      alert('Round logged successfully!')
+    } catch (error) {
+      console.error('Error logging round:', error)
+      alert('Failed to log round')
+    } finally {
+      setLogRoundSubmitting(false)
+    }
+  }
+
   const handleQRScan = async (qrData: any) => {
     try {
       console.log('📱 QR Code scanned:', qrData)
@@ -3243,21 +3293,27 @@ export default function Dashboard() {
                 {/* Log Round Form */}
                 <div className="bg-slate-800/30 rounded-2xl p-8 border border-slate-600/30">
                   <h3 className="text-2xl font-bold text-white mb-6">Log New Round</h3>
-                  <form className="space-y-6">
+                  <form onSubmit={handleLogRound} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <label className="block text-sm font-semibold text-gray-300 mb-3">Course</label>
                         <input
                           type="text"
                           placeholder="Enter course name"
+                          value={logRoundForm.course}
+                          onChange={(e) => setLogRoundForm({ ...logRoundForm, course: e.target.value })}
                           className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300 shadow-lg hover:shadow-emerald-500/10"
+                          required
                         />
                       </div>
                       <div>
                         <label className="block text-sm font-semibold text-gray-300 mb-3">Date</label>
                         <input
                           type="date"
+                          value={logRoundForm.date}
+                          onChange={(e) => setLogRoundForm({ ...logRoundForm, date: e.target.value })}
                           className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300 shadow-lg hover:shadow-emerald-500/10"
+                          required
                         />
                       </div>
                     </div>
@@ -3268,7 +3324,10 @@ export default function Dashboard() {
                         <input
                           type="number"
                           placeholder="85"
+                          value={logRoundForm.score}
+                          onChange={(e) => setLogRoundForm({ ...logRoundForm, score: e.target.value })}
                           className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300 shadow-lg hover:shadow-emerald-500/10"
+                          required
                         />
                       </div>
                       <div>
@@ -3276,7 +3335,10 @@ export default function Dashboard() {
                         <input
                           type="number"
                           placeholder="72"
+                          value={logRoundForm.par}
+                          onChange={(e) => setLogRoundForm({ ...logRoundForm, par: e.target.value })}
                           className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300 shadow-lg hover:shadow-emerald-500/10"
+                          required
                         />
                       </div>
                       <div>
@@ -3285,6 +3347,8 @@ export default function Dashboard() {
                           type="number"
                           step="0.1"
                           placeholder="12.5"
+                          value={logRoundForm.handicap}
+                          onChange={(e) => setLogRoundForm({ ...logRoundForm, handicap: e.target.value })}
                           className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300 shadow-lg hover:shadow-emerald-500/10"
                         />
                       </div>
@@ -3295,6 +3359,8 @@ export default function Dashboard() {
                       <textarea
                         placeholder="How was your round? Any highlights or areas for improvement?"
                         rows={4}
+                        value={logRoundForm.notes}
+                        onChange={(e) => setLogRoundForm({ ...logRoundForm, notes: e.target.value })}
                         className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300 shadow-lg hover:shadow-emerald-500/10 resize-none"
                       />
                     </div>
@@ -3302,10 +3368,20 @@ export default function Dashboard() {
                     <div className="flex justify-end">
                       <button
                         type="submit"
-                        className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-8 py-4 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2"
+                        disabled={logRoundSubmitting}
+                        className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-8 py-4 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed flex items-center space-x-2"
                       >
-                        <Target className="h-5 w-5" />
-                        <span>Log Round</span>
+                        {logRoundSubmitting ? (
+                          <>
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                            <span>Logging...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Target className="h-5 w-5" />
+                            <span>Log Round</span>
+                          </>
+                        )}
                       </button>
                     </div>
                   </form>
@@ -3332,7 +3408,15 @@ export default function Dashboard() {
                   </div>
                   <h4 className="text-xl font-bold text-white mb-4">No Rounds Yet</h4>
                   <p className="text-slate-400 mb-6">Start logging your rounds to track your progress and see your improvement over time.</p>
-                  <button className="bg-gradient-to-r from-emerald-500/20 to-teal-600/20 text-emerald-400 border border-emerald-400/30 px-6 py-3 rounded-xl hover:from-emerald-500/30 hover:to-teal-600/30 transition-all duration-300 font-semibold shadow-lg hover:shadow-emerald-500/20">
+                  <button 
+                    onClick={() => {
+                      const formElement = document.querySelector('form[onSubmit]')
+                      if (formElement) {
+                        formElement.scrollIntoView({ behavior: 'smooth' })
+                      }
+                    }}
+                    className="bg-gradient-to-r from-emerald-500/20 to-teal-600/20 text-emerald-400 border border-emerald-400/30 px-6 py-3 rounded-xl hover:from-emerald-500/30 hover:to-teal-600/30 transition-all duration-300 font-semibold shadow-lg hover:shadow-emerald-500/20"
+                  >
                     Log Your First Round
                   </button>
                 </div>
