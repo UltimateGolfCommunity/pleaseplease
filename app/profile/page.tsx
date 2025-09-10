@@ -739,6 +739,49 @@ export default function ProfilePage() {
                   )}
                 </div>
                 
+                {/* Edit Profile Button */}
+                <div className="flex items-center space-x-3">
+                  {!isEditing ? (
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 py-3 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2"
+                    >
+                      <Edit3 className="h-5 w-5" />
+                      <span>Edit Profile</span>
+                    </button>
+                  ) : (
+                    <div className="flex items-center space-x-3">
+                      <button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-6 py-3 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed flex items-center space-x-2"
+                      >
+                        {saving ? (
+                          <>
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                            <span>Saving...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Save className="h-5 w-5" />
+                            <span>Save Changes</span>
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={handleCancel}
+                        className="bg-gradient-to-r from-slate-500 to-slate-600 hover:from-slate-600 hover:to-slate-700 text-white px-6 py-3 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2"
+                      >
+                        <X className="h-5 w-5" />
+                        <span>Cancel</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Profile Badges */}
+              <div className="flex flex-wrap items-center gap-3">
                 {/* Member Since Badge */}
                 <div className="inline-flex items-center bg-gray-700/50 text-gray-300 px-3 py-2 rounded-lg text-sm">
                   <Calendar className="h-4 w-4 mr-2" />
