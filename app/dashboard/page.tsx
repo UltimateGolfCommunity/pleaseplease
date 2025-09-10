@@ -44,7 +44,7 @@ export default function Dashboard() {
   const supabase = createBrowserClient()
   
 
-      const [activeTab, setActiveTab] = useState<'overview' | 'find-someone' | 'courses' | 'groups' | 'messages' | 'badges' | 'applications' | 'log-round'>('overview')
+      const [activeTab, setActiveTab] = useState<'overview' | 'find-someone' | 'courses' | 'groups' | 'messages' | 'badges' | 'applications' | 'my-rounds'>('overview')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
@@ -161,6 +161,14 @@ export default function Dashboard() {
     }
   }, [activeTab, user?.id])
 
+  // Load rounds when My Rounds tab is opened
+  useEffect(() => {
+    if (activeTab === 'my-rounds') {
+      console.log('🔄 Loading rounds for My Rounds tab...')
+      fetchRounds()
+    }
+  }, [activeTab, user?.id])
+
   // Load tee times when Overview tab is opened
   useEffect(() => {
     if (activeTab === 'overview') {
@@ -194,7 +202,9 @@ export default function Dashboard() {
   const [applications, setApplications] = useState<any[]>([])
   const [applicationsLoading, setApplicationsLoading] = useState(false)
   
-  // Log round state
+  // My rounds state
+  const [rounds, setRounds] = useState<any[]>([])
+  const [roundsLoading, setRoundsLoading] = useState(false)
   const [logRoundForm, setLogRoundForm] = useState({
     course: '',
     date: '',
@@ -1790,6 +1800,26 @@ export default function Dashboard() {
     }
   }
 
+  const fetchRounds = async () => {
+    if (!user) return
+    
+    setRoundsLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('golf_rounds')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false })
+
+      if (error) throw error
+      setRounds(data || [])
+    } catch (error) {
+      console.error('Error fetching rounds:', error)
+    } finally {
+      setRoundsLoading(false)
+    }
+  }
+
   const handleLogRound = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user) return
@@ -1811,7 +1841,7 @@ export default function Dashboard() {
 
       if (error) throw error
 
-      // Reset form
+      // Reset form and refresh rounds
       setLogRoundForm({
         course: '',
         date: '',
@@ -1820,6 +1850,7 @@ export default function Dashboard() {
         handicap: '',
         notes: ''
       })
+      await fetchRounds()
       alert('Round logged successfully!')
     } catch (error) {
       console.error('Error logging round:', error)
@@ -2081,12 +2112,12 @@ export default function Dashboard() {
                       </button>
                       <button
                         onClick={() => {
-                          setActiveTab('log-round')
+                          setActiveTab('my-rounds')
                         }}
                         className="flex items-center w-full px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
                       >
                         <Target className="h-4 w-4 mr-3" />
-                        Log Your Round
+                        My Rounds
                       </button>
                       <button
                         onClick={() => setShowQRCode(true)}
@@ -3234,8 +3265,8 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Log Your Round Tab */}
-        {activeTab === 'log-round' && (
+        {/* My Rounds Tab */}
+        {activeTab === 'my-rounds' && (
           <div className="space-y-8">
             {/* Log Round Header */}
             <div className="relative bg-gradient-to-r from-slate-800/60 to-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 shadow-2xl overflow-hidden">
@@ -3248,10 +3279,10 @@ export default function Dashboard() {
                   <div className="p-3 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 rounded-xl mr-4">
                     <Target className="h-6 w-6 text-emerald-400" />
                   </div>
-                  Log Your Round
+                  My Rounds
                 </h2>
                 <p className="text-slate-300 text-lg mb-8 leading-relaxed">
-                  Track your golf rounds, monitor your progress, and share your achievements with your groups.
+                  Track your golf rounds, monitor your progress, and view your round history.
                 </p>
                 
                 {/* Quick Stats */}
@@ -3263,8 +3294,8 @@ export default function Dashboard() {
                       </div>
                       <h3 className="text-lg font-semibold text-white">Total Rounds</h3>
                     </div>
-                    <p className="text-3xl font-bold text-white">0</p>
-                    <p className="text-slate-400 text-sm">This month</p>
+                    <p className="text-3xl font-bold text-white">{rounds.length}</p>
+                    <p className="text-slate-400 text-sm">Total rounds</p>
                   </div>
                   
                   <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-600/50">
@@ -3274,8 +3305,10 @@ export default function Dashboard() {
                       </div>
                       <h3 className="text-lg font-semibold text-white">Average Score</h3>
                     </div>
-                    <p className="text-3xl font-bold text-white">--</p>
-                    <p className="text-slate-400 text-sm">Last 10 rounds</p>
+                    <p className="text-3xl font-bold text-white">
+                      {rounds.length > 0 ? Math.round(rounds.reduce((sum, round) => sum + round.score, 0) / rounds.length) : '--'}
+                    </p>
+                    <p className="text-slate-400 text-sm">Overall average</p>
                   </div>
                   
                   <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-600/50">
@@ -3285,7 +3318,9 @@ export default function Dashboard() {
                       </div>
                       <h3 className="text-lg font-semibold text-white">Best Round</h3>
                     </div>
-                    <p className="text-3xl font-bold text-white">--</p>
+                    <p className="text-3xl font-bold text-white">
+                      {rounds.length > 0 ? Math.min(...rounds.map(round => round.score)) : '--'}
+                    </p>
                     <p className="text-slate-400 text-sm">Personal best</p>
                   </div>
                 </div>
@@ -3402,24 +3437,74 @@ export default function Dashboard() {
                   Recent Rounds
                 </h3>
                 
-                <div className="text-center py-12">
-                  <div className="w-20 h-20 bg-slate-700/50 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                    <Target className="h-10 w-10 text-slate-400" />
+                {roundsLoading ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-400 mx-auto mb-4"></div>
+                    <p className="text-slate-400">Loading your rounds...</p>
                   </div>
-                  <h4 className="text-xl font-bold text-white mb-4">No Rounds Yet</h4>
-                  <p className="text-slate-400 mb-6">Start logging your rounds to track your progress and see your improvement over time.</p>
-                  <button 
-                    onClick={() => {
-                      const formElement = document.querySelector('form[onSubmit]')
-                      if (formElement) {
-                        formElement.scrollIntoView({ behavior: 'smooth' })
-                      }
-                    }}
-                    className="bg-gradient-to-r from-emerald-500/20 to-teal-600/20 text-emerald-400 border border-emerald-400/30 px-6 py-3 rounded-xl hover:from-emerald-500/30 hover:to-teal-600/30 transition-all duration-300 font-semibold shadow-lg hover:shadow-emerald-500/20"
-                  >
-                    Log Your First Round
-                  </button>
-                </div>
+                ) : rounds.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-20 h-20 bg-slate-700/50 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                      <Target className="h-10 w-10 text-slate-400" />
+                    </div>
+                    <h4 className="text-xl font-bold text-white mb-4">No Rounds Yet</h4>
+                    <p className="text-slate-400 mb-6">Start logging your rounds to track your progress and see your improvement over time.</p>
+                    <button 
+                      onClick={() => {
+                        const formElement = document.querySelector('form[onSubmit]')
+                        if (formElement) {
+                          formElement.scrollIntoView({ behavior: 'smooth' })
+                        }
+                      }}
+                      className="bg-gradient-to-r from-emerald-500/20 to-teal-600/20 text-emerald-400 border border-emerald-400/30 px-6 py-3 rounded-xl hover:from-emerald-500/30 hover:to-teal-600/30 transition-all duration-300 font-semibold shadow-lg hover:shadow-emerald-500/20"
+                    >
+                      Log Your First Round
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {rounds.map((round, index) => (
+                      <div key={round.id || index} className="bg-slate-800/50 rounded-xl p-6 border border-slate-600/50 hover:border-emerald-400/30 transition-all duration-300">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center space-x-4">
+                            <div className="bg-gradient-to-r from-emerald-500/20 to-teal-600/20 rounded-lg p-3">
+                              <Target className="h-6 w-6 text-emerald-400" />
+                            </div>
+                            <div>
+                              <h4 className="text-lg font-semibold text-white">{round.course}</h4>
+                              <p className="text-slate-400 text-sm">{new Date(round.date).toLocaleDateString()}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-2xl font-bold text-white">{round.score}</div>
+                            <div className="text-slate-400 text-sm">Par {round.par}</div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center space-x-6">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-slate-400">Handicap:</span>
+                              <span className="text-white font-medium">{round.handicap || 'N/A'}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <span className="text-slate-400">Score vs Par:</span>
+                              <span className={`font-medium ${round.score - round.par > 0 ? 'text-red-400' : round.score - round.par < 0 ? 'text-green-400' : 'text-yellow-400'}`}>
+                                {round.score - round.par > 0 ? '+' : ''}{round.score - round.par}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {round.notes && (
+                          <div className="mt-4 pt-4 border-t border-slate-600/50">
+                            <p className="text-slate-300 text-sm italic">"{round.notes}"</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
