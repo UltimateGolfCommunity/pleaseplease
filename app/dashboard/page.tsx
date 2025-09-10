@@ -1516,8 +1516,17 @@ export default function Dashboard() {
       const response = await fetch(`/api/groups?user_id=${user.id}`)
       if (response.ok) {
         const data = await response.json()
-        setUserGroups(data.groups || [])
-        console.log('👥 Fetched user groups:', data.groups?.length || 0)
+        console.log('👥 Raw groups data:', data)
+        
+        // Extract group data from the nested structure
+        const groups = (data.groups || []).map((membership: any) => ({
+          ...membership.group,
+          membership_id: membership.id,
+          membership_status: membership.status
+        }))
+        
+        setUserGroups(groups)
+        console.log('👥 Processed user groups:', groups?.length || 0, groups)
       } else {
         console.error('❌ Failed to fetch user groups')
         setUserGroups([])
@@ -3216,10 +3225,12 @@ export default function Dashboard() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {userGroups.map((group: any) => (
+                    {userGroups.map((group: any) => {
+                      console.log('🔍 Rendering group:', group)
+                      return (
                       <div key={group.id} className="bg-slate-800/50 rounded-xl p-6 border border-slate-600/50">
                         <div className="flex items-center justify-between mb-3">
-                          <h4 className="text-lg font-semibold text-white">{group.name}</h4>
+                          <h4 className="text-lg font-semibold text-white">{group.name || 'Unnamed Group'}</h4>
                           <div className="flex items-center space-x-2">
                             <span className="text-sm text-slate-400">{group.member_count || 0} members</span>
                             <button
@@ -3233,7 +3244,12 @@ export default function Dashboard() {
                         <p className="text-slate-300 mb-4">{group.description || 'No description available'}</p>
                         <div className="flex space-x-2">
                           <button 
-                            onClick={() => router.push(`/groups/${group.id}`)}
+                            onClick={() => {
+                              console.log('🔍 View Group clicked for:', group)
+                              console.log('🔍 Group ID:', group.id)
+                              console.log('🔍 Navigating to:', `/groups/${group.id}`)
+                              router.push(`/groups/${group.id}`)
+                            }}
                             className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                           >
                             View Group
@@ -3243,7 +3259,8 @@ export default function Dashboard() {
                           </button>
                         </div>
                       </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </div>
