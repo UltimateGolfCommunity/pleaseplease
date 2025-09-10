@@ -386,54 +386,59 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
-      {/* Animated Background Elements */}
+      {/* Modern Animated Background */}
       <div className="absolute inset-0">
-        <div className="absolute top-20 left-20 w-1 h-1 bg-emerald-400 rounded-full animate-ping"></div>
-        <div className="absolute top-40 right-40 w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
-        <div className="absolute bottom-20 left-1/3 w-1.5 h-1.5 bg-emerald-300 rounded-full animate-bounce"></div>
-        <div className="absolute bottom-40 right-1/4 w-1 h-1 bg-cyan-300 rounded-full animate-ping"></div>
+        <div className="absolute top-20 left-20 w-2 h-2 bg-emerald-400/60 rounded-full animate-ping"></div>
+        <div className="absolute top-40 right-40 w-3 h-3 bg-cyan-400/60 rounded-full animate-pulse"></div>
+        <div className="absolute bottom-20 left-1/3 w-2 h-2 bg-emerald-300/60 rounded-full animate-bounce"></div>
+        <div className="absolute bottom-40 right-1/4 w-2 h-2 bg-cyan-300/60 rounded-full animate-ping"></div>
+        <div className="absolute top-1/2 left-10 w-1 h-1 bg-purple-400/60 rounded-full animate-pulse"></div>
+        <div className="absolute top-1/3 right-20 w-1.5 h-1.5 bg-blue-400/60 rounded-full animate-bounce"></div>
       </div>
-      {/* Navigation */}
-      <nav className="bg-gray-900/95 backdrop-blur-md border-b border-gray-800 sticky top-0 z-50">
+      {/* Modern Navigation */}
+      <nav className="bg-gray-900/95 backdrop-blur-xl border-b border-gray-700/50 sticky top-0 z-50 shadow-2xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
+          <div className="flex justify-between items-center h-20">
+            <div className="flex items-center space-x-6">
               <button
                 onClick={() => router.push('/dashboard')}
-                className="flex items-center text-gray-300 hover:text-emerald-400 transition-colors duration-300 mr-4"
+                className="flex items-center text-gray-300 hover:text-emerald-400 transition-all duration-300 group"
               >
-                <ArrowLeft className="h-5 w-5 mr-2" />
-                Back to Dashboard
+                <div className="p-2 rounded-lg bg-gray-800/50 group-hover:bg-emerald-500/20 transition-colors">
+                  <ArrowLeft className="h-5 w-5" />
+                </div>
+                <span className="ml-3 font-medium">Back to Dashboard</span>
               </button>
+              <div className="h-8 w-px bg-gray-600"></div>
               <Logo size="lg" />
             </div>
             
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
               {/* QR Code Buttons */}
               <button
                 onClick={() => setShowQRCode(true)}
-                className="flex items-center bg-blue-500/20 text-blue-400 border border-blue-400/30 px-3 py-2 rounded-lg hover:bg-blue-500/30 transition-all duration-300"
+                className="flex items-center bg-gradient-to-r from-blue-500/20 to-blue-600/20 text-blue-400 border border-blue-400/30 px-4 py-2.5 rounded-xl hover:from-blue-500/30 hover:to-blue-600/30 transition-all duration-300 shadow-lg hover:shadow-blue-500/20 group"
               >
-                <QrCode className="h-4 w-4 mr-2" />
-                My QR Code
+                <QrCode className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
+                <span className="font-medium">My QR Code</span>
               </button>
               
               <button
                 onClick={() => setShowQRScanner(true)}
-                className="flex items-center bg-purple-500/20 text-purple-400 border border-purple-400/30 px-3 py-2 rounded-lg hover:bg-purple-500/30 transition-all duration-300"
+                className="flex items-center bg-gradient-to-r from-purple-500/20 to-purple-600/20 text-purple-400 border border-purple-400/30 px-4 py-2.5 rounded-xl hover:from-purple-500/30 hover:to-purple-600/30 transition-all duration-300 shadow-lg hover:shadow-purple-500/20 group"
               >
-                <QrCode className="h-4 w-4 mr-2" />
-                Scan QR
+                <QrCode className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
+                <span className="font-medium">Scan QR</span>
               </button>
 
               {/* Navigation Menu */}
               <div className="relative">
                 <button
                   onClick={() => setShowNavigationMenu(!showNavigationMenu)}
-                  className="flex items-center bg-gray-500/20 text-gray-300 border border-gray-400/30 px-3 py-2 rounded-lg hover:bg-gray-500/30 transition-all duration-300"
+                  className="flex items-center bg-gradient-to-r from-gray-500/20 to-gray-600/20 text-gray-300 border border-gray-400/30 px-4 py-2.5 rounded-xl hover:from-gray-500/30 hover:to-gray-600/30 transition-all duration-300 shadow-lg hover:shadow-gray-500/20 group"
                 >
-                  <Menu className="h-4 w-4 mr-2" />
-                  Menu
+                  <Menu className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
+                  <span className="font-medium">Menu</span>
                 </button>
                 
                 {showNavigationMenu && (
@@ -593,27 +598,31 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Profile Header */}
-        <div className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-8 mb-8">
-          <div className="flex items-start space-x-6">
+        {/* Modern Profile Header */}
+        <div className="relative bg-gradient-to-r from-gray-800/60 to-gray-900/60 backdrop-blur-xl border border-gray-700/50 rounded-3xl p-8 mb-8 shadow-2xl overflow-hidden">
+          {/* Decorative Elements */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 rounded-full -translate-y-16 translate-x-16"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-purple-500/10 to-blue-500/10 rounded-full translate-y-12 -translate-x-12"></div>
+          
+          <div className="relative flex flex-col sm:flex-row items-start sm:items-center space-y-6 sm:space-y-0 sm:space-x-8">
             {/* Profile Picture */}
-            <div className="relative">
+            <div className="relative group">
               {(formData.avatar_url || profile?.avatar_url) ? (
-                <div className="h-24 w-24 rounded-full overflow-hidden border-4 border-emerald-400/30">
+                <div className="h-32 w-32 rounded-2xl overflow-hidden border-4 border-emerald-400/30 shadow-2xl group-hover:border-emerald-400/60 transition-all duration-300">
                   <img 
                     src={formData.avatar_url || profile?.avatar_url || '/default-avatar.svg'} 
                     alt="Profile" 
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                 </div>
               ) : (
-                <div className="h-24 w-24 bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-full flex items-center justify-center">
-                  <User className="h-12 w-12 text-black" />
+                <div className="h-32 w-32 bg-gradient-to-br from-emerald-400 to-cyan-400 rounded-2xl flex items-center justify-center shadow-2xl group-hover:scale-105 transition-transform duration-300">
+                  <User className="h-16 w-16 text-black" />
                 </div>
               )}
               {isEditing && (
-                <label className="absolute -bottom-2 -right-2 bg-emerald-500 hover:bg-emerald-600 text-white p-2 rounded-full transition-colors duration-300 cursor-pointer">
-                  <Camera className="h-4 w-4" />
+                <label className="absolute -bottom-2 -right-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white p-3 rounded-xl transition-all duration-300 cursor-pointer shadow-lg hover:shadow-emerald-500/30 group-hover:scale-110">
+                  <Camera className="h-5 w-5" />
                   <input
                     type="file"
                     accept="image/*"
@@ -624,268 +633,324 @@ export default function ProfilePage() {
                 </label>
               )}
               {uploadingImage && (
-                <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                <div className="absolute inset-0 bg-black/50 rounded-2xl flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
                 </div>
               )}
             </div>
 
             {/* Profile Info */}
-            <div className="flex-1">
-              <div className="flex items-center space-x-4 mb-4">
-                <h1 className="text-3xl font-bold text-white">
-                  {profile?.first_name && profile?.last_name 
-                    ? `${profile.first_name} ${profile.last_name}`
-                    : user.email?.split('@')[0] || 'Golfer'
-                  }
-                </h1>
-                {profile?.handicap && (
-                  <span className="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-sm border border-emerald-400/30">
-                    Handicap: {profile.handicap}
-                  </span>
-                )}
-              </div>
-              
-              {profile?.bio ? (
-                <p className="text-gray-300 text-lg mb-4">{profile.bio}</p>
-              ) : (
-                <p className="text-gray-400 text-lg mb-4 italic">No bio yet. Add one to tell other golfers about yourself!</p>
-              )}
-
-              <div className="flex items-center space-x-6 text-sm text-gray-400">
-                {profile?.location && (
-                  <div className="flex items-center">
-                    <MapPin className="h-4 w-4 mr-2" />
-                    {profile.location}
-                  </div>
-                )}
-                <div className="flex items-center">
+            <div className="flex-1 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+                <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                  <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                    {profile?.first_name && profile?.last_name 
+                      ? `${profile.first_name} ${profile.last_name}`
+                      : user.email?.split('@')[0] || 'Golfer'
+                    }
+                  </h1>
+                  {profile?.handicap && (
+                    <div className="inline-flex items-center bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 text-emerald-400 px-4 py-2 rounded-xl text-sm font-semibold border border-emerald-400/30 shadow-lg">
+                      <Trophy className="h-4 w-4 mr-2" />
+                      Handicap: {profile.handicap}
+                    </div>
+                  )}
+                </div>
+                
+                {/* Member Since Badge */}
+                <div className="inline-flex items-center bg-gray-700/50 text-gray-300 px-3 py-2 rounded-lg text-sm">
                   <Calendar className="h-4 w-4 mr-2" />
                   Member since {new Date(user.created_at || Date.now()).toLocaleDateString()}
                 </div>
+              </div>
+              
+              {profile?.bio ? (
+                <p className="text-gray-300 text-lg leading-relaxed max-w-2xl">{profile.bio}</p>
+              ) : (
+                <p className="text-gray-400 text-lg italic max-w-2xl">No bio yet. Add one to tell other golfers about yourself!</p>
+              )}
+
+              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400">
+                {profile?.location && (
+                  <div className="flex items-center bg-gray-700/30 px-3 py-2 rounded-lg">
+                    <MapPin className="h-4 w-4 mr-2 text-emerald-400" />
+                    {profile.location}
+                  </div>
+                )}
+                {profile?.home_club && (
+                  <div className="flex items-center bg-gray-700/30 px-3 py-2 rounded-lg">
+                    <Flag className="h-4 w-4 mr-2 text-blue-400" />
+                    {profile.home_club}
+                  </div>
+                )}
+                {profile?.playing_style && (
+                  <div className="flex items-center bg-gray-700/30 px-3 py-2 rounded-lg">
+                    <User className="h-4 w-4 mr-2 text-purple-400" />
+                    {profile.playing_style}
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Badge Display */}
+        {/* Modern Badge Display */}
         {profile?.badges && profile.badges.length > 0 && (
-          <div className="bg-gradient-to-r from-yellow-900/20 to-orange-900/20 backdrop-blur-sm border border-yellow-400/30 rounded-2xl p-6 mb-8">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center">
-              <Star className="h-5 w-5 mr-2 text-yellow-400" />
-              Badges Earned ({profile.badges.length})
-            </h2>
-            <div className="flex flex-wrap gap-3">
-              {profile.badges.map((userBadge: any) => (
-                <div 
-                  key={userBadge.id}
-                  className={`relative group cursor-pointer ${
-                    userBadge.badge?.name === 'Founding Member' ? 'animate-pulse' : ''
-                  }`}
-                  title={`${userBadge.badge?.name} - ${userBadge.badge?.description}`}
-                >
-                  <div className={`backdrop-blur-xl border rounded-xl px-4 py-3 text-center transform transition-all duration-300 group-hover:scale-110 ${
-                    userBadge.badge?.name === 'Founding Member' 
-                      ? 'bg-gradient-to-r from-purple-500/30 to-pink-500/30 border-purple-400/50 group-hover:border-purple-400/80' 
-                      : 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-400/30 group-hover:border-yellow-400/50'
-                  }`}>
-                    <div className="text-2xl mb-2">
-                      {userBadge.badge?.icon_name === 'crown' && '👑'}
-                      {userBadge.badge?.icon_name === 'star' && '⭐'}
-                      {userBadge.badge?.icon_name === 'trophy' && '🏆'}
-                      {userBadge.badge?.icon_name === 'medal' && '🥇'}
-                      {userBadge.badge?.icon_name === 'flag' && '🏁'}
-                      {userBadge.badge?.icon_name === 'golf' && '⛳'}
-                      {userBadge.badge?.icon_name === 'sunrise' && '🌅'}
-                      {userBadge.badge?.icon_name === 'zap' && '⚡'}
-                      {userBadge.badge?.icon_name === 'lightning' && '⚡'}
-                      {userBadge.badge?.icon_name === 'target' && '🎯'}
-                      {userBadge.badge?.icon_name === 'award' && '🏅'}
-                      {userBadge.badge?.icon_name === 'users' && '👥'}
-                      {userBadge.badge?.icon_name === 'shield' && '🛡️'}
-                      {userBadge.badge?.icon_name === 'edit' && '✏️'}
-                      {userBadge.badge?.icon_name === 'map' && '🗺️'}
-                      {userBadge.badge?.icon_name === 'calendar' && '📅'}
-                      {userBadge.badge?.icon_name === 'cloud-rain' && '🌧️'}
-                      {userBadge.badge?.icon_name === 'sun' && '☀️'}
-                    </div>
-                    <div className="text-yellow-200 text-sm font-medium">{userBadge.badge?.name}</div>
-                    <div className="text-yellow-400 text-xs">{userBadge.badge?.points} pts</div>
-                    {userBadge.badge?.name === 'Founding Member' && (
-                      <div className="text-purple-300 text-xs mt-1 font-medium">🏆 Pioneer!</div>
-                    )}
-                  </div>
-                  {/* Rarity indicator */}
-                  <div className={`absolute -top-2 -right-2 px-2 py-1 rounded-full text-xs font-bold ${
-                    userBadge.badge?.rarity === 'legendary' ? 'bg-purple-500 text-white' :
-                    userBadge.badge?.rarity === 'epic' ? 'bg-blue-500 text-white' :
-                    userBadge.badge?.rarity === 'rare' ? 'bg-green-500 text-white' :
-                    userBadge.badge?.rarity === 'uncommon' ? 'bg-yellow-500 text-white' :
-                    'bg-gray-500 text-white'
-                  }`}>
-                    {userBadge.badge?.rarity?.charAt(0).toUpperCase()}
-                  </div>
+          <div className="relative bg-gradient-to-r from-yellow-900/30 to-orange-900/30 backdrop-blur-xl border border-yellow-400/40 rounded-3xl p-8 mb-8 shadow-2xl overflow-hidden">
+            {/* Decorative Elements */}
+            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-full -translate-y-12 translate-x-12"></div>
+            <div className="absolute bottom-0 left-0 w-16 h-16 bg-gradient-to-tr from-yellow-400/20 to-orange-400/20 rounded-full translate-y-8 -translate-x-8"></div>
+            
+            <div className="relative">
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+                <div className="p-2 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 rounded-xl mr-3">
+                  <Star className="h-6 w-6 text-yellow-400" />
                 </div>
-              ))}
+                Badges Earned ({profile.badges.length})
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {profile.badges.map((userBadge: any) => (
+                  <div 
+                    key={userBadge.id}
+                    className={`relative group cursor-pointer ${
+                      userBadge.badge?.name === 'Founding Member' ? 'animate-pulse' : ''
+                    }`}
+                    title={`${userBadge.badge?.name} - ${userBadge.badge?.description}`}
+                  >
+                    <div className={`backdrop-blur-xl border rounded-2xl px-4 py-4 text-center transform transition-all duration-300 group-hover:scale-105 group-hover:shadow-xl ${
+                      userBadge.badge?.name === 'Founding Member' 
+                        ? 'bg-gradient-to-br from-purple-500/30 to-pink-500/30 border-purple-400/50 group-hover:border-purple-400/80 group-hover:shadow-purple-500/20' 
+                        : 'bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border-yellow-400/30 group-hover:border-yellow-400/50 group-hover:shadow-yellow-500/20'
+                    }`}>
+                      <div className="text-3xl mb-3">
+                        {userBadge.badge?.icon_name === 'crown' && '👑'}
+                        {userBadge.badge?.icon_name === 'star' && '⭐'}
+                        {userBadge.badge?.icon_name === 'trophy' && '🏆'}
+                        {userBadge.badge?.icon_name === 'medal' && '🥇'}
+                        {userBadge.badge?.icon_name === 'flag' && '🏁'}
+                        {userBadge.badge?.icon_name === 'golf' && '⛳'}
+                        {userBadge.badge?.icon_name === 'sunrise' && '🌅'}
+                        {userBadge.badge?.icon_name === 'zap' && '⚡'}
+                        {userBadge.badge?.icon_name === 'lightning' && '⚡'}
+                        {userBadge.badge?.icon_name === 'target' && '🎯'}
+                        {userBadge.badge?.icon_name === 'award' && '🏅'}
+                        {userBadge.badge?.icon_name === 'users' && '👥'}
+                        {userBadge.badge?.icon_name === 'shield' && '🛡️'}
+                        {userBadge.badge?.icon_name === 'edit' && '✏️'}
+                        {userBadge.badge?.icon_name === 'map' && '🗺️'}
+                        {userBadge.badge?.icon_name === 'calendar' && '📅'}
+                        {userBadge.badge?.icon_name === 'cloud-rain' && '🌧️'}
+                        {userBadge.badge?.icon_name === 'sun' && '☀️'}
+                      </div>
+                      <div className="text-yellow-200 text-sm font-semibold mb-1">{userBadge.badge?.name}</div>
+                      <div className="text-yellow-400 text-xs font-medium">{userBadge.badge?.points} pts</div>
+                      {userBadge.badge?.name === 'Founding Member' && (
+                        <div className="text-purple-300 text-xs mt-2 font-bold">🏆 Pioneer!</div>
+                      )}
+                    </div>
+                    {/* Rarity indicator */}
+                    <div className={`absolute -top-2 -right-2 px-2 py-1 rounded-full text-xs font-bold shadow-lg ${
+                      userBadge.badge?.rarity === 'legendary' ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white' :
+                      userBadge.badge?.rarity === 'epic' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white' :
+                      userBadge.badge?.rarity === 'rare' ? 'bg-gradient-to-r from-green-500 to-green-600 text-white' :
+                      userBadge.badge?.rarity === 'uncommon' ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white' :
+                      'bg-gradient-to-r from-gray-500 to-gray-600 text-white'
+                    }`}>
+                      {userBadge.badge?.rarity?.charAt(0).toUpperCase()}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
 
-        {/* Profile Sections */}
+        {/* Modern Profile Sections */}
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Main Profile Info */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-8">
             {/* Personal Information */}
-            <div className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-6">
-              <h2 className="text-xl font-bold text-white mb-4 flex items-center">
-                <User className="h-5 w-5 mr-2 text-emerald-400" />
-                Personal Information
-              </h2>
+            <div className="relative bg-gradient-to-r from-gray-800/60 to-gray-900/60 backdrop-blur-xl border border-gray-700/50 rounded-3xl p-8 shadow-2xl overflow-hidden">
+              {/* Decorative Elements */}
+              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 rounded-full -translate-y-10 translate-x-10"></div>
               
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">First Name</label>
+              <div className="relative">
+                <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+                  <div className="p-2 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 rounded-xl mr-3">
+                    <User className="h-6 w-6 text-emerald-400" />
+                  </div>
+                  Personal Information
+                </h2>
+              
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-300 mb-3">First Name</label>
                   {isEditing ? (
                     <input
                       type="text"
                       value={formData.first_name}
                       onChange={(e) => handleInputChange('first_name', e.target.value)}
-                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300"
+                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300 shadow-lg hover:shadow-emerald-500/10"
                       placeholder="Enter your first name"
                     />
                   ) : (
-                    <p className="text-white">{profile?.first_name || 'Not set'}</p>
+                    <div className="px-4 py-3 bg-gray-700/30 rounded-xl border border-gray-600/30">
+                      <p className="text-white font-medium">{profile?.first_name || 'Not set'}</p>
+                    </div>
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Last Name</label>
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-300 mb-3">Last Name</label>
                   {isEditing ? (
                     <input
                       type="text"
                       value={formData.last_name}
                       onChange={(e) => handleInputChange('last_name', e.target.value)}
-                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300"
+                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300 shadow-lg hover:shadow-emerald-500/10"
                       placeholder="Enter your last name"
                     />
                   ) : (
-                    <p className="text-white">{profile?.last_name || 'Not set'}</p>
+                    <div className="px-4 py-3 bg-gray-700/30 rounded-xl border border-gray-600/30">
+                      <p className="text-white font-medium">{profile?.last_name || 'Not set'}</p>
+                    </div>
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Username</label>
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-300 mb-3">Username</label>
                   {isEditing ? (
                     <input
                       type="text"
                       value={formData.username}
                       onChange={(e) => handleInputChange('username', e.target.value)}
-                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300"
+                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300 shadow-lg hover:shadow-emerald-500/10"
                       placeholder="Choose a username"
                     />
                   ) : (
-                    <p className="text-white">{profile?.username || 'Not set'}</p>
+                    <div className="px-4 py-3 bg-gray-700/30 rounded-xl border border-gray-600/30">
+                      <p className="text-white font-medium">{profile?.username || 'Not set'}</p>
+                    </div>
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
-                  <p className="text-white">{user.email}</p>
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-300 mb-3">Email</label>
+                  <div className="px-4 py-3 bg-gray-700/30 rounded-xl border border-gray-600/30">
+                    <p className="text-white font-medium">{user.email}</p>
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-300 mb-2">Bio</label>
+              <div className="mt-6">
+                <label className="block text-sm font-semibold text-gray-300 mb-3">Bio</label>
                 {isEditing ? (
                   <textarea
                     value={formData.bio}
                     onChange={(e) => handleInputChange('bio', e.target.value)}
-                    rows={3}
-                    className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300"
+                    rows={4}
+                    className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300 shadow-lg hover:shadow-emerald-500/10 resize-none"
                     placeholder="Tell other golfers about yourself..."
                   />
                 ) : (
-                  <p className="text-white">{profile?.bio || 'No bio yet'}</p>
+                  <div className="px-4 py-3 bg-gray-700/30 rounded-xl border border-gray-600/30 min-h-[100px]">
+                    <p className="text-white font-medium leading-relaxed">{profile?.bio || 'No bio yet'}</p>
+                  </div>
                 )}
+              </div>
               </div>
             </div>
 
             {/* Golf Information */}
-            <div className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-6">
-              <h2 className="text-xl font-bold text-white mb-4 flex items-center">
-                <Flag className="h-5 w-5 mr-2 text-emerald-400" />
-                Golf Information
-              </h2>
+            <div className="relative bg-gradient-to-r from-gray-800/60 to-gray-900/60 backdrop-blur-xl border border-gray-700/50 rounded-3xl p-8 shadow-2xl overflow-hidden">
+              {/* Decorative Elements */}
+              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-full -translate-y-10 translate-x-10"></div>
               
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Handicap</label>
+              <div className="relative">
+                <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+                  <div className="p-2 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-xl mr-3">
+                    <Flag className="h-6 w-6 text-blue-400" />
+                  </div>
+                  Golf Information
+                </h2>
+              
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-300 mb-3">Handicap</label>
                   {isEditing ? (
                     <input
                       type="number"
                       step="0.1"
                       value={formData.handicap || ''}
                       onChange={(e) => handleInputChange('handicap', e.target.value ? parseFloat(e.target.value) : null)}
-                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300"
+                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300 shadow-lg hover:shadow-emerald-500/10"
                       placeholder="Enter your handicap"
                     />
                   ) : (
-                    <p className="text-white">{profile?.handicap ? profile.handicap : 'Not set'}</p>
+                    <div className="px-4 py-3 bg-gray-700/30 rounded-xl border border-gray-600/30">
+                      <p className="text-white font-medium">{profile?.handicap ? profile.handicap : 'Not set'}</p>
+                    </div>
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Years Playing</label>
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-300 mb-3">Years Playing</label>
                   {isEditing ? (
                     <input
                       type="number"
                       value={formData.years_playing || ''}
                       onChange={(e) => handleInputChange('years_playing', e.target.value ? parseInt(e.target.value) : null)}
-                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300"
+                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300 shadow-lg hover:shadow-emerald-500/10"
                       placeholder="How many years?"
                     />
                   ) : (
-                    <p className="text-white">{profile?.years_playing ? `${profile.years_playing} years` : 'Not set'}</p>
+                    <div className="px-4 py-3 bg-gray-700/30 rounded-xl border border-gray-600/30">
+                      <p className="text-white font-medium">{profile?.years_playing ? `${profile.years_playing} years` : 'Not set'}</p>
+                    </div>
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Home Club</label>
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-300 mb-3">Home Club</label>
                   {isEditing ? (
                     <input
                       type="text"
                       value={formData.home_club}
                       onChange={(e) => handleInputChange('home_club', e.target.value)}
-                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300"
+                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300 shadow-lg hover:shadow-emerald-500/10"
                       placeholder="Your home golf club"
                     />
                   ) : (
-                    <p className="text-white">{profile?.home_club || 'Not set'}</p>
+                    <div className="px-4 py-3 bg-gray-700/30 rounded-xl border border-gray-600/30">
+                      <p className="text-white font-medium">{profile?.home_club || 'Not set'}</p>
+                    </div>
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Favorite Course</label>
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-300 mb-3">Favorite Course</label>
                   {isEditing ? (
                     <input
                       type="text"
                       value={formData.favorite_course}
                       onChange={(e) => handleInputChange('favorite_course', e.target.value)}
-                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300"
+                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300 shadow-lg hover:shadow-emerald-500/10"
                       placeholder="Your favorite golf course"
                     />
                   ) : (
-                    <p className="text-white">{profile?.favorite_course || 'Not set'}</p>
+                    <div className="px-4 py-3 bg-gray-700/30 rounded-xl border border-gray-600/30">
+                      <p className="text-white font-medium">{profile?.favorite_course || 'Not set'}</p>
+                    </div>
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Playing Style</label>
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-300 mb-3">Playing Style</label>
                   {isEditing ? (
                     <select
                       value={formData.playing_style}
                       onChange={(e) => handleInputChange('playing_style', e.target.value)}
-                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white transition-all duration-300"
+                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white transition-all duration-300 shadow-lg hover:shadow-emerald-500/10"
                     >
                       <option value="">Select playing style</option>
                       <option value="competitive">Competitive</option>
@@ -895,101 +960,129 @@ export default function ProfilePage() {
                       <option value="professional">Professional</option>
                     </select>
                   ) : (
-                    <p className="text-white">{profile?.playing_style || 'Not set'}</p>
+                    <div className="px-4 py-3 bg-gray-700/30 rounded-xl border border-gray-600/30">
+                      <p className="text-white font-medium">{profile?.playing_style || 'Not set'}</p>
+                    </div>
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Location</label>
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-300 mb-3">Location</label>
                   {isEditing ? (
                     <input
                       type="text"
                       value={formData.location}
                       onChange={(e) => handleInputChange('location', e.target.value)}
-                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300"
+                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300 shadow-lg hover:shadow-emerald-500/10"
                       placeholder="Enter your city/area"
                     />
                   ) : (
-                    <p className="text-white">{profile?.location || 'Not set'}</p>
+                    <div className="px-4 py-3 bg-gray-700/30 rounded-xl border border-gray-600/30">
+                      <p className="text-white font-medium">{profile?.location || 'Not set'}</p>
+                    </div>
                   )}
                 </div>
               </div>
 
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-300 mb-2">Golf Goals</label>
+              <div className="mt-6">
+                <label className="block text-sm font-semibold text-gray-300 mb-3">Golf Goals</label>
                 {isEditing ? (
                   <textarea
                     value={formData.goals}
                     onChange={(e) => handleInputChange('goals', e.target.value)}
-                    rows={3}
-                    className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300"
+                    rows={4}
+                    className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300 shadow-lg hover:shadow-emerald-500/10 resize-none"
                     placeholder="What are your golf goals and aspirations?"
                   />
                 ) : (
-                  <p className="text-white">{profile?.goals || 'No goals set yet'}</p>
+                  <div className="px-4 py-3 bg-gray-700/30 rounded-xl border border-gray-600/30 min-h-[100px]">
+                    <p className="text-white font-medium leading-relaxed">{profile?.goals || 'No goals set yet'}</p>
+                  </div>
                 )}
+              </div>
               </div>
             </div>
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
+          {/* Modern Sidebar */}
+          <div className="space-y-8">
             {/* Stats Card */}
-            <div className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-6">
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                <TrendingUp className="h-5 w-5 mr-2 text-emerald-400" />
-                Golf Stats
-              </h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-300">Rounds Played</span>
-                  <span className="text-white font-semibold">0</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-300">Best Score</span>
-                  <span className="text-white font-semibold">--</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-300">Average Score</span>
-                  <span className="text-white font-semibold">--</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-300">Birdies</span>
-                  <span className="text-white font-semibold">0</span>
+            <div className="relative bg-gradient-to-r from-gray-800/60 to-gray-900/60 backdrop-blur-xl border border-gray-700/50 rounded-3xl p-6 shadow-2xl overflow-hidden">
+              {/* Decorative Elements */}
+              <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 rounded-full -translate-y-8 translate-x-8"></div>
+              
+              <div className="relative">
+                <h3 className="text-xl font-bold text-white mb-6 flex items-center">
+                  <div className="p-2 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 rounded-xl mr-3">
+                    <TrendingUp className="h-5 w-5 text-emerald-400" />
+                  </div>
+                  Golf Stats
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 bg-gray-700/30 rounded-xl border border-gray-600/30">
+                    <span className="text-gray-300 font-medium">Rounds Played</span>
+                    <span className="text-white font-bold text-lg">0</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-700/30 rounded-xl border border-gray-600/30">
+                    <span className="text-gray-300 font-medium">Best Score</span>
+                    <span className="text-white font-bold text-lg">--</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-700/30 rounded-xl border border-gray-600/30">
+                    <span className="text-gray-300 font-medium">Average Score</span>
+                    <span className="text-white font-bold text-lg">--</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-700/30 rounded-xl border border-gray-600/30">
+                    <span className="text-gray-300 font-medium">Birdies</span>
+                    <span className="text-white font-bold text-lg">0</span>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Recent Activity */}
-            <div className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-6">
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                <Clock className="h-5 w-5 mr-2 text-emerald-400" />
-                Recent Activity
-              </h3>
-              <div className="space-y-3 text-sm">
-                <div className="text-gray-400">
-                  <p>No recent activity</p>
-                  <p className="text-xs mt-1">Start playing to see your stats!</p>
+            <div className="relative bg-gradient-to-r from-gray-800/60 to-gray-900/60 backdrop-blur-xl border border-gray-700/50 rounded-3xl p-6 shadow-2xl overflow-hidden">
+              {/* Decorative Elements */}
+              <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-full -translate-y-8 translate-x-8"></div>
+              
+              <div className="relative">
+                <h3 className="text-xl font-bold text-white mb-6 flex items-center">
+                  <div className="p-2 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-xl mr-3">
+                    <Clock className="h-5 w-5 text-blue-400" />
+                  </div>
+                  Recent Activity
+                </h3>
+                <div className="p-4 bg-gray-700/30 rounded-xl border border-gray-600/30">
+                  <div className="text-center text-gray-400">
+                    <p className="font-medium mb-2">No recent activity</p>
+                    <p className="text-sm">Start playing to see your stats!</p>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-6">
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                <Settings className="h-5 w-5 mr-2 text-emerald-400" />
-                Quick Actions
-              </h3>
-              <div className="space-y-3">
-                <button className="w-full bg-emerald-500/20 text-emerald-400 border border-emerald-400/30 px-4 py-2 rounded-lg hover:bg-emerald-500/30 transition-colors duration-300">
-                  Post Tee Time
-                </button>
-                <button className="w-full bg-gray-600/20 text-gray-300 border border-gray-600/30 px-4 py-2 rounded-lg hover:bg-gray-600/30 transition-colors duration-300">
-                  View Connections
-                </button>
-                <button className="w-full bg-gray-600/20 text-gray-300 border border-gray-600/30 px-4 py-2 rounded-lg hover:bg-gray-600/30 transition-colors duration-300">
-                  Privacy Settings
-                </button>
+            <div className="relative bg-gradient-to-r from-gray-800/60 to-gray-900/60 backdrop-blur-xl border border-gray-700/50 rounded-3xl p-6 shadow-2xl overflow-hidden">
+              {/* Decorative Elements */}
+              <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-full -translate-y-8 translate-x-8"></div>
+              
+              <div className="relative">
+                <h3 className="text-xl font-bold text-white mb-6 flex items-center">
+                  <div className="p-2 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-xl mr-3">
+                    <Settings className="h-5 w-5 text-purple-400" />
+                  </div>
+                  Quick Actions
+                </h3>
+                <div className="space-y-3">
+                  <button className="w-full bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 text-emerald-400 border border-emerald-400/30 px-4 py-3 rounded-xl hover:from-emerald-500/30 hover:to-emerald-600/30 transition-all duration-300 font-semibold shadow-lg hover:shadow-emerald-500/20">
+                    Post Tee Time
+                  </button>
+                  <button className="w-full bg-gradient-to-r from-gray-600/20 to-gray-700/20 text-gray-300 border border-gray-600/30 px-4 py-3 rounded-xl hover:from-gray-600/30 hover:to-gray-700/30 transition-all duration-300 font-semibold shadow-lg hover:shadow-gray-500/20">
+                    View Connections
+                  </button>
+                  <button className="w-full bg-gradient-to-r from-gray-600/20 to-gray-700/20 text-gray-300 border border-gray-600/30 px-4 py-3 rounded-xl hover:from-gray-600/30 hover:to-gray-700/30 transition-all duration-300 font-semibold shadow-lg hover:shadow-gray-500/20">
+                    Privacy Settings
+                  </button>
+                </div>
               </div>
             </div>
           </div>
