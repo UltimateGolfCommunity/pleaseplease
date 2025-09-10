@@ -28,7 +28,7 @@ import {
 } from 'lucide-react'
 import Logo from '@/app/components/Logo'
 import QRCodeGenerator from '@/app/components/QRCodeGenerator'
-import SimpleQRScanner from '@/app/components/SimpleQRScanner'
+import QRCodeScanner from '@/app/components/QRCodeScanner'
 
 
 interface ProfileFormData {
@@ -1257,7 +1257,7 @@ export default function ProfilePage() {
 
       {/* QR Code Scanner */}
       {showQRScanner && (
-        <SimpleQRScanner
+        <QRCodeScanner
           onScan={handleQRScan}
           onClose={() => setShowQRScanner(false)}
         />
