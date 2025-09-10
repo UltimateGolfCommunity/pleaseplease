@@ -44,7 +44,7 @@ export default function Dashboard() {
   const supabase = createBrowserClient()
   
 
-      const [activeTab, setActiveTab] = useState<'overview' | 'find-someone' | 'courses' | 'groups' | 'messages' | 'badges' | 'applications'>('overview')
+      const [activeTab, setActiveTab] = useState<'overview' | 'find-someone' | 'courses' | 'groups' | 'messages' | 'badges' | 'applications' | 'log-round'>('overview')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
@@ -2030,6 +2030,15 @@ export default function Dashboard() {
                         Applications
                       </button>
                       <button
+                        onClick={() => {
+                          setActiveTab('log-round')
+                        }}
+                        className="flex items-center w-full px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+                      >
+                        <Target className="h-4 w-4 mr-3" />
+                        Log Your Round
+                      </button>
+                      <button
                         onClick={() => setShowQRCode(true)}
                         className="flex items-center w-full px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
                       >
@@ -3142,7 +3151,10 @@ export default function Dashboard() {
                         </div>
                         <p className="text-slate-300 mb-4">{group.description || 'No description available'}</p>
                         <div className="flex space-x-2">
-                          <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                          <button 
+                            onClick={() => router.push(`/groups/${group.id}`)}
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                          >
                             View Group
                           </button>
                           <button className="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
@@ -3169,6 +3181,163 @@ export default function Dashboard() {
         {activeTab === 'badges' && (
           <div className="space-y-6">
             <BadgeManagement />
+          </div>
+        )}
+
+        {/* Log Your Round Tab */}
+        {activeTab === 'log-round' && (
+          <div className="space-y-8">
+            {/* Log Round Header */}
+            <div className="relative bg-gradient-to-r from-slate-800/60 to-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 shadow-2xl overflow-hidden">
+              {/* Decorative Elements */}
+              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 rounded-full -translate-y-12 translate-x-12"></div>
+              <div className="absolute bottom-0 left-0 w-16 h-16 bg-gradient-to-tr from-blue-500/10 to-purple-500/10 rounded-full translate-y-8 -translate-x-8"></div>
+              
+              <div className="relative">
+                <h2 className="text-3xl font-bold text-white mb-8 flex items-center">
+                  <div className="p-3 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 rounded-xl mr-4">
+                    <Target className="h-6 w-6 text-emerald-400" />
+                  </div>
+                  Log Your Round
+                </h2>
+                <p className="text-slate-300 text-lg mb-8 leading-relaxed">
+                  Track your golf rounds, monitor your progress, and share your achievements with your groups.
+                </p>
+                
+                {/* Quick Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                  <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-600/50">
+                    <div className="flex items-center space-x-3 mb-3">
+                      <div className="p-2 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-lg">
+                        <Trophy className="h-5 w-5 text-blue-400" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-white">Total Rounds</h3>
+                    </div>
+                    <p className="text-3xl font-bold text-white">0</p>
+                    <p className="text-slate-400 text-sm">This month</p>
+                  </div>
+                  
+                  <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-600/50">
+                    <div className="flex items-center space-x-3 mb-3">
+                      <div className="p-2 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 rounded-lg">
+                        <Target className="h-5 w-5 text-emerald-400" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-white">Average Score</h3>
+                    </div>
+                    <p className="text-3xl font-bold text-white">--</p>
+                    <p className="text-slate-400 text-sm">Last 10 rounds</p>
+                  </div>
+                  
+                  <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-600/50">
+                    <div className="flex items-center space-x-3 mb-3">
+                      <div className="p-2 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-lg">
+                        <Star className="h-5 w-5 text-purple-400" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-white">Best Round</h3>
+                    </div>
+                    <p className="text-3xl font-bold text-white">--</p>
+                    <p className="text-slate-400 text-sm">Personal best</p>
+                  </div>
+                </div>
+
+                {/* Log Round Form */}
+                <div className="bg-slate-800/30 rounded-2xl p-8 border border-slate-600/30">
+                  <h3 className="text-2xl font-bold text-white mb-6">Log New Round</h3>
+                  <form className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-300 mb-3">Course</label>
+                        <input
+                          type="text"
+                          placeholder="Enter course name"
+                          className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300 shadow-lg hover:shadow-emerald-500/10"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-300 mb-3">Date</label>
+                        <input
+                          type="date"
+                          className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300 shadow-lg hover:shadow-emerald-500/10"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-300 mb-3">Score</label>
+                        <input
+                          type="number"
+                          placeholder="85"
+                          className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300 shadow-lg hover:shadow-emerald-500/10"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-300 mb-3">Par</label>
+                        <input
+                          type="number"
+                          placeholder="72"
+                          className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300 shadow-lg hover:shadow-emerald-500/10"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-300 mb-3">Handicap Used</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          placeholder="12.5"
+                          className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300 shadow-lg hover:shadow-emerald-500/10"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-300 mb-3">Notes</label>
+                      <textarea
+                        placeholder="How was your round? Any highlights or areas for improvement?"
+                        rows={4}
+                        className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300 shadow-lg hover:shadow-emerald-500/10 resize-none"
+                      />
+                    </div>
+                    
+                    <div className="flex justify-end">
+                      <button
+                        type="submit"
+                        className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-8 py-4 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2"
+                      >
+                        <Target className="h-5 w-5" />
+                        <span>Log Round</span>
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Rounds */}
+            <div className="relative bg-gradient-to-r from-slate-800/60 to-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 shadow-2xl overflow-hidden">
+              {/* Decorative Elements */}
+              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full -translate-y-10 translate-x-10"></div>
+              
+              <div className="relative">
+                <h3 className="text-2xl font-bold text-white mb-6 flex items-center">
+                  <div className="p-2 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-lg mr-3">
+                    <Clock className="h-5 w-5 text-blue-400" />
+                  </div>
+                  Recent Rounds
+                </h3>
+                
+                <div className="text-center py-12">
+                  <div className="w-20 h-20 bg-slate-700/50 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                    <Target className="h-10 w-10 text-slate-400" />
+                  </div>
+                  <h4 className="text-xl font-bold text-white mb-4">No Rounds Yet</h4>
+                  <p className="text-slate-400 mb-6">Start logging your rounds to track your progress and see your improvement over time.</p>
+                  <button className="bg-gradient-to-r from-emerald-500/20 to-teal-600/20 text-emerald-400 border border-emerald-400/30 px-6 py-3 rounded-xl hover:from-emerald-500/30 hover:to-teal-600/30 transition-all duration-300 font-semibold shadow-lg hover:shadow-emerald-500/20">
+                    Log Your First Round
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
