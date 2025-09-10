@@ -80,6 +80,8 @@ export default function ProfilePage() {
   const [showQRCode, setShowQRCode] = useState(false)
   const [showQRScanner, setShowQRScanner] = useState(false)
   const [showNavigationMenu, setShowNavigationMenu] = useState(false)
+  const [connectionCount, setConnectionCount] = useState(0)
+  const [connectionsLoading, setConnectionsLoading] = useState(false)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -110,6 +112,13 @@ export default function ProfilePage() {
       })
     }
   }, [user, profile, loading, router])
+
+  // Fetch connections when user loads
+  useEffect(() => {
+    if (user?.id) {
+      fetchConnections()
+    }
+  }, [user?.id])
 
   if (loading) {
     return (
@@ -314,6 +323,29 @@ export default function ProfilePage() {
       alert(`Failed to save profile: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const fetchConnections = async () => {
+    if (!user?.id) return
+    
+    setConnectionsLoading(true)
+    try {
+      const { createBrowserClient } = await import('@/lib/supabase')
+      const supabase = createBrowserClient()
+      
+      const { data, error } = await supabase
+        .from('user_connections')
+        .select('*')
+        .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`)
+        .eq('status', 'accepted')
+
+      if (error) throw error
+      setConnectionCount(data?.length || 0)
+    } catch (error) {
+      console.error('Error fetching connections:', error)
+    } finally {
+      setConnectionsLoading(false)
     }
   }
 
@@ -661,6 +693,16 @@ export default function ProfilePage() {
                 <div className="inline-flex items-center bg-gray-700/50 text-gray-300 px-3 py-2 rounded-lg text-sm">
                   <Calendar className="h-4 w-4 mr-2" />
                   Member since {new Date(user.created_at || Date.now()).toLocaleDateString()}
+                </div>
+                
+                {/* Connections Badge */}
+                <div className="inline-flex items-center bg-gradient-to-r from-blue-500/20 to-indigo-600/20 text-blue-400 px-3 py-2 rounded-lg text-sm border border-blue-400/30">
+                  <Users className="h-4 w-4 mr-2" />
+                  {connectionsLoading ? (
+                    <div className="animate-spin rounded-full h-3 w-3 border-b border-blue-400"></div>
+                  ) : (
+                    `${connectionCount} Connection${connectionCount !== 1 ? 's' : ''}`
+                  )}
                 </div>
               </div>
               
