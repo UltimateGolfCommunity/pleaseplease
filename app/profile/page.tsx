@@ -681,30 +681,48 @@ export default function ProfilePage() {
         )}
 
         {/* Modern Profile Header */}
-        <div className="relative bg-gradient-to-r from-gray-800/60 to-gray-900/60 backdrop-blur-xl border border-gray-700/50 rounded-3xl p-8 mb-8 shadow-2xl overflow-hidden">
-          {/* Decorative Elements */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 rounded-full -translate-y-16 translate-x-16"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-purple-500/10 to-blue-500/10 rounded-full translate-y-12 -translate-x-12"></div>
+        <div className="relative bg-gradient-to-br from-slate-800/80 via-slate-900/60 to-slate-800/80 backdrop-blur-2xl border border-slate-700/30 rounded-3xl p-8 mb-8 shadow-2xl overflow-hidden">
+          {/* Enhanced Decorative Elements */}
+          <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-emerald-500/15 to-cyan-500/10 rounded-full -translate-y-20 translate-x-20 animate-pulse"></div>
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-purple-500/15 to-blue-500/10 rounded-full translate-y-16 -translate-x-16 animate-pulse"></div>
+          <div className="absolute top-1/2 left-1/2 w-24 h-24 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-full -translate-x-1/2 -translate-y-1/2 animate-pulse"></div>
+          
+          {/* Floating Particles */}
+          <div className="absolute top-8 left-8 w-2 h-2 bg-emerald-400/60 rounded-full animate-bounce"></div>
+          <div className="absolute top-16 right-16 w-1 h-1 bg-cyan-400/60 rounded-full animate-bounce" style={{ animationDelay: '0.5s' }}></div>
+          <div className="absolute bottom-12 left-12 w-1.5 h-1.5 bg-purple-400/60 rounded-full animate-bounce" style={{ animationDelay: '1s' }}></div>
           
           <div className="relative flex flex-col sm:flex-row items-start sm:items-center space-y-6 sm:space-y-0 sm:space-x-8">
-            {/* Profile Picture */}
+            {/* Enhanced Profile Picture */}
             <div className="relative group">
-              {(formData.avatar_url || profile?.avatar_url) ? (
-                <div className="h-32 w-32 rounded-2xl overflow-hidden border-4 border-emerald-400/30 shadow-2xl group-hover:border-emerald-400/60 transition-all duration-300">
-                  <img 
-                    src={formData.avatar_url || profile?.avatar_url || '/default-avatar.svg'} 
-                    alt="Profile" 
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
+              <div className="relative">
+                {(formData.avatar_url || profile?.avatar_url) ? (
+                  <div className="h-36 w-36 rounded-3xl overflow-hidden border-4 border-emerald-400/40 shadow-2xl group-hover:border-emerald-400/70 transition-all duration-500 group-hover:shadow-emerald-500/25">
+                    <img 
+                      src={formData.avatar_url || profile?.avatar_url || '/default-avatar.svg'} 
+                      alt="Profile" 
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                    {/* Overlay gradient */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  </div>
+                ) : (
+                  <div className="h-36 w-36 bg-gradient-to-br from-emerald-400 via-cyan-400 to-blue-400 rounded-3xl flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform duration-500 group-hover:shadow-emerald-500/25">
+                    <User className="h-20 w-20 text-white drop-shadow-lg" />
+                  </div>
+                )}
+                
+                {/* Animated ring */}
+                <div className="absolute inset-0 rounded-3xl border-2 border-emerald-400/20 group-hover:border-emerald-400/50 transition-all duration-500 group-hover:scale-105"></div>
+                
+                {/* Status indicator */}
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full border-2 border-slate-800 flex items-center justify-center">
+                  <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
                 </div>
-              ) : (
-                <div className="h-32 w-32 bg-gradient-to-br from-emerald-400 to-cyan-400 rounded-2xl flex items-center justify-center shadow-2xl group-hover:scale-105 transition-transform duration-300">
-                  <User className="h-16 w-16 text-black" />
-                </div>
-              )}
+              </div>
               {isEditing && (
-                <label className="absolute -bottom-2 -right-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white p-3 rounded-xl transition-all duration-300 cursor-pointer shadow-lg hover:shadow-emerald-500/30 group-hover:scale-110">
-                  <Camera className="h-5 w-5" />
+                <label className="absolute -bottom-3 -right-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white p-4 rounded-2xl transition-all duration-300 cursor-pointer shadow-lg hover:shadow-emerald-500/30 group-hover:scale-110 hover:-translate-y-1">
+                  <Camera className="h-6 w-6" />
                   <input
                     type="file"
                     accept="image/*"
@@ -721,19 +739,24 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {/* Profile Info */}
-            <div className="flex-1 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-                <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
-                  <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                    {profile?.first_name && profile?.last_name 
-                      ? `${profile.first_name} ${profile.last_name}`
-                      : user.email?.split('@')[0] || 'Golfer'
-                    }
-                  </h1>
+            {/* Enhanced Profile Info */}
+            <div className="flex-1 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+                <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-6">
+                  <div className="space-y-2">
+                    <h1 className="text-5xl sm:text-6xl font-bold bg-gradient-to-r from-white via-emerald-100 to-cyan-100 bg-clip-text text-transparent leading-tight">
+                      {profile?.first_name && profile?.last_name 
+                        ? `${profile.first_name} ${profile.last_name}`
+                        : user.email?.split('@')[0] || 'Golfer'
+                      }
+                    </h1>
+                    {profile?.username && (
+                      <p className="text-xl text-slate-300 font-medium">@{profile.username}</p>
+                    )}
+                  </div>
                   {profile?.handicap && (
-                    <div className="inline-flex items-center bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 text-emerald-400 px-4 py-2 rounded-xl text-sm font-semibold border border-emerald-400/30 shadow-lg">
-                      <Trophy className="h-4 w-4 mr-2" />
+                    <div className="inline-flex items-center bg-gradient-to-r from-emerald-500/25 to-emerald-600/25 text-emerald-300 px-6 py-3 rounded-2xl text-lg font-bold border border-emerald-400/40 shadow-xl hover:shadow-emerald-500/20 transition-all duration-300">
+                      <Trophy className="h-5 w-5 mr-3" />
                       Handicap: {profile.handicap}
                     </div>
                   )}
@@ -803,29 +826,37 @@ export default function ProfilePage() {
                 </button>
               </div>
               
-              {profile?.bio ? (
-                <p className="text-gray-300 text-lg leading-relaxed max-w-2xl">{profile.bio}</p>
-              ) : (
-                <p className="text-gray-400 text-lg italic max-w-2xl">No bio yet. Add one to tell other golfers about yourself!</p>
-              )}
+              {/* Enhanced Bio Section */}
+              <div className="relative">
+                {profile?.bio ? (
+                  <div className="bg-gradient-to-r from-slate-700/30 to-slate-800/30 backdrop-blur-sm rounded-2xl p-6 border border-slate-600/30 hover:border-slate-500/50 transition-all duration-300">
+                    <p className="text-slate-200 text-lg leading-relaxed">{profile.bio}</p>
+                  </div>
+                ) : (
+                  <div className="bg-gradient-to-r from-slate-700/20 to-slate-800/20 backdrop-blur-sm rounded-2xl p-6 border border-slate-600/20 hover:border-slate-500/30 transition-all duration-300">
+                    <p className="text-slate-400 text-lg italic">No bio yet. Add one to tell other golfers about yourself!</p>
+                  </div>
+                )}
+              </div>
 
-              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400">
+              {/* Enhanced Info Badges */}
+              <div className="flex flex-wrap items-center gap-4">
                 {profile?.location && (
-                  <div className="flex items-center bg-gray-700/30 px-3 py-2 rounded-lg">
-                    <MapPin className="h-4 w-4 mr-2 text-emerald-400" />
-                    {profile.location}
+                  <div className="flex items-center bg-gradient-to-r from-slate-700/40 to-slate-800/40 backdrop-blur-sm px-4 py-3 rounded-xl border border-slate-600/30 hover:border-emerald-400/50 transition-all duration-300 group">
+                    <MapPin className="h-5 w-5 mr-3 text-emerald-400 group-hover:text-emerald-300 transition-colors" />
+                    <span className="text-slate-200 font-medium">{profile.location}</span>
                   </div>
                 )}
                 {profile?.home_club && (
-                  <div className="flex items-center bg-gray-700/30 px-3 py-2 rounded-lg">
-                    <Flag className="h-4 w-4 mr-2 text-blue-400" />
-                    {profile.home_club}
+                  <div className="flex items-center bg-gradient-to-r from-slate-700/40 to-slate-800/40 backdrop-blur-sm px-4 py-3 rounded-xl border border-slate-600/30 hover:border-blue-400/50 transition-all duration-300 group">
+                    <Flag className="h-5 w-5 mr-3 text-blue-400 group-hover:text-blue-300 transition-colors" />
+                    <span className="text-slate-200 font-medium">{profile.home_club}</span>
                   </div>
                 )}
                 {profile?.playing_style && (
-                  <div className="flex items-center bg-gray-700/30 px-3 py-2 rounded-lg">
-                    <User className="h-4 w-4 mr-2 text-purple-400" />
-                    {profile.playing_style}
+                  <div className="flex items-center bg-gradient-to-r from-slate-700/40 to-slate-800/40 backdrop-blur-sm px-4 py-3 rounded-xl border border-slate-600/30 hover:border-purple-400/50 transition-all duration-300 group">
+                    <TrendingUp className="h-5 w-5 mr-3 text-purple-400 group-hover:text-purple-300 transition-colors" />
+                    <span className="text-slate-200 font-medium">{profile.playing_style}</span>
                   </div>
                 )}
               </div>
@@ -833,12 +864,18 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Modern Badge Display */}
+        {/* Enhanced Badge Display */}
         {profile?.badges && profile.badges.length > 0 && (
-          <div className="relative bg-gradient-to-r from-yellow-900/30 to-orange-900/30 backdrop-blur-xl border border-yellow-400/40 rounded-3xl p-8 mb-8 shadow-2xl overflow-hidden">
-            {/* Decorative Elements */}
-            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-full -translate-y-12 translate-x-12"></div>
-            <div className="absolute bottom-0 left-0 w-16 h-16 bg-gradient-to-tr from-yellow-400/20 to-orange-400/20 rounded-full translate-y-8 -translate-x-8"></div>
+          <div className="relative bg-gradient-to-br from-yellow-900/40 via-orange-900/30 to-red-900/40 backdrop-blur-2xl border border-yellow-400/50 rounded-3xl p-8 mb-8 shadow-2xl overflow-hidden">
+            {/* Enhanced Decorative Elements */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-yellow-500/15 to-orange-500/10 rounded-full -translate-y-16 translate-x-16 animate-pulse"></div>
+            <div className="absolute bottom-0 left-0 w-28 h-28 bg-gradient-to-tr from-orange-500/15 to-red-500/10 rounded-full translate-y-14 -translate-x-14 animate-pulse"></div>
+            <div className="absolute top-1/2 left-1/2 w-20 h-20 bg-gradient-to-r from-yellow-500/10 to-red-500/10 rounded-full -translate-x-1/2 -translate-y-1/2 animate-pulse"></div>
+            
+            {/* Floating Badge Particles */}
+            <div className="absolute top-6 left-6 w-2 h-2 bg-yellow-400/60 rounded-full animate-bounce"></div>
+            <div className="absolute top-12 right-12 w-1.5 h-1.5 bg-orange-400/60 rounded-full animate-bounce" style={{ animationDelay: '0.7s' }}></div>
+            <div className="absolute bottom-8 left-8 w-1 h-1 bg-red-400/60 rounded-full animate-bounce" style={{ animationDelay: '1.4s' }}></div>
             
             <div className="relative">
               <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
