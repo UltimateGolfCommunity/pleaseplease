@@ -82,6 +82,9 @@ export default function ProfilePage() {
   const [showNavigationMenu, setShowNavigationMenu] = useState(false)
   const [connectionCount, setConnectionCount] = useState(0)
   const [connectionsLoading, setConnectionsLoading] = useState(false)
+  const [connections, setConnections] = useState<any[]>([])
+  const [showConnectionsModal, setShowConnectionsModal] = useState(false)
+  const [connectionsModalLoading, setConnectionsModalLoading] = useState(false)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -342,10 +345,57 @@ export default function ProfilePage() {
 
       if (error) throw error
       setConnectionCount(data?.length || 0)
+      setConnections(data || [])
     } catch (error) {
       console.error('Error fetching connections:', error)
     } finally {
       setConnectionsLoading(false)
+    }
+  }
+
+  const fetchConnectionProfiles = async () => {
+    if (!user?.id || connections.length === 0) return
+    
+    setConnectionsModalLoading(true)
+    try {
+      const { createBrowserClient } = await import('@/lib/supabase')
+      const supabase = createBrowserClient()
+      
+      // Get all connection user IDs
+      const connectionUserIds = connections.map(conn => 
+        conn.requester_id === user.id ? conn.recipient_id : conn.requester_id
+      )
+      
+      // Fetch profiles for all connections
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('id, first_name, last_name, username, avatar_url, handicap, location, bio')
+        .in('id', connectionUserIds)
+
+      if (error) throw error
+      
+      // Combine connection data with profile data
+      const connectionsWithProfiles = connections.map(conn => {
+        const otherUserId = conn.requester_id === user.id ? conn.recipient_id : conn.requester_id
+        const profile = data?.find((p: any) => p.id === otherUserId)
+        return {
+          ...conn,
+          profile
+        }
+      })
+      
+      setConnections(connectionsWithProfiles)
+    } catch (error) {
+      console.error('Error fetching connection profiles:', error)
+    } finally {
+      setConnectionsModalLoading(false)
+    }
+  }
+
+  const handleConnectionsClick = () => {
+    if (connectionCount > 0) {
+      setShowConnectionsModal(true)
+      fetchConnectionProfiles()
     }
   }
 
@@ -696,14 +746,18 @@ export default function ProfilePage() {
                 </div>
                 
                 {/* Connections Badge */}
-                <div className="inline-flex items-center bg-gradient-to-r from-blue-500/20 to-indigo-600/20 text-blue-400 px-3 py-2 rounded-lg text-sm border border-blue-400/30">
+                <button 
+                  onClick={handleConnectionsClick}
+                  disabled={connectionCount === 0 || connectionsLoading}
+                  className="inline-flex items-center bg-gradient-to-r from-blue-500/20 to-indigo-600/20 text-blue-400 px-3 py-2 rounded-lg text-sm border border-blue-400/30 hover:from-blue-500/30 hover:to-indigo-600/30 hover:border-blue-400/50 transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-50"
+                >
                   <Users className="h-4 w-4 mr-2" />
                   {connectionsLoading ? (
                     <div className="animate-spin rounded-full h-3 w-3 border-b border-blue-400"></div>
                   ) : (
                     `${connectionCount} Connection${connectionCount !== 1 ? 's' : ''}`
                   )}
-                </div>
+                </button>
               </div>
               
               {profile?.bio ? (
@@ -1164,6 +1218,118 @@ export default function ProfilePage() {
           onScan={handleQRScan}
           onClose={() => setShowQRScanner(false)}
         />
+      )}
+
+      {/* Connections Modal */}
+      {showConnectionsModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-2xl p-6 w-full max-w-2xl max-h-[80vh] shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-white flex items-center">
+                <div className="p-2 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-lg mr-3">
+                  <Users className="h-6 w-6 text-blue-400" />
+                </div>
+                My Connections
+              </h3>
+              <button
+                onClick={() => setShowConnectionsModal(false)}
+                className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                <X className="h-6 w-6 text-slate-400" />
+              </button>
+            </div>
+            
+            {connectionsModalLoading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
+                <p className="text-slate-400">Loading connections...</p>
+              </div>
+            ) : connections.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-20 h-20 bg-slate-700/50 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                  <Users className="h-10 w-10 text-slate-400" />
+                </div>
+                <h4 className="text-xl font-bold text-white mb-4">No Connections Yet</h4>
+                <p className="text-slate-400 mb-6">Start connecting with other golfers to build your network!</p>
+                <button
+                  onClick={() => {
+                    setShowConnectionsModal(false)
+                    setShowQRScanner(true)
+                  }}
+                  className="bg-gradient-to-r from-blue-500/20 to-indigo-600/20 text-blue-400 border border-blue-400/30 px-6 py-3 rounded-xl hover:from-blue-500/30 hover:to-indigo-600/30 transition-all duration-300 font-semibold shadow-lg hover:shadow-blue-500/20"
+                >
+                  Scan QR Code to Connect
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4 max-h-96 overflow-y-auto">
+                {connections.map((connection, index) => (
+                  <div key={connection.id || index} className="bg-slate-700/50 rounded-xl p-4 border border-slate-600/50 hover:border-blue-400/30 transition-all duration-300">
+                    <div className="flex items-center space-x-4">
+                      {/* Profile Picture */}
+                      <div className="relative">
+                        {connection.profile?.avatar_url ? (
+                          <div className="h-12 w-12 rounded-xl overflow-hidden border-2 border-blue-400/30">
+                            <img 
+                              src={connection.profile.avatar_url} 
+                              alt={`${connection.profile.first_name} ${connection.profile.last_name}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="h-12 w-12 bg-gradient-to-br from-blue-400 to-indigo-400 rounded-xl flex items-center justify-center border-2 border-blue-400/30">
+                            <User className="h-6 w-6 text-white" />
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Profile Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <h4 className="text-lg font-semibold text-white truncate">
+                            {connection.profile?.first_name} {connection.profile?.last_name}
+                          </h4>
+                          {connection.profile?.handicap && (
+                            <span className="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded-lg text-xs font-medium">
+                              HCP {connection.profile.handicap}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-slate-400 text-sm truncate">
+                          @{connection.profile?.username || 'No username'}
+                        </p>
+                        {connection.profile?.location && (
+                          <div className="flex items-center space-x-1 mt-1">
+                            <MapPin className="h-3 w-3 text-slate-500" />
+                            <span className="text-slate-500 text-xs">{connection.profile.location}</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Action Button */}
+                      <button
+                        onClick={() => {
+                          setShowConnectionsModal(false)
+                          router.push(`/users/${connection.profile?.id}`)
+                        }}
+                        className="bg-gradient-to-r from-blue-500/20 to-indigo-600/20 text-blue-400 border border-blue-400/30 px-4 py-2 rounded-lg hover:from-blue-500/30 hover:to-indigo-600/30 transition-all duration-300 font-medium text-sm"
+                      >
+                        View Profile
+                      </button>
+                    </div>
+                    
+                    {/* Bio Preview */}
+                    {connection.profile?.bio && (
+                      <div className="mt-3 pt-3 border-t border-slate-600/50">
+                        <p className="text-slate-300 text-sm line-clamp-2">{connection.profile.bio}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   )
