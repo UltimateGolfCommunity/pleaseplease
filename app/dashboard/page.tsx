@@ -3230,7 +3230,20 @@ export default function Dashboard() {
                       return (
                       <div key={group.id} className="bg-slate-800/50 rounded-xl p-6 border border-slate-600/50">
                         <div className="flex items-center justify-between mb-3">
-                          <h4 className="text-lg font-semibold text-white">{group.name || 'Unnamed Group'}</h4>
+                          <div className="flex items-center space-x-3">
+                            {group.logo_url ? (
+                              <img
+                                src={group.logo_url}
+                                alt={`${group.name} logo`}
+                                className="w-8 h-8 rounded-lg object-cover"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 bg-gradient-to-br from-slate-600 to-slate-700 rounded-lg flex items-center justify-center">
+                                <Users className="h-4 w-4 text-slate-300" />
+                              </div>
+                            )}
+                            <h4 className="text-lg font-semibold text-white">{group.name || 'Unnamed Group'}</h4>
+                          </div>
                           <div className="flex items-center space-x-2">
                             <span className="text-sm text-slate-400">{group.member_count || 0} members</span>
                             <button

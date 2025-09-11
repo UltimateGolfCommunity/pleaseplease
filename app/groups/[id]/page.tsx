@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createBrowserClient } from '@/lib/supabase'
+import { uploadGroupLogo } from '@/lib/group-logo-upload'
 import { 
   ArrowLeft,
   Users,
@@ -34,6 +35,7 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
   const [members, setMembers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
   const [showMemberModal, setShowMemberModal] = useState(false)
   const [showLogRoundModal, setShowLogRoundModal] = useState(false)
   const [groupId, setGroupId] = useState<string>('')
@@ -144,6 +146,29 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
       alert('Failed to upload image')
     } finally {
       setUploadingImage(false)
+    }
+  }
+
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file || !group) return
+
+    setUploadingLogo(true)
+    try {
+      const result = await uploadGroupLogo(file, group.id)
+      
+      if (result.success) {
+        // Update local state with new logo URL
+        setGroup((prev: any) => prev ? { ...prev, logo_url: result.logoUrl } : null)
+        alert('Group logo uploaded successfully!')
+      } else {
+        alert(`Failed to upload logo: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Error uploading group logo:', error)
+      alert('Failed to upload group logo')
+    } finally {
+      setUploadingLogo(false)
     }
   }
 
@@ -279,6 +304,44 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
                     className="hidden"
                   />
                 </div>
+              </div>
+
+              {/* Group Logo */}
+              <div className="flex-shrink-0">
+                <div className="relative group">
+                  <div className="w-24 h-24 rounded-xl overflow-hidden border-2 border-slate-500/30 shadow-lg">
+                    {group.logo_url ? (
+                      <img
+                        src={group.logo_url}
+                        alt={`${group.name} logo`}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center">
+                        <Trophy className="h-8 w-8 text-slate-300" />
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => document.getElementById('group-logo-upload')?.click()}
+                    disabled={uploadingLogo}
+                    className="absolute -bottom-1 -right-1 bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 disabled:from-slate-500 disabled:to-slate-600 text-white p-2 rounded-lg transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed"
+                  >
+                    {uploadingLogo ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <Upload className="h-4 w-4" />
+                    )}
+                  </button>
+                  <input
+                    id="group-logo-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                  />
+                </div>
+                <p className="text-xs text-slate-400 mt-2 text-center">Group Logo</p>
               </div>
 
               {/* Group Info */}
