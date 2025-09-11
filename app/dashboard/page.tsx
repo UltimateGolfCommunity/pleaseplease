@@ -3123,160 +3123,256 @@ export default function Dashboard() {
 
         {/* Groups Tab */}
         {activeTab === 'groups' && (
-          <div className="space-y-6">
-            {/* Groups Management */}
-            <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8 shadow-xl">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-white">My Groups</h2>
-                <button
-                  onClick={handleCreateGroup}
-                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 py-3 rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-                >
-                  Create Group
-                </button>
-              </div>
+          <div className="space-y-8">
+            {/* Header Section */}
+            <div className="relative bg-gradient-to-br from-slate-800/60 via-slate-900/50 to-slate-800/60 backdrop-blur-2xl border border-slate-700/30 rounded-3xl p-8 shadow-2xl overflow-hidden">
+              {/* Animated Background Elements */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-400/20 to-cyan-400/20 rounded-full -translate-y-16 translate-x-16 animate-pulse"></div>
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-blue-400/20 to-purple-400/20 rounded-full translate-y-12 -translate-x-12 animate-bounce"></div>
+              <div className="absolute top-1/2 left-1/2 w-16 h-16 bg-gradient-to-r from-yellow-400/10 to-orange-400/10 rounded-full -translate-x-8 -translate-y-8 animate-pulse"></div>
               
-              {/* Search Groups */}
-              <div className="mb-6">
-                <div className="flex space-x-2">
+              <div className="relative">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+                  <div>
+                    <h2 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-white via-emerald-100 to-cyan-100 bg-clip-text text-transparent mb-4">
+                      My Groups
+                    </h2>
+                    <p className="text-slate-300 text-lg leading-relaxed max-w-2xl">
+                      Connect with fellow golfers, join communities, and share your passion for the game.
+                    </p>
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <button
+                      onClick={handleCreateGroup}
+                      className="group bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-8 py-4 rounded-2xl transition-all duration-300 font-semibold shadow-xl hover:shadow-emerald-500/25 transform hover:-translate-y-1 flex items-center justify-center space-x-3"
+                    >
+                      <Plus className="h-5 w-5 group-hover:rotate-90 transition-transform duration-300" />
+                      <span>Create Group</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Search Section */}
+            <div className="bg-gradient-to-r from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 shadow-xl">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1 relative">
                   <input
                     type="text"
-                    placeholder="Search groups..."
+                    placeholder="Search for groups to join..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleSearch())}
-                    className="flex-1 p-3 border border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-700 text-white placeholder-slate-400"
+                    className="w-full px-6 py-4 bg-slate-700/50 border border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300 shadow-lg hover:shadow-emerald-500/10"
                   />
-                  <button
-                    onClick={handleSearch}
-                    disabled={searchLoading}
-                    className="px-4 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors disabled:opacity-50"
-                  >
-                    {searchLoading ? '...' : 'Search'}
-                  </button>
-                </div>
-              </div>
-
-              {/* Search Results */}
-              {searchPerformed && (
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-white mb-4">Search Results</h3>
-                  {searchLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
-                      <span className="ml-3 text-slate-300">Searching...</span>
-                    </div>
-                  ) : searchResults.length === 0 ? (
-                    <div className="text-center py-8">
-                      <Users className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                      <h4 className="text-lg font-medium text-slate-300 mb-2">No Groups Found</h4>
-                      <p className="text-slate-400">Try a different search term or create a new group.</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {searchResults.map((group: any) => (
-                        <div key={group.id} className="bg-slate-700/50 rounded-xl p-4 border border-slate-600/50">
-                          <div className="flex items-center justify-between mb-3">
-                            <h4 className="text-lg font-semibold text-white">{group.name}</h4>
-                            <span className="text-xs text-slate-400">{group.member_count || 0} members</span>
-                          </div>
-                          <p className="text-slate-300 text-sm mb-3">{group.description}</p>
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => handleJoinGroup(group.id)}
-                              className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-                            >
-                              Join Group
-                            </button>
-                            <button
-                              onClick={() => router.push(`/groups/${group.id}`)}
-                              className="flex-1 bg-slate-600 hover:bg-slate-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-                            >
-                              View Details
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {/* My Groups */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-white">My Groups</h3>
-                
-                {groupsLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
-                    <span className="ml-3 text-slate-300">Loading groups...</span>
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-4">
+                    <Users className="h-5 w-5 text-slate-400" />
                   </div>
-                ) : userGroups.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Users className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                    <h4 className="text-lg font-medium text-slate-300 mb-2">No Groups Yet</h4>
-                    <p className="text-slate-400 mb-4">You haven't joined any groups yet. Create one or search for existing groups.</p>
+                </div>
+                <button
+                  onClick={handleSearch}
+                  disabled={searchLoading}
+                  className="px-8 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 disabled:from-slate-500 disabled:to-slate-600 text-white rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                >
+                  {searchLoading ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  ) : (
+                    <>
+                      <Users className="h-5 w-5" />
+                      <span>Search</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Search Results */}
+            {searchPerformed && (
+              <div className="space-y-6">
+                <h3 className="text-2xl font-bold text-white flex items-center space-x-3">
+                  <div className="p-2 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-xl">
+                    <Users className="h-6 w-6 text-blue-400" />
+                  </div>
+                  <span>Search Results</span>
+                </h3>
+                
+                {searchLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto mb-4"></div>
+                      <span className="text-slate-300 text-lg">Searching groups...</span>
+                    </div>
+                  </div>
+                ) : searchResults.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-20 h-20 bg-gradient-to-br from-slate-600 to-slate-700 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                      <Users className="h-10 w-10 text-slate-400" />
+                    </div>
+                    <h4 className="text-xl font-semibold text-slate-300 mb-3">No Groups Found</h4>
+                    <p className="text-slate-400 mb-6 max-w-md mx-auto">Try a different search term or create a new group to get started.</p>
                     <button
                       onClick={handleCreateGroup}
-                      className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 py-3 rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                      className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 py-3 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
                     >
-                      Create Your First Group
+                      Create New Group
                     </button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {userGroups.map((group: any) => {
-                      console.log('🔍 Rendering group:', group)
-                      return (
-                      <div key={group.id} className="bg-slate-800/50 rounded-xl p-6 border border-slate-600/50">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center space-x-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {searchResults.map((group: any) => (
+                      <div key={group.id} className="group bg-gradient-to-br from-slate-800/60 to-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center space-x-4">
                             {group.logo_url ? (
                               <img
                                 src={group.logo_url}
                                 alt={`${group.name} logo`}
-                                className="w-8 h-8 rounded-lg object-cover"
+                                className="w-12 h-12 rounded-xl object-cover shadow-lg"
                               />
                             ) : (
-                              <div className="w-8 h-8 bg-gradient-to-br from-slate-600 to-slate-700 rounded-lg flex items-center justify-center">
-                                <Users className="h-4 w-4 text-slate-300" />
+                              <div className="w-12 h-12 bg-gradient-to-br from-slate-600 to-slate-700 rounded-xl flex items-center justify-center shadow-lg">
+                                <Users className="h-6 w-6 text-slate-300" />
                               </div>
                             )}
-                            <h4 className="text-lg font-semibold text-white">{group.name || 'Unnamed Group'}</h4>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <span className="text-sm text-slate-400">{group.member_count || 0} members</span>
-                            <button
-                              onClick={() => setShowGroupModal(true)}
-                              className="text-emerald-400 hover:text-emerald-300 text-sm font-medium"
-                            >
-                              Manage
-                            </button>
+                            <div>
+                              <h4 className="text-lg font-bold text-white group-hover:text-emerald-300 transition-colors">{group.name}</h4>
+                              <p className="text-sm text-slate-400">{group.member_count || 0} members</p>
+                            </div>
                           </div>
                         </div>
-                        <p className="text-slate-300 mb-4">{group.description || 'No description available'}</p>
-                        <div className="flex space-x-2">
-                          <button 
-                            onClick={() => {
-                              console.log('🔍 View Group clicked for:', group)
-                              console.log('🔍 Group ID:', group.id)
-                              console.log('🔍 Navigating to:', `/groups/${group.id}`)
-                              router.push(`/groups/${group.id}`)
-                            }}
-                            className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                        <p className="text-slate-300 text-sm mb-6 line-clamp-2">{group.description || 'No description available'}</p>
+                        <div className="flex space-x-3">
+                          <button
+                            onClick={() => handleJoinGroup(group.id)}
+                            className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 shadow-lg hover:shadow-emerald-500/25 transform hover:-translate-y-1"
                           >
-                            View Group
+                            Join Group
                           </button>
-                          <button className="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                            Leave Group
+                          <button
+                            onClick={() => router.push(`/groups/${group.id}`)}
+                            className="flex-1 bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                          >
+                            View Details
                           </button>
                         </div>
                       </div>
-                      )
-                    })}
+                    ))}
                   </div>
                 )}
               </div>
+            )}
+            
+            {/* My Groups Section */}
+            <div className="space-y-6">
+              <h3 className="text-2xl font-bold text-white flex items-center space-x-3">
+                <div className="p-2 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 rounded-xl">
+                  <Users className="h-6 w-6 text-emerald-400" />
+                </div>
+                <span>Your Groups</span>
+              </h3>
+              
+              {groupsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto mb-4"></div>
+                    <span className="text-slate-300 text-lg">Loading your groups...</span>
+                  </div>
+                </div>
+              ) : userGroups.length === 0 ? (
+                <div className="text-center py-16">
+                  <div className="w-24 h-24 bg-gradient-to-br from-slate-600 to-slate-700 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
+                    <Users className="h-12 w-12 text-slate-400" />
+                  </div>
+                  <h4 className="text-2xl font-bold text-slate-300 mb-4">No Groups Yet</h4>
+                  <p className="text-slate-400 mb-8 max-w-md mx-auto text-lg leading-relaxed">
+                    You haven't joined any groups yet. Create your own group or search for existing ones to connect with fellow golfers.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button
+                      onClick={handleCreateGroup}
+                      className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-8 py-4 rounded-2xl transition-all duration-300 font-semibold shadow-xl hover:shadow-emerald-500/25 transform hover:-translate-y-1 flex items-center justify-center space-x-3"
+                    >
+                      <Plus className="h-5 w-5" />
+                      <span>Create Your First Group</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {userGroups.map((group: any) => {
+                    console.log('🔍 Rendering group:', group)
+                    return (
+                      <div 
+                        key={group.id} 
+                        className="group bg-gradient-to-br from-slate-800/60 to-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer"
+                        onClick={() => {
+                          console.log('🔍 Group card clicked for:', group)
+                          console.log('🔍 Group ID:', group.id)
+                          console.log('🔍 Navigating to:', `/groups/${group.id}`)
+                          router.push(`/groups/${group.id}`)
+                        }}
+                      >
+                        {/* Group Logo */}
+                        <div className="flex justify-center mb-6">
+                          <div className="relative">
+                            <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-slate-600/30 shadow-2xl group-hover:border-emerald-400/50 transition-all duration-300">
+                              {group.logo_url ? (
+                                <img
+                                  src={group.logo_url}
+                                  alt={`${group.name} logo`}
+                                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center group-hover:from-emerald-500 group-hover:to-teal-600 transition-all duration-300">
+                                  <Users className="h-8 w-8 text-slate-300 group-hover:text-white transition-colors duration-300" />
+                                </div>
+                              )}
+                            </div>
+                            {/* Status indicator */}
+                            <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full border-2 border-slate-800 flex items-center justify-center">
+                              <div className="w-2 h-2 bg-white rounded-full"></div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Group Info */}
+                        <div className="text-center">
+                          <h4 className="text-xl font-bold text-white mb-2 group-hover:text-emerald-300 transition-colors duration-300 line-clamp-1">
+                            {group.name || 'Unnamed Group'}
+                          </h4>
+                          <p className="text-slate-400 text-sm mb-4 line-clamp-2">
+                            {group.description || 'No description available'}
+                          </p>
+                          
+                          {/* Group Stats */}
+                          <div className="flex items-center justify-center space-x-4 mb-4">
+                            <div className="flex items-center space-x-1 text-slate-300">
+                              <Users className="h-4 w-4 text-blue-400" />
+                              <span className="text-sm font-medium">{group.member_count || 0}</span>
+                            </div>
+                            <div className="w-1 h-1 bg-slate-500 rounded-full"></div>
+                            <div className="flex items-center space-x-1 text-slate-300">
+                              <Calendar className="h-4 w-4 text-emerald-400" />
+                              <span className="text-sm font-medium">
+                                {new Date(group.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Action Button */}
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-6 py-3 rounded-xl text-sm font-semibold shadow-lg transform group-hover:scale-105 transition-transform duration-300">
+                              View Group
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </div>
         )}
