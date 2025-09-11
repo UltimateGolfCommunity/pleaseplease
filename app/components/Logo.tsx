@@ -12,11 +12,11 @@ export default function Logo({ size = 'xl', showText = true, className = '' }: L
   const { isDark } = useTheme()
   
   const sizeClasses = {
-    xs: 'h-8 w-8',
-    sm: 'h-12 w-12',
-    md: 'h-20 w-20',
-    lg: 'h-24 w-24',
-    xl: 'h-32 w-32'
+    xs: 'h-10 w-10',
+    sm: 'h-16 w-16',
+    md: 'h-24 w-24',
+    lg: 'h-32 w-32',
+    xl: 'h-40 w-40'
   }
 
   // Choose logo based on theme
