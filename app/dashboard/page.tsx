@@ -2684,16 +2684,7 @@ export default function Dashboard() {
               {searchPerformed && (!searchResults || searchResults.length === 0) && !searchLoading && (
                 <div className="text-center py-8">
                   <p className="text-slate-400 mb-4">No users found matching your search.</p>
-                  <p className="text-slate-500 text-sm">Try searching for common names like "John", "Sarah", or "Mike"</p>
-                  <button
-                    onClick={() => {
-                      setSearchQuery('John')
-                      handleSearch()
-                    }}
-                    className="mt-4 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium"
-                  >
-                    Try Example Search
-                  </button>
+                  <p className="text-slate-500 text-sm">Try searching by name, username, or location</p>
                 </div>
               )}
             </div>

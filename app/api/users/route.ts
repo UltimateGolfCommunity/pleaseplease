@@ -1,163 +1,82 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 
-// Mock user data for development
-const mockUsers = [
-  {
-    id: 'user-1',
-    first_name: 'John',
-    last_name: 'Smith',
-    email: 'john.smith@example.com',
-    username: 'johnsmith',
-    handicap: 12,
-    location: 'San Francisco, CA',
-    bio: 'Weekend warrior who loves the game',
-    avatar_url: null,
-    total_points: 450,
-    connections_count: 15,
-    rounds_played: 28
-  },
-  {
-    id: 'user-2',
-    first_name: 'Sarah',
-    last_name: 'Johnson',
-    email: 'sarah.j@example.com',
-    username: 'sarahj',
-    handicap: 8,
-    location: 'Los Angeles, CA',
-    bio: 'Competitive golfer, always looking to improve',
-    avatar_url: null,
-    total_points: 720,
-    connections_count: 23,
-    rounds_played: 45
-  },
-  {
-    id: 'user-3',
-    first_name: 'Mike',
-    last_name: 'Davis',
-    email: 'mike.davis@example.com',
-    username: 'mikedavis',
-    handicap: 18,
-    location: 'Phoenix, AZ',
-    bio: 'Just getting back into golf after a long break',
-    avatar_url: null,
-    total_points: 180,
-    connections_count: 8,
-    rounds_played: 12
-  },
-  {
-    id: 'user-4',
-    first_name: 'Luke',
-    last_name: 'Restall',
-    email: 'luke.restall@example.com',
-    username: 'lukerestall',
-    handicap: 15,
-    location: 'Toronto, ON',
-    bio: 'Passionate golfer looking for new connections',
-    avatar_url: null,
-    total_points: 320,
-    connections_count: 12,
-    rounds_played: 25
-  }
-]
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const search = searchParams.get('search')
+  const searchQuery = searchParams.get('q')
   const userId = searchParams.get('id')
 
-  console.log('🔍 Users API called with:', { search, userId })
+  console.log('🔍 Users API called with:', { search, searchQuery, userId })
 
   try {
-    // Handle user search for invite members functionality
-    if (search) {
-      console.log('🔍 Searching for users with query:', search)
+    const supabase = createAdminClient()
+    
+    // Handle user search (both 'search' and 'q' parameters)
+    if (search || searchQuery) {
+      const query = search || searchQuery
+      console.log('🔍 Searching for users with query:', query)
       
-      try {
-        const supabase = createAdminClient()
-        
-        const { data, error } = await supabase
-          .from('user_profiles')
-          .select('id, first_name, last_name, username, avatar_url, location, handicap')
-          .or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,username.ilike.%${search}%`)
-          .limit(20)
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('id, first_name, last_name, username, avatar_url, location, handicap, bio, total_points, connections_count, rounds_played')
+        .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,username.ilike.%${query}%,location.ilike.%${query}%`)
+        .limit(20)
 
-        if (error) {
-          console.error('❌ Search error:', error)
-          // Return mock data if database fails
-          return NextResponse.json({
-            success: true,
-            users: [
-              { id: 'mock-1', first_name: 'John', last_name: 'Doe', username: 'johndoe', avatar_url: null, location: 'San Francisco, CA', handicap: 12 },
-              { id: 'mock-2', first_name: 'Jane', last_name: 'Smith', username: 'janesmith', avatar_url: null, location: 'Los Angeles, CA', handicap: 8 },
-              { id: 'mock-3', first_name: 'Mike', last_name: 'Johnson', username: 'mikej', avatar_url: null, location: 'Phoenix, AZ', handicap: 18 }
-            ]
-          })
-        }
-
-        console.log('👥 Found users:', data?.length || 0)
-        return NextResponse.json({
-          success: true,
-          users: data || []
-        })
-      } catch (searchError) {
-        console.error('❌ Search operation failed:', searchError)
-        // Return mock data as fallback
-        return NextResponse.json({
-          success: true,
-          users: [
-            { id: 'mock-1', first_name: 'John', last_name: 'Doe', username: 'johndoe', avatar_url: null, location: 'San Francisco, CA', handicap: 12 },
-            { id: 'mock-2', first_name: 'Jane', last_name: 'Smith', username: 'janesmith', avatar_url: null, location: 'Los Angeles, CA', handicap: 8 },
-            { id: 'mock-3', first_name: 'Mike', last_name: 'Johnson', username: 'mikej', avatar_url: null, location: 'Phoenix, AZ', handicap: 18 }
-          ]
-        })
+      if (error) {
+        console.error('❌ Search error:', error)
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Search failed', 
+          details: error.message 
+        }, { status: 500 })
       }
+
+      console.log('👥 Found users:', data?.length || 0)
+      return NextResponse.json({
+        success: true,
+        users: data || []
+      })
     }
 
     // Handle profile fetch
     if (userId) {
       console.log('🔍 Fetching profile for user:', userId)
       
-      try {
-        const supabase = createAdminClient()
-        
-        const { data, error } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('id', userId)
-          .single()
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
 
-        if (error) {
-          console.error('❌ Profile fetch error:', error)
-          return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
-        }
-
-        return NextResponse.json(data)
-      } catch (profileError) {
-        console.error('❌ Profile fetch failed:', profileError)
+      if (error) {
+        console.error('❌ Profile fetch error:', error)
         return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
       }
+
+      return NextResponse.json(data)
     }
 
-    // Default: return mock users with optional search filtering
-    console.log('🔍 Returning mock users')
-    const searchQuery = searchParams.get('q')
-    let filteredUsers = mockUsers
-    
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      filteredUsers = mockUsers.filter(user => 
-        user.first_name.toLowerCase().includes(query) ||
-        user.last_name.toLowerCase().includes(query) ||
-        user.username.toLowerCase().includes(query) ||
-        user.location.toLowerCase().includes(query) ||
-        user.handicap.toString().includes(query)
-      )
+    // Default: return all users (for testing)
+    console.log('🔍 Returning all users from database')
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('id, first_name, last_name, username, avatar_url, location, handicap, bio, total_points, connections_count, rounds_played')
+      .limit(50)
+
+    if (error) {
+      console.error('❌ Error fetching users:', error)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Failed to fetch users', 
+        details: error.message 
+      }, { status: 500 })
     }
-    
+
     return NextResponse.json({
       success: true,
-      users: filteredUsers
+      users: data || []
     })
 
   } catch (error) {
@@ -193,13 +112,10 @@ export async function POST(request: NextRequest) {
         if (error) {
           console.error('❌ Database search error:', error)
           return NextResponse.json({ 
-            success: true,
-            users: [
-              { id: 'mock-1', first_name: 'John', last_name: 'Doe', username: 'johndoe', avatar_url: null, location: 'San Francisco, CA', handicap: 12 },
-              { id: 'mock-2', first_name: 'Jane', last_name: 'Smith', username: 'janesmith', avatar_url: null, location: 'Los Angeles, CA', handicap: 8 },
-              { id: 'mock-3', first_name: 'Mike', last_name: 'Johnson', username: 'mikej', avatar_url: null, location: 'Phoenix, AZ', handicap: 18 }
-            ]
-          })
+            success: false,
+            error: 'Search failed',
+            details: error.message
+          }, { status: 500 })
         }
 
         console.log('✅ USERS POST: Database search results:', searchResults?.length || 0)
