@@ -6,6 +6,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const user_id = searchParams.get('user_id')
+    const group_id = searchParams.get('group_id')
 
     if (!user_id) {
       return NextResponse.json(
@@ -41,16 +42,25 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Get pending invitations for the user
-    const { data, error } = await supabase
+    // Get invitations based on whether group_id is provided
+    let query = supabase
       .from('group_invitations')
       .select(`
         *,
         group:golf_groups(*),
-        inviter:user_profiles!group_invitations_invited_by_fkey(*)
+        inviter:user_profiles!group_invitations_invited_by_fkey(*),
+        user_profiles!group_invitations_invited_user_id_fkey(*)
       `)
-      .eq('invited_user_id', user_id)
-      .eq('status', 'pending')
+
+    if (group_id) {
+      // Get invitations sent for a specific group
+      query = query.eq('group_id', group_id)
+    } else {
+      // Get pending invitations for the user
+      query = query.eq('invited_user_id', user_id).eq('status', 'pending')
+    }
+
+    const { data, error } = await query
 
     if (error) {
       console.error('Database error:', error)
@@ -85,8 +95,122 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { action, invitation_id, user_id } = body
+    const { action, invitation_id, user_id, group_id, invited_user_id, message } = body
 
+    // Handle creating new invitations
+    if (action === 'create') {
+      if (!group_id || !invited_user_id || !user_id) {
+        return NextResponse.json(
+          { error: 'group_id, invited_user_id, and user_id are required' },
+          { status: 400 }
+        )
+      }
+
+      // Check if Supabase is configured
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        console.log('Using mock data for group invitations API')
+        return NextResponse.json({ 
+          success: true, 
+          message: 'Mock response - Supabase not configured' 
+        })
+      }
+
+      // Use admin client to bypass RLS
+      const supabase = createAdminClient()
+
+      // Verify user is the group creator or a member
+      const { data: group, error: groupError } = await supabase
+        .from('golf_groups')
+        .select('creator_id')
+        .eq('id', group_id)
+        .single()
+
+      if (groupError || !group) {
+        return NextResponse.json(
+          { error: 'Group not found' },
+          { status: 404 }
+        )
+      }
+
+      // Check if user is group creator or member
+      const { data: membership, error: membershipError } = await supabase
+        .from('group_members')
+        .select('*')
+        .eq('group_id', group_id)
+        .eq('user_id', user_id)
+        .single()
+
+      if (group.creator_id !== user_id && (membershipError || !membership)) {
+        return NextResponse.json(
+          { error: 'You are not authorized to invite members to this group' },
+          { status: 403 }
+        )
+      }
+
+      // Check if user is already a member
+      const { data: existingMember, error: memberCheckError } = await supabase
+        .from('group_members')
+        .select('*')
+        .eq('group_id', group_id)
+        .eq('user_id', invited_user_id)
+        .single()
+
+      if (!memberCheckError && existingMember) {
+        return NextResponse.json(
+          { error: 'User is already a member of this group' },
+          { status: 400 }
+        )
+      }
+
+      // Check if there's already a pending invitation
+      const { data: existingInvitation, error: invitationCheckError } = await supabase
+        .from('group_invitations')
+        .select('*')
+        .eq('group_id', group_id)
+        .eq('invited_user_id', invited_user_id)
+        .eq('status', 'pending')
+        .single()
+
+      if (!invitationCheckError && existingInvitation) {
+        return NextResponse.json(
+          { error: 'User already has a pending invitation to this group' },
+          { status: 400 }
+        )
+      }
+
+      // Create the invitation
+      const { data: invitation, error: createError } = await supabase
+        .from('group_invitations')
+        .insert({
+          group_id,
+          invited_user_id,
+          invited_by: user_id,
+          message: message || null,
+          status: 'pending'
+        })
+        .select(`
+          *,
+          group:golf_groups(*),
+          inviter:user_profiles!group_invitations_invited_by_fkey(*)
+        `)
+        .single()
+
+      if (createError) {
+        console.error('Error creating invitation:', createError)
+        return NextResponse.json(
+          { error: 'Failed to create invitation' },
+          { status: 500 }
+        )
+      }
+
+      return NextResponse.json({ 
+        success: true, 
+        invitation,
+        message: 'Invitation sent successfully' 
+      })
+    }
+
+    // Handle accepting/declining invitations
     if (!action || !invitation_id || !user_id) {
       return NextResponse.json(
         { error: 'Action, invitation_id, and user_id are required' },

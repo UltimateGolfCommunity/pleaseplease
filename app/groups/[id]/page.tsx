@@ -8,6 +8,7 @@ import { createBrowserClient } from '@/lib/supabase'
 import { uploadGroupLogo } from '@/lib/group-logo-upload'
 import { uploadGroupImage } from '@/lib/group-image-upload'
 import GroupChatModal from '@/app/components/GroupChatModal'
+import InviteMembersModal from '@/app/components/InviteMembersModal'
 import { 
   ArrowLeft,
   Users,
@@ -42,6 +43,7 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
   const [showMemberModal, setShowMemberModal] = useState(false)
   const [showLogRoundModal, setShowLogRoundModal] = useState(false)
   const [showGroupChat, setShowGroupChat] = useState(false)
+  const [showInviteModal, setShowInviteModal] = useState(false)
   const [groupId, setGroupId] = useState<string>('')
   
   // Log round form state
@@ -411,7 +413,7 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
                     <span>Log Your Round</span>
                   </button>
                   <button
-                    onClick={() => setShowMemberModal(true)}
+                    onClick={() => setShowInviteModal(true)}
                     className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-6 py-3 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2"
                   >
                     <UserPlus className="h-5 w-5" />
@@ -592,6 +594,17 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
         <GroupChatModal
           isOpen={showGroupChat}
           onClose={() => setShowGroupChat(false)}
+          groupId={group.id}
+          groupName={group.name}
+          userId={user.id}
+        />
+      )}
+
+      {/* Invite Members Modal */}
+      {group && user && (
+        <InviteMembersModal
+          isOpen={showInviteModal}
+          onClose={() => setShowInviteModal(false)}
           groupId={group.id}
           groupName={group.name}
           userId={user.id}
