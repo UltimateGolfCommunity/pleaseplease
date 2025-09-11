@@ -3,6 +3,72 @@ import { createServerClient } from '@/lib/supabase'
 
 const supabase = createServerClient()
 
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const group_id = searchParams.get('group_id')
+    const user_id = searchParams.get('user_id')
+    
+    if (!group_id || !user_id) {
+      return NextResponse.json(
+        { error: 'Missing required parameters' },
+        { status: 400 }
+      )
+    }
+
+    // Verify user is a member of the group
+    const { data: membership, error: membershipError } = await supabase
+      .from('group_members')
+      .select('*')
+      .eq('group_id', group_id)
+      .eq('user_id', user_id)
+      .single()
+
+    if (membershipError || !membership) {
+      return NextResponse.json(
+        { error: 'User is not a member of this group' },
+        { status: 403 }
+      )
+    }
+
+    // Fetch messages with sender information
+    const { data: messages, error } = await supabase
+      .from('group_messages')
+      .select(`
+        *,
+        user_profiles (
+          id,
+          first_name,
+          last_name,
+          username,
+          avatar_url
+        )
+      `)
+      .eq('group_id', group_id)
+      .order('created_at', { ascending: true })
+
+    if (error) {
+      console.error('Database error:', error)
+      return NextResponse.json(
+        { error: 'Failed to fetch messages' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      messages: messages || []
+    })
+
+  } catch (error) {
+    console.error('Error fetching group messages:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { group_id, user_id, message } = await request.json()

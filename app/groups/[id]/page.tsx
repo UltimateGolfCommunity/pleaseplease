@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { createBrowserClient } from '@/lib/supabase'
 import { uploadGroupLogo } from '@/lib/group-logo-upload'
 import { uploadGroupImage } from '@/lib/group-image-upload'
+import GroupChatModal from '@/app/components/GroupChatModal'
 import { 
   ArrowLeft,
   Users,
@@ -40,6 +41,7 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [showMemberModal, setShowMemberModal] = useState(false)
   const [showLogRoundModal, setShowLogRoundModal] = useState(false)
+  const [showGroupChat, setShowGroupChat] = useState(false)
   const [groupId, setGroupId] = useState<string>('')
   
   // Log round form state
@@ -415,7 +417,10 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
                     <UserPlus className="h-5 w-5" />
                     <span>Invite Members</span>
                   </button>
-                  <button className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white px-6 py-3 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2">
+                  <button 
+                    onClick={() => setShowGroupChat(true)}
+                    className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white px-6 py-3 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2"
+                  >
                     <MessageCircle className="h-5 w-5" />
                     <span>Group Chat</span>
                   </button>
@@ -580,6 +585,17 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
             </form>
           </div>
         </div>
+      )}
+
+      {/* Group Chat Modal */}
+      {group && user && (
+        <GroupChatModal
+          isOpen={showGroupChat}
+          onClose={() => setShowGroupChat(false)}
+          groupId={group.id}
+          groupName={group.name}
+          userId={user.id}
+        />
       )}
     </div>
   )
