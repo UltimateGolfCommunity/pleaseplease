@@ -87,19 +87,23 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
             username,
             avatar_url,
             location,
-            handicap,
-            home_club,
-            favorite_course
+            handicap
           )
         `)
         .eq('group_id', groupId)
 
-      if (membersError) throw membersError
+      if (membersError) {
+        console.error('Error fetching group members:', membersError)
+        // Don't throw here, just log and continue with empty members
+        console.log('Continuing without member details due to schema mismatch')
+      }
 
       setGroup(groupData)
       setMembers(membersData || [])
     } catch (error) {
       console.error('Error fetching group details:', error)
+      setGroup(null)
+      setMembers([])
     } finally {
       setLoading(false)
     }
@@ -370,16 +374,10 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
                         <span className="text-sm font-medium">Handicap: {member.user_profiles.handicap}</span>
                       </div>
                     )}
-                    {member.user_profiles?.home_club && (
+                    {member.user_profiles?.location && (
                       <div className="flex items-center space-x-2 text-slate-300">
-                        <Target className="h-4 w-4 text-blue-400" />
-                        <span className="text-sm font-medium">Home: {member.user_profiles.home_club}</span>
-                      </div>
-                    )}
-                    {member.user_profiles?.favorite_course && (
-                      <div className="flex items-center space-x-2 text-slate-300">
-                        <Star className="h-4 w-4 text-purple-400" />
-                        <span className="text-sm font-medium">Favorite: {member.user_profiles.favorite_course}</span>
+                        <MapPin className="h-4 w-4 text-blue-400" />
+                        <span className="text-sm font-medium">Location: {member.user_profiles.location}</span>
                       </div>
                     )}
                   </div>
