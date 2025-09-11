@@ -17,7 +17,7 @@ export default function Logo({ size = 'xl', showText = true, className = '' }: L
       {/* Logo Image */}
       <div className={`relative ${sizeClasses[size]}`}>
         <img
-          src="/newlogo.png"
+          src="/NEWLOGOREAL.png"
           alt="Ultimate Golf Community Logo"
           className="w-full h-full object-contain"
         />
