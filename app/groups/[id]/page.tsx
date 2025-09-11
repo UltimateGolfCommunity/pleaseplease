@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createBrowserClient } from '@/lib/supabase'
 import { uploadGroupLogo } from '@/lib/group-logo-upload'
+import { uploadGroupImage } from '@/lib/group-image-upload'
 import { 
   ArrowLeft,
   Users,
@@ -35,6 +36,7 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
   const [members, setMembers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [uploadingHeader, setUploadingHeader] = useState(false)
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [showMemberModal, setShowMemberModal] = useState(false)
   const [showLogRoundModal, setShowLogRoundModal] = useState(false)
@@ -117,35 +119,41 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
 
     setUploadingImage(true)
     try {
-      // Upload to Supabase storage
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${group.id}-${Date.now()}.${fileExt}`
+      const result = await uploadGroupImage(file, group.id, 'profile')
       
-      const { data, error } = await supabase.storage
-        .from('group-images')
-        .upload(fileName, file)
-
-      if (error) throw error
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('group-images')
-        .getPublicUrl(fileName)
-
-      // Update group with new image URL
-      const { error: updateError } = await supabase
-        .from('golf_groups')
-        .update({ image_url: publicUrl })
-        .eq('id', group.id)
-
-      if (updateError) throw updateError
-
-      setGroup({ ...group, image_url: publicUrl })
+      if (result.success) {
+        setGroup((prev: any) => prev ? { ...prev, image_url: result.imageUrl } : null)
+        alert('Group profile image uploaded successfully!')
+      } else {
+        alert(`Failed to upload image: ${result.error}`)
+      }
     } catch (error) {
       console.error('Error uploading image:', error)
       alert('Failed to upload image')
     } finally {
       setUploadingImage(false)
+    }
+  }
+
+  const handleHeaderUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file || !group) return
+
+    setUploadingHeader(true)
+    try {
+      const result = await uploadGroupImage(file, group.id, 'header')
+      
+      if (result.success) {
+        setGroup((prev: any) => prev ? { ...prev, header_image_url: result.imageUrl } : null)
+        alert('Group header image uploaded successfully!')
+      } else {
+        alert(`Failed to upload header: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Error uploading header:', error)
+      alert('Failed to upload header image')
+    } finally {
+      setUploadingHeader(false)
     }
   }
 
@@ -247,6 +255,25 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
               </Link>
             </div>
             <div className="flex items-center space-x-3">
+              <button 
+                onClick={() => document.getElementById('group-header-upload')?.click()}
+                disabled={uploadingHeader}
+                className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed flex items-center space-x-2"
+              >
+                {uploadingHeader ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                <span>{uploadingHeader ? 'Uploading...' : 'Header'}</span>
+              </button>
+              <input
+                id="group-header-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleHeaderUpload}
+                className="hidden"
+              />
               <button className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2">
                 <Share2 className="h-4 w-4" />
                 <span>Share</span>
@@ -263,6 +290,18 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         {/* Group Header */}
         <div className="relative bg-gradient-to-r from-slate-800/60 to-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 mb-8 shadow-2xl overflow-hidden">
+          {/* Header Image Background */}
+          {group?.header_image_url && (
+            <div className="absolute inset-0 rounded-3xl overflow-hidden">
+              <img
+                src={group.header_image_url}
+                alt={`${group.name} header`}
+                className="w-full h-full object-cover opacity-20"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-800/80 to-slate-900/80"></div>
+            </div>
+          )}
+          
           {/* Decorative Elements */}
           <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full -translate-y-12 translate-x-12"></div>
           <div className="absolute bottom-0 left-0 w-16 h-16 bg-gradient-to-tr from-cyan-500/10 to-blue-500/10 rounded-full translate-y-8 -translate-x-8"></div>
