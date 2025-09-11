@@ -19,7 +19,7 @@ export default function Logo({ size = 'xl', showText = true, className = '' }: L
   }
 
   // Choose logo based on theme
-  const logoSrc = isDark ? '/NEWLOGOREAL.png' : '/thelogoforlightmode.png'
+  const logoSrc = isDark ? '/thereallogo.png' : '/logoforlitemode.png'
 
   return (
     <div className={`flex items-center ${className}`}>
