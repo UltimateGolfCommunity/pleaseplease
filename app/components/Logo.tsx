@@ -14,9 +14,9 @@ export default function Logo({ size = 'xl', showText = true, className = '' }: L
   const sizeClasses = {
     xs: 'h-8 w-8',
     sm: 'h-12 w-12',
-    md: 'h-16 w-16',
-    lg: 'h-20 w-20',
-    xl: 'h-24 w-24'
+    md: 'h-20 w-20',
+    lg: 'h-24 w-24',
+    xl: 'h-32 w-32'
   }
 
   // Choose logo based on theme
