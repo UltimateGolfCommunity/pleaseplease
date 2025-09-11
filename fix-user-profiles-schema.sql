@@ -23,14 +23,31 @@ SET
   member_since = COALESCE(member_since, created_at)
 WHERE total_points IS NULL OR member_since IS NULL;
 
--- Add constraints if needed
-ALTER TABLE user_profiles 
-ADD CONSTRAINT IF NOT EXISTS check_handicap_range 
-CHECK (handicap IS NULL OR (handicap >= 0 AND handicap <= 54));
+-- Add constraints if needed (only if they don't exist)
+DO $$
+BEGIN
+  -- Add handicap range constraint
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints 
+    WHERE constraint_name = 'check_handicap_range' 
+    AND table_name = 'user_profiles'
+  ) THEN
+    ALTER TABLE user_profiles 
+    ADD CONSTRAINT check_handicap_range 
+    CHECK (handicap IS NULL OR (handicap >= 0 AND handicap <= 54));
+  END IF;
 
-ALTER TABLE user_profiles 
-ADD CONSTRAINT IF NOT EXISTS check_years_playing 
-CHECK (years_playing IS NULL OR years_playing >= 0);
+  -- Add years playing constraint
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints 
+    WHERE constraint_name = 'check_years_playing' 
+    AND table_name = 'user_profiles'
+  ) THEN
+    ALTER TABLE user_profiles 
+    ADD CONSTRAINT check_years_playing 
+    CHECK (years_playing IS NULL OR years_playing >= 0);
+  END IF;
+END $$;
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_user_profiles_experience_level ON user_profiles(experience_level);
