@@ -18,7 +18,7 @@ export default function PrivacyPolicyPage() {
             {/* Logo */}
             <div className="flex-shrink-0">
               <Link href={user ? "/dashboard" : "/"}>
-                <Logo size="lg" />
+                <Logo size="md" />
               </Link>
             </div>
 

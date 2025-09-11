@@ -259,7 +259,7 @@ export default function UserProfilePage() {
                 <span className="hidden sm:block">Back to Dashboard</span>
                 <span className="sm:hidden">Back</span>
               </button>
-              <Logo size="lg" />
+              <Logo size="md" />
             </div>
             
             {/* Center - Page Title */}

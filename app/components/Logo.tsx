@@ -3,7 +3,7 @@
 import { useTheme } from '@/contexts/ThemeContext'
 
 interface LogoProps {
-  size?: 'sm' | 'md' | 'lg' | 'xl'
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
   showText?: boolean
   className?: string
 }
@@ -12,10 +12,11 @@ export default function Logo({ size = 'xl', showText = true, className = '' }: L
   const { isDark } = useTheme()
   
   const sizeClasses = {
-    sm: 'h-40 w-40',
-    md: 'h-56 w-56',
-    lg: 'h-72 w-72',
-    xl: 'h-96 w-96'
+    xs: 'h-8 w-8',
+    sm: 'h-12 w-12',
+    md: 'h-16 w-16',
+    lg: 'h-20 w-20',
+    xl: 'h-24 w-24'
   }
 
   // Choose logo based on theme

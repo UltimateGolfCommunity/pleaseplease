@@ -137,7 +137,7 @@ export default function SignupPage() {
         <div className="max-w-7xl mx-auto px-0">
           <div className="flex justify-between items-center h-24">
             <div className="pl-6 sm:pl-8 lg:pl-12">
-              <Logo size="lg" />
+              <Logo size="md" />
             </div>
             
             <div className="flex items-center space-x-4">

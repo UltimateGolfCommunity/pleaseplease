@@ -23,7 +23,7 @@ export default function AboutPage() {
             {/* Logo */}
             <div className="flex-shrink-0">
               <Link href="/dashboard">
-                <Logo size="lg" />
+                <Logo size="md" />
               </Link>
             </div>
 
