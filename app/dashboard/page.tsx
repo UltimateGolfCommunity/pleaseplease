@@ -1553,21 +1553,24 @@ export default function Dashboard() {
       if (activeTab === 'groups') {
         response = await fetch(`/api/groups?action=search&q=${encodeURIComponent(searchQuery)}`)
       } else {
-        response = await fetch(`/api/users?action=search&q=${encodeURIComponent(searchQuery)}`)
+        // Use the correct API call for user search
+        response = await fetch(`/api/users?q=${encodeURIComponent(searchQuery)}`)
       }
       
       console.log('📡 Search response status:', response.status)
       
       if (response.ok) {
         const data = await response.json()
-        console.log('📊 Search results:', data?.length || 0)
+        console.log('📊 Search results:', data)
         
         if (activeTab === 'groups') {
           // For groups, no filtering needed
           setSearchResults(data || [])
         } else {
+          // Handle the API response structure - it returns { success: true, users: [...] }
+          const users = data.users || data || []
           // Filter out the current user from user search results
-          const filteredData = data.filter((searchedUser: any) => searchedUser.id !== user?.id)
+          const filteredData = users.filter((searchedUser: any) => searchedUser.id !== user?.id)
           console.log('🔍 Filtered results:', filteredData?.length || 0)
           setSearchResults(filteredData)
         }

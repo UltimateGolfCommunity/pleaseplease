@@ -139,9 +139,26 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Default: return mock users
+    // Default: return mock users with optional search filtering
     console.log('🔍 Returning mock users')
-    return NextResponse.json(mockUsers)
+    const searchQuery = searchParams.get('q')
+    let filteredUsers = mockUsers
+    
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      filteredUsers = mockUsers.filter(user => 
+        user.first_name.toLowerCase().includes(query) ||
+        user.last_name.toLowerCase().includes(query) ||
+        user.username.toLowerCase().includes(query) ||
+        user.location.toLowerCase().includes(query) ||
+        user.handicap.toString().includes(query)
+      )
+    }
+    
+    return NextResponse.json({
+      success: true,
+      users: filteredUsers
+    })
 
   } catch (error) {
     console.error('Error in users API:', error)
