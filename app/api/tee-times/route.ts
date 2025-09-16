@@ -2,6 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { createAdminClient } from '@/lib/supabase-admin'
 
+// Function to calculate distance between two coordinates using Haversine formula
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371 // Earth's radius in kilometers
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLon = (lon2 - lon1) * Math.PI / 180
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+  return R * c
+}
+
 // Mock tee time data for development with in-memory storage
 let mockTeeTimes = [
   {
@@ -173,38 +186,48 @@ export async function GET(request: NextRequest) {
       // Get today's date in YYYY-MM-DD format
       const today = new Date().toISOString().split('T')[0]
       
-      // Get tee times within specified radius using the distance function
+      // Get all active tee times and calculate distance, then order by distance
       const { data, error } = await supabase
-        .rpc('get_nearby_tee_times', {
-          user_lat: parseFloat(userLat),
-          user_lon: parseFloat(userLon),
-          radius_km: parseFloat(radiusKm)
-        })
+        .from('tee_times')
+        .select(`
+          *,
+          creator:user_profiles(id, first_name, last_name, avatar_url),
+          golf_courses(name, location, course_image_url, logo_url, latitude, longitude)
+        `)
+        .eq('status', 'active')
+        .gte('tee_time_date', today) // Only get tee times from today forward
 
       if (error) {
-        console.error('Error fetching nearby tee times:', error)
-        // Fallback to regular available tee times with date filter
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('tee_times')
-          .select(`
-            *,
-            creator:user_profiles(id, first_name, last_name, avatar_url),
-            golf_courses(name, location, course_image_url, logo_url, latitude, longitude)
-          `)
-          .eq('status', 'active')
-          .gte('tee_time_date', today) // Only get tee times from today forward
-          .order('tee_time_date', { ascending: true })
-
-        if (fallbackError) throw fallbackError
-        return NextResponse.json(fallbackData || [])
+        console.error('Error fetching tee times:', error)
+        return NextResponse.json([])
       }
 
-      // Filter the nearby tee times to only include today and forward
-      const filteredData = (data || []).filter((teeTime: any) => {
-        return teeTime.tee_time_date >= today
+      // Calculate distance for each tee time and sort by distance
+      const teeTimesWithDistance = (data || []).map((teeTime: any) => {
+        if (teeTime.golf_courses?.latitude && teeTime.golf_courses?.longitude) {
+          const distance = calculateDistance(
+            parseFloat(userLat),
+            parseFloat(userLon),
+            parseFloat(teeTime.golf_courses.latitude),
+            parseFloat(teeTime.golf_courses.longitude)
+          )
+          return {
+            ...teeTime,
+            distance_km: distance
+          }
+        }
+        return {
+          ...teeTime,
+          distance_km: 999999 // Very large distance for courses without coordinates
+        }
       })
 
-      return NextResponse.json(filteredData)
+      // Sort by distance (closest first)
+      const sortedTeeTimes = teeTimesWithDistance.sort((a: any, b: any) => {
+        return a.distance_km - b.distance_km
+      })
+
+      return NextResponse.json(sortedTeeTimes)
     }
     
     if (action === 'get-applications' && userId) {

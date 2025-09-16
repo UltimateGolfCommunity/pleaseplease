@@ -613,7 +613,7 @@ export default function Dashboard() {
       
       // Check if we should fetch nearby tee times
       if (showNearbyTeeTimesOnly && userLocation) {
-        const response = await fetch(`/api/tee-times?action=nearby&user_lat=${userLocation.lat}&user_lon=${userLocation.lon}&radius_km=50`)
+        const response = await fetch(`/api/tee-times?action=nearby&user_lat=${userLocation.lat}&user_lon=${userLocation.lon}`)
         if (response.ok) {
           const data = await response.json()
           const teeTimes = Array.isArray(data) ? data : (data.tee_times || [])
@@ -2348,7 +2348,7 @@ export default function Dashboard() {
                       <div className="flex items-center space-x-2 text-emerald-300">
                         <MapPin className="h-4 w-4" />
                         <span className="text-sm">
-                          Showing tee times near {currentCity || 'your location'}
+                          Showing tee times ordered by distance from {currentCity || 'your location'}
                         </span>
                         <span className="text-slate-400">•</span>
                         <span className="text-sm">
