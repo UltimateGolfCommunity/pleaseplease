@@ -106,18 +106,10 @@ export default function Dashboard() {
   const [courseSearchLoading, setCourseSearchLoading] = useState(false)
   const [courseSearchResults, setCourseSearchResults] = useState<any[]>([])
   
-  // Location-based filtering state
-  const [zipCode, setZipCode] = useState('')
-  const [searchRadius, setSearchRadius] = useState(250)
   
   // Groups state
   const [userGroups, setUserGroups] = useState<any[]>([])
   const [groupsLoading, setGroupsLoading] = useState(false)
-  const [userLocation, setUserLocation] = useState<{lat: number, lon: number} | null>(null)
-  const [locationLoading, setLocationLoading] = useState(false)
-  const [currentCity, setCurrentCity] = useState<string>('')
-  const [nearbyCourses, setNearbyCourses] = useState<any[]>([])
-  const [showNearbyOnly, setShowNearbyOnly] = useState(false)
   
   // Course review state
   const [showReviewModal, setShowReviewModal] = useState(false)
@@ -145,11 +137,6 @@ export default function Dashboard() {
       console.log('🔄 Loading courses for Courses tab...')
       handleCourseSearch()
       
-      // Automatically get user location for nearby courses and tee times
-      if (!userLocation && navigator.geolocation) {
-        console.log('📍 Getting user location for nearby courses and tee times...')
-        getUserLocation()
-      }
     }
   }, [activeTab])
 
@@ -456,10 +443,6 @@ export default function Dashboard() {
         location: profile.location || ''
       })
       
-      // Set current city from profile if available
-      if (profile.location) {
-        setCurrentCity(profile.location)
-      }
     }
   }, [profile])
 
@@ -514,74 +497,6 @@ export default function Dashboard() {
     setShowTeeTimeModal(true)
   }
 
-  const getUserLocation = async () => {
-    if (!navigator.geolocation) {
-      console.log('Geolocation is not supported by this browser')
-      return null
-    }
-
-    return new Promise<{lat: number, lon: number} | null>((resolve) => {
-      setLocationLoading(true)
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const location = {
-            lat: position.coords.latitude,
-            lon: position.coords.longitude
-          }
-          setUserLocation(location)
-          setLocationLoading(false)
-          
-          // Update user's location in their profile
-          try {
-            const response = await fetch(`/api/weather?lat=${location.lat}&lon=${location.lon}`, {
-              method: 'GET',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-            })
-            
-            if (response.ok) {
-              const weatherData = await response.json()
-              const cityName = weatherData.location
-              setCurrentCity(cityName)
-              
-              // Update profile with detected city
-              if (profile && cityName && cityName !== profile.location) {
-                console.log('📍 Updating user location in profile:', cityName)
-                const updateResponse = await fetch('/api/users', {
-                  method: 'PUT',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    location: cityName
-                  })
-                })
-                
-                if (updateResponse.ok) {
-                  console.log('✅ User location updated in profile')
-                }
-              }
-            }
-          } catch (error) {
-            console.error('Error updating user location:', error)
-          }
-          
-          resolve(location)
-        },
-        (error) => {
-          console.log('Error getting location:', error)
-          setLocationLoading(false)
-          resolve(null)
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 300000 // 5 minutes
-        }
-      )
-    })
-  }
 
   const fetchTeeTimes = async () => {
     try {
@@ -1332,10 +1247,6 @@ export default function Dashboard() {
       const params = new URLSearchParams()
       if (courseSearchQuery) {
         params.append('query', courseSearchQuery)
-      }
-      if (zipCode) {
-        params.append('zipCode', zipCode)
-        params.append('radius', searchRadius.toString())
       }
       
       const queryString = params.toString()
@@ -2241,33 +2152,6 @@ export default function Dashboard() {
                 </button>
               </div>
 
-              {/* Tee Time Location Filtering */}
-              <div className="relative mb-6">
-                <div className="flex flex-wrap gap-3 mb-4">
-                  <div className="flex items-center space-x-2">
-                    <MapPin className="h-5 w-5 text-emerald-400" />
-                    <span className="text-white font-medium">Location-based Filtering:</span>
-                  </div>
-
-                  <button
-                    onClick={getUserLocation}
-                    disabled={locationLoading}
-                    className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed flex items-center space-x-2"
-                  >
-                    {locationLoading ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        <span>Getting Location...</span>
-                      </>
-                    ) : (
-                      <>
-                        <MapPin className="h-4 w-4" />
-                        <span>Find Nearby</span>
-                      </>
-                    )}
-                  </button>
-
-                </div>
 
               </div>
             
@@ -2878,140 +2762,31 @@ export default function Dashboard() {
                 </div>
 
                 {/* Location Filter */}
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center space-x-2">
-                    <MapPin className="h-5 w-5 text-slate-400" />
-                    <span className="text-slate-300 font-medium">Find courses near:</span>
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-2 w-full">
-                    <input
-                      type="text"
-                      placeholder="Enter ZIP code (e.g., 12345)"
-                      value={zipCode}
-                      onChange={(e) => setZipCode(e.target.value)}
-                      className="px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300 flex-1"
-                    />
-                    <select
-                      value={searchRadius}
-                      onChange={(e) => setSearchRadius(parseInt(e.target.value))}
-                      className="px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white transition-all duration-300 w-full sm:w-32"
-                    >
-                      <option value={50}>50 miles</option>
-                      <option value={100}>100 miles</option>
-                      <option value={150}>150 miles</option>
-                      <option value={200}>200 miles</option>
-                      <option value={250}>250 miles</option>
-                      <option value={500}>500 miles</option>
-                    </select>
-                    <button
-                      onClick={handleCourseSearch}
-                      disabled={courseSearchLoading || !zipCode}
-                      className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed whitespace-nowrap w-full sm:w-auto"
-                    >
-                      Find Nearby
-                    </button>
-                  </div>
-                </div>
 
                 {/* Active Filters Display */}
-                {(courseSearchQuery || zipCode) && (
+                {courseSearchQuery && (
                   <div className="flex flex-wrap gap-2">
-                    {courseSearchQuery && (
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800">
-                        Search: "{courseSearchQuery}"
-                        <button
-                          onClick={() => {
-                            setCourseSearchQuery('')
-                            handleCourseSearch()
-                          }}
-                          className="ml-2 text-blue-600 hover:text-blue-800"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </span>
-                    )}
-                    {zipCode && (
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-purple-100 text-purple-800">
-                        Within {searchRadius}mi of {zipCode}
-                        <button
-                          onClick={() => {
-                            setZipCode('')
-                            handleCourseSearch()
-                          }}
-                          className="ml-2 text-purple-600 hover:text-purple-800"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </span>
-                    )}
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800">
+                      Search: "{courseSearchQuery}"
+                      <button
+                        onClick={() => {
+                          setCourseSearchQuery('')
+                          handleCourseSearch()
+                        }}
+                        className="ml-2 text-blue-600 hover:text-blue-800"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
                   </div>
                 )}
               </div>
 
-                {/* Location Filtering */}
-                <div className="flex flex-wrap gap-3 mb-6">
-                  <div className="flex items-center space-x-2">
-                    <MapPin className="h-5 w-5 text-emerald-400" />
-                    <span className="text-white font-medium">Location-based Filtering:</span>
-                  </div>
-
-                  <button
-                    onClick={getUserLocation}
-                    disabled={locationLoading}
-                    className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed flex items-center space-x-2"
-                  >
-                    {locationLoading ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        <span>Getting Location...</span>
-                      </>
-                    ) : (
-                      <>
-                        <MapPin className="h-4 w-4" />
-                        <span>Find Nearby</span>
-                      </>
-                    )}
-                  </button>
-
-                  {userLocation && (
-                    <button
-                      onClick={() => setShowNearbyOnly(!showNearbyOnly)}
-                      className={`px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2 ${
-                        showNearbyOnly 
-                          ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white' 
-                          : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50'
-                      }`}
-                    >
-                      <span>{showNearbyOnly ? 'Show All' : 'Show Nearby Only'}</span>
-                      {nearbyCourses.length > 0 && (
-                        <span className="bg-emerald-500 text-white text-xs px-2 py-1 rounded-full">
-                          {nearbyCourses.length}
-                        </span>
-                      )}
-                    </button>
-                  )}
-                </div>
-
-                {/* Location Status */}
-                {userLocation && (
-                  <div className="mb-4 p-3 bg-emerald-500/20 border border-emerald-500/30 rounded-lg">
-                    <div className="flex items-center space-x-2 text-emerald-300">
-                      <MapPin className="h-4 w-4" />
-                      <span className="text-sm">
-                        Location: {userLocation.lat.toFixed(4)}, {userLocation.lon.toFixed(4)}
-                      </span>
-                      <span className="text-slate-400">•</span>
-                      <span className="text-sm">
-                        {nearbyCourses.length} courses within 50 miles
-                      </span>
-                    </div>
-                  </div>
-                )}
 
               {/* Course Results */}
-              {(showNearbyOnly ? nearbyCourses : courseSearchResults) && (showNearbyOnly ? nearbyCourses : courseSearchResults).length > 0 ? (
+              {courseSearchResults && courseSearchResults.length > 0 ? (
                 <div className="space-y-4">
-                  {(showNearbyOnly ? nearbyCourses : courseSearchResults)?.map((course) => (
+                  {courseSearchResults?.map((course) => (
                     <div key={course.id} className="bg-slate-800/50 border border-slate-600/50 rounded-xl p-4 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300">
                         <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-4 gap-4">
                         <div className="flex-1">
