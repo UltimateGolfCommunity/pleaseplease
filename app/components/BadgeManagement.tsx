@@ -114,7 +114,8 @@ export default function BadgeManagement() {
 
       if (response.ok) {
         const data = await response.json()
-        setSearchResults(data)
+        const users = data.users || data || []
+        setSearchResults(users)
       }
     } catch (error) {
       console.error('Error searching users:', error)

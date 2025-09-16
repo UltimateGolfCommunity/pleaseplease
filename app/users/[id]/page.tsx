@@ -70,7 +70,7 @@ export default function UserProfilePage() {
             const searchResponse = await fetch(`/api/users?action=search&q=${params.id}`)
             if (searchResponse.ok) {
               const searchData = await searchResponse.json()
-              const foundUser = searchData.find((u: UserProfile) => 
+              const foundUser = searchData.users?.find((u: UserProfile) => 
                 u.username === params.id || u.id === params.id
               )
               if (foundUser) {

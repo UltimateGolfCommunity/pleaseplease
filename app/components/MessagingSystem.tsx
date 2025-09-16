@@ -243,7 +243,8 @@ export default function MessagingSystem() {
 
       if (response.ok) {
         const data = await response.json()
-        setSearchResults(data.filter((user: any) => user.id !== currentUser?.id))
+        const users = data.users || data || []
+        setSearchResults(users.filter((user: any) => user.id !== currentUser?.id))
       }
     } catch (error) {
       console.error('Error searching users:', error)
