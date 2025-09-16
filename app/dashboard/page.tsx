@@ -2394,18 +2394,31 @@ export default function Dashboard() {
                               alt={teeTime.course_name}
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                e.currentTarget.style.display = 'none'
+                                // Fallback to default golf course image
+                                e.currentTarget.src = '/Logos/golfcoursedefaultimage.png'
                               }}
                             />
                             <div className="absolute inset-0 bg-black/20"></div>
                           </>
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <div className="text-center text-white">
-                              <Flag className="h-12 w-12 mx-auto mb-2 opacity-80" />
-                              <p className="text-lg font-semibold opacity-90">{teeTime.course_name}</p>
+                          <>
+                            <img
+                              src="/Logos/golfcoursedefaultimage.png"
+                              alt={`${teeTime.course_name} - Golf Course`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                // Final fallback to gradient background
+                                e.currentTarget.style.display = 'none'
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black/30"></div>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="text-center text-white">
+                                <Flag className="h-12 w-12 mx-auto mb-2 opacity-80" />
+                                <p className="text-lg font-semibold opacity-90">{teeTime.course_name}</p>
+                              </div>
                             </div>
-                          </div>
+                          </>
                         )}
                         
                         {/* Course Logo Overlay */}
@@ -2482,6 +2495,28 @@ export default function Dashboard() {
                                     </span>
                                   </div>
                                 )}
+                                
+                                {/* Course Details */}
+                                <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                                  {teeTime.golf_courses?.par && (
+                                    <div className="flex items-center gap-1">
+                                      <Target className="h-3 w-3" />
+                                      <span>Par {teeTime.golf_courses.par}</span>
+                                    </div>
+                                  )}
+                                  {teeTime.golf_courses?.holes && (
+                                    <div className="flex items-center gap-1">
+                                      <Flag className="h-3 w-3" />
+                                      <span>{teeTime.golf_courses.holes} Holes</span>
+                                    </div>
+                                  )}
+                                  {teeTime.golf_courses?.average_rating > 0 && (
+                                    <div className="flex items-center gap-1">
+                                      <Star className="h-3 w-3 text-yellow-500" />
+                                      <span>{teeTime.golf_courses.average_rating.toFixed(1)} ⭐</span>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
                             
@@ -2498,62 +2533,113 @@ export default function Dashboard() {
                               {/* Creator Info */}
                               <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                                 <div className="relative">
-                                  <div className="h-8 w-8 rounded-full overflow-hidden border-2 border-emerald-500/50">
-                                <img
-                                  src={teeTime.creator?.avatar_url || '/default-avatar.svg'}
-                                  alt={`${teeTime.creator?.first_name || 'Unknown'} ${teeTime.creator?.last_name || ''}`}
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    e.currentTarget.src = '/default-avatar.svg'
-                                  }}
-                                />
-                              </div>
-                                  <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-green-500 border-2 border-white rounded-full"></div>
-                            </div>
-                                <div>
-                                  <p className="text-gray-500 text-xs">Hosted by</p>
+                                  <div className="h-12 w-12 rounded-full overflow-hidden border-2 border-emerald-500/50 shadow-md">
+                                    <img
+                                      src={teeTime.creator?.avatar_url || '/default-avatar.svg'}
+                                      alt={`${teeTime.creator?.first_name || 'Unknown'} ${teeTime.creator?.last_name || ''}`}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        e.currentTarget.src = '/default-avatar.svg'
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-green-500 border-2 border-white rounded-full flex items-center justify-center">
+                                    <div className="h-2 w-2 bg-white rounded-full"></div>
+                                  </div>
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-gray-500 text-xs mb-1">Hosted by</p>
                                   <button
                                     onClick={() => router.push(`/users/${teeTime.creator?.id}`)}
-                                    className="text-emerald-600 hover:text-emerald-700 transition-colors duration-200 font-medium hover:underline text-sm"
+                                    className="text-emerald-600 hover:text-emerald-700 transition-colors duration-200 font-semibold hover:underline text-sm"
                                   >
                                     {teeTime.creator?.first_name || 'Unknown'} {teeTime.creator?.last_name || ''}
                                   </button>
-                          </div>
-                        </div>
+                                  {teeTime.creator?.username && (
+                                    <p className="text-gray-400 text-xs mt-1">@{teeTime.creator.username}</p>
+                                  )}
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-xs text-gray-500">Created</div>
+                                  <div className="text-xs text-gray-700 font-medium">
+                                    {new Date(teeTime.created_at).toLocaleDateString()}
+                                  </div>
+                                </div>
+                              </div>
                           </div>
                           </div>
 
                           {/* Player and Handicap Info */}
-                          <div className="flex flex-col gap-2 sm:text-right sm:min-w-[140px]">
+                          <div className="flex flex-col gap-3 sm:text-right sm:min-w-[160px]">
                             <div className="relative">
-                              <div className={`${isAlmostFull ? 'bg-red-500' : 'bg-emerald-500'} text-white px-3 py-2 rounded-lg text-center`}>
-                                <div className="text-base font-bold">{teeTime.current_players || 1}/{teeTime.max_players}</div>
+                              <div className={`${isAlmostFull ? 'bg-red-500' : spotsRemaining === 0 ? 'bg-gray-500' : 'bg-emerald-500'} text-white px-4 py-3 rounded-lg text-center shadow-md`}>
+                                <div className="text-lg font-bold">{teeTime.current_players || 1}/{teeTime.max_players}</div>
                                 <div className="text-xs opacity-90">Players</div>
-                        </div>
+                              </div>
                               {spotsRemaining > 0 && (
-                                <div className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs font-medium rounded-full h-5 w-5 flex items-center justify-center">
+                                <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shadow-lg">
                                   {spotsRemaining}
-                      </div>
+                                </div>
+                              )}
+                              {spotsRemaining === 0 && (
+                                <div className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shadow-lg">
+                                  FULL
+                                </div>
                               )}
                             </div>
                             
                             <div className="bg-gray-50 border border-gray-200 px-3 py-2 rounded-lg text-center">
-                              <div className="text-gray-500 text-xs">Skill Level</div>
-                              <div className="text-gray-900 font-medium text-sm capitalize">{teeTime.handicap_requirement}</div>
+                              <div className="text-gray-500 text-xs mb-1">Skill Level</div>
+                              <div className="text-gray-900 font-semibold text-sm capitalize">{teeTime.handicap_requirement}</div>
+                              {teeTime.handicap_requirement !== 'any' && (
+                                <div className="text-gray-400 text-xs mt-1">Handicap Required</div>
+                              )}
                             </div>
+
+                            {/* Course Rating */}
+                            {teeTime.golf_courses?.average_rating > 0 && (
+                              <div className="bg-yellow-50 border border-yellow-200 px-3 py-2 rounded-lg text-center">
+                                <div className="text-yellow-600 text-xs mb-1">Course Rating</div>
+                                <div className="text-yellow-900 text-sm font-semibold flex items-center justify-center gap-1">
+                                  <Star className="h-3 w-3 fill-current" />
+                                  {teeTime.golf_courses.average_rating.toFixed(1)}
+                                </div>
+                                <div className="text-yellow-600 text-xs">({teeTime.golf_courses.review_count || 0} reviews)</div>
+                              </div>
+                            )}
 
                             {/* Weather Widget Placeholder */}
                             <div className="bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg text-center">
-                              <div className="text-xs text-blue-600 mb-1">Weather</div>
-                              <div className="text-blue-900 text-xs font-medium">☀️ 72°F</div>
+                              <div className="text-blue-600 text-xs mb-1">Weather</div>
+                              <div className="text-blue-900 text-sm font-medium">☀️ 72°F</div>
+                              <div className="text-blue-600 text-xs">Perfect for golf!</div>
                             </div>
                           </div>
                         </div>
 
                         {/* Description */}
                         {teeTime.description && (
-                          <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                            <p className="text-gray-700 text-sm leading-relaxed italic">&quot;{teeTime.description}&quot;</p>
+                          <div className="mb-4 p-4 bg-gradient-to-r from-gray-50 to-blue-50 border border-gray-200 rounded-lg">
+                            <div className="flex items-start gap-2">
+                              <MessageCircle className="h-4 w-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="text-gray-700 text-sm leading-relaxed italic">&quot;{teeTime.description}&quot;</p>
+                                <p className="text-gray-500 text-xs mt-2">- {teeTime.creator?.first_name || 'Host'}</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Additional Course Information */}
+                        {teeTime.golf_courses?.description && (
+                          <div className="mb-4 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-lg">
+                            <div className="flex items-start gap-2">
+                              <Flag className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <h4 className="text-emerald-800 font-semibold text-sm mb-1">About This Course</h4>
+                                <p className="text-emerald-700 text-sm leading-relaxed">{teeTime.golf_courses.description}</p>
+                              </div>
+                            </div>
                           </div>
                         )}
 
