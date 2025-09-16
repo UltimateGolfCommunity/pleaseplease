@@ -665,6 +665,7 @@ export default function Dashboard() {
           })
           setAvailableTeeTimes(sortedTeeTimes)
           console.log('Fetched and sorted tee times (today+):', sortedTeeTimes)
+          console.log('🎯 Setting availableTeeTimes state to:', sortedTeeTimes.length, 'tee times')
         } else {
           console.error('Failed to fetch tee times')
           setAvailableTeeTimes([])
@@ -2381,6 +2382,15 @@ export default function Dashboard() {
 
               {/* Tee Times List */}
               <div className="space-y-6">
+                {(() => {
+                  console.log('🎨 Rendering tee times section:', { 
+                    teeTimesLoading, 
+                    availableTeeTimesLength: availableTeeTimes?.length || 0,
+                    showNearbyTeeTimesOnly,
+                    nearbyTeeTimesLength: nearbyTeeTimes?.length || 0
+                  })
+                  return null
+                })()}
                 {teeTimesLoading ? (
                   <div className="text-center py-12">
                     <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-500 border-t-transparent mx-auto mb-4"></div>
