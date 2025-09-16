@@ -80,12 +80,20 @@ export default function InviteMembersModal({
       const data = await response.json()
       
       if (data.success) {
+        console.log('🔍 Search API response:', data)
+        console.log('👥 Raw users from API:', data.users)
+        
         // Filter out current user and already invited users
         const filteredUsers = data.users.filter((user: User) => 
           user.id !== userId && 
           !sentInvitations.some(inv => inv.invited_user_id === user.id)
         )
+        
+        console.log('✅ Filtered users:', filteredUsers)
+        console.log('🎯 Setting search results:', filteredUsers.length, 'users')
         setSearchResults(filteredUsers)
+      } else {
+        console.log('❌ Search failed:', data)
       }
     } catch (error) {
       console.error('Error searching users:', error)
@@ -207,6 +215,7 @@ export default function InviteMembersModal({
 
             {/* Search Results */}
             <div className="flex-1 overflow-y-auto">
+              {console.log('🎨 Rendering search results:', { searching, searchResults: searchResults.length, searchQuery })}
               {searching ? (
                 <div className="flex items-center justify-center h-32">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
