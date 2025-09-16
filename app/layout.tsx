@@ -78,12 +78,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/thereallogo.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/thereallogo.png" />
-        <link rel="shortcut icon" href="/thereallogo.png" />
+        <link rel="icon" href="/thereallogo.png?v=2" type="image/png" />
+        <link rel="apple-touch-icon" href="/thereallogo.png?v=2" />
+        <link rel="shortcut icon" href="/thereallogo.png?v=2" />
         <meta name="theme-color" content="#10b981" />
         <meta name="msapplication-TileColor" content="#10b981" />
-        <meta name="msapplication-TileImage" content="/thereallogo.png" />
+        <meta name="msapplication-TileImage" content="/thereallogo.png?v=2" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:image:type" content="image/png" />
@@ -100,23 +100,23 @@ export default function RootLayout({
         <meta name="msapplication-config" content="/browserconfig.xml" />
         
         {/* iOS PWA Support */}
-        <link rel="apple-touch-icon" sizes="180x180" href="/thereallogo.png" />
-        <link rel="apple-touch-icon" sizes="152x152" href="/thereallogo.png" />
-        <link rel="apple-touch-icon" sizes="144x144" href="/thereallogo.png" />
-        <link rel="apple-touch-icon" sizes="120x120" href="/thereallogo.png" />
-        <link rel="apple-touch-icon" sizes="114x114" href="/thereallogo.png" />
-        <link rel="apple-touch-icon" sizes="76x76" href="/thereallogo.png" />
-        <link rel="apple-touch-icon" sizes="72x72" href="/thereallogo.png" />
-        <link rel="apple-touch-icon" sizes="60x60" href="/thereallogo.png" />
-        <link rel="apple-touch-icon" sizes="57x57" href="/thereallogo.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/thereallogo.png?v=2" />
+        <link rel="apple-touch-icon" sizes="152x152" href="/thereallogo.png?v=2" />
+        <link rel="apple-touch-icon" sizes="144x144" href="/thereallogo.png?v=2" />
+        <link rel="apple-touch-icon" sizes="120x120" href="/thereallogo.png?v=2" />
+        <link rel="apple-touch-icon" sizes="114x114" href="/thereallogo.png?v=2" />
+        <link rel="apple-touch-icon" sizes="76x76" href="/thereallogo.png?v=2" />
+        <link rel="apple-touch-icon" sizes="72x72" href="/thereallogo.png?v=2" />
+        <link rel="apple-touch-icon" sizes="60x60" href="/thereallogo.png?v=2" />
+        <link rel="apple-touch-icon" sizes="57x57" href="/thereallogo.png?v=2" />
         
         {/* Android PWA Support */}
-        <link rel="icon" type="image/png" sizes="192x192" href="/thereallogo.png" />
-        <link rel="icon" type="image/png" sizes="512x512" href="/thereallogo.png" />
-        <link rel="icon" type="image/png" sizes="144x144" href="/thereallogo.png" />
-        <link rel="icon" type="image/png" sizes="96x96" href="/thereallogo.png" />
-        <link rel="icon" type="image/png" sizes="72x72" href="/thereallogo.png" />
-        <link rel="icon" type="image/png" sizes="48x48" href="/thereallogo.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/thereallogo.png?v=2" />
+        <link rel="icon" type="image/png" sizes="512x512" href="/thereallogo.png?v=2" />
+        <link rel="icon" type="image/png" sizes="144x144" href="/thereallogo.png?v=2" />
+        <link rel="icon" type="image/png" sizes="96x96" href="/thereallogo.png?v=2" />
+        <link rel="icon" type="image/png" sizes="72x72" href="/thereallogo.png?v=2" />
+        <link rel="icon" type="image/png" sizes="48x48" href="/thereallogo.png?v=2" />
       </head>
       <body className={`${inter.className} bg-theme-gradient text-theme-primary transition-colors duration-300`}>
         <ThemeProvider>
