@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
+import PWARegistration from '@/app/components/PWARegistration'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -80,18 +81,48 @@ export default function RootLayout({
         <link rel="icon" href="/NEWLOGOREAL.png?v=3" type="image/png" />
         <link rel="apple-touch-icon" href="/NEWLOGOREAL.png?v=3" />
         <link rel="shortcut icon" href="/NEWLOGOREAL.png?v=3" />
-        <meta name="theme-color" content="#1f2937" />
-        <meta name="msapplication-TileColor" content="#1f2937" />
+        <meta name="theme-color" content="#10b981" />
+        <meta name="msapplication-TileColor" content="#10b981" />
         <meta name="msapplication-TileImage" content="/NEWLOGOREAL.png?v=3" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:image:type" content="image/png" />
         <meta name="twitter:image:alt" content="Ultimate Golf Community Logo" />
+        
+        {/* PWA Meta Tags */}
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="UGC Golf" />
+        <meta name="application-name" content="Ultimate Golf Community" />
+        <meta name="msapplication-TileColor" content="#10b981" />
+        <meta name="msapplication-config" content="/browserconfig.xml" />
+        
+        {/* iOS PWA Support */}
+        <link rel="apple-touch-icon" sizes="180x180" href="/logos/NEWLOGOREAL.png" />
+        <link rel="apple-touch-icon" sizes="152x152" href="/logos/NEWLOGOREAL.png" />
+        <link rel="apple-touch-icon" sizes="144x144" href="/logos/NEWLOGOREAL.png" />
+        <link rel="apple-touch-icon" sizes="120x120" href="/logos/NEWLOGOREAL.png" />
+        <link rel="apple-touch-icon" sizes="114x114" href="/logos/NEWLOGOREAL.png" />
+        <link rel="apple-touch-icon" sizes="76x76" href="/logos/NEWLOGOREAL.png" />
+        <link rel="apple-touch-icon" sizes="72x72" href="/logos/NEWLOGOREAL.png" />
+        <link rel="apple-touch-icon" sizes="60x60" href="/logos/NEWLOGOREAL.png" />
+        <link rel="apple-touch-icon" sizes="57x57" href="/logos/NEWLOGOREAL.png" />
+        
+        {/* Android PWA Support */}
+        <link rel="icon" type="image/png" sizes="192x192" href="/logos/NEWLOGOREAL.png" />
+        <link rel="icon" type="image/png" sizes="512x512" href="/logos/NEWLOGOREAL.png" />
+        <link rel="icon" type="image/png" sizes="144x144" href="/logos/NEWLOGOREAL.png" />
+        <link rel="icon" type="image/png" sizes="96x96" href="/logos/NEWLOGOREAL.png" />
+        <link rel="icon" type="image/png" sizes="72x72" href="/logos/NEWLOGOREAL.png" />
+        <link rel="icon" type="image/png" sizes="48x48" href="/logos/NEWLOGOREAL.png" />
       </head>
       <body className={`${inter.className} bg-theme-gradient text-theme-primary transition-colors duration-300`}>
         <ThemeProvider>
           <AuthProvider>
             {children}
+            <PWARegistration />
           </AuthProvider>
         </ThemeProvider>
       </body>

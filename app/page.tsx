@@ -33,6 +33,7 @@ import {
   User
 } from 'lucide-react'
 import Logo from '@/app/components/Logo'
+import PWAInstallPrompt from '@/app/components/PWAInstallPrompt'
 
 
 export default function HomePage() {
@@ -497,6 +498,8 @@ export default function HomePage() {
         </div>
       </div>
       
+      {/* PWA Install Prompt */}
+      <PWAInstallPrompt />
 
     </div>
   )
