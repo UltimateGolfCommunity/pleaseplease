@@ -174,26 +174,8 @@ export default function Dashboard() {
     if (activeTab === 'overview') {
       console.log('🔄 Loading tee times for Overview tab...')
       fetchTeeTimes()
-      
-      // Automatically get user location for nearby tee times
-      if (!userLocation && navigator.geolocation) {
-        console.log('📍 Getting user location for nearby tee times...')
-        getUserLocation()
-      }
     }
   }, [activeTab])
-
-  // Auto-enable location filtering when user location is detected
-  useEffect(() => {
-    if (userLocation && !showNearbyTeeTimesOnly) {
-      console.log('📍 User location detected, enabling location-based filtering...')
-      setShowNearbyTeeTimesOnly(true)
-      // Fetch tee times with location filter
-      setTimeout(() => {
-        fetchTeeTimes()
-      }, 100)
-    }
-  }, [userLocation])
   const [createCourseSubmitting, setCreateCourseSubmitting] = useState(false)
 
   // Badge system state
@@ -205,9 +187,6 @@ export default function Dashboard() {
   // Tee time loading state
   const [teeTimesLoading, setTeeTimesLoading] = useState(false)
   
-  // Tee time location filtering state
-  const [nearbyTeeTimes, setNearbyTeeTimes] = useState<any[]>([])
-  const [showNearbyTeeTimesOnly, setShowNearbyTeeTimesOnly] = useState(false)
   
   // Applications state
   const [applications, setApplications] = useState<any[]>([])
@@ -611,105 +590,35 @@ export default function Dashboard() {
       // Get today's date for filtering
       const today = new Date().toISOString().split('T')[0]
       
-      // Check if we should fetch nearby tee times
-      if (showNearbyTeeTimesOnly && userLocation) {
-        const response = await fetch(`/api/tee-times?action=nearby&user_lat=${userLocation.lat}&user_lon=${userLocation.lon}`)
-        console.log('📡 Nearby tee times API response status:', response.status)
-        if (response.ok) {
-          const data = await response.json()
-          console.log('📊 Nearby tee times API response data:', data)
-          const teeTimes = Array.isArray(data) ? data : (data.tee_times || [])
-          console.log('🎯 Extracted nearby tee times:', teeTimes)
-          
-          // Filter to only show tee times from today forward (client-side backup)
-          const filteredTeeTimes = teeTimes.filter((teeTime: any) => {
-            return teeTime.tee_time_date >= today
-          })
-          
-          // Sort by distance first, then by date
-          const sortedTeeTimes = filteredTeeTimes.sort((a: any, b: any) => {
-            if (a.distance_km !== undefined && b.distance_km !== undefined) {
-              return a.distance_km - b.distance_km
-            }
-            const dateA = new Date(a.tee_time_date + ' ' + a.tee_time_time)
-            const dateB = new Date(b.tee_time_date + ' ' + b.tee_time_time)
-            return dateA.getTime() - dateB.getTime()
-          })
-          setNearbyTeeTimes(sortedTeeTimes)
-          console.log('Fetched nearby tee times (today+):', sortedTeeTimes)
-          
-          // If no nearby tee times found, fallback to fetching all available tee times
-          if (sortedTeeTimes.length === 0) {
-            console.log('📍 No nearby tee times found, fetching all available tee times as fallback...')
-            const fallbackResponse = await fetch('/api/tee-times?action=available')
-            if (fallbackResponse.ok) {
-              const fallbackData = await fallbackResponse.json()
-              const fallbackTeeTimes = Array.isArray(fallbackData) ? fallbackData : (fallbackData.tee_times || [])
-              const filteredFallbackTeeTimes = fallbackTeeTimes.filter((teeTime: any) => {
-                return teeTime.tee_time_date >= today
-              })
-              const sortedFallbackTeeTimes = filteredFallbackTeeTimes.sort((a: any, b: any) => {
-                const dateA = new Date(a.tee_time_date + ' ' + a.tee_time_time)
-                const dateB = new Date(b.tee_time_date + ' ' + b.tee_time_time)
-                return dateA.getTime() - dateB.getTime()
-              })
-              setAvailableTeeTimes(sortedFallbackTeeTimes)
-              console.log('📍 Fallback available tee times:', sortedFallbackTeeTimes)
-            }
-          }
-        } else {
-          console.error('Failed to fetch nearby tee times')
-          setNearbyTeeTimes([])
-          
-          // Fallback to fetching all available tee times
-          console.log('📍 Nearby fetch failed, fetching all available tee times as fallback...')
-          const fallbackResponse = await fetch('/api/tee-times?action=available')
-          if (fallbackResponse.ok) {
-            const fallbackData = await fallbackResponse.json()
-            const fallbackTeeTimes = Array.isArray(fallbackData) ? fallbackData : (fallbackData.tee_times || [])
-            const filteredFallbackTeeTimes = fallbackTeeTimes.filter((teeTime: any) => {
-              return teeTime.tee_time_date >= today
-            })
-            const sortedFallbackTeeTimes = filteredFallbackTeeTimes.sort((a: any, b: any) => {
-              const dateA = new Date(a.tee_time_date + ' ' + a.tee_time_time)
-              const dateB = new Date(b.tee_time_date + ' ' + b.tee_time_time)
-              return dateA.getTime() - dateB.getTime()
-            })
-            setAvailableTeeTimes(sortedFallbackTeeTimes)
-            console.log('📍 Fallback available tee times (error case):', sortedFallbackTeeTimes)
-          }
-        }
+      // Fetch all available tee times
+      const response = await fetch('/api/tee-times?action=available')
+      console.log('📡 Tee times API response status:', response.status)
+      if (response.ok) {
+        const data = await response.json()
+        console.log('📊 Tee times API response data:', data)
+        console.log('📊 Data type:', typeof data, 'Is array:', Array.isArray(data))
+        // Handle both array format and object format
+        const teeTimes = Array.isArray(data) ? data : (data.tee_times || [])
+        console.log('🎯 Extracted tee times:', teeTimes)
+        console.log('🎯 Tee times length:', teeTimes.length)
+        
+        // Filter to only show tee times from today forward (client-side backup)
+        const filteredTeeTimes = teeTimes.filter((teeTime: any) => {
+          return teeTime.tee_time_date >= today
+        })
+        
+        // Sort by date (earliest first)
+        const sortedTeeTimes = filteredTeeTimes.sort((a: any, b: any) => {
+          const dateA = new Date(a.tee_time_date + ' ' + a.tee_time_time)
+          const dateB = new Date(b.tee_time_date + ' ' + b.tee_time_time)
+          return dateA.getTime() - dateB.getTime()
+        })
+        setAvailableTeeTimes(sortedTeeTimes)
+        console.log('Fetched and sorted tee times (today+):', sortedTeeTimes)
+        console.log('🎯 Setting availableTeeTimes state to:', sortedTeeTimes.length, 'tee times')
       } else {
-        // Fetch all available tee times
-        const response = await fetch('/api/tee-times?action=available')
-        console.log('📡 Tee times API response status:', response.status)
-        if (response.ok) {
-          const data = await response.json()
-          console.log('📊 Tee times API response data:', data)
-          console.log('📊 Data type:', typeof data, 'Is array:', Array.isArray(data))
-          // Handle both array format and object format
-          const teeTimes = Array.isArray(data) ? data : (data.tee_times || [])
-          console.log('🎯 Extracted tee times:', teeTimes)
-          console.log('🎯 Tee times length:', teeTimes.length)
-          
-          // Filter to only show tee times from today forward (client-side backup)
-          const filteredTeeTimes = teeTimes.filter((teeTime: any) => {
-            return teeTime.tee_time_date >= today
-          })
-          
-          // Sort by date (earliest first)
-          const sortedTeeTimes = filteredTeeTimes.sort((a: any, b: any) => {
-            const dateA = new Date(a.tee_time_date + ' ' + a.tee_time_time)
-            const dateB = new Date(b.tee_time_date + ' ' + b.tee_time_time)
-            return dateA.getTime() - dateB.getTime()
-          })
-          setAvailableTeeTimes(sortedTeeTimes)
-          console.log('Fetched and sorted tee times (today+):', sortedTeeTimes)
-          console.log('🎯 Setting availableTeeTimes state to:', sortedTeeTimes.length, 'tee times')
-        } else {
-          console.error('Failed to fetch tee times')
-          setAvailableTeeTimes([])
-        }
+        console.error('Failed to fetch tee times')
+        setAvailableTeeTimes([])
       }
     } catch (error) {
       console.error('Error fetching tee times:', error)
@@ -2358,59 +2267,8 @@ export default function Dashboard() {
                     )}
                   </button>
 
-                  {userLocation && (
-                    <button
-                      onClick={async () => {
-                        const newValue = !showNearbyTeeTimesOnly
-                        setShowNearbyTeeTimesOnly(newValue)
-                        
-                        if (newValue && !userLocation) {
-                          // Get user's location if not already available
-                          await getUserLocation()
-                        }
-                        
-                        // Refresh tee times with new filter
-                        setTimeout(() => {
-                          fetchTeeTimes()
-                        }, 100)
-                      }}
-                      className={`px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2 ${
-                        showNearbyTeeTimesOnly 
-                          ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white' 
-                          : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50'
-                      }`}
-                    >
-                      <span>{showNearbyTeeTimesOnly ? 'Show All Tee Times' : 'Show Nearby Only'}</span>
-                      {showNearbyTeeTimesOnly && availableTeeTimes.length > 0 && (
-                        <span className="bg-emerald-500 text-white text-xs px-2 py-1 rounded-full">
-                          {availableTeeTimes.length}
-                        </span>
-                      )}
-                    </button>
-                  )}
                 </div>
 
-                {/* Location Status for Tee Times */}
-                {userLocation && (
-                  <div className="mb-4 p-3 bg-emerald-500/20 border border-emerald-500/30 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2 text-emerald-300">
-                        <MapPin className="h-4 w-4" />
-                        <span className="text-sm">
-                          Showing tee times ordered by distance from {currentCity || 'your location'}
-                        </span>
-                        <span className="text-slate-400">•</span>
-                        <span className="text-sm">
-                          {availableTeeTimes.length} available
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <span className="text-xs text-emerald-400">Location Active</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             
               {/* Available Tee Times Heading */}
@@ -2423,11 +2281,9 @@ export default function Dashboard() {
               {/* Tee Times List */}
               <div className="space-y-6">
                 {(() => {
-                  console.log('🎨 Rendering tee times section:', { 
+                  console.log('🎨 Rendering tee times section:', {
                     teeTimesLoading, 
-                    availableTeeTimesLength: availableTeeTimes?.length || 0,
-                    showNearbyTeeTimesOnly,
-                    nearbyTeeTimesLength: nearbyTeeTimes?.length || 0
+                    availableTeeTimesLength: availableTeeTimes?.length || 0
                   })
                   return null
                 })()}
@@ -2451,16 +2307,7 @@ export default function Dashboard() {
                     </button>
                   </div>
                 ) : (
-                  (() => {
-                    const displayTeeTimes = showNearbyTeeTimesOnly && nearbyTeeTimes.length > 0 ? nearbyTeeTimes : availableTeeTimes
-                    console.log('🎨 Display logic:', {
-                      showNearbyTeeTimesOnly,
-                      nearbyTeeTimesLength: nearbyTeeTimes.length,
-                      availableTeeTimesLength: availableTeeTimes.length,
-                      displayTeeTimesLength: displayTeeTimes.length
-                    })
-                    return displayTeeTimes
-                  })()?.map((teeTime) => {
+                  availableTeeTimes?.map((teeTime) => {
                     const daysUntilTeeTime = Math.ceil((new Date(teeTime.tee_time_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
                     const isToday = new Date(teeTime.tee_time_date).toDateString() === new Date().toDateString()
                     const isTomorrow = daysUntilTeeTime === 1
