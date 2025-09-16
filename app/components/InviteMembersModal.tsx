@@ -76,7 +76,7 @@ export default function InviteMembersModal({
 
     setSearching(true)
     try {
-      const response = await fetch(`/api/users?action=search&q=${encodeURIComponent(query)}`)
+      const response = await fetch(`/api/users?action=search&q=${encodeURIComponent(query)}&_t=${Date.now()}`)
       const data = await response.json()
       
       if (data.success) {

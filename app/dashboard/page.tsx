@@ -1015,7 +1015,7 @@ export default function Dashboard() {
       console.log('🔍 Current user ID:', user?.id)
       console.log('🔍 Selected invitees:', selectedInvitees.map(i => i.id))
       
-      const response = await fetch(`/api/users?action=search&q=${encodeURIComponent(groupInviteQuery)}`)
+      const response = await fetch(`/api/users?action=search&q=${encodeURIComponent(groupInviteQuery)}&_t=${Date.now()}`)
       console.log('📡 Group invite search response status:', response.status)
       
       if (response.ok) {
@@ -1583,7 +1583,7 @@ export default function Dashboard() {
         response = await fetch(`/api/groups?action=search&q=${encodeURIComponent(searchQuery)}`)
       } else {
         // Use the correct API call for user search
-        response = await fetch(`/api/users?action=search&q=${encodeURIComponent(searchQuery)}`)
+        response = await fetch(`/api/users?action=search&q=${encodeURIComponent(searchQuery)}&_t=${Date.now()}`)
       }
       
       console.log('📡 Search response status:', response.status)
