@@ -2450,10 +2450,10 @@ export default function Dashboard() {
                     const isAlmostFull = spotsRemaining <= 1
                     
                     return (
-                    <div key={teeTime.id} className="bg-white/95 backdrop-blur-sm border border-gray-200/50 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden relative">
+                    <div key={teeTime.id} className="bg-white/95 backdrop-blur-sm border border-gray-200/50 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden relative">
                       
                       {/* Course Image Header */}
-                      <div className="relative h-32 sm:h-40 bg-gradient-to-r from-emerald-500 to-teal-600">
+                      <div className="relative h-24 sm:h-28 bg-gradient-to-r from-emerald-500 to-teal-600">
                         {(teeTime.golf_courses?.course_image_url || teeTime.golf_courses?.logo_url) ? (
                           <>
                             <img
@@ -2490,8 +2490,8 @@ export default function Dashboard() {
                         
                         {/* Course Logo Overlay */}
                         {teeTime.golf_courses?.logo_url && (
-                          <div className="absolute top-3 left-3">
-                            <div className="h-12 w-12 bg-white/90 rounded-lg p-2 shadow-lg">
+                          <div className="absolute top-2 left-2">
+                            <div className="h-8 w-8 bg-white/90 rounded p-1 shadow-lg">
                               <img
                                 src={teeTime.golf_courses.logo_url}
                                 alt={`${teeTime.course_name} logo`}
@@ -2506,7 +2506,7 @@ export default function Dashboard() {
                       </div>
 
                       {/* Status Badges */}
-                      <div className="absolute top-3 right-3 flex flex-col gap-1 z-10">
+                      <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
                         {isToday && (
                           <div className="bg-red-500 text-white px-2 py-1 rounded-md text-xs font-medium">
                             TODAY
@@ -2524,15 +2524,15 @@ export default function Dashboard() {
                         )}
                       </div>
 
-                      <div className="relative p-4 sm:p-6">
+                      <div className="relative p-3 sm:p-4">
                         {/* Header Section */}
-                        <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-4 gap-4">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-3 gap-3">
                         <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-3">
+                            <div className="flex items-center gap-2 mb-2">
                               {/* Course Icon/Logo */}
                               <div className="flex-shrink-0">
                                 {teeTime.golf_courses?.logo_url ? (
-                                  <div className="h-12 w-12 bg-white rounded-lg p-2 shadow-md border border-gray-200">
+                                  <div className="h-8 w-8 bg-white rounded p-1 shadow-md border border-gray-200">
                                     <img
                                       src={teeTime.golf_courses.logo_url}
                                       alt={`${teeTime.course_name} logo`}
@@ -2544,15 +2544,15 @@ export default function Dashboard() {
                                     />
                                   </div>
                                 ) : (
-                                  <div className="h-12 w-12 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center shadow-md">
-                                    <Flag className="h-6 w-6 text-white" />
+                                  <div className="h-8 w-8 bg-gradient-to-r from-emerald-500 to-teal-600 rounded flex items-center justify-center shadow-md">
+                                    <Flag className="h-4 w-4 text-white" />
                                   </div>
                                 )}
                               </div>
                               <div className="flex-1">
-                                <h3 className="text-gray-900 font-bold text-lg sm:text-xl">{teeTime.course_name}</h3>
+                                <h3 className="text-gray-900 font-bold text-base sm:text-lg">{teeTime.course_name}</h3>
                                 {teeTime.golf_courses?.location && (
-                                  <p className="text-gray-600 text-sm mt-1">{teeTime.golf_courses.location}</p>
+                                  <p className="text-gray-600 text-xs mt-1">{teeTime.golf_courses.location}</p>
                                 )}
                                 {(teeTime.distance_km || teeTime.distance) && (
                                   <div className="flex items-center space-x-1 mt-1">
@@ -2587,9 +2587,9 @@ export default function Dashboard() {
                               </div>
                             </div>
                             
-                            <div className="space-y-3">
+                            <div className="space-y-2">
                               {/* Date and Time */}
-                              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                              <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
                                 <Calendar className="h-4 w-4 text-emerald-500" />
                                 <div>
                                   <p className="text-gray-900 font-medium text-sm">{new Date(teeTime.tee_time_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
@@ -2598,9 +2598,9 @@ export default function Dashboard() {
                               </div>
 
                               {/* Creator Info */}
-                              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                              <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
                                 <div className="relative">
-                                  <div className="h-12 w-12 rounded-full overflow-hidden border-2 border-emerald-500/50 shadow-md">
+                                  <div className="h-8 w-8 rounded-full overflow-hidden border-2 border-emerald-500/50 shadow-md">
                                     <img
                                       src={teeTime.creator?.avatar_url || '/default-avatar.svg'}
                                       alt={`${teeTime.creator?.first_name || 'Unknown'} ${teeTime.creator?.last_name || ''}`}
@@ -2637,10 +2637,10 @@ export default function Dashboard() {
                           </div>
 
                           {/* Player and Handicap Info */}
-                          <div className="flex flex-col gap-3 sm:text-right sm:min-w-[160px]">
+                          <div className="flex flex-col gap-2 sm:text-right sm:min-w-[140px]">
                             <div className="relative">
-                              <div className={`${isAlmostFull ? 'bg-red-500' : spotsRemaining === 0 ? 'bg-gray-500' : 'bg-emerald-500'} text-white px-4 py-3 rounded-lg text-center shadow-md`}>
-                                <div className="text-lg font-bold">{teeTime.current_players || 1}/{teeTime.max_players}</div>
+                              <div className={`${isAlmostFull ? 'bg-red-500' : spotsRemaining === 0 ? 'bg-gray-500' : 'bg-emerald-500'} text-white px-3 py-2 rounded-lg text-center shadow-md`}>
+                                <div className="text-base font-bold">{teeTime.current_players || 1}/{teeTime.max_players}</div>
                                 <div className="text-xs opacity-90">Players</div>
                               </div>
                               {spotsRemaining > 0 && (
@@ -2909,7 +2909,7 @@ export default function Dashboard() {
                 {/* Course Search */}
               <div className="space-y-4 mb-6">
                 {/* Search Input */}
-                <div className="flex space-x-3">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                   <input
                     type="text"
                     placeholder="Search courses by name or location..."
@@ -2917,39 +2917,41 @@ export default function Dashboard() {
                     onChange={(e) => setCourseSearchQuery(e.target.value)}
                     className="flex-1 px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300"
                   />
-                  <button
-                    onClick={handleCourseSearch}
-                    disabled={courseSearchLoading}
-                    className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-6 py-3 rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed"
-                  >
-                    {courseSearchLoading ? 'Searching...' : 'Search'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setCourseSearchQuery('')
-                      setZipCode('')
-                      handleCourseSearch()
-                    }}
-                    disabled={courseSearchLoading}
-                    className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-6 py-3 rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed"
-                  >
-                    Show All
-                  </button>
+                  <div className="flex gap-2 sm:gap-3">
+                    <button
+                      onClick={handleCourseSearch}
+                      disabled={courseSearchLoading}
+                      className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-4 sm:px-6 py-3 rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed flex-1 sm:flex-none"
+                    >
+                      {courseSearchLoading ? 'Searching...' : 'Search'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setCourseSearchQuery('')
+                        setZipCode('')
+                        handleCourseSearch()
+                      }}
+                      disabled={courseSearchLoading}
+                      className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-4 sm:px-6 py-3 rounded-xl transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed flex-1 sm:flex-none"
+                    >
+                      Show All
+                    </button>
+                  </div>
                 </div>
 
                 {/* Location Filter */}
-                <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-                  <div className="flex items-center space-x-2 flex-shrink-0">
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center space-x-2">
                     <MapPin className="h-5 w-5 text-slate-400" />
-                    <span className="text-slate-300 font-medium whitespace-nowrap">Find courses near:</span>
+                    <span className="text-slate-300 font-medium">Find courses near:</span>
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                  <div className="flex flex-col sm:flex-row gap-2 w-full">
                     <input
                       type="text"
                       placeholder="Enter ZIP code (e.g., 12345)"
                       value={zipCode}
                       onChange={(e) => setZipCode(e.target.value)}
-                      className="px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300 w-full sm:w-48"
+                      className="px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300 flex-1"
                     />
                     <select
                       value={searchRadius}
