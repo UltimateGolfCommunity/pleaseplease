@@ -614,9 +614,12 @@ export default function Dashboard() {
       // Check if we should fetch nearby tee times
       if (showNearbyTeeTimesOnly && userLocation) {
         const response = await fetch(`/api/tee-times?action=nearby&user_lat=${userLocation.lat}&user_lon=${userLocation.lon}`)
+        console.log('📡 Nearby tee times API response status:', response.status)
         if (response.ok) {
           const data = await response.json()
+          console.log('📊 Nearby tee times API response data:', data)
           const teeTimes = Array.isArray(data) ? data : (data.tee_times || [])
+          console.log('🎯 Extracted nearby tee times:', teeTimes)
           
           // Filter to only show tee times from today forward (client-side backup)
           const filteredTeeTimes = teeTimes.filter((teeTime: any) => {
@@ -641,10 +644,13 @@ export default function Dashboard() {
       } else {
         // Fetch all available tee times
         const response = await fetch('/api/tee-times?action=available')
+        console.log('📡 Tee times API response status:', response.status)
         if (response.ok) {
           const data = await response.json()
+          console.log('📊 Tee times API response data:', data)
           // Handle both array format and object format
           const teeTimes = Array.isArray(data) ? data : (data.tee_times || [])
+          console.log('🎯 Extracted tee times:', teeTimes)
           
           // Filter to only show tee times from today forward (client-side backup)
           const filteredTeeTimes = teeTimes.filter((teeTime: any) => {
