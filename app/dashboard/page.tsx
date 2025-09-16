@@ -1583,7 +1583,7 @@ export default function Dashboard() {
         response = await fetch(`/api/groups?action=search&q=${encodeURIComponent(searchQuery)}`)
       } else {
         // Use the correct API call for user search
-        response = await fetch(`/api/users?q=${encodeURIComponent(searchQuery)}`)
+        response = await fetch(`/api/users?action=search&q=${encodeURIComponent(searchQuery)}`)
       }
       
       console.log('📡 Search response status:', response.status)
