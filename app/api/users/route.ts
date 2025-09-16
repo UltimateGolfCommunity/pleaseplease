@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
       
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('id, first_name, last_name, username, avatar_url, location, handicap, bio, total_points, connections_count, rounds_played')
+        .select('id, first_name, last_name, username, avatar_url, location, handicap, bio, total_points, connections_count, tee_times_count')
         .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,username.ilike.%${query}%,location.ilike.%${query}%`)
         .limit(20)
 
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
     console.log('🔍 Returning all users from database')
     const { data, error } = await supabase
       .from('user_profiles')
-      .select('id, first_name, last_name, username, avatar_url, location, handicap, bio, total_points, connections_count, rounds_played')
+      .select('id, first_name, last_name, username, avatar_url, location, handicap, bio, total_points, connections_count, tee_times_count')
       .limit(50)
 
     if (error) {
