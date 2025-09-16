@@ -648,9 +648,11 @@ export default function Dashboard() {
         if (response.ok) {
           const data = await response.json()
           console.log('📊 Tee times API response data:', data)
+          console.log('📊 Data type:', typeof data, 'Is array:', Array.isArray(data))
           // Handle both array format and object format
           const teeTimes = Array.isArray(data) ? data : (data.tee_times || [])
           console.log('🎯 Extracted tee times:', teeTimes)
+          console.log('🎯 Tee times length:', teeTimes.length)
           
           // Filter to only show tee times from today forward (client-side backup)
           const filteredTeeTimes = teeTimes.filter((teeTime: any) => {
