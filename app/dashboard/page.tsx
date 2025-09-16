@@ -772,11 +772,12 @@ export default function Dashboard() {
       const response = await fetch(`/api/users?action=connections&user_id=${user.id}`)
       if (response.ok) {
         const data = await response.json()
+        const connections = data.connections || data || []
         // Filter connections based on status and who initiated them
-        const acceptedConnections = data.filter((conn: any) => 
+        const acceptedConnections = connections.filter((conn: any) => 
           conn.status === 'accepted'
         )
-        const pendingRequests = data.filter((conn: any) => 
+        const pendingRequests = connections.filter((conn: any) => 
           conn.status === 'pending' && conn.recipient_id === user.id
         )
         

@@ -80,12 +80,18 @@ self.addEventListener('fetch', (event) => {
       .then((cachedResponse) => {
         // Return cached version if available
         if (cachedResponse) {
-          console.log('📦 Serving from cache:', event.request.url);
+          // Only log API calls, not static assets
+          if (event.request.url.includes('/api/')) {
+            console.log('📦 Serving from cache:', event.request.url);
+          }
           return cachedResponse;
         }
 
         // Otherwise fetch from network
-        console.log('🌐 Fetching from network:', event.request.url);
+        // Only log API calls, not static assets
+        if (event.request.url.includes('/api/')) {
+          console.log('🌐 Fetching from network:', event.request.url);
+        }
         return fetch(event.request)
           .then((response) => {
             // Don't cache non-successful responses
