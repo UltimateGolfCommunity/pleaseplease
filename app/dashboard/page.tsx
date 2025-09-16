@@ -779,7 +779,7 @@ export default function Dashboard() {
       const response = await fetch(`/api/users?action=connections&user_id=${user.id}`)
       if (response.ok) {
         const data = await response.json()
-        const connections = data.connections || data || []
+        const connections = Array.isArray(data.connections) ? data.connections : (Array.isArray(data) ? data : [])
         // Filter connections based on status and who initiated them
         const acceptedConnections = connections.filter((conn: any) => 
           conn.status === 'accepted'
@@ -2396,7 +2396,7 @@ export default function Dashboard() {
                     <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-500 border-t-transparent mx-auto mb-4"></div>
                     <p className="text-slate-600 text-lg">Loading tee times...</p>
                   </div>
-                ) : (!availableTeeTimes || availableTeeTimes.length === 0) && (!showNearbyTeeTimesOnly || nearbyTeeTimes.length === 0) ? (
+                ) : (!availableTeeTimes || availableTeeTimes.length === 0) ? (
                   <div className="text-center py-12">
                     <div className="bg-gradient-to-r from-slate-100 to-blue-50 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
                       <Calendar className="h-10 w-10 text-slate-400" />
