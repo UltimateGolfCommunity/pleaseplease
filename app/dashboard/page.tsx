@@ -101,11 +101,6 @@ export default function Dashboard() {
   
   const [groupMessageText, setGroupMessageText] = useState('')
   
-  // Course search state
-  const [courseSearchQuery, setCourseSearchQuery] = useState('')
-  const [courseSearchLoading, setCourseSearchLoading] = useState(false)
-  const [courseSearchResults, setCourseSearchResults] = useState<any[]>([])
-  
   
   // Groups state
   const [userGroups, setUserGroups] = useState<any[]>([])
@@ -130,15 +125,6 @@ export default function Dashboard() {
     holes: 18
   })
 
-  // Load courses when Courses tab is opened
-  useEffect(() => {
-    console.log('🔍 Courses tab useEffect triggered:', { activeTab, courseSearchResultsLength: courseSearchResults.length })
-    if (activeTab === 'courses') {
-      console.log('🔄 Loading courses for Courses tab...')
-      handleCourseSearch()
-      
-    }
-  }, [activeTab])
 
   // Load user groups when Groups tab is opened
   useEffect(() => {
@@ -443,6 +429,10 @@ export default function Dashboard() {
         location: profile.location || ''
       })
       
+      // Set current city from profile if available
+      if (profile.location) {
+        setCurrentCity(profile.location)
+      }
     }
   }, [profile])
 
@@ -502,41 +492,23 @@ export default function Dashboard() {
     try {
       setTeeTimesLoading(true)
       
-      // Get today's date for filtering
-      const today = new Date().toISOString().split('T')[0]
-      
-      // Fetch all available tee times
+      // Fetch all available tee times - simple, no filtering
       const response = await fetch('/api/tee-times?action=available')
-      console.log('📡 Tee times API response status:', response.status)
       if (response.ok) {
         const data = await response.json()
-        console.log('📊 Tee times API response data:', data)
-        console.log('📊 Data type:', typeof data, 'Is array:', Array.isArray(data))
-        // Handle both array format and object format
         const teeTimes = Array.isArray(data) ? data : (data.tee_times || [])
-        console.log('🎯 Extracted tee times:', teeTimes)
-        console.log('🎯 Tee times length:', teeTimes.length)
-        
-        // Filter to only show tee times from today forward (client-side backup)
-        const filteredTeeTimes = teeTimes.filter((teeTime: any) => {
-          return teeTime.tee_time_date >= today
-        })
         
         // Sort by date (earliest first)
-        const sortedTeeTimes = filteredTeeTimes.sort((a: any, b: any) => {
+        const sortedTeeTimes = teeTimes.sort((a: any, b: any) => {
           const dateA = new Date(a.tee_time_date + ' ' + a.tee_time_time)
           const dateB = new Date(b.tee_time_date + ' ' + b.tee_time_time)
           return dateA.getTime() - dateB.getTime()
         })
         setAvailableTeeTimes(sortedTeeTimes)
-        console.log('Fetched and sorted tee times (today+):', sortedTeeTimes)
-        console.log('🎯 Setting availableTeeTimes state to:', sortedTeeTimes.length, 'tee times')
       } else {
-        console.error('Failed to fetch tee times')
         setAvailableTeeTimes([])
       }
     } catch (error) {
-      console.error('Error fetching tee times:', error)
       setAvailableTeeTimes([])
     } finally {
       setTeeTimesLoading(false)
@@ -1238,38 +1210,6 @@ export default function Dashboard() {
     }
   }
 
-  // Course search functionality
-  const handleCourseSearch = async () => {
-    try {
-      setCourseSearchLoading(true)
-      
-      // Build query parameters
-      const params = new URLSearchParams()
-      if (courseSearchQuery) {
-        params.append('query', courseSearchQuery)
-      }
-      
-      const queryString = params.toString()
-      const url = queryString ? `/api/golf-courses?${queryString}` : '/api/golf-courses'
-      
-      console.log('🔍 Course search URL:', url)
-      const response = await fetch(url)
-      
-      if (response.ok) {
-        const data = await response.json()
-        console.log('🔍 Course search results:', data.courses?.length || 0, 'courses found')
-        setCourseSearchResults(data.courses || [])
-      } else {
-        console.error('Failed to search courses')
-        setCourseSearchResults([])
-      }
-    } catch (error) {
-      console.error('Error searching courses:', error)
-      setCourseSearchResults([])
-    } finally {
-      setCourseSearchLoading(false)
-    }
-  }
 
 
   const handleWriteReview = (course: any) => {
@@ -2152,6 +2092,33 @@ export default function Dashboard() {
                 </button>
               </div>
 
+              {/* Tee Time Location Filtering */}
+              <div className="relative mb-6">
+                <div className="flex flex-wrap gap-3 mb-4">
+                  <div className="flex items-center space-x-2">
+                    <MapPin className="h-5 w-5 text-emerald-400" />
+                    <span className="text-white font-medium">Location-based Filtering:</span>
+                  </div>
+
+                  <button
+                    onClick={getUserLocation}
+                    disabled={locationLoading}
+                    className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed flex items-center space-x-2"
+                  >
+                    {locationLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Getting Location...</span>
+                      </>
+                    ) : (
+                      <>
+                        <MapPin className="h-4 w-4" />
+                        <span>Find Nearby</span>
+                      </>
+                    )}
+                  </button>
+
+                </div>
 
               </div>
             
@@ -2762,31 +2729,140 @@ export default function Dashboard() {
                 </div>
 
                 {/* Location Filter */}
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center space-x-2">
+                    <MapPin className="h-5 w-5 text-slate-400" />
+                    <span className="text-slate-300 font-medium">Find courses near:</span>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2 w-full">
+                    <input
+                      type="text"
+                      placeholder="Enter ZIP code (e.g., 12345)"
+                      value={zipCode}
+                      onChange={(e) => setZipCode(e.target.value)}
+                      className="px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-slate-400 transition-all duration-300 flex-1"
+                    />
+                    <select
+                      value={searchRadius}
+                      onChange={(e) => setSearchRadius(parseInt(e.target.value))}
+                      className="px-3 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white transition-all duration-300 w-full sm:w-32"
+                    >
+                      <option value={50}>50 miles</option>
+                      <option value={100}>100 miles</option>
+                      <option value={150}>150 miles</option>
+                      <option value={200}>200 miles</option>
+                      <option value={250}>250 miles</option>
+                      <option value={500}>500 miles</option>
+                    </select>
+                    <button
+                      onClick={handleCourseSearch}
+                      disabled={courseSearchLoading || !zipCode}
+                      className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed whitespace-nowrap w-full sm:w-auto"
+                    >
+                      Find Nearby
+                    </button>
+                  </div>
+                </div>
 
                 {/* Active Filters Display */}
-                {courseSearchQuery && (
+                {(courseSearchQuery || zipCode) && (
                   <div className="flex flex-wrap gap-2">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800">
-                      Search: "{courseSearchQuery}"
-                      <button
-                        onClick={() => {
-                          setCourseSearchQuery('')
-                          handleCourseSearch()
-                        }}
-                        className="ml-2 text-blue-600 hover:text-blue-800"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
+                    {courseSearchQuery && (
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800">
+                        Search: "{courseSearchQuery}"
+                        <button
+                          onClick={() => {
+                            setCourseSearchQuery('')
+                            handleCourseSearch()
+                          }}
+                          className="ml-2 text-blue-600 hover:text-blue-800"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    )}
+                    {zipCode && (
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-purple-100 text-purple-800">
+                        Within {searchRadius}mi of {zipCode}
+                        <button
+                          onClick={() => {
+                            setZipCode('')
+                            handleCourseSearch()
+                          }}
+                          className="ml-2 text-purple-600 hover:text-purple-800"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
 
+                {/* Location Filtering */}
+                <div className="flex flex-wrap gap-3 mb-6">
+                  <div className="flex items-center space-x-2">
+                    <MapPin className="h-5 w-5 text-emerald-400" />
+                    <span className="text-white font-medium">Location-based Filtering:</span>
+                  </div>
+
+                  <button
+                    onClick={getUserLocation}
+                    disabled={locationLoading}
+                    className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed flex items-center space-x-2"
+                  >
+                    {locationLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Getting Location...</span>
+                      </>
+                    ) : (
+                      <>
+                        <MapPin className="h-4 w-4" />
+                        <span>Find Nearby</span>
+                      </>
+                    )}
+                  </button>
+
+                  {userLocation && (
+                    <button
+                      onClick={() => setShowNearbyOnly(!showNearbyOnly)}
+                      className={`px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2 ${
+                        showNearbyOnly 
+                          ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white' 
+                          : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50'
+                      }`}
+                    >
+                      <span>{showNearbyOnly ? 'Show All' : 'Show Nearby Only'}</span>
+                      {nearbyCourses.length > 0 && (
+                        <span className="bg-emerald-500 text-white text-xs px-2 py-1 rounded-full">
+                          {nearbyCourses.length}
+                        </span>
+                      )}
+                    </button>
+                  )}
+                </div>
+
+                {/* Location Status */}
+                {userLocation && (
+                  <div className="mb-4 p-3 bg-emerald-500/20 border border-emerald-500/30 rounded-lg">
+                    <div className="flex items-center space-x-2 text-emerald-300">
+                      <MapPin className="h-4 w-4" />
+                      <span className="text-sm">
+                        Location: {userLocation.lat.toFixed(4)}, {userLocation.lon.toFixed(4)}
+                      </span>
+                      <span className="text-slate-400">•</span>
+                      <span className="text-sm">
+                        {nearbyCourses.length} courses within 50 miles
+                      </span>
+                    </div>
+                  </div>
+                )}
 
               {/* Course Results */}
-              {courseSearchResults && courseSearchResults.length > 0 ? (
+              {(showNearbyOnly ? nearbyCourses : courseSearchResults) && (showNearbyOnly ? nearbyCourses : courseSearchResults).length > 0 ? (
                 <div className="space-y-4">
-                  {courseSearchResults?.map((course) => (
+                  {(showNearbyOnly ? nearbyCourses : courseSearchResults)?.map((course) => (
                     <div key={course.id} className="bg-slate-800/50 border border-slate-600/50 rounded-xl p-4 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300">
                         <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-4 gap-4">
                         <div className="flex-1">
