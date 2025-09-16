@@ -2395,7 +2395,7 @@ export default function Dashboard() {
                               className="w-full h-full object-cover"
                               onError={(e) => {
                                 // Fallback to default golf course image
-                                e.currentTarget.src = '/Logos/golfcoursedefaultimage.png'
+                                e.currentTarget.src = '/golfcoursedefaultimage.png'
                               }}
                             />
                             <div className="absolute inset-0 bg-black/20"></div>
@@ -2403,7 +2403,7 @@ export default function Dashboard() {
                         ) : (
                           <>
                             <img
-                              src="/Logos/golfcoursedefaultimage.png"
+                              src="/golfcoursedefaultimage.png"
                               alt={`${teeTime.course_name} - Golf Course`}
                               className="w-full h-full object-cover"
                               onError={(e) => {

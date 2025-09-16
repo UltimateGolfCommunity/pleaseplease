@@ -7,11 +7,42 @@ export async function GET(request: NextRequest) {
   const search = searchParams.get('search')
   const searchQuery = searchParams.get('q')
   const userId = searchParams.get('id')
+  const action = searchParams.get('action')
 
-  console.log('🔍 Users API called with:', { search, searchQuery, userId })
+  console.log('🔍 Users API called with:', { search, searchQuery, userId, action })
 
   try {
     const supabase = createAdminClient()
+    
+    // Handle connections fetch
+    if (action === 'connections' && userId) {
+      console.log('🔗 Fetching connections for user:', userId)
+      
+      const { data: connections, error } = await supabase
+        .from('user_connections')
+        .select(`
+          *,
+          requester:user_profiles!user_connections_requester_id_fkey(id, first_name, last_name, username, avatar_url),
+          recipient:user_profiles!user_connections_recipient_id_fkey(id, first_name, last_name, username, avatar_url)
+        `)
+        .or(`requester_id.eq.${userId},recipient_id.eq.${userId}`)
+        .eq('status', 'accepted')
+
+      if (error) {
+        console.error('❌ Connections fetch error:', error)
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Failed to fetch connections', 
+          details: error.message 
+        }, { status: 500 })
+      }
+
+      console.log('✅ Found connections:', connections?.length || 0)
+      return NextResponse.json({
+        success: true,
+        connections: connections || []
+      })
+    }
     
     // Handle user search (both 'search' and 'q' parameters)
     if (search || searchQuery) {
