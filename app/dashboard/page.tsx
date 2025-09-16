@@ -2396,7 +2396,7 @@ export default function Dashboard() {
                     <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-500 border-t-transparent mx-auto mb-4"></div>
                     <p className="text-slate-600 text-lg">Loading tee times...</p>
                   </div>
-                ) : !availableTeeTimes || availableTeeTimes.length === 0 ? (
+                ) : (!availableTeeTimes || availableTeeTimes.length === 0) && (!showNearbyTeeTimesOnly || nearbyTeeTimes.length === 0) ? (
                   <div className="text-center py-12">
                     <div className="bg-gradient-to-r from-slate-100 to-blue-50 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
                       <Calendar className="h-10 w-10 text-slate-400" />
@@ -2411,7 +2411,7 @@ export default function Dashboard() {
                     </button>
                   </div>
                 ) : (
-                  (showNearbyTeeTimesOnly ? nearbyTeeTimes : availableTeeTimes)?.map((teeTime) => {
+                  (showNearbyTeeTimesOnly && nearbyTeeTimes.length > 0 ? nearbyTeeTimes : availableTeeTimes)?.map((teeTime) => {
                     const daysUntilTeeTime = Math.ceil((new Date(teeTime.tee_time_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
                     const isToday = new Date(teeTime.tee_time_date).toDateString() === new Date().toDateString()
                     const isTomorrow = daysUntilTeeTime === 1
