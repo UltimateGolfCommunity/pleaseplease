@@ -116,6 +116,7 @@ export default function Dashboard() {
   const [groupsLoading, setGroupsLoading] = useState(false)
   const [userLocation, setUserLocation] = useState<{lat: number, lon: number} | null>(null)
   const [locationLoading, setLocationLoading] = useState(false)
+  const [currentCity, setCurrentCity] = useState<string>('')
   const [nearbyCourses, setNearbyCourses] = useState<any[]>([])
   const [showNearbyOnly, setShowNearbyOnly] = useState(false)
   
@@ -182,6 +183,18 @@ export default function Dashboard() {
       }
     }
   }, [activeTab])
+
+  // Auto-enable location filtering when user location is detected
+  useEffect(() => {
+    if (userLocation && !showNearbyTeeTimesOnly) {
+      console.log('📍 User location detected, enabling location-based filtering...')
+      setShowNearbyTeeTimesOnly(true)
+      // Fetch tee times with location filter
+      setTimeout(() => {
+        fetchTeeTimes()
+      }, 100)
+    }
+  }, [userLocation])
   const [createCourseSubmitting, setCreateCourseSubmitting] = useState(false)
 
   // Badge system state
@@ -465,6 +478,11 @@ export default function Dashboard() {
         handicap: profile.handicap || 0,
         location: profile.location || ''
       })
+      
+      // Set current city from profile if available
+      if (profile.location) {
+        setCurrentCity(profile.location)
+      }
     }
   }, [profile])
 
@@ -528,13 +546,50 @@ export default function Dashboard() {
     return new Promise<{lat: number, lon: number} | null>((resolve) => {
       setLocationLoading(true)
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
           const location = {
             lat: position.coords.latitude,
             lon: position.coords.longitude
           }
           setUserLocation(location)
           setLocationLoading(false)
+          
+          // Update user's location in their profile
+          try {
+            const response = await fetch(`/api/weather?lat=${location.lat}&lon=${location.lon}`, {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            })
+            
+            if (response.ok) {
+              const weatherData = await response.json()
+              const cityName = weatherData.location
+              setCurrentCity(cityName)
+              
+              // Update profile with detected city
+              if (profile && cityName && cityName !== profile.location) {
+                console.log('📍 Updating user location in profile:', cityName)
+                const updateResponse = await fetch('/api/users', {
+                  method: 'PUT',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    location: cityName
+                  })
+                })
+                
+                if (updateResponse.ok) {
+                  console.log('✅ User location updated in profile')
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Error updating user location:', error)
+          }
+          
           resolve(location)
         },
         (error) => {
@@ -2325,10 +2380,10 @@ export default function Dashboard() {
                           : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50'
                       }`}
                     >
-                      <span>{showNearbyTeeTimesOnly ? 'Show All' : 'Show Nearby Only'}</span>
-                      {nearbyTeeTimes.length > 0 && (
+                      <span>{showNearbyTeeTimesOnly ? 'Show All Tee Times' : 'Show Nearby Only'}</span>
+                      {showNearbyTeeTimesOnly && availableTeeTimes.length > 0 && (
                         <span className="bg-emerald-500 text-white text-xs px-2 py-1 rounded-full">
-                          {nearbyTeeTimes.length}
+                          {availableTeeTimes.length}
                         </span>
                       )}
                     </button>
@@ -2338,15 +2393,21 @@ export default function Dashboard() {
                 {/* Location Status for Tee Times */}
                 {userLocation && (
                   <div className="mb-4 p-3 bg-emerald-500/20 border border-emerald-500/30 rounded-lg">
-                    <div className="flex items-center space-x-2 text-emerald-300">
-                      <MapPin className="h-4 w-4" />
-                      <span className="text-sm">
-                        Location: {userLocation.lat.toFixed(4)}, {userLocation.lon.toFixed(4)}
-                      </span>
-                      <span className="text-slate-400">•</span>
-                      <span className="text-sm">
-                        {nearbyTeeTimes.length} tee times within 50 miles
-                      </span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2 text-emerald-300">
+                        <MapPin className="h-4 w-4" />
+                        <span className="text-sm">
+                          Showing tee times near {currentCity || 'your location'}
+                        </span>
+                        <span className="text-slate-400">•</span>
+                        <span className="text-sm">
+                          {availableTeeTimes.length} available
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span className="text-xs text-emerald-400">Location Active</span>
+                      </div>
                     </div>
                   </div>
                 )}
