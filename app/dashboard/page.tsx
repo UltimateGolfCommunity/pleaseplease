@@ -1021,10 +1021,11 @@ export default function Dashboard() {
       if (response.ok) {
         const data = await response.json()
         console.log('📊 Group invite search results (raw):', data)
-        console.log('📊 Group invite search results count:', data?.length || 0)
+        console.log('📊 Group invite search results count:', data?.users?.length || 0)
         
         // Filter out the current user and already selected users
-        const filteredUsers = data.filter((searchedUser: any) => {
+        const users = data.users || data || []
+        const filteredUsers = users.filter((searchedUser: any) => {
           const isNotCurrentUser = searchedUser.id !== user?.id
           const isNotAlreadySelected = !selectedInvitees.some(invitee => invitee.id === searchedUser.id)
           console.log(`🔍 User ${searchedUser.first_name} ${searchedUser.last_name}:`, {
