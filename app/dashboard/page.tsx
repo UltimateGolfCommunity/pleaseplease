@@ -2403,8 +2403,80 @@ export default function Dashboard() {
                     return (
                     <div key={teeTime.id} className="bg-white/95 backdrop-blur-sm border border-gray-200/50 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden relative">
                       
-                      {/* Course Image Header */}
-                      <div className="relative h-16 sm:h-20 bg-gradient-to-r from-emerald-500 to-teal-600">
+                      {/* Mobile Compact Layout */}
+                      <div className="sm:hidden">
+                        <div className="flex items-center gap-3 p-3">
+                          {/* Profile Picture */}
+                          <div className="relative flex-shrink-0">
+                            <div className="h-10 w-10 rounded-full overflow-hidden border-2 border-emerald-500/50 shadow-md">
+                              <img
+                                src={teeTime.creator?.avatar_url || '/default-avatar.svg'}
+                                alt={`${teeTime.creator?.first_name || 'Unknown'} ${teeTime.creator?.last_name || ''}`}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.src = '/default-avatar.svg'
+                                }}
+                              />
+                            </div>
+                            <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-green-500 border-2 border-white rounded-full flex items-center justify-center">
+                              <div className="h-1 w-1 bg-white rounded-full"></div>
+                            </div>
+                          </div>
+                          
+                          {/* Main Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-1">
+                              <h3 className="text-sm font-bold text-gray-900 truncate">{teeTime.course_name}</h3>
+                              <div className="flex items-center gap-1">
+                                {isToday && (
+                                  <div className="bg-red-500 text-white px-1.5 py-0.5 rounded text-xs font-medium">
+                                    TODAY
+                                  </div>
+                                )}
+                                {isTomorrow && (
+                                  <div className="bg-orange-500 text-white px-1.5 py-0.5 rounded text-xs font-medium">
+                                    TOMORROW
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-2 text-xs text-gray-600 mb-1">
+                              <Calendar className="h-3 w-3" />
+                              <span>{new Date(teeTime.tee_time_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                              <span>•</span>
+                              <Clock className="h-3 w-3" />
+                              <span>{teeTime.tee_time_time}</span>
+                            </div>
+                            
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1 text-xs text-gray-500">
+                                <Users className="h-3 w-3" />
+                                <span>{teeTime.current_players || 1}/{teeTime.max_players} players</span>
+                                {spotsRemaining > 0 && (
+                                  <span className="text-emerald-600 font-medium">({spotsRemaining} spots)</span>
+                                )}
+                                {spotsRemaining === 0 && (
+                                  <span className="text-red-600 font-medium">(FULL)</span>
+                                )}
+                              </div>
+                              
+                              <button
+                                onClick={() => handleApplyToTeeTime(teeTime.id)}
+                                disabled={spotsRemaining === 0 || teeTime.creator?.id === user?.id}
+                                className="bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-400 text-white px-3 py-1 rounded text-xs font-medium transition-colors duration-200"
+                              >
+                                {spotsRemaining === 0 ? 'Full' : 'Join'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Desktop Layout */}
+                      <div className="hidden sm:block">
+                        {/* Course Image Header */}
+                        <div className="relative h-16 sm:h-20 bg-gradient-to-r from-emerald-500 to-teal-600">
                         {(teeTime.golf_courses?.course_image_url || teeTime.golf_courses?.logo_url) ? (
                           <>
                             <img
@@ -2703,6 +2775,7 @@ export default function Dashboard() {
                         </button>
                             </>
                           )}
+                      </div>
                       </div>
                     </div>
                     </div>
