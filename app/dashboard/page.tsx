@@ -109,7 +109,6 @@ export default function Dashboard() {
   // Location-based filtering state
   const [zipCode, setZipCode] = useState('')
   const [searchRadius, setSearchRadius] = useState(250)
-  const [locationFilter, setLocationFilter] = useState('')
   
   // Groups state
   const [userGroups, setUserGroups] = useState<any[]>([])
@@ -207,7 +206,6 @@ export default function Dashboard() {
   const [teeTimesLoading, setTeeTimesLoading] = useState(false)
   
   // Tee time location filtering state
-  const [teeTimeLocationFilter, setTeeTimeLocationFilter] = useState('')
   const [nearbyTeeTimes, setNearbyTeeTimes] = useState<any[]>([])
   const [showNearbyTeeTimesOnly, setShowNearbyTeeTimesOnly] = useState(false)
   
@@ -674,31 +672,6 @@ export default function Dashboard() {
     }
   }
 
-  // Filter tee times by location
-  const handleTeeTimeLocationFilter = (location: string) => {
-    setTeeTimeLocationFilter(location)
-    if (location === '') {
-      setShowNearbyTeeTimesOnly(false)
-      return
-    }
-    
-    // For now, just set the filter - the actual filtering will be handled by the API
-    // This is a simple implementation that can be enhanced later
-    console.log('Filtering tee times by location:', location)
-  }
-
-  // Filter courses by location
-  const handleLocationFilter = (location: string) => {
-    setLocationFilter(location)
-    if (location === '') {
-      setShowNearbyOnly(false)
-      return
-    }
-    
-    // For now, just set the filter - the actual filtering will be handled by the API
-    // This is a simple implementation that can be enhanced later
-    console.log('Filtering courses by location:', location)
-  }
   
   const fetchApplications = async () => {
     try {
@@ -2315,30 +2288,8 @@ export default function Dashboard() {
                 <div className="flex flex-wrap gap-3 mb-4">
                   <div className="flex items-center space-x-2">
                     <MapPin className="h-5 w-5 text-emerald-400" />
-                    <span className="text-white font-medium">Filter Tee Times by Location:</span>
+                    <span className="text-white font-medium">Location-based Filtering:</span>
                   </div>
-                  
-                  <select
-                    value={teeTimeLocationFilter}
-                    onChange={(e) => handleTeeTimeLocationFilter(e.target.value)}
-                    className="px-4 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 transition-all duration-300"
-                  >
-                    <option value="">All Locations</option>
-                    <option value="california">California</option>
-                    <option value="florida">Florida</option>
-                    <option value="texas">Texas</option>
-                    <option value="new york">New York</option>
-                    <option value="georgia">Georgia</option>
-                    <option value="washington">Washington</option>
-                    <option value="oregon">Oregon</option>
-                    <option value="illinois">Illinois</option>
-                    <option value="minnesota">Minnesota</option>
-                    <option value="north carolina">North Carolina</option>
-                    <option value="pennsylvania">Pennsylvania</option>
-                    <option value="scotland">Scotland</option>
-                    <option value="ireland">Ireland</option>
-                    <option value="australia">Australia</option>
-                  </select>
 
                   <button
                     onClick={getUserLocation}
@@ -3014,30 +2965,8 @@ export default function Dashboard() {
                 <div className="flex flex-wrap gap-3 mb-6">
                   <div className="flex items-center space-x-2">
                     <MapPin className="h-5 w-5 text-emerald-400" />
-                    <span className="text-white font-medium">Filter by Location:</span>
+                    <span className="text-white font-medium">Location-based Filtering:</span>
                   </div>
-                  
-                  <select
-                    value={locationFilter}
-                    onChange={(e) => handleLocationFilter(e.target.value)}
-                    className="px-4 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 transition-all duration-300"
-                  >
-                    <option value="">All Locations</option>
-                    <option value="california">California</option>
-                    <option value="florida">Florida</option>
-                    <option value="texas">Texas</option>
-                    <option value="new york">New York</option>
-                    <option value="georgia">Georgia</option>
-                    <option value="washington">Washington</option>
-                    <option value="oregon">Oregon</option>
-                    <option value="illinois">Illinois</option>
-                    <option value="minnesota">Minnesota</option>
-                    <option value="north carolina">North Carolina</option>
-                    <option value="pennsylvania">Pennsylvania</option>
-                    <option value="scotland">Scotland</option>
-                    <option value="ireland">Ireland</option>
-                    <option value="australia">Australia</option>
-                  </select>
 
                   <button
                     onClick={getUserLocation}
