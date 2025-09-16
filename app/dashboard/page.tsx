@@ -2404,7 +2404,7 @@ export default function Dashboard() {
                     <div key={teeTime.id} className="bg-white/95 backdrop-blur-sm border border-gray-200/50 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden relative">
                       
                       {/* Course Image Header */}
-                      <div className="relative h-24 sm:h-28 bg-gradient-to-r from-emerald-500 to-teal-600">
+                      <div className="relative h-16 sm:h-20 bg-gradient-to-r from-emerald-500 to-teal-600">
                         {(teeTime.golf_courses?.course_image_url || teeTime.golf_courses?.logo_url) ? (
                           <>
                             <img
@@ -2441,8 +2441,8 @@ export default function Dashboard() {
                         
                         {/* Course Logo Overlay */}
                         {teeTime.golf_courses?.logo_url && (
-                          <div className="absolute top-2 left-2">
-                            <div className="h-8 w-8 bg-white/90 rounded p-1 shadow-lg">
+                          <div className="absolute top-1 left-1">
+                            <div className="h-6 w-6 bg-white/90 rounded p-0.5 shadow-lg">
                               <img
                                 src={teeTime.golf_courses.logo_url}
                                 alt={`${teeTime.course_name} logo`}
@@ -2457,33 +2457,33 @@ export default function Dashboard() {
                       </div>
 
                       {/* Status Badges */}
-                      <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
+                      <div className="absolute top-1 right-1 flex flex-col gap-0.5 z-10">
                         {isToday && (
-                          <div className="bg-red-500 text-white px-2 py-1 rounded-md text-xs font-medium">
+                          <div className="bg-red-500 text-white px-1.5 py-0.5 rounded text-xs font-medium">
                             TODAY
                           </div>
                         )}
                         {isTomorrow && (
-                          <div className="bg-orange-500 text-white px-2 py-1 rounded-md text-xs font-medium">
+                          <div className="bg-orange-500 text-white px-1.5 py-0.5 rounded text-xs font-medium">
                             TOMORROW
                           </div>
                         )}
                         {isAlmostFull && (
-                          <div className="bg-red-600 text-white px-2 py-1 rounded-md text-xs font-medium">
-                            ALMOST FULL
+                          <div className="bg-red-600 text-white px-1.5 py-0.5 rounded text-xs font-medium">
+                            FULL
                           </div>
                         )}
                       </div>
 
-                      <div className="relative p-3 sm:p-4">
+                      <div className="relative p-2 sm:p-3">
                         {/* Header Section */}
-                        <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-3 gap-3">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-2 gap-2">
                         <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
+                            <div className="flex items-center gap-1.5 mb-1.5">
                               {/* Course Icon/Logo */}
                               <div className="flex-shrink-0">
                                 {teeTime.golf_courses?.logo_url ? (
-                                  <div className="h-8 w-8 bg-white rounded p-1 shadow-md border border-gray-200">
+                                  <div className="h-6 w-6 bg-white rounded p-0.5 shadow-md border border-gray-200">
                                     <img
                                       src={teeTime.golf_courses.logo_url}
                                       alt={`${teeTime.course_name} logo`}
@@ -2495,13 +2495,13 @@ export default function Dashboard() {
                                     />
                                   </div>
                                 ) : (
-                                  <div className="h-8 w-8 bg-gradient-to-r from-emerald-500 to-teal-600 rounded flex items-center justify-center shadow-md">
-                                    <Flag className="h-4 w-4 text-white" />
+                                  <div className="h-6 w-6 bg-gradient-to-r from-emerald-500 to-teal-600 rounded flex items-center justify-center shadow-md">
+                                    <Flag className="h-3 w-3 text-white" />
                                   </div>
                                 )}
                               </div>
                               <div className="flex-1">
-                                <h3 className="text-gray-900 font-bold text-base sm:text-lg">{teeTime.course_name}</h3>
+                                <h3 className="text-gray-900 font-bold text-sm sm:text-base">{teeTime.course_name}</h3>
                                 {teeTime.golf_courses?.location && (
                                   <p className="text-gray-600 text-xs mt-1">{teeTime.golf_courses.location}</p>
                                 )}
@@ -2538,9 +2538,9 @@ export default function Dashboard() {
                               </div>
                             </div>
                             
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                               {/* Date and Time */}
-                              <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                              <div className="flex items-center gap-1.5 p-1.5 bg-gray-50 rounded-lg border border-gray-200">
                                 <Calendar className="h-4 w-4 text-emerald-500" />
                                 <div>
                                   <p className="text-gray-900 font-medium text-sm">{new Date(teeTime.tee_time_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
@@ -2549,9 +2549,9 @@ export default function Dashboard() {
                               </div>
 
                               {/* Creator Info */}
-                              <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                              <div className="flex items-center gap-1.5 p-1.5 bg-gray-50 rounded-lg border border-gray-200">
                                 <div className="relative">
-                                  <div className="h-8 w-8 rounded-full overflow-hidden border-2 border-emerald-500/50 shadow-md">
+                                  <div className="h-6 w-6 rounded-full overflow-hidden border-2 border-emerald-500/50 shadow-md">
                                     <img
                                       src={teeTime.creator?.avatar_url || '/default-avatar.svg'}
                                       alt={`${teeTime.creator?.first_name || 'Unknown'} ${teeTime.creator?.last_name || ''}`}
@@ -2588,37 +2588,37 @@ export default function Dashboard() {
                           </div>
 
                           {/* Player and Handicap Info */}
-                          <div className="flex flex-col gap-2 sm:text-right sm:min-w-[140px]">
+                          <div className="flex flex-col gap-1.5 sm:text-right sm:min-w-[120px]">
                             <div className="relative">
-                              <div className={`${isAlmostFull ? 'bg-red-500' : spotsRemaining === 0 ? 'bg-gray-500' : 'bg-emerald-500'} text-white px-3 py-2 rounded-lg text-center shadow-md`}>
-                                <div className="text-base font-bold">{teeTime.current_players || 1}/{teeTime.max_players}</div>
+                              <div className={`${isAlmostFull ? 'bg-red-500' : spotsRemaining === 0 ? 'bg-gray-500' : 'bg-emerald-500'} text-white px-2 py-1.5 rounded-lg text-center shadow-md`}>
+                                <div className="text-sm font-bold">{teeTime.current_players || 1}/{teeTime.max_players}</div>
                                 <div className="text-xs opacity-90">Players</div>
                               </div>
                               {spotsRemaining > 0 && (
-                                <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shadow-lg">
+                                <div className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-lg">
                                   {spotsRemaining}
                                 </div>
                               )}
                               {spotsRemaining === 0 && (
-                                <div className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shadow-lg">
+                                <div className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-lg">
                                   FULL
                                 </div>
                               )}
                             </div>
                             
-                            <div className="bg-gray-50 border border-gray-200 px-3 py-2 rounded-lg text-center">
-                              <div className="text-gray-500 text-xs mb-1">Skill Level</div>
-                              <div className="text-gray-900 font-semibold text-sm capitalize">{teeTime.handicap_requirement}</div>
+                            <div className="bg-gray-50 border border-gray-200 px-2 py-1.5 rounded-lg text-center">
+                              <div className="text-gray-500 text-xs mb-0.5">Skill Level</div>
+                              <div className="text-gray-900 font-semibold text-xs capitalize">{teeTime.handicap_requirement}</div>
                               {teeTime.handicap_requirement !== 'any' && (
-                                <div className="text-gray-400 text-xs mt-1">Handicap Required</div>
+                                <div className="text-gray-400 text-xs mt-0.5">Handicap Required</div>
                               )}
                             </div>
 
                             {/* Course Rating */}
                             {teeTime.golf_courses?.average_rating > 0 && (
-                              <div className="bg-yellow-50 border border-yellow-200 px-3 py-2 rounded-lg text-center">
-                                <div className="text-yellow-600 text-xs mb-1">Course Rating</div>
-                                <div className="text-yellow-900 text-sm font-semibold flex items-center justify-center gap-1">
+                              <div className="bg-yellow-50 border border-yellow-200 px-2 py-1.5 rounded-lg text-center">
+                                <div className="text-yellow-600 text-xs mb-0.5">Course Rating</div>
+                                <div className="text-yellow-900 text-xs font-semibold flex items-center justify-center gap-1">
                                   <Star className="h-3 w-3 fill-current" />
                                   {teeTime.golf_courses.average_rating.toFixed(1)}
                                 </div>
@@ -2627,9 +2627,9 @@ export default function Dashboard() {
                             )}
 
                             {/* Weather Widget Placeholder */}
-                            <div className="bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg text-center">
-                              <div className="text-blue-600 text-xs mb-1">Weather</div>
-                              <div className="text-blue-900 text-sm font-medium">☀️ 72°F</div>
+                            <div className="bg-blue-50 border border-blue-200 px-2 py-1.5 rounded-lg text-center">
+                              <div className="text-blue-600 text-xs mb-0.5">Weather</div>
+                              <div className="text-blue-900 text-xs font-medium">☀️ 72°F</div>
                               <div className="text-blue-600 text-xs">Perfect for golf!</div>
                             </div>
                           </div>
