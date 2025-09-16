@@ -635,11 +635,11 @@ export default function Dashboard() {
             const dateB = new Date(b.tee_time_date + ' ' + b.tee_time_time)
             return dateA.getTime() - dateB.getTime()
           })
-          setAvailableTeeTimes(sortedTeeTimes)
+          setNearbyTeeTimes(sortedTeeTimes)
           console.log('Fetched nearby tee times (today+):', sortedTeeTimes)
         } else {
           console.error('Failed to fetch nearby tee times')
-          setAvailableTeeTimes([])
+          setNearbyTeeTimes([])
         }
       } else {
         // Fetch all available tee times
@@ -2413,7 +2413,16 @@ export default function Dashboard() {
                     </button>
                   </div>
                 ) : (
-                  (showNearbyTeeTimesOnly && nearbyTeeTimes.length > 0 ? nearbyTeeTimes : availableTeeTimes)?.map((teeTime) => {
+                  (() => {
+                    const displayTeeTimes = showNearbyTeeTimesOnly && nearbyTeeTimes.length > 0 ? nearbyTeeTimes : availableTeeTimes
+                    console.log('🎨 Display logic:', {
+                      showNearbyTeeTimesOnly,
+                      nearbyTeeTimesLength: nearbyTeeTimes.length,
+                      availableTeeTimesLength: availableTeeTimes.length,
+                      displayTeeTimesLength: displayTeeTimes.length
+                    })
+                    return displayTeeTimes
+                  })()?.map((teeTime) => {
                     const daysUntilTeeTime = Math.ceil((new Date(teeTime.tee_time_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
                     const isToday = new Date(teeTime.tee_time_date).toDateString() === new Date().toDateString()
                     const isTomorrow = daysUntilTeeTime === 1
