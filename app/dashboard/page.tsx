@@ -637,9 +637,47 @@ export default function Dashboard() {
           })
           setNearbyTeeTimes(sortedTeeTimes)
           console.log('Fetched nearby tee times (today+):', sortedTeeTimes)
+          
+          // If no nearby tee times found, fallback to fetching all available tee times
+          if (sortedTeeTimes.length === 0) {
+            console.log('📍 No nearby tee times found, fetching all available tee times as fallback...')
+            const fallbackResponse = await fetch('/api/tee-times?action=available')
+            if (fallbackResponse.ok) {
+              const fallbackData = await fallbackResponse.json()
+              const fallbackTeeTimes = Array.isArray(fallbackData) ? fallbackData : (fallbackData.tee_times || [])
+              const filteredFallbackTeeTimes = fallbackTeeTimes.filter((teeTime: any) => {
+                return teeTime.tee_time_date >= today
+              })
+              const sortedFallbackTeeTimes = filteredFallbackTeeTimes.sort((a: any, b: any) => {
+                const dateA = new Date(a.tee_time_date + ' ' + a.tee_time_time)
+                const dateB = new Date(b.tee_time_date + ' ' + b.tee_time_time)
+                return dateA.getTime() - dateB.getTime()
+              })
+              setAvailableTeeTimes(sortedFallbackTeeTimes)
+              console.log('📍 Fallback available tee times:', sortedFallbackTeeTimes)
+            }
+          }
         } else {
           console.error('Failed to fetch nearby tee times')
           setNearbyTeeTimes([])
+          
+          // Fallback to fetching all available tee times
+          console.log('📍 Nearby fetch failed, fetching all available tee times as fallback...')
+          const fallbackResponse = await fetch('/api/tee-times?action=available')
+          if (fallbackResponse.ok) {
+            const fallbackData = await fallbackResponse.json()
+            const fallbackTeeTimes = Array.isArray(fallbackData) ? fallbackData : (fallbackData.tee_times || [])
+            const filteredFallbackTeeTimes = fallbackTeeTimes.filter((teeTime: any) => {
+              return teeTime.tee_time_date >= today
+            })
+            const sortedFallbackTeeTimes = filteredFallbackTeeTimes.sort((a: any, b: any) => {
+              const dateA = new Date(a.tee_time_date + ' ' + a.tee_time_time)
+              const dateB = new Date(b.tee_time_date + ' ' + b.tee_time_time)
+              return dateA.getTime() - dateB.getTime()
+            })
+            setAvailableTeeTimes(sortedFallbackTeeTimes)
+            console.log('📍 Fallback available tee times (error case):', sortedFallbackTeeTimes)
+          }
         }
       } else {
         // Fetch all available tee times
