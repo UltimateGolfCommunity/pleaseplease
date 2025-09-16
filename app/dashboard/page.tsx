@@ -2246,8 +2246,7 @@ export default function Dashboard() {
             {/* Tee Time Feed */}
             <div className="bg-gradient-to-br from-slate-800 via-slate-700/30 to-slate-600/20 rounded-3xl p-4 sm:p-8 shadow-xl border border-slate-600/40 backdrop-blur-sm relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-600/20 to-transparent transform -skew-y-6"></div>
-              <div className="relative flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 gap-4">
-                <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-emerald-400 to-teal-500 bg-clip-text text-transparent">Available Tee Times</h2>
+              <div className="relative flex flex-col sm:flex-row sm:items-center justify-end mb-6 sm:mb-8 gap-4">
                 <button 
                   onClick={openTeeTimeModal}
                   className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-2xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 w-full sm:w-auto"
@@ -2353,6 +2352,13 @@ export default function Dashboard() {
                 )}
               </div>
             
+              {/* Available Tee Times Heading */}
+              <div className="mb-6">
+                <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-emerald-400 to-teal-500 bg-clip-text text-transparent text-center sm:text-left">
+                  Available Tee Times
+                </h2>
+              </div>
+
               {/* Tee Times List */}
               <div className="space-y-6">
                 {teeTimesLoading ? (
