@@ -169,10 +169,10 @@ export default function Dashboard() {
     }
   }, [activeTab, user?.id])
 
-  // Load tee times when Overview tab is opened
+  // Refresh tee times when Overview tab is opened (tee times already loaded on login)
   useEffect(() => {
     if (activeTab === 'overview') {
-      console.log('🔄 Loading tee times for Overview tab...')
+      console.log('🔄 Refreshing tee times for Overview tab...')
       fetchTeeTimes()
     }
   }, [activeTab])
@@ -472,6 +472,8 @@ export default function Dashboard() {
       fetchPendingApplications()
       // Check if user profile exists
       checkUserProfile()
+      // Automatically load tee times when user logs in (no need to click tab)
+      fetchTeeTimes()
       
       // Set up periodic refresh for notifications and applications (every 30 seconds)
       const refreshInterval = setInterval(() => {
