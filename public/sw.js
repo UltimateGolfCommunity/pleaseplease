@@ -1,12 +1,11 @@
 // Service Worker for Ultimate Golf Community PWA
-const CACHE_NAME = 'ugc-golf-v3-force-update';
+const CACHE_NAME = 'ugc-golf-v4-fixed-installation';
 const STATIC_CACHE_URLS = [
   '/',
   '/dashboard',
   '/auth/login',
   '/auth/signup',
   '/manifest.json',
-  '/logos/NEWLOGOREAL.png',
   '/logos/golfcoursedefaultimage.png',
   '/logos/augustanational.png',
   '/logos/Pebblebeach.png',
