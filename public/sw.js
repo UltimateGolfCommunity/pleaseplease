@@ -99,6 +99,16 @@ self.addEventListener('fetch', (event) => {
               return response;
             }
 
+            // Check if response has cache-busting headers
+            const cacheControl = response.headers.get('Cache-Control');
+            const pragma = response.headers.get('Pragma');
+            
+            // Don't cache if cache-busting headers are present
+            if (cacheControl && (cacheControl.includes('no-cache') || cacheControl.includes('no-store'))) {
+              console.log('🚫 Not caching due to cache-busting headers:', event.request.url);
+              return response;
+            }
+
             // Clone the response for caching
             const responseToCache = response.clone();
 
