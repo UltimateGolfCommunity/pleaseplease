@@ -160,7 +160,13 @@ export async function GET(request: NextRequest) {
         .order('tee_time_date', { ascending: true })
 
       if (error) throw error
-      return NextResponse.json(data || [])
+      
+      const response = NextResponse.json(data || [])
+      // Add cache-busting headers to prevent stale data
+      response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+      response.headers.set('Pragma', 'no-cache')
+      response.headers.set('Expires', '0')
+      return response
     }
 
     if (action === 'available') {
@@ -179,7 +185,13 @@ export async function GET(request: NextRequest) {
         .order('tee_time_date', { ascending: true })
 
       if (error) throw error
-      return NextResponse.json(data || [])
+      
+      const response = NextResponse.json(data || [])
+      // Add cache-busting headers to prevent stale data
+      response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+      response.headers.set('Pragma', 'no-cache')
+      response.headers.set('Expires', '0')
+      return response
     }
 
     if (action === 'nearby' && userLat && userLon) {
