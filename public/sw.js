@@ -1,5 +1,5 @@
 // Service Worker for Ultimate Golf Community PWA
-const CACHE_NAME = 'ugc-golf-v2-cache-bypass';
+const CACHE_NAME = 'ugc-golf-v3-force-update';
 const STATIC_CACHE_URLS = [
   '/',
   '/dashboard',
@@ -75,9 +75,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Don't cache tee times API - always fetch fresh
-  if (event.request.url.includes('/api/tee-times')) {
-    console.log('🚫 BYPASSING CACHE for tee times API:', event.request.url);
+  // Don't cache tee times or user search APIs - always fetch fresh
+  if (event.request.url.includes('/api/tee-times') || event.request.url.includes('/api/users')) {
+    console.log('🚫 BYPASSING CACHE for API:', event.request.url);
     console.log('🚫 Service Worker Version:', CACHE_NAME);
     
     // Clear any existing cache for this URL
@@ -92,7 +92,7 @@ self.addEventListener('fetch', (event) => {
           'Pragma': 'no-cache'
         }
       }).then(response => {
-        console.log('🌐 Fresh tee times response:', response.status);
+        console.log('🌐 Fresh API response:', response.status, event.request.url);
         return response;
       })
     );

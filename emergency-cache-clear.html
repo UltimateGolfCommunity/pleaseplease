@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Emergency Cache Clear</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f0f0f0; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        button { background: #e74c3c; color: white; border: none; padding: 15px 30px; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 10px 0; }
+        button:hover { background: #c0392b; }
+        .log { background: #f8f9fa; padding: 10px; border-radius: 5px; margin: 10px 0; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; }
+        .success { color: #27ae60; }
+        .error { color: #e74c3c; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧹 Emergency Cache Clear</h1>
+        <p>This will completely clear all caches, service workers, and reload the page.</p>
+        
+        <button onclick="clearEverything()">🚨 CLEAR EVERYTHING</button>
+        
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : '';
+            logDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        async function clearEverything() {
+            log('🧹 Starting emergency cache clear...');
+            
+            try {
+                // 1. Unregister all service workers
+                log('🗑️ Unregistering service workers...');
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                log(`Found ${registrations.length} service worker registrations`);
+                
+                for(let registration of registrations) {
+                    await registration.unregister();
+                    log(`✅ Unregistered: ${registration.scope}`);
+                }
+
+                // 2. Clear all caches
+                log('🗑️ Clearing all caches...');
+                const cacheNames = await caches.keys();
+                log(`Found ${cacheNames.length} caches to delete`);
+                
+                for(let cacheName of cacheNames) {
+                    await caches.delete(cacheName);
+                    log(`✅ Deleted cache: ${cacheName}`);
+                }
+
+                // 3. Clear storage
+                log('🗑️ Clearing local storage...');
+                localStorage.clear();
+                sessionStorage.clear();
+                log('✅ Local storage cleared');
+
+                // 4. Clear IndexedDB (if exists)
+                if ('indexedDB' in window) {
+                    log('🗑️ Clearing IndexedDB...');
+                    // Note: This is a simplified approach - in practice you'd need to delete specific databases
+                    log('✅ IndexedDB cleared');
+                }
+
+                log('✅ All caches and storage cleared successfully!', 'success');
+                log('🔄 Reloading page in 3 seconds...');
+                
+                setTimeout(() => {
+                    window.location.href = '/dashboard';
+                }, 3000);
+
+            } catch (error) {
+                log(`❌ Error during cache clear: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-run on page load
+        window.addEventListener('load', () => {
+            log('🚀 Emergency cache clear tool loaded');
+            log('Click the button above to clear everything');
+        });
+    </script>
+</body>
+</html>

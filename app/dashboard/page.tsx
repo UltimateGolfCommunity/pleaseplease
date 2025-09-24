@@ -974,7 +974,7 @@ export default function Dashboard() {
       console.log('🔍 Current user ID:', user?.id)
       console.log('🔍 Selected invitees:', selectedInvitees.map(i => i.id))
       
-      const response = await fetch(`/api/users?action=search&q=${encodeURIComponent(groupInviteQuery)}&_t=${Date.now()}`)
+      const response = await fetch(`/api/users?action=search&q=${encodeURIComponent(groupInviteQuery)}&_t=${Date.now()}&_cache_bust=${Math.random()}`)
       console.log('📡 Group invite search response status:', response.status)
       
       if (response.ok) {
