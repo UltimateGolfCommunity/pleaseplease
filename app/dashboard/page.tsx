@@ -983,7 +983,8 @@ export default function Dashboard() {
         console.log('📊 Group invite search results count:', data?.users?.length || 0)
         
         // Filter out the current user and already selected users
-        const users = data.users || data || []
+        const users = Array.isArray(data.users) ? data.users : (Array.isArray(data) ? data : [])
+        console.log('🔍 Extracted users array:', users)
         const filteredUsers = users.filter((searchedUser: any) => {
           const isNotCurrentUser = searchedUser.id !== user?.id
           const isNotAlreadySelected = !selectedInvitees.some(invitee => invitee.id === searchedUser.id)
@@ -1556,7 +1557,7 @@ export default function Dashboard() {
           setSearchResults(data || [])
         } else {
           // Handle the API response structure - it returns { success: true, users: [...] }
-          const users = data.users || data || []
+          const users = Array.isArray(data.users) ? data.users : (Array.isArray(data) ? data : [])
           // Filter out the current user from user search results
           const filteredData = users.filter((searchedUser: any) => searchedUser.id !== user?.id)
           console.log('🔍 Filtered results:', filteredData?.length || 0)
