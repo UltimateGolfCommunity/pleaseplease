@@ -2227,6 +2227,14 @@ export default function Dashboard() {
 
         {/* Tee Times Feed - Always Visible */}
         <div className="mb-8">
+          {(() => {
+            console.log('🎨 Main Feed Tee Times Debug:', {
+              teeTimesLoading,
+              availableTeeTimesLength: availableTeeTimes?.length || 0,
+              availableTeeTimes: availableTeeTimes
+            })
+            return null
+          })()}
           <div className="bg-gradient-to-br from-slate-800 via-slate-700/30 to-slate-600/20 rounded-3xl p-4 sm:p-8 shadow-xl border border-slate-600/40 backdrop-blur-sm relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-600/20 to-transparent transform -skew-y-6"></div>
             
@@ -2238,6 +2246,10 @@ export default function Dashboard() {
                     Available Tee Times
                   </h2>
                   <p className="text-slate-300 mt-2">Join other golfers for your next round</p>
+                  {/* Debug info */}
+                  <div className="text-xs text-slate-400 mt-1">
+                    Debug: Loading: {teeTimesLoading ? 'Yes' : 'No'} | Count: {availableTeeTimes?.length || 0}
+                  </div>
                 </div>
                 <button 
                   onClick={openTeeTimeModal}
