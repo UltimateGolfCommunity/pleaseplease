@@ -3014,82 +3014,76 @@ export default function Dashboard() {
 
               {/* Course Results */}
               {(showNearbyOnly ? nearbyCourses : courseSearchResults) && (showNearbyOnly ? nearbyCourses : courseSearchResults).length > 0 ? (
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {(showNearbyOnly ? nearbyCourses : courseSearchResults)?.map((course) => (
-                    <div key={course.id} className="bg-slate-800/50 border border-slate-600/50 rounded-xl p-4 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300">
+                    <div key={course.id} className="bg-slate-800/50 border border-slate-600/50 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer">
                         <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-4 gap-4">
                         <div className="flex-1">
                           <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-                            {/* Golf Course Logo */}
-                            {(course.course_image_url || course.logo_url) ? (
-                              <div className="flex-shrink-0 mx-auto sm:mx-0">
-                                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border-2 border-emerald-500/30 shadow-lg">
-                                  <img
-                                    src={course.course_image_url || course.logo_url}
-                                    alt={`${course.name} logo`}
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = 'none'
-                                      e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center"><svg class="h-6 w-6 sm:h-8 sm:w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></div>'
-                                    }}
-                                  />
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex-shrink-0 mx-auto sm:mx-0">
-                                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center border-2 border-emerald-500/30 shadow-lg">
-                                  <Flag className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
-                                </div>
-                              </div>
-                            )}
-                            <div className="flex-1 text-center sm:text-left">
-                              <h3 className="text-white font-bold text-xl sm:text-2xl mb-2">{course.name}</h3>
-                              
-                              {/* Location and Distance */}
-                              <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 text-slate-300 text-sm mb-3">
-                                <div className="flex items-center justify-center sm:justify-start space-x-1">
-                                  <MapPin className="h-4 w-4 text-emerald-400" />
-                                  <span>{course.location}</span>
-                                </div>
-                                {course.distance && (
-                                  <div className="flex items-center justify-center sm:justify-start space-x-1">
-                                    <span className="text-purple-400 font-medium">
-                                      {Math.round(course.distance * 10) / 10} mi away
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                              
-                              {/* Course Stats */}
-                              <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-6 mb-3">
-                                {/* Par */}
-                                <div className="flex items-center justify-center sm:justify-start space-x-2">
-                                  <Flag className="h-4 w-4 text-blue-400" />
-                                  <span className="text-slate-400 text-sm">Par:</span>
-                                  <span className="text-white font-semibold text-lg">{course.par || 'N/A'}</span>
-                                </div>
-                                
-                                {/* Public/Private Status */}
-                                <div className="flex items-center justify-center sm:justify-start space-x-2">
-                                  <div className={`w-3 h-3 rounded-full ${course.course_type === 'private' ? 'bg-red-500' : 'bg-green-500'}`}></div>
-                                  <span className="text-slate-400 text-sm">Type:</span>
-                                  <span className={`font-semibold text-sm ${course.course_type === 'private' ? 'text-red-400' : 'text-green-400'}`}>
-                                    {course.course_type === 'private' ? 'Private' : 'Public'}
-                                  </span>
-                                </div>
-                                
-                                {/* Holes */}
-                                {course.holes && (
-                                  <div className="flex items-center justify-center sm:justify-start space-x-2">
-                                    <Target className="h-4 w-4 text-purple-400" />
-                                    <span className="text-slate-400 text-sm">Holes:</span>
-                                    <span className="text-white font-semibold">{course.holes}</span>
-                                  </div>
-                                )}
-                              </div>
-                              
-                              <p className="text-slate-200 leading-relaxed text-sm sm:text-base">{course.description}</p>
-                            </div>
+                      {/* Course Logo */}
+                      <div className="flex justify-center mb-3">
+                        <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-emerald-500/30 shadow-lg">
+                          {(course.course_image_url || course.logo_url) ? (
+                            <img
+                              src={course.course_image_url || course.logo_url}
+                              alt={`${course.name} logo`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.src = '/logos/DefaultPicPNG.png'
+                              }}
+                            />
+                          ) : (
+                            <img
+                              src="/logos/DefaultPicPNG.png"
+                              alt="Default course logo"
+                              className="w-full h-full object-cover"
+                            />
+                          )}
+                        </div>
+                      </div>
+                      {/* Course Name */}
+                      <h3 className="text-white font-bold text-lg text-center mb-2 line-clamp-2">
+                        {course.name}
+                      </h3>
+
+                      {/* Location */}
+                      <div className="flex items-center justify-center space-x-1 mb-3">
+                        <MapPin className="h-3 w-3 text-emerald-400" />
+                        <span className="text-slate-300 text-xs text-center line-clamp-1">
+                          {course.location}
+                        </span>
+                      </div>
+
+                      {/* Average Rating */}
+                      <div className="flex items-center justify-center space-x-1 mb-3">
+                        <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                        <span className="text-white font-bold text-lg">
+                          {course.average_rating || 'N/A'}
+                        </span>
+                        <span className="text-slate-400 text-xs">
+                          ({course.review_count || 0})
+                        </span>
+                      </div>
+
+                      {/* Course Type Badge */}
+                      <div className="flex justify-center mb-3">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          course.course_type === 'private' 
+                            ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
+                            : 'bg-green-500/20 text-green-400 border border-green-500/30'
+                        }`}>
+                          {course.course_type === 'private' ? 'Private' : 'Public'}
+                        </span>
+                      </div>
+
+                      {/* Distance (if available) */}
+                      {course.distance && (
+                        <div className="text-center mb-3">
+                          <span className="text-purple-400 text-xs font-medium">
+                            {Math.round(course.distance * 10) / 10} mi away
+                          </span>
+                        </div>
+                      )}
                           </div>
                             </div>
                         <div className="text-center sm:text-right">
@@ -3147,20 +3141,30 @@ export default function Dashboard() {
                         </div>
                       )}
                       
-                      <div className="flex space-x-3 mt-4">
-                          <Link 
-                            href={`/courses/${course.id}`}
-                            className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white py-2 px-4 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 text-center"
-                          >
-                            View Details
-                          </Link>
-                        <button 
-                          onClick={() => handleWriteReview(course)}
-                          className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-2 px-4 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                      {/* Action Buttons */}
+                      <div className="flex flex-col gap-2">
+                        <button
+                          onClick={() => {
+                            setTeeTimeForm(prev => ({
+                              ...prev,
+                              course: course.name,
+                              location: course.location
+                            }))
+                            setShowTeeTimeModal(true)
+                          }}
+                          className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white py-2 px-3 rounded-lg transition-all duration-300 font-medium text-sm shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center space-x-1"
                         >
-                            Write Review
-                          </button>
-                        </div>
+                          <Calendar className="h-3 w-3" />
+                          <span>Book Tee Time</span>
+                        </button>
+                        <button
+                          onClick={() => setShowRatingModal(true)}
+                          className="bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white py-2 px-3 rounded-lg transition-all duration-300 font-medium text-sm shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center space-x-1"
+                        >
+                          <Star className="h-3 w-3" />
+                          <span>Rate & Review</span>
+                        </button>
+                      </div>
                       </div>
                   ))}
                     </div>
