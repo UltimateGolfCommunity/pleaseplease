@@ -3012,14 +3012,11 @@ export default function Dashboard() {
                   </div>
                 )}
 
-              {/* Course Results */}
+              {/* Course Results - Small Widgets */}
               {(showNearbyOnly ? nearbyCourses : courseSearchResults) && (showNearbyOnly ? nearbyCourses : courseSearchResults).length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {(showNearbyOnly ? nearbyCourses : courseSearchResults)?.map((course) => (
                     <div key={course.id} className="bg-slate-800/50 border border-slate-600/50 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer">
-                        <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-4 gap-4">
-                        <div className="flex-1">
-                          <div className="flex flex-col sm:flex-row sm:items-start gap-4">
                       {/* Course Logo */}
                       <div className="flex justify-center mb-3">
                         <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-emerald-500/30 shadow-lg">
@@ -3084,62 +3081,6 @@ export default function Dashboard() {
                           </span>
                         </div>
                       )}
-                          </div>
-                            </div>
-                        <div className="text-center sm:text-right">
-                          <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl px-3 py-2 sm:px-4 sm:py-3 text-center shadow-lg inline-block">
-                            <div className="flex items-center justify-center space-x-1 mb-1">
-                              <Star className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-400 fill-current" />
-                              <span className="text-white font-bold text-lg sm:text-xl">{course.average_rating || 'N/A'}</span>
-                            </div>
-                            <div className="text-emerald-100 text-xs">
-                              {course.review_count || 0} reviews
-                            </div>
-                          </div>
-                          </div>
-                            </div>
-                      <div className="grid grid-cols-3 gap-4 text-sm mb-4">
-                        <div>
-                          <span className="text-slate-400">Par:</span>
-                          <p className="text-white font-medium">{course.par}</p>
-                          </div>
-                        <div>
-                          <span className="text-slate-400">Holes:</span>
-                          <p className="text-white font-medium">{course.holes}</p>
-                        </div>
-                        <div>
-                          <span className="text-slate-400">Recent Reviews:</span>
-                          <p className="text-white font-medium">{course.reviews?.length || 0}</p>
-                                      </div>
-                                    </div>
-                      {/* Recent Reviews */}
-                      {course.recent_reviews && course.recent_reviews.length > 0 && (
-                        <div className="mt-4 p-4 bg-slate-700/30 rounded-lg border border-slate-600/30">
-                          <h4 className="text-sm font-medium text-slate-300 mb-3">Recent Reviews</h4>
-                          <div className="space-y-3">
-                            {course.recent_reviews.map((review: any, index: number) => (
-                              <div key={index} className="flex items-start space-x-3">
-                                <div className="flex items-center space-x-2">
-                                  <div className="flex items-center">
-                                    {[...Array(5)].map((_, i) => (
-                                      <Star 
-                                        key={i} 
-                                        className={`h-3 w-3 ${i < review.rating ? 'text-yellow-400 fill-current' : 'text-slate-500'}`} 
-                                      />
-                                    ))}
-                                  </div>
-                                  <span className="text-xs text-slate-400">
-                                    {review.user_profiles?.first_name || 'Anonymous'}
-                                  </span>
-                                </div>
-                                {review.comment && (
-                                  <p className="text-sm text-slate-300 flex-1">{review.comment}</p>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
                       
                       {/* Action Buttons */}
                       <div className="flex flex-col gap-2">
@@ -3165,10 +3106,10 @@ export default function Dashboard() {
                           <span>Rate & Review</span>
                         </button>
                       </div>
-                      </div>
-                  ))}
                     </div>
-                  ) : courseSearchResults && courseSearchResults.length === 0 ? (
+                  ))}
+                </div>
+              ) : courseSearchResults && courseSearchResults.length === 0 ? (
                     <div className="text-center py-12">
                       <div className="bg-gradient-to-r from-slate-100 to-blue-50 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
                         <Target className="h-10 w-10 text-slate-400" />
