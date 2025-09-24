@@ -2227,6 +2227,10 @@ export default function Dashboard() {
 
         {/* Tee Times Feed - Always Visible */}
         <div className="mb-8">
+          {/* TEST: Bright red banner to confirm this section renders */}
+          <div className="bg-red-500 text-white p-4 mb-4 rounded-lg text-center font-bold">
+            🔴 TEST: Tee Times Main Feed Section is Rendering! 🔴
+          </div>
           {(() => {
             console.log('🎨 Main Feed Tee Times Debug:', {
               teeTimesLoading,

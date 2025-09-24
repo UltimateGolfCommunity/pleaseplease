@@ -75,6 +75,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Don't cache tee times API - always fetch fresh
+  if (event.request.url.includes('/api/tee-times')) {
+    console.log('🚫 Bypassing cache for tee times API:', event.request.url);
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((cachedResponse) => {
