@@ -2225,6 +2225,190 @@ export default function Dashboard() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
 
+        {/* Tee Times Feed - Always Visible */}
+        <div className="mb-8">
+          <div className="bg-gradient-to-br from-slate-800 via-slate-700/30 to-slate-600/20 rounded-3xl p-4 sm:p-8 shadow-xl border border-slate-600/40 backdrop-blur-sm relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-600/20 to-transparent transform -skew-y-6"></div>
+            
+            {/* Header */}
+            <div className="relative mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+                <div>
+                  <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-emerald-400 to-teal-500 bg-clip-text text-transparent">
+                    Available Tee Times
+                  </h2>
+                  <p className="text-slate-300 mt-2">Join other golfers for your next round</p>
+                </div>
+                <button 
+                  onClick={openTeeTimeModal}
+                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-2xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 w-full sm:w-auto"
+                >
+                  Post Tee Time
+                </button>
+              </div>
+            </div>
+
+            {/* Tee Times List */}
+            <div className="relative space-y-6">
+              {teeTimesLoading ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-500 border-t-transparent mx-auto mb-4"></div>
+                  <p className="text-slate-300 text-lg">Loading tee times...</p>
+                </div>
+              ) : (!availableTeeTimes || availableTeeTimes.length === 0) ? (
+                <div className="text-center py-12">
+                  <div className="bg-gradient-to-r from-slate-100 to-blue-50 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
+                    <Calendar className="h-10 w-10 text-slate-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-slate-300 mb-2">No Tee Times Available</h3>
+                  <p className="text-slate-400 mb-6">Be the first to post a tee time and start building the golf community!</p>
+                  <button 
+                    onClick={openTeeTimeModal}
+                    className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 py-3 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                  >
+                    Post First Tee Time
+                  </button>
+                </div>
+              ) : (
+                availableTeeTimes?.slice(0, 3).map((teeTime) => {
+                  const daysUntilTeeTime = Math.ceil((new Date(teeTime.tee_time_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+                  const isToday = new Date(teeTime.tee_time_date).toDateString() === new Date().toDateString()
+                  const isTomorrow = daysUntilTeeTime === 1
+                  const spotsRemaining = teeTime.max_players - (teeTime.current_players || 1)
+                  const isAlmostFull = spotsRemaining <= 1
+                  
+                  return (
+                  <div key={teeTime.id} className="bg-white/95 backdrop-blur-sm border border-gray-200/50 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden relative">
+                    
+                    {/* Status Badge */}
+                    <div className="absolute top-4 right-4 z-10">
+                      {isToday ? (
+                        <span className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-lg">
+                          TODAY
+                        </span>
+                      ) : isTomorrow ? (
+                        <span className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-lg">
+                          TOMORROW
+                        </span>
+                      ) : (
+                        <span className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-lg">
+                          {daysUntilTeeTime} DAYS
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="p-6">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                        {/* Course Info */}
+                        <div className="flex-1">
+                          <h3 className="text-xl font-bold text-gray-900 mb-2">
+                            {teeTime.golf_courses?.name || teeTime.course_name || 'Golf Course'}
+                          </h3>
+                          <div className="flex items-center text-gray-600 mb-2">
+                            <MapPin className="h-4 w-4 mr-1" />
+                            <span className="text-sm">{teeTime.golf_courses?.location || 'Location TBD'}</span>
+                          </div>
+                          <div className="flex items-center text-gray-600 mb-3">
+                            <Clock className="h-4 w-4 mr-1" />
+                            <span className="text-sm">
+                              {new Date(teeTime.tee_time_date).toLocaleDateString('en-US', { 
+                                weekday: 'long', 
+                                year: 'numeric', 
+                                month: 'long', 
+                                day: 'numeric' 
+                              })} at {new Date('2000-01-01T' + teeTime.tee_time_time).toLocaleTimeString('en-US', { 
+                                hour: 'numeric', 
+                                minute: '2-digit',
+                                hour12: true 
+                              })}
+                            </span>
+                          </div>
+                          
+                          {/* Description */}
+                          {teeTime.description && (
+                            <p className="text-gray-600 text-sm mb-3">{teeTime.description}</p>
+                          )}
+                          
+                          {/* Handicap Requirement */}
+                          {teeTime.handicap_requirement && teeTime.handicap_requirement !== 'any' && (
+                            <div className="flex items-center text-gray-600 mb-3">
+                              <Trophy className="h-4 w-4 mr-1" />
+                              <span className="text-sm">Handicap: {teeTime.handicap_requirement}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Player Info & Actions */}
+                        <div className="flex flex-col items-end gap-3">
+                          {/* Player Count */}
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-gray-900">
+                              {teeTime.current_players || 1}/{teeTime.max_players}
+                            </div>
+                            <div className="text-sm text-gray-600">Players</div>
+                            {spotsRemaining > 0 && (
+                              <div className={`text-xs font-medium mt-1 px-2 py-1 rounded-full ${
+                                isAlmostFull 
+                                  ? 'bg-red-100 text-red-700' 
+                                  : 'bg-green-100 text-green-700'
+                              }`}>
+                                {spotsRemaining} spot{spotsRemaining > 1 ? 's' : ''} left
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Creator Info */}
+                          {teeTime.creator && (
+                            <div className="text-right">
+                              <div className="text-sm text-gray-600">Posted by</div>
+                              <div className="font-medium text-gray-900">
+                                {teeTime.creator.first_name} {teeTime.creator.last_name}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Action Buttons */}
+                          <div className="flex gap-2">
+                            {user?.id !== teeTime.creator_id && (
+                              <button
+                                onClick={() => handleApplyToTeeTime(teeTime.id)}
+                                className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg"
+                              >
+                                Apply
+                              </button>
+                            )}
+                            {user?.id === teeTime.creator_id && (
+                              <button
+                                onClick={() => handleDeleteTeeTime(teeTime.id)}
+                                className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 shadow-md hover:shadow-lg"
+                              >
+                                Delete
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  )
+                })
+              )}
+              
+              {/* Show More Button */}
+              {availableTeeTimes && availableTeeTimes.length > 3 && (
+                <div className="text-center pt-4">
+                  <button
+                    onClick={() => setActiveTab('overview')}
+                    className="bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white px-6 py-3 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl"
+                  >
+                    View All {availableTeeTimes.length} Tee Times
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* Overview Tab */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
