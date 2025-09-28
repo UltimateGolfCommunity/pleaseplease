@@ -2321,72 +2321,112 @@ export default function Dashboard() {
                     return (
                     <div key={teeTime.id} className="bg-white/95 backdrop-blur-sm border border-gray-200/50 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden relative">
                       
-                      {/* Mobile Compact Layout */}
+                      {/* Mobile Enhanced Layout */}
                       <div className="sm:hidden">
-                        <div className="flex items-center gap-3 p-3">
-                          {/* Profile Picture */}
-                          <div className="relative flex-shrink-0">
-                            <div className="h-10 w-10 rounded-full overflow-hidden border-2 border-emerald-500/50 shadow-md">
-                              <img
-                                src={teeTime.creator?.avatar_url || '/default-avatar.svg'}
-                                alt={`${teeTime.creator?.first_name || 'Unknown'} ${teeTime.creator?.last_name || ''}`}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  e.currentTarget.src = '/default-avatar.svg'
-                                }}
-                              />
-                            </div>
-                            <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-green-500 border-2 border-white rounded-full flex items-center justify-center">
-                              <div className="h-1 w-1 bg-white rounded-full"></div>
-                            </div>
-                          </div>
-                          
-                          {/* Main Info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-1">
-                              <h3 className="text-sm font-bold text-gray-900 truncate">{teeTime.course_name}</h3>
-                              <div className="flex items-center gap-1">
-                                {isToday && (
-                                  <div className="bg-red-500 text-white px-1.5 py-0.5 rounded text-xs font-medium">
-                                    TODAY
-                                  </div>
-                                )}
-                                {isTomorrow && (
-                                  <div className="bg-orange-500 text-white px-1.5 py-0.5 rounded text-xs font-medium">
-                                    TOMORROW
-                                  </div>
-                                )}
+                        <div className="p-4 space-y-3">
+                          {/* Header with Profile and Course */}
+                          <div className="flex items-center gap-3">
+                            {/* Profile Picture */}
+                            <div className="relative flex-shrink-0">
+                              <div className="h-12 w-12 rounded-full overflow-hidden border-2 border-emerald-500/50 shadow-md">
+                                <img
+                                  src={teeTime.creator?.avatar_url || '/default-avatar.svg'}
+                                  alt={`${teeTime.creator?.first_name || 'Unknown'} ${teeTime.creator?.last_name || ''}`}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.src = '/default-avatar.svg'
+                                  }}
+                                />
+                              </div>
+                              <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-green-500 border-2 border-white rounded-full flex items-center justify-center">
+                                <div className="h-1 w-1 bg-white rounded-full"></div>
                               </div>
                             </div>
                             
-                            <div className="flex items-center gap-2 text-xs text-gray-600 mb-1">
-                              <Calendar className="h-3 w-3" />
-                              <span>{new Date(teeTime.tee_time_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                              <span>•</span>
-                              <Clock className="h-3 w-3" />
-                              <span>{teeTime.tee_time_time}</span>
-                            </div>
-                            
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-1 text-xs text-gray-500">
-                                <Users className="h-3 w-3" />
-                                <span>{teeTime.current_players || 1}/{teeTime.max_players} players</span>
-                                {spotsRemaining > 0 && (
-                                  <span className="text-emerald-600 font-medium">({spotsRemaining} spots)</span>
-                                )}
-                                {spotsRemaining === 0 && (
-                                  <span className="text-red-600 font-medium">(FULL)</span>
-                                )}
+                            {/* Creator and Course Info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between mb-1">
+                                <h3 className="text-base font-bold text-gray-900 truncate">{teeTime.course_name}</h3>
+                                <div className="flex items-center gap-1">
+                                  {isToday && (
+                                    <div className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium">
+                                      TODAY
+                                    </div>
+                                  )}
+                                  {isTomorrow && (
+                                    <div className="bg-orange-500 text-white px-2 py-1 rounded text-xs font-medium">
+                                      TOMORROW
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                               
-                              <button
-                                onClick={() => handleApplyToTeeTime(teeTime.id)}
-                                disabled={spotsRemaining === 0 || teeTime.creator?.id === user?.id}
-                                className="bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-400 text-white px-3 py-1 rounded text-xs font-medium transition-colors duration-200"
-                              >
-                                {spotsRemaining === 0 ? 'Full' : 'Join'}
-                              </button>
+                              <p className="text-sm text-gray-600 truncate">
+                                Hosted by {teeTime.creator?.first_name || 'Unknown'} {teeTime.creator?.last_name || ''}
+                              </p>
                             </div>
+                          </div>
+
+                          {/* Date and Time */}
+                          <div className="flex items-center gap-4 text-sm">
+                            <div className="flex items-center gap-2 text-gray-700">
+                              <Calendar className="h-4 w-4 text-emerald-600" />
+                              <span className="font-medium">{new Date(teeTime.tee_time_date).toLocaleDateString('en-US', { 
+                                weekday: 'short', 
+                                month: 'short', 
+                                day: 'numeric' 
+                              })}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-gray-700">
+                              <Clock className="h-4 w-4 text-blue-600" />
+                              <span className="font-medium">{teeTime.tee_time_time}</span>
+                            </div>
+                          </div>
+
+                          {/* Location */}
+                          {teeTime.location && (
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <MapPin className="h-4 w-4 text-purple-600" />
+                              <span className="truncate">{teeTime.location}</span>
+                            </div>
+                          )}
+
+                          {/* Players and Spots */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Users className="h-4 w-4 text-gray-600" />
+                              <span className="text-sm text-gray-700">
+                                {teeTime.current_players || 1}/{teeTime.max_players} players
+                              </span>
+                              {spotsRemaining > 0 && (
+                                <span className="text-emerald-600 font-medium text-sm">
+                                  ({spotsRemaining} spots left)
+                                </span>
+                              )}
+                              {spotsRemaining === 0 && (
+                                <span className="text-red-600 font-medium text-sm">(FULL)</span>
+                              )}
+                            </div>
+                            
+                            <button
+                              onClick={() => handleApplyToTeeTime(teeTime.id)}
+                              disabled={spotsRemaining === 0 || teeTime.creator?.id === user?.id}
+                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                                spotsRemaining === 0 || teeTime.creator?.id === user?.id
+                                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                                  : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-md hover:shadow-lg'
+                              }`}
+                            >
+                              {spotsRemaining === 0 ? 'Full' : teeTime.creator?.id === user?.id ? 'Your Tee Time' : 'Join'}
+                            </button>
+                          </div>
+
+                          {/* Additional Info */}
+                          <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-gray-200">
+                            <span>Posted {daysUntilTeeTime === 0 ? 'today' : `${daysUntilTeeTime} day${daysUntilTeeTime > 1 ? 's' : ''} ago`}</span>
+                            {isAlmostFull && spotsRemaining > 0 && (
+                              <span className="text-orange-600 font-medium">Almost full!</span>
+                            )}
                           </div>
                         </div>
                       </div>
