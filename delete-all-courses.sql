@@ -22,12 +22,7 @@ DELETE FROM tee_time_applications WHERE tee_time_id IN (
   )
 );
 
--- Step 4: Delete all golf rounds associated with courses
-DELETE FROM golf_rounds WHERE course_id IN (
-  SELECT id FROM golf_courses
-);
-
--- Step 5: Finally, delete all golf courses
+-- Step 4: Finally, delete all golf courses
 DELETE FROM golf_courses;
 
 -- Optional: Reset the sequence/auto-increment if using serial/auto-increment

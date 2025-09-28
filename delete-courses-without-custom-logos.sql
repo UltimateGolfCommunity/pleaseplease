@@ -58,14 +58,7 @@ WHERE tee_time_id IN (
     )
 );
 
--- Step 4: Delete golf rounds associated with courses that will be deleted
-DELETE FROM golf_rounds 
-WHERE course_id IN (
-    SELECT id FROM golf_courses 
-    WHERE course_image_url = '/logos/golfcoursedefaultimage.png'
-);
-
--- Step 5: Finally, delete the courses that use the default logo
+-- Step 4: Finally, delete the courses that use the default logo
 DELETE FROM golf_courses 
 WHERE course_image_url = '/logos/golfcoursedefaultimage.png';
 

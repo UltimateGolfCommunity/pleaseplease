@@ -80,17 +80,6 @@ WHERE tee_time_id IN (
     )
 )
 
-UNION ALL
-
--- Count golf rounds that will be deleted
-SELECT 
-    'Golf Rounds' as data_type,
-    COUNT(*) as count_to_delete
-FROM golf_rounds 
-WHERE course_id IN (
-    SELECT id FROM golf_courses 
-    WHERE course_image_url = '/logos/golfcoursedefaultimage.png'
-);
 
 -- Summary
 SELECT 'SUMMARY - After deletion you will have:' as status;
