@@ -184,7 +184,7 @@ export default function HomePage() {
           </h1>
           
           <p className="text-lg sm:text-xl md:text-2xl text-gray-300 mb-8 sm:mb-12 max-w-4xl mx-auto leading-relaxed px-2">
-            Create golf groups, build message boards, organize tournaments, and connect with fellow golfers in the most vibrant golf community online.
+            Create golf groups, post and fill empty tee times, build message boards, organize tournaments, and connect with fellow golfers in the most vibrant golf community online.
           </p>
           
           <div className="flex justify-center items-center">
@@ -238,7 +238,7 @@ export default function HomePage() {
               <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent"> Community</span>
             </h2>
             <p className="text-xl text-gray-400 max-w-3xl mx-auto">
-              Create groups, organize tournaments, and build message boards to connect golfers and grow your local golf community
+              Create groups, post and fill empty tee times, organize tournaments, and build message boards to connect golfers and grow your local golf community
             </p>
           </div>
 
@@ -247,8 +247,8 @@ export default function HomePage() {
               <div className="bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:from-emerald-500/30 group-hover:to-cyan-500/30 transition-all duration-300">
                 <Calendar className="h-10 w-10 text-emerald-400" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-3 text-center">Create Groups</h3>
-              <p className="text-gray-400 text-center group-hover:text-gray-300 transition-colors duration-300">Start golf groups for your course, skill level, or interests and build lasting connections</p>
+              <h3 className="text-xl font-semibold text-white mb-3 text-center">Tee Times & Groups</h3>
+              <p className="text-gray-400 text-center group-hover:text-gray-300 transition-colors duration-300">Post and fill empty tee times, create golf groups for your course, skill level, or interests and build lasting connections</p>
             </div>
 
             <div className="group p-8 rounded-2xl bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-gray-700/50 hover:border-emerald-500/50 transition-all duration-300 hover:transform hover:scale-105 backdrop-blur-sm">
@@ -358,7 +358,7 @@ export default function HomePage() {
               <span className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent"> Golf Community</span>?
             </h2>
             <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-4xl mx-auto leading-relaxed">
-              Start creating groups, organizing tournaments, and building message boards to connect golfers and grow your local golf community
+              Start posting and filling tee times, creating groups, organizing tournaments, and building message boards to connect golfers and grow your local golf community
             </p>
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
               <a
