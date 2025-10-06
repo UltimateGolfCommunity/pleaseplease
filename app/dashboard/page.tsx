@@ -317,110 +317,108 @@ export default function Dashboard() {
             <WeatherWidget />
 
             {/* Tee Times Section */}
-            <div className="bg-white/95 backdrop-blur-sm border border-gray-200/50 rounded-2xl shadow-xl">
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">Available Tee Times</h2>
-                <p className="text-gray-600">Join upcoming tee times with fellow golfers</p>
+            <div className="space-y-6">
+              <div className="text-center">
+                <h2 className="text-3xl font-bold text-white mb-2">Available Tee Times</h2>
+                <p className="text-gray-300">Join upcoming tee times with fellow golfers</p>
               </div>
-
-              <div className="p-6">
+              
+              <div className="space-y-4">
                 {teeTimesLoading ? (
                   <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
-                    <span className="ml-3 text-gray-600">Loading tee times...</span>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-400"></div>
+                    <span className="ml-3 text-gray-300">Loading tee times...</span>
                   </div>
                 ) : teeTimes.length === 0 ? (
                   <div className="text-center py-8">
                     <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-600 mb-2">No Tee Times Available</h3>
-                    <p className="text-gray-500">Check back later for new tee times or create your own!</p>
+                    <h3 className="text-lg font-medium text-gray-300 mb-2">No Tee Times Available</h3>
+                    <p className="text-gray-400">Check back later for new tee times or create your own!</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {teeTimes.map((teeTime) => (
-                      <div key={teeTime.id} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                      <div key={teeTime.id} className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
                         <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                            <h3 className="font-semibold text-gray-800 mb-2">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-white mb-2">
                               {teeTime.course_name || 'Unknown Course'}
-                          </h3>
-                            <div className="flex items-center space-x-4 text-sm text-gray-600">
+                            </h3>
+                            <div className="flex items-center space-x-4 text-sm text-gray-300">
                               <div className="flex items-center space-x-1">
                                 <Calendar className="h-4 w-4" />
                                 <span>{new Date(teeTime.tee_time_date).toLocaleDateString()}</span>
-                        </div>
+                              </div>
                               <div className="flex items-center space-x-1">
                                 <Clock className="h-4 w-4" />
                                 <span>{teeTime.tee_time_time}</span>
-                      </div>
+                              </div>
                               {teeTime.location && (
                                 <div className="flex items-center space-x-1">
-                        <MapPin className="h-4 w-4" />
+                                  <MapPin className="h-4 w-4" />
                                   <span>{teeTime.location}</span>
-                  </div>
-                )}
                                 </div>
+                              )}
+                            </div>
                             {teeTime.description && (
-                              <p className="text-gray-600 text-sm mt-2">{teeTime.description}</p>
+                              <p className="text-gray-300 text-sm mt-2">{teeTime.description}</p>
                             )}
-                                </div>
+                          </div>
                           <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
                             Join
                           </button>
                         </div>
                       </div>
-                  ))}
-                    </div>
-                      )}
-                    </div>
-              </div>
-            </div>
-          )}
-
-        {/* Groups Tab */}
-        {activeTab === 'groups' && (
-              <div className="space-y-6">
-            <div className="bg-white/95 backdrop-blur-sm border border-gray-200/50 rounded-2xl shadow-xl">
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">My Groups</h2>
-                <p className="text-gray-600">Manage your golf groups and find new ones</p>
-                  </div>
-              
-              <div className="p-6">
-                {groupsLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
-                    <span className="ml-3 text-gray-600">Loading groups...</span>
-                    </div>
-                ) : userGroups.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Trophy className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-600 mb-2">No Groups Yet</h3>
-                    <p className="text-gray-500">Join or create golf groups to connect with fellow golfers!</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {userGroups.map((group) => (
-                      <div key={group.id} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                        <h3 className="font-semibold text-gray-800 mb-2">{group.name}</h3>
-                        <p className="text-gray-600 text-sm">{group.description}</p>
-                      </div>
                     ))}
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Groups Tab */}
+        {activeTab === 'groups' && (
+          <div className="space-y-6">
+            <div className="text-center">
+              <h2 className="text-3xl font-bold text-white mb-2">My Groups</h2>
+              <p className="text-gray-300">Manage your golf groups and find new ones</p>
+            </div>
+            
+            <div className="space-y-4">
+              {groupsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-400"></div>
+                  <span className="ml-3 text-gray-300">Loading groups...</span>
                 </div>
+              ) : userGroups.length === 0 ? (
+                <div className="text-center py-8">
+                  <Trophy className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-300 mb-2">No Groups Yet</h3>
+                  <p className="text-gray-400">Join or create golf groups to connect with fellow golfers!</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {userGroups.map((group) => (
+                    <div key={group.id} className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
+                      <h3 className="font-semibold text-white mb-2">{group.name}</h3>
+                      <p className="text-gray-300 text-sm">{group.description}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
         {/* Messages Tab */}
         {activeTab === 'messages' && (
-          <div className="space-y-6">
+                    <div className="space-y-6">
             <MessagingSystem />
-          </div>
-        )}
+                            </div>
+                          )}
       </div>
-
+      
       {/* Modals */}
 
       {/* QR Code Display */}
