@@ -1696,6 +1696,10 @@ export default function Dashboard() {
           rating: 5,
           review: ''
         })
+        // Refresh course search results if we're on the golf courses tab
+        if (activeTab === 'courses' && courseSearchQuery) {
+          handleCourseSearch()
+        }
       } else {
         alert('Failed to submit review')
       }
