@@ -1720,20 +1720,41 @@ export default function Dashboard() {
   
   const handleMessageSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (!user?.id) {
+      alert('You must be logged in to send messages')
+      return
+    }
+    
+    if (!messageForm.recipient || !messageForm.message) {
+      alert('Please fill in recipient and message')
+      return
+    }
+    
     try {
-              const response = await fetch('/api/messages', {
+      console.log('📧 Sending message:', {
+        sender_id: user.id,
+        recipient: messageForm.recipient,
+        message_content: messageForm.message
+      })
+      
+      const response = await fetch('/api/messages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           action: 'send',
-          ...messageForm
+          sender_id: user.id,
+          recipient_id: messageForm.recipient, // This should be a user ID, not name
+          message_content: messageForm.message
         }),
       })
       
       if (response.ok) {
-        console.log('Message sent successfully')
+        const result = await response.json()
+        console.log('✅ Message sent successfully:', result)
+        alert('Message sent successfully!')
         setShowMessageModal(false)
         setMessageForm({
           recipient: '',
@@ -1741,10 +1762,13 @@ export default function Dashboard() {
           message: ''
         })
       } else {
-        console.error('Failed to send message')
+        const errorData = await response.json()
+        console.error('❌ Failed to send message:', errorData)
+        alert('Failed to send message: ' + (errorData.error || 'Unknown error'))
       }
     } catch (error) {
-      console.error('Error sending message:', error)
+      console.error('❌ Error sending message:', error)
+      alert('Failed to send message. Please try again.')
     }
   }
   
@@ -4695,11 +4719,14 @@ export default function Dashboard() {
             <form onSubmit={handleMessageSubmit} className="space-y-4">
                 <input
                   type="text"
-                placeholder="Recipient"
+                  placeholder="Recipient User ID (e.g., b2284531-dc96-43a6-8b23-222cc496f34d)"
                   value={messageForm.recipient}
                   onChange={(e) => setMessageForm({...messageForm, recipient: e.target.value})}
-                className="w-full p-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full p-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
+                <div className="text-xs text-slate-500">
+                  Tip: Use the User ID from the message response above
+                </div>
                 <input
                   type="text"
                 placeholder="Subject"
