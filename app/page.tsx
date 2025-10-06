@@ -184,7 +184,7 @@ export default function HomePage() {
           </h1>
           
           <p className="text-lg sm:text-xl md:text-2xl text-gray-300 mb-8 sm:mb-12 max-w-4xl mx-auto leading-relaxed px-2">
-            Connect with fellow golfers, book tee times, track your game, and join the most vibrant golf community online.
+            Create golf groups, build message boards, organize tournaments, and connect with fellow golfers in the most vibrant golf community online.
           </p>
           
           <div className="flex justify-center items-center">
@@ -214,16 +214,16 @@ export default function HomePage() {
               <div className="bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Users className="h-8 w-8 text-emerald-400" />
               </div>
-              <div className="text-3xl font-bold text-white mb-2">10K+</div>
-              <div className="text-gray-400">Active Golfers</div>
+              <div className="text-3xl font-bold text-white mb-2">500+</div>
+              <div className="text-gray-400">Active Groups</div>
             </div>
             
             <div className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-md border border-gray-700/50 rounded-2xl p-6 text-center transform hover:scale-105 transition-all duration-300">
               <div className="bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <MapPin className="h-8 w-8 text-emerald-400" />
               </div>
-              <div className="text-3xl font-bold text-white mb-2">500+</div>
-              <div className="text-gray-400">Golf Courses</div>
+              <div className="text-3xl font-bold text-white mb-2">100+</div>
+              <div className="text-gray-400">Tournaments</div>
             </div>
           </div>
         </div>
@@ -234,11 +234,11 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-20">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              Everything You Need for the
-              <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent"> Perfect Golf Experience</span>
+              Build Your Golf
+              <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent"> Community</span>
             </h2>
             <p className="text-xl text-gray-400 max-w-3xl mx-auto">
-              From tee time booking to community features, we've got you covered with cutting-edge technology
+              Create groups, organize tournaments, and build message boards to connect golfers and grow your local golf community
             </p>
           </div>
 
@@ -247,32 +247,32 @@ export default function HomePage() {
               <div className="bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:from-emerald-500/30 group-hover:to-cyan-500/30 transition-all duration-300">
                 <Calendar className="h-10 w-10 text-emerald-400" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-3 text-center">Book Tee Times</h3>
-              <p className="text-gray-400 text-center group-hover:text-gray-300 transition-colors duration-300">Easy booking for your favorite golf courses with real-time availability</p>
+              <h3 className="text-xl font-semibold text-white mb-3 text-center">Create Groups</h3>
+              <p className="text-gray-400 text-center group-hover:text-gray-300 transition-colors duration-300">Start golf groups for your course, skill level, or interests and build lasting connections</p>
             </div>
 
             <div className="group p-8 rounded-2xl bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-gray-700/50 hover:border-emerald-500/50 transition-all duration-300 hover:transform hover:scale-105 backdrop-blur-sm">
               <div className="bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:from-emerald-500/30 group-hover:to-cyan-500/30 transition-all duration-300">
                 <Users className="h-10 w-10 text-emerald-400" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-3 text-center">Connect</h3>
-              <p className="text-gray-400 text-center group-hover:text-gray-300 transition-colors duration-300">Meet and play with fellow golfers in your area</p>
+              <h3 className="text-xl font-semibold text-white mb-3 text-center">Message Boards</h3>
+              <p className="text-gray-400 text-center group-hover:text-gray-300 transition-colors duration-300">Build community message boards for discussions, tips, and local golf events</p>
             </div>
 
             <div className="group p-8 rounded-2xl bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-gray-700/50 hover:border-emerald-500/50 transition-all duration-300 hover:transform hover:scale-105 backdrop-blur-sm">
               <div className="bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:from-emerald-500/30 group-hover:to-cyan-500/30 transition-all duration-300">
                 <Trophy className="h-10 w-10 text-emerald-400" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-3 text-center">Track Progress</h3>
-              <p className="text-gray-400 text-center group-hover:text-gray-300 transition-colors duration-300">Monitor your game improvement with detailed analytics</p>
+              <h3 className="text-xl font-semibold text-white mb-3 text-center">Organize Tournaments</h3>
+              <p className="text-gray-400 text-center group-hover:text-gray-300 transition-colors duration-300">Plan and manage golf tournaments with registration, scoring, and leaderboards</p>
             </div>
 
             <div className="group p-8 rounded-2xl bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-gray-700/50 hover:border-emerald-500/50 transition-all duration-300 hover:transform hover:scale-105 backdrop-blur-sm">
               <div className="bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:from-emerald-500/30 group-hover:to-cyan-500/30 transition-all duration-300">
                 <Star className="h-10 w-10 text-emerald-400" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-3 text-center">Reviews</h3>
-              <p className="text-gray-400 text-center group-hover:text-gray-300 transition-colors duration-300">Rate and review golf courses with detailed insights</p>
+              <h3 className="text-xl font-semibold text-white mb-3 text-center">Community Building</h3>
+              <p className="text-gray-400 text-center group-hover:text-gray-300 transition-colors duration-300">Foster lasting relationships and grow your local golf community with powerful tools</p>
             </div>
           </div>
         </div>
@@ -354,11 +354,11 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <div className="bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 backdrop-blur-sm border border-emerald-500/20 rounded-3xl p-12">
             <h2 className="text-5xl md:text-6xl font-bold text-white mb-8">
-              Ready to Transform Your
-              <span className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent"> Golf Experience</span>?
+              Ready to Build Your
+              <span className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent"> Golf Community</span>?
             </h2>
             <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-4xl mx-auto leading-relaxed">
-              Join thousands of golfers who are already part of the Ultimate Golf Community and discover a new way to enjoy the game
+              Start creating groups, organizing tournaments, and building message boards to connect golfers and grow your local golf community
             </p>
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
               <a
