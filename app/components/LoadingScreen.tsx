@@ -8,24 +8,6 @@ export default function LoadingScreen({ message = 'Loading...' }: LoadingScreenP
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 flex items-center justify-center z-50 transition-opacity duration-500">
       <div className="text-center">
-        {/* Logo */}
-        <div className="relative w-48 h-48 mx-auto mb-12">
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="w-full h-full object-contain opacity-90"
-          >
-            <source src="/0901.mp4" type="video/mp4" />
-            <img
-              src="/thereallogo.png"
-              alt="Ultimate Golf Community"
-              className="w-full h-full object-contain"
-            />
-          </video>
-        </div>
-        
         {/* Golf Ball Putting Animation */}
         <div className="relative w-80 h-24 mx-auto mb-8">
           {/* Putting Green Line */}

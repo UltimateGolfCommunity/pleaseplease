@@ -34,7 +34,7 @@ import LoadingScreen from '@/components/LoadingScreen'
 type ActiveTab = 'tee-times' | 'groups' | 'messages'
 
 export default function Dashboard() {
-  const { user, profile } = useAuth()
+  const { user, profile, signOut } = useAuth()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<ActiveTab>('tee-times')
   const [showMobileMenu, setShowMobileMenu] = useState(false)
@@ -195,6 +195,17 @@ export default function Dashboard() {
   const handleQRScan = (data: string) => {
     console.log('QR Code scanned:', data)
     setShowQRScanner(false)
+  }
+
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+      // Redirect to home page
+      router.push('/')
+    } catch (error) {
+      console.error('❌ Error signing out:', error)
+      alert('Failed to sign out. Please try again.')
+    }
   }
 
   const handleCreateTeeTime = async (e: React.FormEvent) => {
@@ -365,6 +376,14 @@ export default function Dashboard() {
               {/* Theme Toggle */}
               <ThemeToggle />
 
+              {/* Sign Out Button */}
+              <button
+                onClick={handleSignOut}
+                className="hidden md:block px-4 py-2 bg-red-600/20 hover:bg-red-600/40 text-red-400 hover:text-red-300 rounded-lg transition-all duration-300 border border-red-600/30 text-sm font-medium"
+              >
+                Sign Out
+              </button>
+
               {/* Mobile menu button */}
                       <button
                 onClick={() => setShowMobileMenu(!showMobileMenu)}
@@ -400,6 +419,14 @@ export default function Dashboard() {
                 </button>
               )
             })}
+            
+            {/* Mobile Sign Out Button */}
+            <button
+              onClick={handleSignOut}
+              className="flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300 font-medium bg-red-600/20 hover:bg-red-600/40 text-red-400 hover:text-red-300 border border-red-600/30"
+            >
+              <span>Sign Out</span>
+            </button>
           </div>
         </div>
       )}
