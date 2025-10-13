@@ -74,14 +74,14 @@ export default function Dashboard() {
 
   // Auto-load data when user logs in
   useEffect(() => {
-    if (user?.id) {
+      if (user?.id) {
       const loadInitialData = async () => {
         setInitialLoading(true)
         await Promise.all([
           fetchTeeTimes(),
           fetchUserGroups(),
           fetchNotifications(),
-          fetchPendingApplications()
+      fetchPendingApplications()
         ])
         setInitialLoading(false)
       }
@@ -114,7 +114,7 @@ export default function Dashboard() {
       
       setTeeTimes(sortedTeeTimes)
       console.log('🎯 Fetched and sorted tee times:', sortedTeeTimes)
-    } catch (error) {
+          } catch (error) {
       console.error('❌ Error fetching tee times:', error)
     } finally {
       setTeeTimesLoading(false)
@@ -128,7 +128,7 @@ export default function Dashboard() {
     setGroupsLoading(true)
     try {
       const response = await fetch(`/api/groups?user_id=${user.id}&_cache_bust=${Math.random()}`)
-      const data = await response.json()
+        const data = await response.json()
       
       console.log('📊 Groups API response:', data)
       
@@ -232,7 +232,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-theme-gradient transition-colors duration-300">
+    <div className="min-h-screen bg-theme-gradient transition-colors duration-300 animate-fade-in">
       {/* Navigation */}
       <nav className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border-b border-gray-200/60 dark:border-slate-700/60 sticky top-0 z-50 shadow-xl transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -343,7 +343,7 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
         {/* Tee Times Tab */}
         {activeTab === 'tee-times' && (
-          <div className="space-y-6">
+          <div className="space-y-6 animate-fade-in">
             {/* Weather Widget */}
             <WeatherWidget />
 
@@ -352,7 +352,7 @@ export default function Dashboard() {
               <div className="text-center">
                 <h2 className="text-3xl font-bold text-white mb-2">Available Tee Times</h2>
                 <p className="text-gray-300">Join upcoming tee times with fellow golfers</p>
-                <button
+                <button 
                   onClick={() => setShowCreateTeeTimeModal(true)}
                   className="mt-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-emerald-500/50 flex items-center space-x-2 mx-auto"
                 >
@@ -360,7 +360,7 @@ export default function Dashboard() {
                   <span>Create Tee Time</span>
                 </button>
               </div>
-              
+
               <div className="space-y-4">
                 {teeTimesLoading ? (
                   <div className="flex items-center justify-center py-8">
@@ -378,107 +378,107 @@ export default function Dashboard() {
                     {teeTimes.map((teeTime) => (
                       <div key={teeTime.id} className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
                         <div className="flex items-start justify-between">
-                          <div className="flex-1">
+                        <div className="flex-1">
                             <h3 className="font-semibold text-white mb-2">
                               {teeTime.course_name || 'Unknown Course'}
-                            </h3>
+                          </h3>
                             <div className="flex items-center space-x-4 text-sm text-gray-300">
                               <div className="flex items-center space-x-1">
                                 <Calendar className="h-4 w-4" />
                                 <span>{new Date(teeTime.tee_time_date).toLocaleDateString()}</span>
-                              </div>
+                        </div>
                               <div className="flex items-center space-x-1">
                                 <Clock className="h-4 w-4" />
                                 <span>{teeTime.tee_time_time}</span>
-                              </div>
+                      </div>
                               {teeTime.location && (
                                 <div className="flex items-center space-x-1">
-                                  <MapPin className="h-4 w-4" />
+                        <MapPin className="h-4 w-4" />
                                   <span>{teeTime.location}</span>
+                  </div>
+                )}
                                 </div>
-                              )}
-                            </div>
                             {teeTime.description && (
                               <p className="text-gray-300 text-sm mt-2">{teeTime.description}</p>
                             )}
-                          </div>
+                                </div>
                           <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
                             Join
                           </button>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
+                  ))}
+                    </div>
+                      )}
+                    </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Groups Tab */}
         {activeTab === 'groups' && (
-          <div className="space-y-6">
-            <div className="text-center">
+          <div className="space-y-6 animate-fade-in">
+                    <div className="text-center">
               <h2 className="text-3xl font-bold text-white mb-2">My Groups</h2>
               <p className="text-gray-300">Manage your golf groups and find new ones</p>
-              <button
+                    <button
                 onClick={() => setShowCreateGroupModal(true)}
                 className="mt-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-emerald-500/50 flex items-center space-x-2 mx-auto"
-              >
-                <Plus className="h-5 w-5" />
+                    >
+                      <Plus className="h-5 w-5" />
                 <span>Create Group</span>
-              </button>
-            </div>
-            
-            <div className="space-y-4">
+                    </button>
+                        </div>
+
+                  <div className="space-y-4">
               {groupsLoading ? (
-                <div className="flex items-center justify-center py-8">
+                  <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-400"></div>
                   <span className="ml-3 text-gray-300">Loading groups...</span>
-                </div>
+                  </div>
               ) : userGroups.length === 0 ? (
-                <div className="text-center py-8">
+                  <div className="text-center py-8">
                   <Trophy className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-300 mb-2">No Groups Yet</h3>
                   <p className="text-gray-400">Join or create golf groups to connect with fellow golfers!</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
+                  </div>
+                ) : (
+                  <div className="space-y-4">
                   {userGroups.map((group) => (
                     <div key={group.id} className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
                       <h3 className="font-semibold text-white mb-2">{group.name}</h3>
                       <p className="text-gray-300 text-sm">{group.description}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
+                      </div>
+                    ))}
+                  </div>
+                )}
             </div>
           </div>
         )}
 
         {/* Messages Tab */}
         {activeTab === 'messages' && (
-                    <div className="space-y-6">
+          <div className="space-y-6 animate-fade-in">
             <MessagingSystem />
-                            </div>
-                          )}
+                </div>
+              )}
       </div>
       
       {/* Modals */}
-
+      
       {/* Create Tee Time Modal */}
       {showCreateTeeTimeModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-slate-800 rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-emerald-500/20 shadow-2xl">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-2xl font-bold text-white">Create Tee Time</h3>
-              <button
+                    <button
                 onClick={() => setShowCreateTeeTimeModal(false)}
                 className="text-gray-400 hover:text-white transition-colors"
-              >
+                    >
                 <X className="h-6 w-6" />
-              </button>
-            </div>
+                    </button>
+                </div>
             
             <form className="space-y-4">
               <div>
@@ -500,13 +500,13 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Time</label>
-                  <input
+                <input
                     type="time"
                     className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-emerald-500"
-                  />
+                    />
+                  </div>
                 </div>
-              </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Location (Optional)</label>
                 <input
@@ -514,17 +514,17 @@ export default function Dashboard() {
                   className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-emerald-500"
                   placeholder="Enter location"
                 />
-              </div>
-              
+                </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Description (Optional)</label>
                 <textarea
                   rows={3}
                   className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-emerald-500"
                   placeholder="Add details about the tee time..."
-                />
-              </div>
-              
+                    />
+                </div>
+
               <div className="flex justify-end space-x-3 pt-4">
                 <button
                   type="button"
@@ -537,28 +537,28 @@ export default function Dashboard() {
                   type="submit"
                   className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-lg font-semibold transition-all duration-300"
                 >
-                  Create Tee Time
+                    Create Tee Time
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-
+      
       {/* Create Group Modal */}
       {showCreateGroupModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-slate-800 rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-emerald-500/20 shadow-2xl">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-2xl font-bold text-white">Create Group</h3>
-              <button
+                      <button
                 onClick={() => setShowCreateGroupModal(false)}
                 className="text-gray-400 hover:text-white transition-colors"
               >
                 <X className="h-6 w-6" />
-              </button>
-            </div>
-            
+                      </button>
+                    </div>
+
             <form className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Group Name</label>
@@ -575,7 +575,7 @@ export default function Dashboard() {
                   rows={4}
                   className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-emerald-500"
                   placeholder="Describe your group..."
-                />
+              />
               </div>
               
               <div className="flex justify-end space-x-3 pt-4">
