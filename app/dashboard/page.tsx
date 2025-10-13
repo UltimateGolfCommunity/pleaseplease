@@ -91,16 +91,20 @@ export default function Dashboard() {
       
       console.log('📊 Tee times API response:', data)
       
-      if (data.success) {
-        const sortedTeeTimes = data.teeTimes
-          .filter((tt: any) => new Date(tt.tee_time_date) >= new Date())
-          .sort((a: any, b: any) => new Date(a.tee_time_date).getTime() - new Date(b.tee_time_date).getTime())
-        
-        setTeeTimes(sortedTeeTimes)
-        console.log('🎯 Fetched and sorted tee times:', sortedTeeTimes)
-      } else {
-        console.log('❌ Tee times fetch failed:', data)
+      // Handle both array response and object response formats
+      let teeTimesArray = []
+      if (data.success && data.teeTimes) {
+        teeTimesArray = data.teeTimes
+      } else if (Array.isArray(data)) {
+        teeTimesArray = data
       }
+      
+      const sortedTeeTimes = teeTimesArray
+        .filter((tt: any) => new Date(tt.tee_time_date) >= new Date())
+        .sort((a: any, b: any) => new Date(a.tee_time_date).getTime() - new Date(b.tee_time_date).getTime())
+      
+      setTeeTimes(sortedTeeTimes)
+      console.log('🎯 Fetched and sorted tee times:', sortedTeeTimes)
     } catch (error) {
       console.error('❌ Error fetching tee times:', error)
     } finally {
