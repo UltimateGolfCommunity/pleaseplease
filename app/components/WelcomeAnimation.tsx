@@ -13,10 +13,10 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
     // Show welcome message immediately
     setShowMessage(true)
 
-    // Complete animation after 4 seconds
+    // Complete animation after 4.5 seconds (slightly longer than animation)
     const completeTimer = setTimeout(() => {
       onComplete()
-    }, 4000)
+    }, 4500)
 
     return () => {
       clearTimeout(completeTimer)
@@ -57,7 +57,7 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
           </div>
           
           {/* Golf Ball */}
-          <div className="golf-ball-welcome absolute top-1/2">
+          <div className="golf-ball-welcome">
             <div className="relative">
               {/* Ball Shadow */}
               <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 w-16 h-5 bg-black/50 rounded-full blur-xl"></div>
@@ -83,30 +83,47 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
       <style jsx>{`
         @keyframes putt-welcome {
           0% {
-            transform: translate(-80px, -50%) scale(1);
+            left: 0;
+            transform: translateY(-50%) scale(1);
             opacity: 1;
           }
-          60% {
-            transform: translate(calc(100vw - 600px), -50%) scale(1);
+          55% {
+            left: calc(100% - 400px);
+            transform: translateY(-50%) scale(1);
             opacity: 1;
           }
-          75% {
-            transform: translate(calc(100vw - 400px), -50%) scale(0.85);
+          70% {
+            left: calc(100% - 250px);
+            transform: translateY(-50%) scale(0.9);
             opacity: 1;
           }
-          90% {
-            transform: translate(calc(100vw - 250px), -50%) scale(0.6);
+          82% {
+            left: calc(100% - 150px);
+            transform: translateY(-50%) scale(0.75);
             opacity: 1;
+          }
+          92% {
+            left: calc(100% - 90px);
+            transform: translateY(-50%) scale(0.5);
+            opacity: 0.9;
+          }
+          98% {
+            left: calc(100% - 60px);
+            transform: translateY(-50%) scale(0.25);
+            opacity: 0.5;
           }
           100% {
-            transform: translate(calc(100vw - 180px), -50%) scale(0.3);
+            left: calc(100% - 48px);
+            transform: translateY(-50%) scale(0.1);
             opacity: 0;
           }
         }
 
         .golf-ball-welcome {
           will-change: transform, opacity;
-          animation: putt-welcome 3.5s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+          position: absolute;
+          top: 50%;
+          animation: putt-welcome 4s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
         }
 
         @keyframes fade-in-scale {

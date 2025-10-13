@@ -308,13 +308,8 @@ export default function Dashboard() {
     { id: 'messages', label: 'Messages', icon: Flag },
   ]
 
-  // Show loading screen while initial data is being fetched
-  if (initialLoading) {
-    return <LoadingScreen message="Loading your golf community..." />
-  }
-
-  // Show welcome animation after loading completes
-  if (showWelcome) {
+  // Show welcome animation while loading and after
+  if (initialLoading || showWelcome) {
     return <WelcomeAnimation onComplete={() => setShowWelcome(false)} />
   }
 
