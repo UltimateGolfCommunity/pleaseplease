@@ -36,7 +36,7 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
           <div className="absolute top-1/2 left-0 right-0 h-2 bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600 transform -translate-y-1/2 shadow-2xl"></div>
           
           {/* Golf Hole - Regulation 4.25 inch (much bigger than ball) */}
-          <div className="absolute right-16 top-1/2 transform -translate-y-1/2">
+          <div className="absolute right-8 top-1/2 transform -translate-y-1/2">
             <div className="relative">
               {/* Hole Shadow/Depth */}
               <div className="w-24 h-24 rounded-full bg-gradient-to-br from-slate-900 to-black border-4 border-emerald-600 shadow-2xl"></div>
@@ -80,33 +80,33 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
             opacity: 1;
           }
           70% {
-            left: calc(100% - 120px);
+            left: calc(100% - 200px);
             transform: translateY(-50%) scale(1) rotate(1080deg);
             opacity: 1;
           }
           85% {
-            left: calc(100% - 64px);
+            left: calc(100% - 44px);
             transform: translateY(-50%) scale(1) rotate(1260deg);
             opacity: 1;
           }
           /* Stop at hole and drop straight down */
           88% {
-            left: calc(100% - 64px);
+            left: calc(100% - 44px);
             transform: translateY(-50%) scale(1) rotate(1300deg);
             opacity: 1;
           }
           92% {
-            left: calc(100% - 64px);
+            left: calc(100% - 44px);
             transform: translateY(-40%) scale(0.8) rotate(1340deg);
             opacity: 1;
           }
           96% {
-            left: calc(100% - 64px);
+            left: calc(100% - 44px);
             transform: translateY(-20%) scale(0.5) rotate(1380deg);
             opacity: 0.8;
           }
           100% {
-            left: calc(100% - 64px);
+            left: calc(100% - 44px);
             transform: translateY(20%) scale(0.2) rotate(1440deg);
             opacity: 0;
           }
