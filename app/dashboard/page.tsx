@@ -29,6 +29,7 @@ import Logo from '@/components/Logo'
 import ThemeToggle from '@/components/ThemeToggle'
 import QRCodeGenerator from '@/components/QRCodeGenerator'
 import SimpleQRScanner from '@/components/SimpleQRScanner'
+import LoadingScreen from '@/components/LoadingScreen'
 
 type ActiveTab = 'tee-times' | 'groups' | 'messages'
 
@@ -41,6 +42,7 @@ export default function Dashboard() {
   const [showQRScanner, setShowQRScanner] = useState(false)
   const [showCreateTeeTimeModal, setShowCreateTeeTimeModal] = useState(false)
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false)
+  const [initialLoading, setInitialLoading] = useState(true)
   
   // Tee Times
   const [teeTimes, setTeeTimes] = useState<any[]>([])
@@ -70,13 +72,20 @@ export default function Dashboard() {
   // Profile loading
   const [profileLoading, setProfileLoading] = useState(false)
 
-  // Auto-load tee times when user logs in
+  // Auto-load data when user logs in
   useEffect(() => {
-      if (user?.id) {
-      fetchTeeTimes()
-      fetchUserGroups()
-      fetchNotifications()
-      fetchPendingApplications()
+    if (user?.id) {
+      const loadInitialData = async () => {
+        setInitialLoading(true)
+        await Promise.all([
+          fetchTeeTimes(),
+          fetchUserGroups(),
+          fetchNotifications(),
+          fetchPendingApplications()
+        ])
+        setInitialLoading(false)
+      }
+      loadInitialData()
     }
   }, [user?.id])
 
@@ -216,6 +225,11 @@ export default function Dashboard() {
     { id: 'groups', label: 'Groups', icon: Trophy },
     { id: 'messages', label: 'Messages', icon: Flag },
   ]
+
+  // Show loading screen while initial data is being fetched
+  if (initialLoading) {
+    return <LoadingScreen message="Loading your golf community..." />
+  }
 
   return (
     <div className="min-h-screen bg-theme-gradient transition-colors duration-300">
