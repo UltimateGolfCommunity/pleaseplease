@@ -388,13 +388,27 @@ export default function Dashboard() {
                 Sign Out
               </button>
 
-              {/* Mobile menu button */}
-                      <button
+              {/* Mobile menu button - Profile Picture */}
+              <button
                 onClick={() => setShowMobileMenu(!showMobileMenu)}
-                className="md:hidden p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                className="md:hidden relative"
               >
-                <X className="h-5 w-5" />
-                      </button>
+                <div className="h-10 w-10 rounded-full overflow-hidden border-2 border-emerald-500 shadow-lg hover:border-emerald-400 transition-all">
+                  {profile?.avatar_url ? (
+                    <img
+                      src={profile.avatar_url}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center">
+                      <span className="text-white font-bold text-lg">
+                        {profile?.first_name?.[0] || user?.email?.[0]?.toUpperCase() || 'U'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </button>
                   </div>
                   </div>
 
