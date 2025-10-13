@@ -13,10 +13,10 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
     // Show welcome message immediately
     setShowMessage(true)
 
-    // Complete animation after 4 seconds (slightly longer than animation)
+    // Complete animation after 5 seconds (slightly longer than animation)
     const completeTimer = setTimeout(() => {
       onComplete()
-    }, 4000)
+    }, 5000)
 
     return () => {
       clearTimeout(completeTimer)
@@ -82,34 +82,70 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
 
       <style jsx>{`
         @keyframes putt-welcome {
+          /* Roll across the green */
           0% {
             left: 0;
-            transform: translateY(-50%) scale(1);
+            transform: translateY(-50%) scale(1) rotate(0deg);
             opacity: 1;
           }
-          75% {
-            left: calc(100% - 150px);
-            transform: translateY(-50%) scale(1);
+          65% {
+            left: calc(100% - 180px);
+            transform: translateY(-50%) scale(1) rotate(720deg);
             opacity: 1;
           }
-          85% {
-            left: calc(100% - 80px);
-            transform: translateY(-50%) scale(0.85);
+          
+          /* Approach the hole */
+          72% {
+            left: calc(100% - 100px);
+            transform: translateY(-50%) scale(0.95) rotate(850deg);
             opacity: 1;
           }
-          92% {
-            left: calc(100% - 55px);
-            transform: translateY(-45%) scale(0.6);
+          
+          /* Start swirling around the rim - right side */
+          78% {
+            left: calc(100% - 60px);
+            transform: translateY(-62%) scale(0.85) rotate(900deg);
             opacity: 1;
           }
-          96% {
+          
+          /* Top of rim */
+          82% {
             left: calc(100% - 48px);
-            transform: translateY(-35%) scale(0.4);
+            transform: translateY(-70%) scale(0.75) rotate(990deg);
+            opacity: 1;
+          }
+          
+          /* Left side of rim */
+          86% {
+            left: calc(100% - 36px);
+            transform: translateY(-62%) scale(0.7) rotate(1080deg);
+            opacity: 1;
+          }
+          
+          /* Bottom/right side - second rotation */
+          90% {
+            left: calc(100% - 52px);
+            transform: translateY(-55%) scale(0.65) rotate(1170deg);
+            opacity: 1;
+          }
+          
+          /* Circling closer to center */
+          94% {
+            left: calc(100% - 48px);
+            transform: translateY(-58%) scale(0.5) rotate(1260deg);
+            opacity: 1;
+          }
+          
+          /* Drop into hole */
+          97% {
+            left: calc(100% - 48px);
+            transform: translateY(-30%) scale(0.3) rotate(1350deg);
             opacity: 0.8;
           }
+          
           100% {
             left: calc(100% - 48px);
-            transform: translateY(0%) scale(0.1);
+            transform: translateY(0%) scale(0.1) rotate(1440deg);
             opacity: 0;
           }
         }
@@ -118,7 +154,7 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
           will-change: transform, opacity;
           position: absolute;
           top: 50%;
-          animation: putt-welcome 3.5s cubic-bezier(0.33, 0, 0.1, 1) forwards;
+          animation: putt-welcome 4.5s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
         }
 
         @keyframes fade-in-scale {
