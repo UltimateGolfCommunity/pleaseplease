@@ -10,25 +10,22 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
   const [showMessage, setShowMessage] = useState(false)
 
   useEffect(() => {
-    // Show welcome message after 1 second
-    const messageTimer = setTimeout(() => {
-      setShowMessage(true)
-    }, 1000)
+    // Show welcome message immediately
+    setShowMessage(true)
 
-    // Complete animation after 4 seconds (enough time for ball to roll in and message to show)
+    // Complete animation after 4 seconds
     const completeTimer = setTimeout(() => {
       onComplete()
     }, 4000)
 
     return () => {
-      clearTimeout(messageTimer)
       clearTimeout(completeTimer)
     }
   }, [onComplete])
 
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 flex items-center justify-center z-50">
-      <div className="text-center">
+      <div className="text-center w-full px-4">
         {/* Welcome Message */}
         {showMessage && (
           <div className="mb-16 animate-fade-in-scale">
@@ -42,39 +39,41 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
         )}
         
         {/* Golf Ball Putting Animation */}
-        <div className="relative w-96 h-32 mx-auto">
+        <div className="relative w-full max-w-4xl h-64 mx-auto">
           {/* Putting Green Line */}
-          <div className="absolute top-1/2 left-0 right-0 h-1 bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600 transform -translate-y-1/2 shadow-lg"></div>
+          <div className="absolute top-1/2 left-0 right-0 h-2 bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600 transform -translate-y-1/2 shadow-2xl"></div>
           
           {/* Golf Hole */}
-          <div className="absolute right-8 top-1/2 transform -translate-y-1/2">
+          <div className="absolute right-12 top-1/2 transform -translate-y-1/2">
             <div className="relative">
               {/* Hole Shadow/Depth */}
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-slate-900 to-black border-4 border-emerald-600 shadow-2xl"></div>
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-slate-900 to-black border-4 border-emerald-600 shadow-2xl"></div>
               {/* Flag */}
-              <div className="absolute -top-16 left-1/2 transform -translate-x-1/2">
-                <div className="w-1 h-14 bg-gray-300 shadow-lg"></div>
-                <div className="absolute top-0 left-1 w-6 h-4 bg-red-500 rounded-r shadow-lg"></div>
+              <div className="absolute -top-24 left-1/2 transform -translate-x-1/2">
+                <div className="w-1.5 h-20 bg-gray-300 shadow-xl"></div>
+                <div className="absolute top-0 left-1.5 w-10 h-7 bg-red-500 rounded-r shadow-xl"></div>
               </div>
             </div>
           </div>
           
           {/* Golf Ball */}
-          <div className="golf-ball-welcome absolute top-1/2 transform -translate-y-1/2">
+          <div className="golf-ball-welcome absolute top-1/2">
             <div className="relative">
               {/* Ball Shadow */}
-              <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-8 h-3 bg-black/40 rounded-full blur-md"></div>
+              <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 w-16 h-5 bg-black/50 rounded-full blur-xl"></div>
               {/* Ball */}
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-white via-gray-100 to-gray-200 shadow-2xl relative overflow-hidden">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-white via-gray-100 to-gray-200 shadow-2xl relative overflow-hidden">
                 {/* Dimples Effect */}
                 <div className="absolute inset-0 opacity-30">
-                  <div className="absolute top-1 left-1 w-1.5 h-1.5 rounded-full bg-gray-400"></div>
-                  <div className="absolute top-2 right-1 w-1.5 h-1.5 rounded-full bg-gray-400"></div>
-                  <div className="absolute bottom-2 left-2 w-1.5 h-1.5 rounded-full bg-gray-400"></div>
-                  <div className="absolute top-4 left-4 w-1.5 h-1.5 rounded-full bg-gray-400"></div>
+                  <div className="absolute top-3 left-3 w-2.5 h-2.5 rounded-full bg-gray-400"></div>
+                  <div className="absolute top-6 right-3 w-2.5 h-2.5 rounded-full bg-gray-400"></div>
+                  <div className="absolute bottom-3 left-6 w-2.5 h-2.5 rounded-full bg-gray-400"></div>
+                  <div className="absolute top-9 left-9 w-2.5 h-2.5 rounded-full bg-gray-400"></div>
+                  <div className="absolute top-5 right-6 w-2 h-2 rounded-full bg-gray-400"></div>
+                  <div className="absolute bottom-6 right-5 w-2 h-2 rounded-full bg-gray-400"></div>
                 </div>
                 {/* Highlight */}
-                <div className="absolute top-1 right-1 w-3 h-3 rounded-full bg-white/70 blur-sm"></div>
+                <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-white/80 blur-md"></div>
               </div>
             </div>
           </div>
@@ -84,34 +83,30 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
       <style jsx>{`
         @keyframes putt-welcome {
           0% {
-            left: -40px;
-            transform: translateY(-50%) scale(1);
+            transform: translate(-80px, -50%) scale(1);
             opacity: 1;
           }
           60% {
-            left: calc(100% - 160px);
-            transform: translateY(-50%) scale(1);
+            transform: translate(calc(100vw - 600px), -50%) scale(1);
             opacity: 1;
           }
           75% {
-            left: calc(100% - 100px);
-            transform: translateY(-50%) scale(0.8);
+            transform: translate(calc(100vw - 400px), -50%) scale(0.85);
             opacity: 1;
           }
           90% {
-            left: calc(100% - 60px);
-            transform: translateY(-50%) scale(0.5);
+            transform: translate(calc(100vw - 250px), -50%) scale(0.6);
             opacity: 1;
           }
           100% {
-            left: calc(100% - 40px);
-            transform: translateY(-50%) scale(0.2);
+            transform: translate(calc(100vw - 180px), -50%) scale(0.3);
             opacity: 0;
           }
         }
 
         .golf-ball-welcome {
-          animation: putt-welcome 3s ease-in-out forwards;
+          will-change: transform, opacity;
+          animation: putt-welcome 3.5s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
         }
 
         @keyframes fade-in-scale {

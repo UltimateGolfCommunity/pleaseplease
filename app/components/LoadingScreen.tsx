@@ -6,10 +6,10 @@ interface LoadingScreenProps {
 
 export default function LoadingScreen({ message = 'Loading...' }: LoadingScreenProps) {
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 flex items-center justify-center z-50 transition-opacity duration-500">
-      <div className="text-center">
-        {/* Golf Ball Putting Animation - Made Much Bigger */}
-        <div className="relative w-full max-w-3xl h-48 mx-auto mb-12 px-8">
+    <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 flex items-center justify-center z-50">
+      <div className="text-center w-full px-4">
+        {/* Golf Ball Putting Animation - Optimized for Smoothness */}
+        <div className="relative w-full max-w-4xl h-64 mx-auto mb-12">
           {/* Putting Green Line */}
           <div className="absolute top-1/2 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600 transform -translate-y-1/2 shadow-xl"></div>
           
@@ -59,31 +59,30 @@ export default function LoadingScreen({ message = 'Loading...' }: LoadingScreenP
       <style jsx>{`
         @keyframes putt {
           0% {
-            left: -50px;
-            transform: translateY(-50%) scale(1);
+            transform: translate(-60px, -50%) scale(1);
+            opacity: 1;
           }
           65% {
-            left: calc(100% - 200px);
-            transform: translateY(-50%) scale(1);
+            transform: translate(calc(100vw - 500px), -50%) scale(1);
+            opacity: 1;
           }
           80% {
-            left: calc(100% - 140px);
-            transform: translateY(-50%) scale(0.85);
+            transform: translate(calc(100vw - 350px), -50%) scale(0.85);
+            opacity: 1;
           }
           92% {
-            left: calc(100% - 90px);
-            transform: translateY(-50%) scale(0.6);
+            transform: translate(calc(100vw - 230px), -50%) scale(0.6);
             opacity: 1;
           }
           100% {
-            left: calc(100% - 60px);
-            transform: translateY(-50%) scale(0.3);
+            transform: translate(calc(100vw - 180px), -50%) scale(0.3);
             opacity: 0;
           }
         }
 
         .golf-ball {
-          animation: putt 3s ease-in-out infinite;
+          will-change: transform, opacity;
+          animation: putt 3s cubic-bezier(0.25, 0.1, 0.25, 1) infinite;
         }
 
         @keyframes fade-in {
