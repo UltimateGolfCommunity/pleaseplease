@@ -44,6 +44,16 @@ export default function Dashboard() {
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false)
   const [initialLoading, setInitialLoading] = useState(true)
   
+  // Tee Time Form
+  const [teeTimeForm, setTeeTimeForm] = useState({
+    course_name: '',
+    tee_time_date: '',
+    tee_time_time: '',
+    location: '',
+    description: ''
+  })
+  const [teeTimeSubmitting, setTeeTimeSubmitting] = useState(false)
+  
   // Tee Times
   const [teeTimes, setTeeTimes] = useState<any[]>([])
   const [teeTimesLoading, setTeeTimesLoading] = useState(false)
@@ -187,13 +197,70 @@ export default function Dashboard() {
     setShowQRScanner(false)
   }
 
+  const handleCreateTeeTime = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!user?.id) {
+      alert('You must be logged in to create a tee time')
+      return
+    }
+
+    if (!teeTimeForm.course_name || !teeTimeForm.tee_time_date || !teeTimeForm.tee_time_time) {
+      alert('Please fill in all required fields')
+      return
+    }
+
+    setTeeTimeSubmitting(true)
+    try {
+      const response = await fetch('/api/tee-times', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'create',
+          creator_id: user.id,
+          course_name: teeTimeForm.course_name,
+          tee_time_date: teeTimeForm.tee_time_date,
+          tee_time_time: teeTimeForm.tee_time_time,
+          location: teeTimeForm.location,
+          description: teeTimeForm.description,
+          max_players: 4
+        }),
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        alert('Tee time created successfully!')
+        setShowCreateTeeTimeModal(false)
+        setTeeTimeForm({
+          course_name: '',
+          tee_time_date: '',
+          tee_time_time: '',
+          location: '',
+          description: ''
+        })
+        // Refresh tee times list
+        fetchTeeTimes()
+      } else {
+        alert('Failed to create tee time: ' + (data.error || 'Unknown error'))
+      }
+    } catch (error) {
+      console.error('Error creating tee time:', error)
+      alert('Failed to create tee time. Please try again.')
+    } finally {
+      setTeeTimeSubmitting(false)
+    }
+  }
+
   const handleMessageSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!user?.id) return
     
     try {
-      const response = await fetch('/api/messages', {
+              const response = await fetch('/api/messages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -480,29 +547,38 @@ export default function Dashboard() {
                     </button>
                 </div>
             
-            <form className="space-y-4">
+            <form onSubmit={handleCreateTeeTime} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Course Name</label>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Course Name *</label>
                 <input
                   type="text"
+                  value={teeTimeForm.course_name}
+                  onChange={(e) => setTeeTimeForm({...teeTimeForm, course_name: e.target.value})}
                   className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-emerald-500"
                   placeholder="Enter course name"
+                  required
                 />
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Date</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Date *</label>
                   <input
                     type="date"
+                    value={teeTimeForm.tee_time_date}
+                    onChange={(e) => setTeeTimeForm({...teeTimeForm, tee_time_date: e.target.value})}
                     className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                    required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Time</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Time *</label>
                 <input
                     type="time"
+                    value={teeTimeForm.tee_time_time}
+                    onChange={(e) => setTeeTimeForm({...teeTimeForm, tee_time_time: e.target.value})}
                     className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                      required
                     />
                   </div>
                 </div>
@@ -511,15 +587,19 @@ export default function Dashboard() {
                 <label className="block text-sm font-medium text-gray-300 mb-2">Location (Optional)</label>
                 <input
                   type="text"
+                  value={teeTimeForm.location}
+                  onChange={(e) => setTeeTimeForm({...teeTimeForm, location: e.target.value})}
                   className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-emerald-500"
                   placeholder="Enter location"
-                />
+                    />
                 </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Description (Optional)</label>
                 <textarea
                   rows={3}
+                  value={teeTimeForm.description}
+                  onChange={(e) => setTeeTimeForm({...teeTimeForm, description: e.target.value})}
                   className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-emerald-500"
                   placeholder="Add details about the tee time..."
                     />
@@ -530,14 +610,16 @@ export default function Dashboard() {
                   type="button"
                   onClick={() => setShowCreateTeeTimeModal(false)}
                   className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                  disabled={teeTimeSubmitting}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-lg font-semibold transition-all duration-300"
+                  className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-lg font-semibold transition-all duration-300 disabled:opacity-50"
+                  disabled={teeTimeSubmitting}
                 >
-                    Create Tee Time
+                  {teeTimeSubmitting ? 'Creating...' : 'Create Tee Time'}
                 </button>
               </div>
             </form>
