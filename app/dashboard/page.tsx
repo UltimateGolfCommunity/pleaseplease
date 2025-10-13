@@ -83,10 +83,13 @@ export default function Dashboard() {
   const fetchTeeTimes = async () => {
     if (!user?.id) return
     
-      setTeeTimesLoading(true)
+    console.log('🔄 Starting to fetch tee times...')
+    setTeeTimesLoading(true)
     try {
       const response = await fetch(`/api/tee-times?action=available&_cache_bust=${Math.random()}`)
-        const data = await response.json()
+      const data = await response.json()
+      
+      console.log('📊 Tee times API response:', data)
       
       if (data.success) {
         const sortedTeeTimes = data.teeTimes
@@ -95,9 +98,11 @@ export default function Dashboard() {
         
         setTeeTimes(sortedTeeTimes)
         console.log('🎯 Fetched and sorted tee times:', sortedTeeTimes)
+      } else {
+        console.log('❌ Tee times fetch failed:', data)
       }
     } catch (error) {
-      console.error('Error fetching tee times:', error)
+      console.error('❌ Error fetching tee times:', error)
     } finally {
       setTeeTimesLoading(false)
     }
@@ -106,16 +111,22 @@ export default function Dashboard() {
   const fetchUserGroups = async () => {
     if (!user?.id) return
   
+    console.log('🔄 Starting to fetch groups...')
     setGroupsLoading(true)
     try {
       const response = await fetch(`/api/groups?user_id=${user.id}&_cache_bust=${Math.random()}`)
-        const data = await response.json()
+      const data = await response.json()
+      
+      console.log('📊 Groups API response:', data)
       
       if (data.success) {
         setUserGroups(data.groups || [])
+        console.log('🎯 Fetched groups:', data.groups)
+      } else {
+        console.log('❌ Groups fetch failed:', data)
       }
     } catch (error) {
-      console.error('Error fetching user groups:', error)
+      console.error('❌ Error fetching user groups:', error)
     } finally {
       setGroupsLoading(false)
     }
