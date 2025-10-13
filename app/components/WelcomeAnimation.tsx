@@ -13,10 +13,10 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
     // Show welcome message immediately
     setShowMessage(true)
 
-    // Complete animation after 5.5 seconds (slightly longer than animation)
+    // Complete animation after 3.5 seconds (slightly longer than animation)
     const completeTimer = setTimeout(() => {
       onComplete()
-    }, 5500)
+    }, 3500)
 
     return () => {
       clearTimeout(completeTimer)
@@ -26,9 +26,18 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 flex items-center justify-center z-50">
       <div className="text-center w-full px-4">
+        {/* Site Logo */}
+        <div className="mb-12 animate-fade-in-scale">
+          <img
+            src="/thereallogo.png"
+            alt="Ultimate Golf Community"
+            className="w-48 h-48 mx-auto object-contain"
+          />
+        </div>
+
         {/* Welcome Message - Epic Kingdom Entry */}
         {showMessage && (
-          <div className="mb-20 animate-fade-in-scale">
+          <div className="mb-16 animate-fade-in-scale">
             {/* Decorative Top Border */}
             <div className="flex items-center justify-center mb-8">
               <div className="h-px w-24 bg-gradient-to-r from-transparent via-emerald-400 to-transparent"></div>
@@ -123,96 +132,38 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
 
       <style jsx>{`
         @keyframes putt-welcome {
-          /* Roll across the green */
           0% {
             left: 0;
-            top: 50%;
-            transform: translate(0, -50%) scale(1) rotate(0deg);
+            transform: translateY(-50%) scale(1) rotate(0deg);
             opacity: 1;
           }
-          60% {
-            left: calc(100% - 180px);
-            top: 50%;
-            transform: translate(0, -50%) scale(1) rotate(720deg);
+          75% {
+            left: calc(100% - 100px);
+            transform: translateY(-50%) scale(1) rotate(1080deg);
             opacity: 1;
           }
-          
-          /* Approach the hole - slow down */
-          68% {
-            left: calc(100% - 120px);
-            top: 50%;
-            transform: translate(0, -50%) scale(0.95) rotate(850deg);
-            opacity: 1;
-          }
-          
-          /* Start rimming - Right side (3 o'clock) */
-          73% {
+          85% {
             left: calc(100% - 60px);
-            top: calc(50% - 0px);
-            transform: translate(0, -50%) scale(0.85) rotate(920deg);
+            transform: translateY(-50%) scale(0.8) rotate(1260deg);
             opacity: 1;
           }
-          
-          /* Top of rim (12 o'clock) */
-          78% {
+          93% {
             left: calc(100% - 48px);
-            top: calc(50% - 30px);
-            transform: translate(0, -50%) scale(0.8) rotate(1000deg);
+            transform: translateY(-50%) scale(0.5) rotate(1400deg);
             opacity: 1;
           }
-          
-          /* Left side of rim (9 o'clock) */
-          83% {
-            left: calc(100% - 36px);
-            top: calc(50% - 0px);
-            transform: translate(0, -50%) scale(0.75) rotate(1080deg);
-            opacity: 1;
-          }
-          
-          /* Bottom of rim (6 o'clock) */
-          88% {
-            left: calc(100% - 48px);
-            top: calc(50% + 30px);
-            transform: translate(0, -50%) scale(0.7) rotate(1160deg);
-            opacity: 1;
-          }
-          
-          /* Back to right side - tighter circle (3 o'clock again) */
-          92% {
-            left: calc(100% - 54px);
-            top: calc(50% + 0px);
-            transform: translate(0, -50%) scale(0.6) rotate(1240deg);
-            opacity: 1;
-          }
-          
-          /* Final spiral into center */
-          95% {
-            left: calc(100% - 48px);
-            top: calc(50% - 10px);
-            transform: translate(0, -50%) scale(0.4) rotate(1300deg);
-            opacity: 1;
-          }
-          
-          /* Drop straight down into hole */
-          98% {
-            left: calc(100% - 48px);
-            top: calc(50% + 20px);
-            transform: translate(0, -50%) scale(0.2) rotate(1360deg);
-            opacity: 0.6;
-          }
-          
           100% {
             left: calc(100% - 48px);
-            top: calc(50% + 40px);
-            transform: translate(0, -50%) scale(0.05) rotate(1440deg);
+            transform: translateY(-50%) scale(0) rotate(1440deg);
             opacity: 0;
           }
         }
 
         .golf-ball-welcome {
-          will-change: transform, opacity, left, top;
+          will-change: transform, opacity;
           position: absolute;
-          animation: putt-welcome 5s cubic-bezier(0.22, 0.1, 0.2, 1) forwards;
+          top: 50%;
+          animation: putt-welcome 3s ease-out forwards;
         }
 
         @keyframes fade-in-scale {
