@@ -8,20 +8,20 @@ export default function LoadingScreen({ message = 'Loading...' }: LoadingScreenP
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 flex items-center justify-center z-50 transition-opacity duration-500">
       <div className="text-center">
-        {/* Golf Ball Putting Animation */}
-        <div className="relative w-80 h-24 mx-auto mb-8">
+        {/* Golf Ball Putting Animation - Made Much Bigger */}
+        <div className="relative w-full max-w-3xl h-48 mx-auto mb-12 px-8">
           {/* Putting Green Line */}
-          <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600 transform -translate-y-1/2"></div>
+          <div className="absolute top-1/2 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600 transform -translate-y-1/2 shadow-xl"></div>
           
           {/* Golf Hole */}
-          <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+          <div className="absolute right-8 top-1/2 transform -translate-y-1/2">
             <div className="relative">
               {/* Hole Shadow/Depth */}
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-900 to-black border-2 border-emerald-600 shadow-lg"></div>
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-slate-900 to-black border-4 border-emerald-600 shadow-2xl"></div>
               {/* Flag */}
-              <div className="absolute -top-12 left-1/2 transform -translate-x-1/2">
-                <div className="w-0.5 h-10 bg-gray-300"></div>
-                <div className="absolute top-0 left-0.5 w-4 h-3 bg-red-500 rounded-r"></div>
+              <div className="absolute -top-20 left-1/2 transform -translate-x-1/2">
+                <div className="w-1 h-16 bg-gray-300 shadow-lg"></div>
+                <div className="absolute top-0 left-1 w-8 h-6 bg-red-500 rounded-r shadow-lg"></div>
               </div>
             </div>
           </div>
@@ -30,18 +30,20 @@ export default function LoadingScreen({ message = 'Loading...' }: LoadingScreenP
           <div className="golf-ball absolute top-1/2 transform -translate-y-1/2">
             <div className="relative">
               {/* Ball Shadow */}
-              <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-6 h-2 bg-black/30 rounded-full blur-sm"></div>
+              <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-12 h-4 bg-black/40 rounded-full blur-lg"></div>
               {/* Ball */}
-              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-white via-gray-100 to-gray-200 shadow-lg relative overflow-hidden">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-white via-gray-100 to-gray-200 shadow-2xl relative overflow-hidden">
                 {/* Dimples Effect */}
-                <div className="absolute inset-0 opacity-20">
-                  <div className="absolute top-1 left-1 w-1 h-1 rounded-full bg-gray-400"></div>
-                  <div className="absolute top-2 right-1 w-1 h-1 rounded-full bg-gray-400"></div>
-                  <div className="absolute bottom-1 left-2 w-1 h-1 rounded-full bg-gray-400"></div>
-                  <div className="absolute top-3 left-3 w-1 h-1 rounded-full bg-gray-400"></div>
+                <div className="absolute inset-0 opacity-25">
+                  <div className="absolute top-2 left-2 w-2 h-2 rounded-full bg-gray-400"></div>
+                  <div className="absolute top-4 right-2 w-2 h-2 rounded-full bg-gray-400"></div>
+                  <div className="absolute bottom-2 left-4 w-2 h-2 rounded-full bg-gray-400"></div>
+                  <div className="absolute top-6 left-6 w-2 h-2 rounded-full bg-gray-400"></div>
+                  <div className="absolute top-3 right-4 w-1.5 h-1.5 rounded-full bg-gray-400"></div>
+                  <div className="absolute bottom-4 right-3 w-1.5 h-1.5 rounded-full bg-gray-400"></div>
                 </div>
                 {/* Highlight */}
-                <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-white/60 blur-sm"></div>
+                <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-white/70 blur-sm"></div>
               </div>
             </div>
           </div>
@@ -57,25 +59,25 @@ export default function LoadingScreen({ message = 'Loading...' }: LoadingScreenP
       <style jsx>{`
         @keyframes putt {
           0% {
-            left: 0;
+            left: -50px;
             transform: translateY(-50%) scale(1);
           }
-          70% {
-            left: calc(100% - 120px);
+          65% {
+            left: calc(100% - 200px);
             transform: translateY(-50%) scale(1);
           }
-          85% {
-            left: calc(100% - 80px);
-            transform: translateY(-50%) scale(0.8);
+          80% {
+            left: calc(100% - 140px);
+            transform: translateY(-50%) scale(0.85);
           }
-          95% {
-            left: calc(100% - 50px);
-            transform: translateY(-50%) scale(0.5);
+          92% {
+            left: calc(100% - 90px);
+            transform: translateY(-50%) scale(0.6);
             opacity: 1;
           }
           100% {
-            left: calc(100% - 30px);
-            transform: translateY(-50%) scale(0.2);
+            left: calc(100% - 60px);
+            transform: translateY(-50%) scale(0.3);
             opacity: 0;
           }
         }
