@@ -30,6 +30,7 @@ import ThemeToggle from '@/components/ThemeToggle'
 import QRCodeGenerator from '@/components/QRCodeGenerator'
 import SimpleQRScanner from '@/components/SimpleQRScanner'
 import LoadingScreen from '@/components/LoadingScreen'
+import WelcomeAnimation from '@/components/WelcomeAnimation'
 
 type ActiveTab = 'tee-times' | 'groups' | 'messages'
 
@@ -43,6 +44,7 @@ export default function Dashboard() {
   const [showCreateTeeTimeModal, setShowCreateTeeTimeModal] = useState(false)
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false)
   const [initialLoading, setInitialLoading] = useState(true)
+  const [showWelcome, setShowWelcome] = useState(false)
   
   // Tee Time Form
   const [teeTimeForm, setTeeTimeForm] = useState({
@@ -84,16 +86,18 @@ export default function Dashboard() {
 
   // Auto-load data when user logs in
   useEffect(() => {
-      if (user?.id) {
+    if (user?.id) {
       const loadInitialData = async () => {
         setInitialLoading(true)
         await Promise.all([
           fetchTeeTimes(),
           fetchUserGroups(),
           fetchNotifications(),
-      fetchPendingApplications()
+          fetchPendingApplications()
         ])
         setInitialLoading(false)
+        // Show welcome animation after data is loaded
+        setShowWelcome(true)
       }
       loadInitialData()
     }
@@ -307,6 +311,11 @@ export default function Dashboard() {
   // Show loading screen while initial data is being fetched
   if (initialLoading) {
     return <LoadingScreen message="Loading your golf community..." />
+  }
+
+  // Show welcome animation after loading completes
+  if (showWelcome) {
+    return <WelcomeAnimation onComplete={() => setShowWelcome(false)} />
   }
 
   return (
