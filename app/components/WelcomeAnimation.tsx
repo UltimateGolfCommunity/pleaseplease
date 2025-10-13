@@ -13,10 +13,10 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
     // Show welcome message immediately
     setShowMessage(true)
 
-    // Complete animation after 4.5 seconds (slightly longer than animation)
+    // Complete animation after 4 seconds (slightly longer than animation)
     const completeTimer = setTimeout(() => {
       onComplete()
-    }, 4500)
+    }, 4000)
 
     return () => {
       clearTimeout(completeTimer)
@@ -87,34 +87,29 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
             transform: translateY(-50%) scale(1);
             opacity: 1;
           }
-          55% {
-            left: calc(100% - 400px);
+          75% {
+            left: calc(100% - 150px);
             transform: translateY(-50%) scale(1);
             opacity: 1;
           }
-          70% {
-            left: calc(100% - 250px);
-            transform: translateY(-50%) scale(0.9);
-            opacity: 1;
-          }
-          82% {
-            left: calc(100% - 150px);
-            transform: translateY(-50%) scale(0.75);
+          85% {
+            left: calc(100% - 80px);
+            transform: translateY(-50%) scale(0.85);
             opacity: 1;
           }
           92% {
-            left: calc(100% - 90px);
-            transform: translateY(-50%) scale(0.5);
-            opacity: 0.9;
+            left: calc(100% - 55px);
+            transform: translateY(-45%) scale(0.6);
+            opacity: 1;
           }
-          98% {
-            left: calc(100% - 60px);
-            transform: translateY(-50%) scale(0.25);
-            opacity: 0.5;
+          96% {
+            left: calc(100% - 48px);
+            transform: translateY(-35%) scale(0.4);
+            opacity: 0.8;
           }
           100% {
             left: calc(100% - 48px);
-            transform: translateY(-50%) scale(0.1);
+            transform: translateY(0%) scale(0.1);
             opacity: 0;
           }
         }
@@ -123,7 +118,7 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
           will-change: transform, opacity;
           position: absolute;
           top: 50%;
-          animation: putt-welcome 4s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+          animation: putt-welcome 3.5s cubic-bezier(0.33, 0, 0.1, 1) forwards;
         }
 
         @keyframes fade-in-scale {
