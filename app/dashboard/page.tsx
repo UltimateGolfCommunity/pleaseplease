@@ -16,10 +16,11 @@ import {
   Flag,
   Home,
   Trophy,
-  Target,
-  Camera,
-  X,
-  QrCode
+  Target, 
+  Camera, 
+  X, 
+  QrCode,
+  User
 } from 'lucide-react'
 import WeatherWidget from '@/components/WeatherWidget'
 import GolfRoundForm from '@/components/GolfRoundForm'
@@ -32,7 +33,7 @@ import SimpleQRScanner from '@/components/SimpleQRScanner'
 import LoadingScreen from '@/components/LoadingScreen'
 import WelcomeAnimation from '@/components/WelcomeAnimation'
 
-type ActiveTab = 'tee-times' | 'groups' | 'messages'
+type ActiveTab = 'tee-times' | 'groups' | 'messages' | 'profile'
 
 export default function Dashboard() {
   const { user, profile, signOut } = useAuth()
@@ -306,6 +307,7 @@ export default function Dashboard() {
     { id: 'tee-times', label: 'Tee Times', icon: Calendar },
     { id: 'groups', label: 'Groups', icon: Trophy },
     { id: 'messages', label: 'Messages', icon: Flag },
+    { id: 'profile', label: 'Profile', icon: User },
   ]
 
   // Show welcome animation while loading and after
@@ -572,8 +574,82 @@ export default function Dashboard() {
         {activeTab === 'messages' && (
           <div className="space-y-6 animate-fade-in">
             <MessagingSystem />
+          </div>
+        )}
+
+        {/* Profile Tab */}
+        {activeTab === 'profile' && (
+          <div className="space-y-6 animate-fade-in">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-white mb-2">My Profile</h2>
+              <p className="text-gray-300">Manage your golf profile and settings</p>
+            </div>
+            
+            <div className="max-w-2xl mx-auto space-y-6">
+              {/* Profile Picture */}
+              <div className="flex justify-center">
+                <div className="relative">
+                  <div className="h-32 w-32 rounded-full overflow-hidden border-4 border-emerald-500 shadow-2xl">
+                    {profile?.avatar_url ? (
+                      <img
+                        src={profile.avatar_url}
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center">
+                        <span className="text-white font-bold text-5xl">
+                          {profile?.first_name?.[0] || user?.email?.[0]?.toUpperCase() || 'U'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
+              </div>
+
+              {/* User Info */}
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-1">Name</label>
+                    <p className="text-white text-lg font-semibold">
+                      {profile?.first_name} {profile?.last_name}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-1">Email</label>
+                    <p className="text-white">{user?.email}</p>
+                  </div>
+                  
+                  {profile?.bio && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-1">Bio</label>
+                      <p className="text-gray-300">{profile.bio}</p>
+                    </div>
+                  )}
+                  
+                  {profile?.handicap && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-1">Handicap</label>
+                      <p className="text-white font-semibold">{profile.handicap}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Edit Profile Button */}
+              <div className="flex justify-center">
+                <button
+                  onClick={() => router.push('/profile')}
+                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-8 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-emerald-500/50"
+                >
+                  Edit Profile
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       
       {/* Modals */}
