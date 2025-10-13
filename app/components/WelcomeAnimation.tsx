@@ -40,10 +40,10 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
             <div className="relative">
               {/* Hole Shadow/Depth */}
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-slate-900 to-black border-2 border-emerald-600 shadow-xl"></div>
-              {/* Flag - attached to hole */}
-              <div className="absolute top-0 left-1/2 transform -translate-x-1/2">
-                <div className="w-1 h-16 bg-gray-300 shadow-lg"></div>
-                <div className="absolute top-0 left-1 w-6 h-4 bg-red-500 rounded-r shadow-lg"></div>
+              {/* Flag - above the hole */}
+              <div className="absolute -top-24 left-1/2 transform -translate-x-1/2">
+                <div className="w-1.5 h-24 bg-gray-300 shadow-xl"></div>
+                <div className="absolute top-0 left-1.5 w-10 h-7 bg-red-500 rounded-r shadow-xl"></div>
               </div>
             </div>
           </div>
