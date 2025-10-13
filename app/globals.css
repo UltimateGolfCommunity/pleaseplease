@@ -167,4 +167,31 @@ body {
   .animate-fade-in {
     animation: fade-in 0.5s ease-in-out;
   }
+
+  /* Shimmer animation for welcome text */
+  @keyframes shimmer {
+    0% {
+      background-position: 200% center;
+    }
+    100% {
+      background-position: -200% center;
+    }
+  }
+
+  @keyframes shimmer-reverse {
+    0% {
+      background-position: -200% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
+  }
+
+  .animate-shimmer {
+    animation: shimmer 3s linear infinite;
+  }
+
+  .animate-shimmer-reverse {
+    animation: shimmer-reverse 3s linear infinite;
+  }
 }

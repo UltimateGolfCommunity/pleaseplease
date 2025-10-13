@@ -26,15 +26,56 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-emerald-900 to-slate-900 flex items-center justify-center z-50">
       <div className="text-center w-full px-4">
-        {/* Welcome Message */}
+        {/* Welcome Message - Epic Kingdom Entry */}
         {showMessage && (
-          <div className="mb-16 animate-fade-in-scale">
-            <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
-              Welcome to the
-            </h1>
-            <h2 className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent">
-              Ultimate Golf Community
-            </h2>
+          <div className="mb-20 animate-fade-in-scale">
+            {/* Decorative Top Border */}
+            <div className="flex items-center justify-center mb-8">
+              <div className="h-px w-24 bg-gradient-to-r from-transparent via-emerald-400 to-transparent"></div>
+              <div className="mx-4">
+                <div className="w-3 h-3 rotate-45 bg-gradient-to-br from-emerald-400 to-cyan-400 shadow-lg shadow-emerald-500/50"></div>
+              </div>
+              <div className="h-px w-24 bg-gradient-to-r from-transparent via-emerald-400 to-transparent"></div>
+            </div>
+            
+            {/* Main Welcome Text */}
+            <div className="relative">
+              {/* Glow Effect Behind Text */}
+              <div className="absolute inset-0 blur-3xl opacity-30">
+                <div className="w-full h-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500"></div>
+              </div>
+              
+              {/* Text Content */}
+              <div className="relative">
+                <h1 className="text-3xl md:text-5xl font-bold text-gray-200 mb-3 tracking-wide uppercase">
+                  Welcome to the
+                </h1>
+                <h2 className="text-5xl md:text-8xl font-black mb-4 leading-tight">
+                  <span className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent drop-shadow-2xl animate-shimmer bg-[length:200%_100%]">
+                    Ultimate Golf
+                  </span>
+                </h2>
+                <h2 className="text-5xl md:text-8xl font-black leading-tight">
+                  <span className="bg-gradient-to-r from-blue-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent drop-shadow-2xl animate-shimmer-reverse bg-[length:200%_100%]">
+                    Community
+                  </span>
+                </h2>
+                
+                {/* Subtitle */}
+                <p className="text-lg md:text-2xl text-emerald-300 mt-6 font-light tracking-widest uppercase">
+                  Where Legends Tee Off
+                </p>
+              </div>
+            </div>
+            
+            {/* Decorative Bottom Border */}
+            <div className="flex items-center justify-center mt-8">
+              <div className="h-px w-24 bg-gradient-to-r from-transparent via-emerald-400 to-transparent"></div>
+              <div className="mx-4">
+                <div className="w-3 h-3 rotate-45 bg-gradient-to-br from-cyan-400 to-blue-400 shadow-lg shadow-cyan-500/50"></div>
+              </div>
+              <div className="h-px w-24 bg-gradient-to-r from-transparent via-emerald-400 to-transparent"></div>
+            </div>
           </div>
         )}
         
