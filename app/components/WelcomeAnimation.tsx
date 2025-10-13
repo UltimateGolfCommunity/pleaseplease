@@ -13,10 +13,10 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
     // Show welcome message immediately
     setShowMessage(true)
 
-    // Complete animation after 5 seconds (slightly longer than animation)
+    // Complete animation after 5.5 seconds (slightly longer than animation)
     const completeTimer = setTimeout(() => {
       onComplete()
-    }, 5000)
+    }, 5500)
 
     return () => {
       clearTimeout(completeTimer)
@@ -126,76 +126,93 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
           /* Roll across the green */
           0% {
             left: 0;
-            transform: translateY(-50%) scale(1) rotate(0deg);
+            top: 50%;
+            transform: translate(0, -50%) scale(1) rotate(0deg);
             opacity: 1;
           }
-          65% {
+          60% {
             left: calc(100% - 180px);
-            transform: translateY(-50%) scale(1) rotate(720deg);
+            top: 50%;
+            transform: translate(0, -50%) scale(1) rotate(720deg);
             opacity: 1;
           }
           
-          /* Approach the hole */
-          72% {
-            left: calc(100% - 100px);
-            transform: translateY(-50%) scale(0.95) rotate(850deg);
+          /* Approach the hole - slow down */
+          68% {
+            left: calc(100% - 120px);
+            top: 50%;
+            transform: translate(0, -50%) scale(0.95) rotate(850deg);
             opacity: 1;
           }
           
-          /* Start swirling around the rim - right side */
-          78% {
+          /* Start rimming - Right side (3 o'clock) */
+          73% {
             left: calc(100% - 60px);
-            transform: translateY(-62%) scale(0.85) rotate(900deg);
+            top: calc(50% - 0px);
+            transform: translate(0, -50%) scale(0.85) rotate(920deg);
             opacity: 1;
           }
           
-          /* Top of rim */
-          82% {
+          /* Top of rim (12 o'clock) */
+          78% {
             left: calc(100% - 48px);
-            transform: translateY(-70%) scale(0.75) rotate(990deg);
+            top: calc(50% - 30px);
+            transform: translate(0, -50%) scale(0.8) rotate(1000deg);
             opacity: 1;
           }
           
-          /* Left side of rim */
-          86% {
+          /* Left side of rim (9 o'clock) */
+          83% {
             left: calc(100% - 36px);
-            transform: translateY(-62%) scale(0.7) rotate(1080deg);
+            top: calc(50% - 0px);
+            transform: translate(0, -50%) scale(0.75) rotate(1080deg);
             opacity: 1;
           }
           
-          /* Bottom/right side - second rotation */
-          90% {
-            left: calc(100% - 52px);
-            transform: translateY(-55%) scale(0.65) rotate(1170deg);
-            opacity: 1;
-          }
-          
-          /* Circling closer to center */
-          94% {
+          /* Bottom of rim (6 o'clock) */
+          88% {
             left: calc(100% - 48px);
-            transform: translateY(-58%) scale(0.5) rotate(1260deg);
+            top: calc(50% + 30px);
+            transform: translate(0, -50%) scale(0.7) rotate(1160deg);
             opacity: 1;
           }
           
-          /* Drop into hole */
-          97% {
+          /* Back to right side - tighter circle (3 o'clock again) */
+          92% {
+            left: calc(100% - 54px);
+            top: calc(50% + 0px);
+            transform: translate(0, -50%) scale(0.6) rotate(1240deg);
+            opacity: 1;
+          }
+          
+          /* Final spiral into center */
+          95% {
             left: calc(100% - 48px);
-            transform: translateY(-30%) scale(0.3) rotate(1350deg);
-            opacity: 0.8;
+            top: calc(50% - 10px);
+            transform: translate(0, -50%) scale(0.4) rotate(1300deg);
+            opacity: 1;
+          }
+          
+          /* Drop straight down into hole */
+          98% {
+            left: calc(100% - 48px);
+            top: calc(50% + 20px);
+            transform: translate(0, -50%) scale(0.2) rotate(1360deg);
+            opacity: 0.6;
           }
           
           100% {
             left: calc(100% - 48px);
-            transform: translateY(0%) scale(0.1) rotate(1440deg);
+            top: calc(50% + 40px);
+            transform: translate(0, -50%) scale(0.05) rotate(1440deg);
             opacity: 0;
           }
         }
 
         .golf-ball-welcome {
-          will-change: transform, opacity;
+          will-change: transform, opacity, left, top;
           position: absolute;
-          top: 50%;
-          animation: putt-welcome 4.5s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+          animation: putt-welcome 5s cubic-bezier(0.22, 0.1, 0.2, 1) forwards;
         }
 
         @keyframes fade-in-scale {
