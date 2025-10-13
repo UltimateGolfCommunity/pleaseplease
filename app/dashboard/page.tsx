@@ -57,6 +57,13 @@ export default function Dashboard() {
   })
   const [teeTimeSubmitting, setTeeTimeSubmitting] = useState(false)
   
+  // Group Form
+  const [groupForm, setGroupForm] = useState({
+    name: '',
+    description: ''
+  })
+  const [groupSubmitting, setGroupSubmitting] = useState(false)
+  
   // Tee Times
   const [teeTimes, setTeeTimes] = useState<any[]>([])
   const [teeTimesLoading, setTeeTimesLoading] = useState(false)
@@ -210,6 +217,57 @@ export default function Dashboard() {
     } catch (error) {
       console.error('❌ Error signing out:', error)
       alert('Failed to sign out. Please try again.')
+    }
+  }
+
+  const handleCreateGroup = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!user?.id) {
+      alert('You must be logged in to create a group')
+      return
+    }
+    
+    if (!groupForm.name) {
+      alert('Please enter a group name')
+      return
+    }
+    
+    setGroupSubmitting(true)
+    try {
+      const response = await fetch('/api/groups', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'create',
+          name: groupForm.name,
+          description: groupForm.description,
+          creator_id: user.id,
+          status: 'active'
+        }),
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        alert('Group created successfully!')
+        setShowCreateGroupModal(false)
+        setGroupForm({
+          name: '',
+          description: ''
+        })
+        // Refresh groups list
+        fetchUserGroups()
+      } else {
+        alert('Failed to create group: ' + (data.error || 'Unknown error'))
+      }
+    } catch (error) {
+      console.error('Error creating group:', error)
+      alert('Failed to create group. Please try again.')
+    } finally {
+      setGroupSubmitting(false)
     }
   }
 
@@ -494,8 +552,8 @@ export default function Dashboard() {
                         <div className="flex items-start justify-between">
                         <div className="flex-1">
                             <h3 className="font-semibold text-white mb-2">
-                              {teeTime.course_name || 'Unknown Course'}
-                          </h3>
+                              {teeTime.golf_courses?.name || teeTime.course_name || 'Unknown Course'}
+                            </h3>
                             <div className="flex items-center space-x-4 text-sm text-gray-300">
                               <div className="flex items-center space-x-1">
                                 <Calendar className="h-4 w-4" />
@@ -762,13 +820,16 @@ export default function Dashboard() {
                       </button>
                     </div>
 
-            <form className="space-y-4">
+            <form onSubmit={handleCreateGroup} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Group Name</label>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Group Name *</label>
                 <input
                   type="text"
+                  value={groupForm.name}
+                  onChange={(e) => setGroupForm({...groupForm, name: e.target.value})}
                   className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-emerald-500"
                   placeholder="Enter group name"
+                  required
                 />
               </div>
               
@@ -776,9 +837,11 @@ export default function Dashboard() {
                 <label className="block text-sm font-medium text-gray-300 mb-2">Description</label>
                 <textarea
                   rows={4}
+                  value={groupForm.description}
+                  onChange={(e) => setGroupForm({...groupForm, description: e.target.value})}
                   className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-emerald-500"
                   placeholder="Describe your group..."
-              />
+                />
               </div>
               
               <div className="flex justify-end space-x-3 pt-4">
@@ -786,14 +849,16 @@ export default function Dashboard() {
                   type="button"
                   onClick={() => setShowCreateGroupModal(false)}
                   className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                  disabled={groupSubmitting}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-lg font-semibold transition-all duration-300"
+                  className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-lg font-semibold transition-all duration-300 disabled:opacity-50"
+                  disabled={groupSubmitting}
                 >
-                  Create Group
+                  {groupSubmitting ? 'Creating...' : 'Create Group'}
                 </button>
               </div>
             </form>
