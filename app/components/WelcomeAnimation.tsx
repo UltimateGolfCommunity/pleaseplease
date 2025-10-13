@@ -8,10 +8,10 @@ interface WelcomeAnimationProps {
 
 export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) {
   useEffect(() => {
-    // Complete animation after 3.5 seconds
+    // Complete animation after 3 seconds
     const completeTimer = setTimeout(() => {
       onComplete()
-    }, 3500)
+    }, 3000)
 
     return () => {
       clearTimeout(completeTimer)
@@ -35,15 +35,15 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
           {/* Putting Green Line */}
           <div className="absolute top-1/2 left-0 right-0 h-2 bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600 transform -translate-y-1/2 shadow-2xl"></div>
           
-          {/* Golf Hole - Regulation 4.25 inch (much bigger than ball) */}
+          {/* Golf Hole - Smaller, realistic size */}
           <div className="absolute right-8 top-1/2 transform -translate-y-1/2">
             <div className="relative">
               {/* Hole Shadow/Depth */}
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-slate-900 to-black border-4 border-emerald-600 shadow-2xl"></div>
-              {/* Flag */}
-              <div className="absolute -top-28 left-1/2 transform -translate-x-1/2">
-                <div className="w-1.5 h-24 bg-gray-300 shadow-xl"></div>
-                <div className="absolute top-0 left-1.5 w-10 h-7 bg-red-500 rounded-r shadow-xl"></div>
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-slate-900 to-black border-2 border-emerald-600 shadow-xl"></div>
+              {/* Flag - attached to hole */}
+              <div className="absolute top-0 left-1/2 transform -translate-x-1/2">
+                <div className="w-1 h-16 bg-gray-300 shadow-lg"></div>
+                <div className="absolute top-0 left-1 w-6 h-4 bg-red-500 rounded-r shadow-lg"></div>
               </div>
             </div>
           </div>
@@ -79,35 +79,21 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
             transform: translateY(-50%) scale(1) rotate(0deg);
             opacity: 1;
           }
-          70% {
-            left: calc(100% - 200px);
-            transform: translateY(-50%) scale(1) rotate(1080deg);
+          80% {
+            left: calc(100% - 64px);
+            transform: translateY(-50%) scale(1) rotate(1200deg);
             opacity: 1;
           }
+          /* Ball at hole - pause briefly */
           85% {
-            left: calc(100% - 44px);
+            left: calc(100% - 64px);
             transform: translateY(-50%) scale(1) rotate(1260deg);
             opacity: 1;
           }
-          /* Stop at hole and drop straight down */
-          88% {
-            left: calc(100% - 44px);
-            transform: translateY(-50%) scale(1) rotate(1300deg);
-            opacity: 1;
-          }
-          92% {
-            left: calc(100% - 44px);
-            transform: translateY(-40%) scale(0.8) rotate(1340deg);
-            opacity: 1;
-          }
-          96% {
-            left: calc(100% - 44px);
-            transform: translateY(-20%) scale(0.5) rotate(1380deg);
-            opacity: 0.8;
-          }
+          /* Fade out */
           100% {
-            left: calc(100% - 44px);
-            transform: translateY(20%) scale(0.2) rotate(1440deg);
+            left: calc(100% - 64px);
+            transform: translateY(-50%) scale(0.3) rotate(1440deg);
             opacity: 0;
           }
         }
@@ -116,7 +102,7 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
           will-change: transform, opacity;
           position: absolute;
           top: 50%;
-          animation: putt-welcome 3s ease-in-out forwards;
+          animation: putt-welcome 2.5s ease-out forwards;
         }
 
         @keyframes fade-in-scale {
