@@ -536,7 +536,7 @@ export async function POST(request: NextRequest) {
       console.log('🔧 Using mock mode for tee time creation with data:', data)
       
       // Handle short course names by expanding them
-      let courseName = data.course || 'Golf Course'
+      let courseName = data.course_name || data.course || 'Golf Course'
       if (courseName.length <= 2) {
         courseName = `${courseName} Golf Club`
       }
@@ -640,10 +640,10 @@ export async function POST(request: NextRequest) {
 
       // First, try to find or create a course for this tee time
       let courseId = null
-      console.log('🔍 Course data received:', data.course)
+      console.log('🔍 Course data received:', data.course_name)
       
       // Handle short course names by expanding them
-      let courseName = data.course?.trim() || ''
+      let courseName = data.course_name?.trim() || data.course?.trim() || ''
       if (courseName && courseName.length <= 2) {
         courseName = `${courseName} Golf Club`
         console.log('🔍 Expanded short course name to:', courseName)
