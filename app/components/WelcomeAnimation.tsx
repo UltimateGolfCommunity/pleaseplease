@@ -38,13 +38,7 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
         
         {/* Golf Ball Putting Animation - Enhanced Realism */}
         <div className="relative w-full max-w-5xl h-72 mx-auto">
-          {/* Grass Texture Background */}
-          <div className="absolute inset-0 bg-gradient-to-b from-emerald-700/20 to-emerald-800/30 rounded-3xl overflow-hidden">
-            {/* Grass pattern effect */}
-            <div className="grass-pattern absolute inset-0"></div>
-          </div>
-          
-          {/* Putting Green Line with 3D Effect */}
+          {/* Putting Green Line with 3D Effect - No Box */}
           <div className="absolute top-1/2 left-0 right-0 h-3 transform -translate-y-1/2">
             {/* Shadow below line */}
             <div className="absolute inset-0 bg-black/30 transform translate-y-1 blur-sm"></div>
@@ -150,66 +144,91 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
             transform: translateY(-50%) scale(1) rotate(0deg);
             opacity: 0;
           }
-          5% {
+          3% {
             opacity: 1;
           }
-          /* Smooth acceleration */
-          20% {
-            left: 20%;
-            transform: translateY(-50%) scale(1.05) rotate(240deg);
+          /* Smooth continuous acceleration */
+          15% {
+            left: 15%;
+            transform: translateY(-50%) scale(1) rotate(180deg);
           }
-          /* Cruising speed */
-          60% {
-            left: 70%;
-            transform: translateY(-50%) scale(1) rotate(900deg);
+          30% {
+            left: 35%;
+            transform: translateY(-50%) scale(1) rotate(420deg);
           }
-          /* Deceleration as it approaches hole */
-          82% {
-            left: calc(100% - 80px);
-            transform: translateY(-50%) scale(0.98) rotate(1180deg);
+          50% {
+            left: 60%;
+            transform: translateY(-50%) scale(1) rotate(720deg);
           }
-          /* Stop at hole */
-          87% {
-            left: calc(100% - 80px);
-            transform: translateY(-50%) scale(1) rotate(1240deg);
+          /* Gentle deceleration */
+          70% {
+            left: 80%;
+            transform: translateY(-50%) scale(1) rotate(1020deg);
           }
-          /* Drop into hole */
-          93% {
-            left: calc(100% - 80px);
-            transform: translateY(20px) scale(0.7) rotate(1300deg);
+          /* Approach the front edge of hole */
+          85% {
+            left: calc(100% - 96px);
+            transform: translateY(-50%) scale(1) rotate(1260deg);
+          }
+          /* Stop at front edge of hole */
+          88% {
+            left: calc(100% - 92px);
+            transform: translateY(-50%) scale(1) rotate(1300deg);
+          }
+          /* Teetering at edge */
+          90% {
+            left: calc(100% - 92px);
+            transform: translateY(-50%) scale(1) rotate(1320deg);
+          }
+          /* Drop straight down into hole */
+          95% {
+            left: calc(100% - 92px);
+            transform: translateY(25px) scale(0.6) rotate(1380deg);
             opacity: 1;
           }
-          /* Disappear */
+          /* Disappear into hole */
           100% {
-            left: calc(100% - 80px);
-            transform: translateY(30px) scale(0.3) rotate(1440deg);
+            left: calc(100% - 92px);
+            transform: translateY(35px) scale(0.2) rotate(1440deg);
             opacity: 0;
           }
         }
 
         @keyframes shadow-follow {
           0% {
-            width: 48px;
+            width: 44px;
             opacity: 0.3;
           }
-          20% {
-            width: 52px;
-            opacity: 0.6;
+          15% {
+            width: 48px;
+            opacity: 0.5;
           }
-          60% {
+          50% {
             width: 48px;
             opacity: 0.6;
           }
-          82% {
-            width: 44px;
-            opacity: 0.5;
+          70% {
+            width: 46px;
+            opacity: 0.55;
           }
-          87% {
-            width: 40px;
+          85% {
+            width: 42px;
+            opacity: 0.45;
+          }
+          88% {
+            width: 38px;
             opacity: 0.4;
           }
+          90% {
+            width: 36px;
+            opacity: 0.35;
+          }
+          95% {
+            width: 24px;
+            opacity: 0.2;
+          }
           100% {
-            width: 20px;
+            width: 16px;
             opacity: 0;
           }
         }
@@ -303,16 +322,19 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
         }
 
         @keyframes hole-pulse {
-          0%, 100% {
-            transform: translateY(-50%) scale(1);
-          }
-          87% {
+          0%, 87% {
             transform: translateY(-50%) scale(1);
           }
           90% {
-            transform: translateY(-50%) scale(1.1);
+            transform: translateY(-50%) scale(1.05);
           }
           93% {
+            transform: translateY(-50%) scale(1.08);
+          }
+          96% {
+            transform: translateY(-50%) scale(1);
+          }
+          100% {
             transform: translateY(-50%) scale(1);
           }
         }
