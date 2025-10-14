@@ -137,6 +137,16 @@ export default function Dashboard() {
       
       setTeeTimes(sortedTeeTimes)
       console.log('🎯 Fetched and sorted tee times:', sortedTeeTimes)
+      
+      // Debug each tee time's course name
+      sortedTeeTimes.forEach((tt: any, index: number) => {
+        console.log(`🏌️ Tee Time ${index + 1}:`, {
+          course_name: tt.course_name,
+          golf_courses_name: tt.golf_courses?.name,
+          course_location: tt.course_location,
+          creator: tt.creator
+        })
+      })
           } catch (error) {
       console.error('❌ Error fetching tee times:', error)
     } finally {
