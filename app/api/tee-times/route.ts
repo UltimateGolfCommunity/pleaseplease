@@ -912,14 +912,23 @@ export async function POST(request: NextRequest) {
             ? `${applicantDetails.first_name} ${applicantDetails.last_name}`
             : applicantDetails.username || 'Someone'
           
-          // Insert notification directly into database
+          // Insert notification directly into database with detailed data
           const notificationData = {
             user_id: teeTimeDetails.creator_id,
             type: 'tee_time_application',
             title: 'New Tee Time Application',
             message: `${applicantName} applied to join your tee time on ${teeTimeDetails.tee_time_date} at ${teeTimeDetails.tee_time_time}`,
             related_id: application.id,
-            is_read: false
+            is_read: false,
+            notification_data: {
+              tee_time_id: data.tee_time_id,
+              application_id: application.id,
+              applicant_id: data.applicant_id,
+              applicant_name: applicantName,
+              tee_time_date: teeTimeDetails.tee_time_date,
+              tee_time_time: teeTimeDetails.tee_time_time,
+              course_name: teeTimeDetails.course_name
+            }
           }
           
           const { error: notifError } = await supabase
@@ -1114,6 +1123,69 @@ export async function POST(request: NextRequest) {
         .eq('id', data.tee_time_id)
 
       return NextResponse.json({ success: true, message: 'Successfully joined tee time' })
+    }
+
+    if (action === 'delete') {
+      console.log('🔍 DELETE: Processing tee time deletion:', data)
+      
+      // Validate required fields
+      if (!data.tee_time_id || !data.user_id) {
+        return NextResponse.json({ 
+          error: 'Missing required fields',
+          details: 'Tee time ID and user ID are required'
+        }, { status: 400 })
+      }
+      
+      // Handle mock mode
+      if (usingMockMode) {
+        console.log('🔧 DELETE: Using mock mode for deletion')
+        return NextResponse.json({ 
+          success: true, 
+          message: 'Tee time deleted successfully (backup system)'
+        })
+      }
+      
+      // Verify the user is the creator of the tee time
+      const { data: teeTime, error: verifyError } = await supabase
+        .from('tee_times')
+        .select('creator_id')
+        .eq('id', data.tee_time_id)
+        .single()
+      
+      if (verifyError) {
+        console.error('❌ Error verifying tee time:', verifyError)
+        return NextResponse.json({ 
+          error: 'Tee time not found',
+          details: 'Could not find the specified tee time'
+        }, { status: 404 })
+      }
+      
+      if (teeTime.creator_id !== data.user_id) {
+        return NextResponse.json({ 
+          error: 'Unauthorized',
+          details: 'You can only delete your own tee times'
+        }, { status: 403 })
+      }
+      
+      // Delete the tee time (related applications will be cascade deleted if set up)
+      const { error: deleteError } = await supabase
+        .from('tee_times')
+        .delete()
+        .eq('id', data.tee_time_id)
+      
+      if (deleteError) {
+        console.error('❌ Error deleting tee time:', deleteError)
+        return NextResponse.json({ 
+          error: 'Failed to delete tee time',
+          details: deleteError.message
+        }, { status: 500 })
+      }
+      
+      console.log('✅ Tee time deleted successfully:', data.tee_time_id)
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Tee time deleted successfully'
+      })
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })

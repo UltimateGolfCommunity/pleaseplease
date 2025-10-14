@@ -44,6 +44,9 @@ export default function Dashboard() {
   const [showQRScanner, setShowQRScanner] = useState(false)
   const [showCreateTeeTimeModal, setShowCreateTeeTimeModal] = useState(false)
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false)
+  const [showApplicantModal, setShowApplicantModal] = useState(false)
+  const [selectedApplication, setSelectedApplication] = useState<any>(null)
+  const [applicantProfile, setApplicantProfile] = useState<any>(null)
   const [initialLoading, setInitialLoading] = useState(true)
   const [showWelcome, setShowWelcome] = useState(false)
   
@@ -340,6 +343,177 @@ export default function Dashboard() {
     }
   }
 
+  const handleDeleteTeeTime = async (teeTimeId: string) => {
+    if (!user?.id) {
+      alert('You must be logged in to delete a tee time')
+      return
+    }
+
+    if (!confirm('Are you sure you want to delete this tee time? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      const response = await fetch('/api/tee-times', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'delete',
+          tee_time_id: teeTimeId,
+          user_id: user.id
+        }),
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        alert('Tee time deleted successfully!')
+        fetchTeeTimes()
+      } else {
+        alert('Failed to delete tee time: ' + (data.error || 'Unknown error'))
+      }
+    } catch (error) {
+      console.error('Error deleting tee time:', error)
+      alert('Failed to delete tee time')
+    }
+  }
+
+  const handleJoinTeeTime = async (teeTimeId: string) => {
+    if (!user?.id) {
+      alert('You must be logged in to join a tee time')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/tee-times', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'apply',
+          tee_time_id: teeTimeId,
+          applicant_id: user.id
+        }),
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        alert('Application submitted successfully! The tee time creator will review your request.')
+        fetchTeeTimes()
+      } else {
+        alert('Failed to apply: ' + (data.error || 'Unknown error'))
+      }
+    } catch (error) {
+      console.error('Error applying to tee time:', error)
+      alert('Failed to apply to tee time')
+    }
+  }
+
+  const handleViewApplicant = async (notification: any) => {
+    console.log('📋 Viewing applicant from notification:', notification)
+    
+    if (!notification.notification_data?.applicant_id) {
+      alert('Cannot view applicant - missing applicant information')
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/users?action=profile&user_id=${notification.notification_data.applicant_id}`)
+      const data = await response.json()
+      
+      if (data.success && data.profile) {
+        setApplicantProfile(data.profile)
+        setSelectedApplication(notification.notification_data)
+        setShowApplicantModal(true)
+      } else {
+        alert('Failed to load applicant profile')
+      }
+    } catch (error) {
+      console.error('Error loading applicant profile:', error)
+      alert('Failed to load applicant profile')
+    }
+  }
+
+  const handleAcceptApplicant = async () => {
+    if (!selectedApplication?.application_id) {
+      alert('No application selected')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/tee-times', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'manage_application',
+          application_id: selectedApplication.application_id,
+          action_type: 'accept'
+        }),
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        alert('Applicant accepted successfully!')
+        setShowApplicantModal(false)
+        setSelectedApplication(null)
+        setApplicantProfile(null)
+        fetchNotifications()
+      } else {
+        alert('Failed to accept applicant: ' + (data.error || 'Unknown error'))
+      }
+    } catch (error) {
+      console.error('Error accepting applicant:', error)
+      alert('Failed to accept applicant')
+    }
+  }
+
+  const handleRejectApplicant = async () => {
+    if (!selectedApplication?.application_id) {
+      alert('No application selected')
+      return
+    }
+
+    if (!confirm('Are you sure you want to reject this applicant?')) {
+      return
+    }
+
+    try {
+      const response = await fetch('/api/tee-times', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'manage_application',
+          application_id: selectedApplication.application_id,
+          action_type: 'reject'
+        }),
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        alert('Applicant rejected')
+        setShowApplicantModal(false)
+        setSelectedApplication(null)
+        setApplicantProfile(null)
+        fetchNotifications()
+      } else {
+        alert('Failed to reject applicant: ' + (data.error || 'Unknown error'))
+      }
+    } catch (error) {
+      console.error('Error rejecting applicant:', error)
+      alert('Failed to reject applicant')
+    }
+  }
+
   const handleMessageSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -622,15 +796,29 @@ export default function Dashboard() {
                             </p>
                           )}
                           
-                          {/* Bottom Row: Players Info and Join Button */}
+                          {/* Bottom Row: Players Info and Action Buttons */}
                           <div className="flex items-center justify-between gap-4 pt-2">
                             <p className="text-gray-300 text-sm">
                               <span className="text-emerald-400 font-semibold">Spots:</span> {teeTime.available_spots || teeTime.max_players - teeTime.current_players} of {teeTime.max_players}
                             </p>
                             
-                            <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2 rounded-lg text-sm font-bold transition-colors shadow-lg hover:shadow-emerald-500/50 whitespace-nowrap">
-                              Join
-                </button>
+                            <div className="flex items-center gap-2">
+                              {teeTime.creator_id === user?.id ? (
+                                <button 
+                                  onClick={() => handleDeleteTeeTime(teeTime.id)}
+                                  className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-lg text-sm font-bold transition-colors shadow-lg hover:shadow-red-500/50 whitespace-nowrap"
+                                >
+                                  Delete
+                                </button>
+                              ) : (
+                                <button 
+                                  onClick={() => handleJoinTeeTime(teeTime.id)}
+                                  className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2 rounded-lg text-sm font-bold transition-colors shadow-lg hover:shadow-emerald-500/50 whitespace-nowrap"
+                                >
+                                  Join
+                                </button>
+                              )}
+                            </div>
               </div>
                   </div>
                 </div>
@@ -943,6 +1131,187 @@ export default function Dashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Notifications Dropdown */}
+      {showNotifications && (
+        <div className="fixed top-20 right-4 md:right-8 w-96 max-w-[calc(100vw-2rem)] bg-slate-800 rounded-xl shadow-2xl border border-emerald-500/20 z-50 max-h-[80vh] overflow-y-auto">
+          <div className="p-4 border-b border-slate-700">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-bold text-white">Notifications</h3>
+              <button
+                onClick={() => setShowNotifications(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+          
+          <div className="divide-y divide-slate-700">
+            {notificationsLoading ? (
+              <div className="p-4 text-center text-gray-400">
+                Loading notifications...
+              </div>
+            ) : notifications.length === 0 ? (
+              <div className="p-8 text-center text-gray-400">
+                <Bell className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p>No notifications</p>
+              </div>
+            ) : (
+              notifications.map((notification) => (
+                <div 
+                  key={notification.id} 
+                  className={`p-4 hover:bg-slate-700/50 transition-colors ${
+                    notification.type === 'tee_time_application' ? 'cursor-pointer' : ''
+                  }`}
+                  onClick={() => {
+                    if (notification.type === 'tee_time_application') {
+                      handleViewApplicant(notification)
+                      setShowNotifications(false)
+                    }
+                  }}
+                >
+                  <div className="flex items-start space-x-3">
+                    <div className="flex-shrink-0">
+                      {notification.type === 'tee_time_application' ? (
+                        <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                          <Calendar className="h-5 w-5 text-emerald-400" />
+                        </div>
+                      ) : (
+                        <div className="h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                          <Bell className="h-5 w-5 text-blue-400" />
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-white">
+                        {notification.title}
+                      </p>
+                      <p className="text-sm text-gray-300 mt-1">
+                        {notification.message}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {new Date(notification.created_at).toLocaleDateString()} at {new Date(notification.created_at).toLocaleTimeString()}
+                      </p>
+                      {notification.type === 'tee_time_application' && (
+                        <p className="text-xs text-emerald-400 mt-2 font-semibold">
+                          Click to review applicant
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Applicant Review Modal */}
+      {showApplicantModal && applicantProfile && selectedApplication && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-emerald-500/20 shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold text-white">Review Applicant</h3>
+              <button
+                onClick={() => {
+                  setShowApplicantModal(false)
+                  setSelectedApplication(null)
+                  setApplicantProfile(null)
+                }}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Tee Time Info */}
+            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 mb-6">
+              <h4 className="text-sm font-semibold text-emerald-400 mb-2">Tee Time Details</h4>
+              <p className="text-white font-bold text-lg">{selectedApplication.course_name}</p>
+              <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-300">
+                <div className="flex items-center space-x-1">
+                  <Calendar className="h-4 w-4" />
+                  <span>{new Date(selectedApplication.tee_time_date).toLocaleDateString()}</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <Clock className="h-4 w-4" />
+                  <span>{selectedApplication.tee_time_time}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Applicant Profile */}
+            <div className="space-y-6">
+              <div className="flex items-center space-x-4">
+                <div className="h-20 w-20 rounded-full overflow-hidden border-4 border-emerald-500 shadow-lg">
+                  {applicantProfile.avatar_url ? (
+                    <img
+                      src={applicantProfile.avatar_url}
+                      alt={`${applicantProfile.first_name} ${applicantProfile.last_name}`}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center">
+                      <span className="text-white font-bold text-2xl">
+                        {applicantProfile.first_name?.[0] || 'U'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex-1">
+                  <h4 className="text-2xl font-bold text-white">
+                    {applicantProfile.first_name} {applicantProfile.last_name}
+                  </h4>
+                  <p className="text-gray-400">@{applicantProfile.username || 'user'}</p>
+                </div>
+              </div>
+
+              {/* Profile Details */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-700/50 rounded-lg p-4">
+                  <p className="text-sm text-gray-400 mb-1">Handicap</p>
+                  <p className="text-xl font-bold text-emerald-400">
+                    {applicantProfile.handicap || 'Not set'}
+                  </p>
+                </div>
+                
+                <div className="bg-slate-700/50 rounded-lg p-4">
+                  <p className="text-sm text-gray-400 mb-1">Email</p>
+                  <p className="text-sm text-white truncate">
+                    {applicantProfile.email || 'Not available'}
+                  </p>
+                </div>
+              </div>
+
+              {applicantProfile.bio && (
+                <div className="bg-slate-700/50 rounded-lg p-4">
+                  <p className="text-sm text-gray-400 mb-2">Bio</p>
+                  <p className="text-white">{applicantProfile.bio}</p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex justify-end space-x-3 pt-4 border-t border-slate-700">
+                <button
+                  onClick={handleRejectApplicant}
+                  className="px-6 py-3 bg-red-500/20 hover:bg-red-500/30 text-red-400 hover:text-red-300 rounded-lg transition-all duration-300 border border-red-500/30 font-semibold"
+                >
+                  Reject
+                </button>
+                <button
+                  onClick={handleAcceptApplicant}
+                  className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-emerald-500/50"
+                >
+                  Accept to Tee Time
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
