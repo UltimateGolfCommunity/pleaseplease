@@ -721,6 +721,7 @@ export async function POST(request: NextRequest) {
       // Use only the fields that exist in the database schema
       const insertData = {
         course_id: courseId,
+        course_name: courseName || data.course_name || 'Unnamed Course',
         creator_id: creatorId,
         tee_time_date: data.tee_time_date,
         tee_time_time: formattedTime,
