@@ -570,13 +570,13 @@ export default function Dashboard() {
                               <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center">
                                 <span className="text-white font-bold text-lg">
                                   {teeTime.creator?.first_name?.[0] || 'U'}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                          
+                                    </span>
+                                  </div>
+                                )}
+                            </div>
+                            
                           {/* Name and Handicap */}
-                          <div className="flex-1">
+                                <div className="flex-1">
                             <p className="text-white font-semibold">
                               {teeTime.creator?.first_name} {teeTime.creator?.last_name}
                             </p>
@@ -584,50 +584,50 @@ export default function Dashboard() {
                               Handicap: {teeTime.creator?.handicap || 'Not set'}
                             </p>
                           </div>
-                        </div>
+                          </div>
 
                         {/* Tee Time Details */}
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-4 text-sm text-gray-300">
-                              <div className="flex items-center space-x-1">
-                                <Calendar className="h-4 w-4" />
-                                <span>{new Date(teeTime.tee_time_date).toLocaleDateString()}</span>
-                              </div>
-                              <div className="flex items-center space-x-1">
-                                <Clock className="h-4 w-4" />
-                                <span>{teeTime.tee_time_time}</span>
-                              </div>
-                              {teeTime.course_location && (
-                                <div className="flex items-center space-x-1">
-                                  <MapPin className="h-4 w-4" />
-                                  <span>{teeTime.course_location}</span>
-                                </div>
-                              )}
-                            </div>
-                            
-                            {/* Skill Level */}
-                            {teeTime.handicap_requirement && (
-                              <p className="text-gray-300 text-sm mt-2">
-                                <span className="text-emerald-400 font-semibold">Skill Level:</span> {teeTime.handicap_requirement}
-                              </p>
-                            )}
-                            
-                            {/* Players Info */}
-                            <p className="text-gray-300 text-sm mt-2">
-                              <span className="text-emerald-400 font-semibold">Spots:</span> {teeTime.available_spots || teeTime.max_players - teeTime.current_players} of {teeTime.max_players} available
-                            </p>
-                          </div>
-                          
-                          <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-xl text-sm font-bold transition-colors shadow-lg hover:shadow-emerald-500/50">
-                            Join
-                          </button>
+                <div className="space-y-3">
+                          <div className="flex flex-wrap items-center gap-3 text-sm text-gray-300">
+                            <div className="flex items-center space-x-1">
+                              <Calendar className="h-4 w-4" />
+                              <span>{new Date(teeTime.tee_time_date).toLocaleDateString()}</span>
                         </div>
-                      </div>
-                    ))}
-                    </div>
-                      )}
-                    </div>
+                            <div className="flex items-center space-x-1">
+                              <Clock className="h-4 w-4" />
+                              <span>{teeTime.tee_time_time}</span>
+                        </div>
+                            {teeTime.course_location && (
+                              <div className="flex items-center space-x-1">
+                                <MapPin className="h-4 w-4" />
+                                <span>{teeTime.course_location}</span>
+                </div>
+              )}
+            </div>
+
+                          {/* Skill Level */}
+                          {teeTime.handicap_requirement && (
+                            <p className="text-gray-300 text-sm">
+                              <span className="text-emerald-400 font-semibold">Skill Level:</span> {teeTime.handicap_requirement}
+                            </p>
+                          )}
+                          
+                          {/* Bottom Row: Players Info and Join Button */}
+                          <div className="flex items-center justify-between gap-4 pt-2">
+                            <p className="text-gray-300 text-sm">
+                              <span className="text-emerald-400 font-semibold">Spots:</span> {teeTime.available_spots || teeTime.max_players - teeTime.current_players} of {teeTime.max_players}
+                            </p>
+                            
+                            <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2 rounded-lg text-sm font-bold transition-colors shadow-lg hover:shadow-emerald-500/50 whitespace-nowrap">
+                              Join
+                </button>
+              </div>
+                  </div>
+                </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
               </div>
             </div>
           )}
@@ -766,14 +766,14 @@ export default function Dashboard() {
               <div>
                 <h3 className="text-3xl font-bold text-white mb-1">Post a Tee Time</h3>
                 <p className="text-gray-400 text-sm">Find golfers to fill your group</p>
-              </div>
-              <button
+                </div>
+                <button
                 onClick={() => setShowCreateTeeTimeModal(false)}
                 className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
               >
                 <X className="h-6 w-6" />
-              </button>
-            </div>
+                </button>
+              </div>
             
             <form onSubmit={handleCreateTeeTime} className="space-y-6">
               {/* Course Name */}
@@ -785,9 +785,9 @@ export default function Dashboard() {
                   onChange={(e) => setTeeTimeForm({...teeTimeForm, course_name: e.target.value})}
                   className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500 transition-all"
                   placeholder="e.g., Pebble Beach Golf Links"
-                  required
-                />
-              </div>
+                      required
+                    />
+                </div>
 
               {/* Location (Zip Code) */}
               <div>
@@ -798,38 +798,38 @@ export default function Dashboard() {
                   onChange={(e) => setTeeTimeForm({...teeTimeForm, location: e.target.value})}
                   className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500 transition-all"
                   placeholder="e.g., 90210"
-                  required
-                />
-              </div>
-              
-              {/* Date and Time */}
+                      required
+                    />
+                </div>
+
+                {/* Date and Time */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-emerald-400 mb-2">Date *</label>
-                  <input
-                    type="date"
+                <input
+                  type="date"
                     value={teeTimeForm.tee_time_date}
                     onChange={(e) => setTeeTimeForm({...teeTimeForm, tee_time_date: e.target.value})}
                     className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white focus:outline-none focus:border-emerald-500 transition-all"
-                    required
-                  />
-                </div>
+                        required
+                      />
+                    </div>
                 <div>
                   <label className="block text-sm font-semibold text-emerald-400 mb-2">Time *</label>
-                  <input
-                    type="time"
+                <input
+                  type="time"
                     value={teeTimeForm.tee_time_time}
                     onChange={(e) => setTeeTimeForm({...teeTimeForm, tee_time_time: e.target.value})}
                     className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white focus:outline-none focus:border-emerald-500 transition-all"
-                    required
-                  />
+                        required
+                      />
+                  </div>
                 </div>
-              </div>
 
               {/* Number of Players Needed */}
               <div>
                 <label className="block text-sm font-semibold text-emerald-400 mb-2">Players Needed *</label>
-                <select
+                    <select
                   value={teeTimeForm.max_players}
                   onChange={(e) => setTeeTimeForm({...teeTimeForm, max_players: parseInt(e.target.value)})}
                   className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white focus:outline-none focus:border-emerald-500 transition-all"
@@ -837,13 +837,13 @@ export default function Dashboard() {
                   <option value={2}>1 Player Needed (2 total)</option>
                   <option value={3}>2 Players Needed (3 total)</option>
                   <option value={4}>3 Players Needed (4 total)</option>
-                </select>
-              </div>
+                    </select>
+                  </div>
 
               {/* Skill Level */}
               <div>
                 <label className="block text-sm font-semibold text-emerald-400 mb-2">Skill Level *</label>
-                <select
+                    <select
                   value={teeTimeForm.handicap_requirement}
                   onChange={(e) => setTeeTimeForm({...teeTimeForm, handicap_requirement: e.target.value})}
                   className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white focus:outline-none focus:border-emerald-500 transition-all"
@@ -851,8 +851,8 @@ export default function Dashboard() {
                   <option value="hack">Hack - Just here for fun!</option>
                   <option value="weekend-warrior">Weekend Warrior - Casual player</option>
                   <option value="pro">Pro - Serious golfer</option>
-                </select>
-              </div>
+                    </select>
+                </div>
 
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4">
