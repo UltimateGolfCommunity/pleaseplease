@@ -551,37 +551,80 @@ export default function Dashboard() {
                   <div className="space-y-4">
                     {teeTimes.map((teeTime) => (
                       <div key={teeTime.id} className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
+                        {/* Course Name */}
+                        <h3 className="font-bold text-white text-xl mb-4">
+                          {teeTime.golf_courses?.name || teeTime.course_name || 'Unknown Course'}
+                        </h3>
+
+                        {/* Creator Info with Profile Picture */}
+                        <div className="flex items-center space-x-3 mb-4 pb-4 border-b border-white/10">
+                          {/* Profile Picture */}
+                          <div className="h-12 w-12 rounded-full overflow-hidden border-2 border-emerald-500 shadow-lg">
+                            {teeTime.creator?.avatar_url ? (
+                              <img
+                                src={teeTime.creator.avatar_url}
+                                alt={`${teeTime.creator.first_name} ${teeTime.creator.last_name}`}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center">
+                                <span className="text-white font-bold text-lg">
+                                  {teeTime.creator?.first_name?.[0] || 'U'}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Name and Handicap */}
+                          <div className="flex-1">
+                            <p className="text-white font-semibold">
+                              {teeTime.creator?.first_name} {teeTime.creator?.last_name}
+                            </p>
+                            <p className="text-emerald-400 text-sm">
+                              Handicap: {teeTime.creator?.handicap || 'Not set'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Tee Time Details */}
                         <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                            <h3 className="font-semibold text-white mb-2">
-                              {teeTime.golf_courses?.name || teeTime.course_name || 'Unknown Course'}
-                          </h3>
+                          <div className="flex-1">
                             <div className="flex items-center space-x-4 text-sm text-gray-300">
                               <div className="flex items-center space-x-1">
                                 <Calendar className="h-4 w-4" />
                                 <span>{new Date(teeTime.tee_time_date).toLocaleDateString()}</span>
-                        </div>
+                              </div>
                               <div className="flex items-center space-x-1">
                                 <Clock className="h-4 w-4" />
                                 <span>{teeTime.tee_time_time}</span>
-                      </div>
-                              {teeTime.location && (
+                              </div>
+                              {teeTime.course_location && (
                                 <div className="flex items-center space-x-1">
-                        <MapPin className="h-4 w-4" />
-                                  <span>{teeTime.location}</span>
-                  </div>
-                )}
+                                  <MapPin className="h-4 w-4" />
+                                  <span>{teeTime.course_location}</span>
                                 </div>
-                            {teeTime.description && (
-                              <p className="text-gray-300 text-sm mt-2">{teeTime.description}</p>
+                              )}
+                            </div>
+                            
+                            {/* Skill Level */}
+                            {teeTime.handicap_requirement && (
+                              <p className="text-gray-300 text-sm mt-2">
+                                <span className="text-emerald-400 font-semibold">Skill Level:</span> {teeTime.handicap_requirement}
+                              </p>
                             )}
-                                </div>
-                          <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                            
+                            {/* Players Info */}
+                            <p className="text-gray-300 text-sm mt-2">
+                              <span className="text-emerald-400 font-semibold">Spots:</span> {teeTime.available_spots || teeTime.max_players - teeTime.current_players} of {teeTime.max_players} available
+                            </p>
+                          </div>
+                          
+                          <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-xl text-sm font-bold transition-colors shadow-lg hover:shadow-emerald-500/50">
                             Join
                           </button>
                         </div>
                       </div>
-                  ))}
+                    ))}
                     </div>
                       )}
                     </div>
