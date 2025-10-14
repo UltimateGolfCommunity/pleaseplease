@@ -241,7 +241,7 @@ export default function Dashboard() {
       alert('You must be logged in to create a group')
       return
     }
-    
+
     if (!groupForm.name) {
       alert('Please enter a group name')
       return
@@ -258,7 +258,7 @@ export default function Dashboard() {
           action: 'create',
           name: groupForm.name,
           description: groupForm.description,
-          creator_id: user.id,
+          user_id: user.id,
           status: 'active'
         }),
       })
@@ -292,12 +292,12 @@ export default function Dashboard() {
       alert('You must be logged in to create a tee time')
       return
     }
-
+    
     if (!teeTimeForm.course_name || !teeTimeForm.tee_time_date || !teeTimeForm.tee_time_time) {
       alert('Please fill in all required fields')
       return
     }
-
+    
     setTeeTimeSubmitting(true)
     try {
       const response = await fetch('/api/tee-times', {
@@ -348,7 +348,7 @@ export default function Dashboard() {
       alert('You must be logged in to delete a tee time')
       return
     }
-
+    
     if (!confirm('Are you sure you want to delete this tee time? This action cannot be undone.')) {
       return
     }
@@ -398,8 +398,8 @@ export default function Dashboard() {
           applicant_id: user.id
         }),
       })
-      
-      const data = await response.json()
+
+        const data = await response.json()
       
       if (data.success) {
         alert('Application submitted successfully! The tee time creator will review your request.')
@@ -423,13 +423,13 @@ export default function Dashboard() {
 
     try {
       const response = await fetch(`/api/users?action=profile&user_id=${notification.notification_data.applicant_id}`)
-      const data = await response.json()
+        const data = await response.json()
       
       if (data.success && data.profile) {
         setApplicantProfile(data.profile)
         setSelectedApplication(notification.notification_data)
         setShowApplicantModal(true)
-      } else {
+        } else {
         alert('Failed to load applicant profile')
       }
     } catch (error) {
@@ -456,8 +456,8 @@ export default function Dashboard() {
           action_type: 'accept'
         }),
       })
-      
-      const data = await response.json()
+          
+        const data = await response.json()
       
       if (data.success) {
         alert('Applicant accepted successfully!')
@@ -513,7 +513,7 @@ export default function Dashboard() {
       alert('Failed to reject applicant')
     }
   }
-
+  
   const handleMessageSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -776,19 +776,19 @@ export default function Dashboard() {
                             <div className="flex items-center space-x-1">
                               <Calendar className="h-4 w-4" />
                               <span>{new Date(teeTime.tee_time_date).toLocaleDateString()}</span>
-                        </div>
+                              </div>
                             <div className="flex items-center space-x-1">
                               <Clock className="h-4 w-4" />
                               <span>{teeTime.tee_time_time}</span>
-                        </div>
+                                </div>
                             {teeTime.course_location && (
                               <div className="flex items-center space-x-1">
                                 <MapPin className="h-4 w-4" />
                                 <span>{teeTime.course_location}</span>
-                </div>
-              )}
-            </div>
-
+                                </div>
+                              )}
+                            </div>
+                            
                           {/* Skill Level */}
                           {teeTime.handicap_requirement && (
                             <p className="text-gray-300 text-sm">
@@ -803,29 +803,29 @@ export default function Dashboard() {
                             </p>
                             
                             <div className="flex items-center gap-2">
-                              {teeTime.creator_id === user?.id ? (
-                                <button 
-                                  onClick={() => handleDeleteTeeTime(teeTime.id)}
+                        {teeTime.creator_id === user?.id ? (
+                          <button
+                            onClick={() => handleDeleteTeeTime(teeTime.id)}
                                   className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-lg text-sm font-bold transition-colors shadow-lg hover:shadow-red-500/50 whitespace-nowrap"
-                                >
+                          >
                                   Delete
-                                </button>
-                              ) : (
-                                <button 
+                          </button>
+                        ) : (
+                          <button
                                   onClick={() => handleJoinTeeTime(teeTime.id)}
                                   className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2 rounded-lg text-sm font-bold transition-colors shadow-lg hover:shadow-emerald-500/50 whitespace-nowrap"
-                                >
+                          >
                                   Join
-                                </button>
-                              )}
-                            </div>
-              </div>
-                  </div>
+                          </button>
+                          )}
+                      </div>
+                      </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
+              )}
+                </div>
               </div>
             </div>
           )}
@@ -1092,48 +1092,48 @@ export default function Dashboard() {
             <form onSubmit={handleCreateGroup} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Group Name *</label>
-                <input
-                  type="text"
-                  value={groupForm.name}
-                  onChange={(e) => setGroupForm({...groupForm, name: e.target.value})}
+                  <input
+                    type="text"
+                    value={groupForm.name}
+                    onChange={(e) => setGroupForm({...groupForm, name: e.target.value})}
                   className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-emerald-500"
                   placeholder="Enter group name"
                   required
-                />
+                  />
               </div>
               
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Description</label>
-                <textarea
+                  <textarea
                   rows={4}
-                  value={groupForm.description}
-                  onChange={(e) => setGroupForm({...groupForm, description: e.target.value})}
+                    value={groupForm.description}
+                    onChange={(e) => setGroupForm({...groupForm, description: e.target.value})}
                   className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-emerald-500"
                   placeholder="Describe your group..."
               />
-              </div>
-              
+                </div>
+
               <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
+                      <button
+                        type="button"
                   onClick={() => setShowCreateGroupModal(false)}
                   className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
                   disabled={groupSubmitting}
                 >
                   Cancel
-                </button>
-                <button
+                      </button>
+                            <button
                   type="submit"
                   className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-lg font-semibold transition-all duration-300 disabled:opacity-50"
                   disabled={groupSubmitting}
                 >
                   {groupSubmitting ? 'Creating...' : 'Create Group'}
-                </button>
-              </div>
+                            </button>
+                          </div>
             </form>
           </div>
-        </div>
-      )}
+                      </div>
+                    )}
 
       {/* Notifications Dropdown */}
       {showNotifications && (
@@ -1141,25 +1141,25 @@ export default function Dashboard() {
           <div className="p-4 border-b border-slate-700">
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-bold text-white">Notifications</h3>
-              <button
+                              <button
                 onClick={() => setShowNotifications(false)}
                 className="text-gray-400 hover:text-white transition-colors"
-              >
+                              >
                 <X className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
+                              </button>
+                            </div>
+                        </div>
           
           <div className="divide-y divide-slate-700">
             {notificationsLoading ? (
               <div className="p-4 text-center text-gray-400">
                 Loading notifications...
-              </div>
+                      </div>
             ) : notifications.length === 0 ? (
               <div className="p-8 text-center text-gray-400">
                 <Bell className="h-12 w-12 mx-auto mb-2 opacity-50" />
                 <p>No notifications</p>
-              </div>
+                  </div>
             ) : (
               notifications.map((notification) => (
                 <div 
@@ -1179,14 +1179,14 @@ export default function Dashboard() {
                       {notification.type === 'tee_time_application' ? (
                         <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
                           <Calendar className="h-5 w-5 text-emerald-400" />
-                        </div>
+                </div>
                       ) : (
                         <div className="h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center">
                           <Bell className="h-5 w-5 text-blue-400" />
                         </div>
                       )}
-                    </div>
-                    
+              </div>
+
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-white">
                         {notification.title}
@@ -1202,22 +1202,22 @@ export default function Dashboard() {
                           Click to review applicant
                         </p>
                       )}
-                    </div>
-                  </div>
-                </div>
+              </div>
+          </div>
+        </div>
               ))
             )}
           </div>
         </div>
       )}
-
+      
       {/* Applicant Review Modal */}
       {showApplicantModal && applicantProfile && selectedApplication && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-slate-800 rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-emerald-500/20 shadow-2xl">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-2xl font-bold text-white">Review Applicant</h3>
-              <button
+                <button
                 onClick={() => {
                   setShowApplicantModal(false)
                   setSelectedApplication(null)
@@ -1226,8 +1226,8 @@ export default function Dashboard() {
                 className="text-gray-400 hover:text-white transition-colors"
               >
                 <X className="h-6 w-6" />
-              </button>
-            </div>
+                </button>
+              </div>
 
             {/* Tee Time Info */}
             <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 mb-6">
@@ -1237,11 +1237,11 @@ export default function Dashboard() {
                 <div className="flex items-center space-x-1">
                   <Calendar className="h-4 w-4" />
                   <span>{new Date(selectedApplication.tee_time_date).toLocaleDateString()}</span>
-                </div>
+          </div>
                 <div className="flex items-center space-x-1">
                   <Clock className="h-4 w-4" />
                   <span>{selectedApplication.tee_time_time}</span>
-                </div>
+        </div>
               </div>
             </div>
 
@@ -1270,8 +1270,8 @@ export default function Dashboard() {
                   </h4>
                   <p className="text-gray-400">@{applicantProfile.username || 'user'}</p>
                 </div>
-              </div>
-
+            </div>
+            
               {/* Profile Details */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-slate-700/50 rounded-lg p-4">
@@ -1279,39 +1279,39 @@ export default function Dashboard() {
                   <p className="text-xl font-bold text-emerald-400">
                     {applicantProfile.handicap || 'Not set'}
                   </p>
-                </div>
+              </div>
                 
                 <div className="bg-slate-700/50 rounded-lg p-4">
                   <p className="text-sm text-gray-400 mb-1">Email</p>
                   <p className="text-sm text-white truncate">
                     {applicantProfile.email || 'Not available'}
                   </p>
-                </div>
-              </div>
+                        </div>
+                        </div>
 
               {applicantProfile.bio && (
                 <div className="bg-slate-700/50 rounded-lg p-4">
                   <p className="text-sm text-gray-400 mb-2">Bio</p>
                   <p className="text-white">{applicantProfile.bio}</p>
-                </div>
+                      </div>
               )}
 
               {/* Action Buttons */}
               <div className="flex justify-end space-x-3 pt-4 border-t border-slate-700">
-                <button
+                      <button
                   onClick={handleRejectApplicant}
                   className="px-6 py-3 bg-red-500/20 hover:bg-red-500/30 text-red-400 hover:text-red-300 rounded-lg transition-all duration-300 border border-red-500/30 font-semibold"
-                >
+                      >
                   Reject
-                </button>
-                <button
+                      </button>
+                    <button
                   onClick={handleAcceptApplicant}
                   className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-emerald-500/50"
                 >
                   Accept to Tee Time
-                </button>
+                    </button>
+                  </div>
               </div>
-            </div>
           </div>
         </div>
       )}
