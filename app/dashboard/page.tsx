@@ -64,8 +64,11 @@ export default function Dashboard() {
   // Group Form
   const [groupForm, setGroupForm] = useState({
     name: '',
-    description: ''
+    description: '',
+    location: ''
   })
+  const [groupLogo, setGroupLogo] = useState<File | null>(null)
+  const [groupLogoPreview, setGroupLogoPreview] = useState<string>('')
   const [groupSubmitting, setGroupSubmitting] = useState(false)
   
   // Tee Times
@@ -75,6 +78,9 @@ export default function Dashboard() {
   // Groups
   const [userGroups, setUserGroups] = useState<any[]>([])
   const [groupsLoading, setGroupsLoading] = useState(false)
+  const [allGroups, setAllGroups] = useState<any[]>([])
+  const [groupSearchQuery, setGroupSearchQuery] = useState('')
+  const [groupSearchLoading, setGroupSearchLoading] = useState(false)
   
   // Messages
   const [showMessageModal, setShowMessageModal] = useState(false)
@@ -249,6 +255,25 @@ export default function Dashboard() {
 
     setGroupSubmitting(true)
     try {
+      let logoUrl = ''
+      
+      // Upload logo if provided
+      if (groupLogo) {
+        const formData = new FormData()
+        formData.append('file', groupLogo)
+        formData.append('folder', 'group-logos')
+        
+        const uploadResponse = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        })
+        
+        const uploadData = await uploadResponse.json()
+        if (uploadData.success) {
+          logoUrl = uploadData.url
+        }
+      }
+
       const response = await fetch('/api/groups', {
         method: 'POST',
         headers: {
@@ -258,22 +283,28 @@ export default function Dashboard() {
           action: 'create',
           name: groupForm.name,
           description: groupForm.description,
+          location: groupForm.location,
+          logo_url: logoUrl,
           user_id: user.id,
           status: 'active'
         }),
       })
 
-        const data = await response.json()
+      const data = await response.json()
       
       if (data.success) {
         alert('Group created successfully!')
         setShowCreateGroupModal(false)
         setGroupForm({
           name: '',
-          description: ''
+          description: '',
+          location: ''
         })
+        setGroupLogo(null)
+        setGroupLogoPreview('')
         // Refresh groups list
         fetchUserGroups()
+        searchGroups('')
       } else {
         alert('Failed to create group: ' + (data.error || 'Unknown error'))
       }
@@ -282,6 +313,36 @@ export default function Dashboard() {
       alert('Failed to create group. Please try again.')
     } finally {
       setGroupSubmitting(false)
+    }
+  }
+
+  const handleGroupLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setGroupLogo(file)
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setGroupLogoPreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const searchGroups = async (query: string) => {
+    setGroupSearchQuery(query)
+    setGroupSearchLoading(true)
+    
+    try {
+      const response = await fetch(`/api/groups?action=search&query=${encodeURIComponent(query)}`)
+      const data = await response.json()
+      
+      if (data.success) {
+        setAllGroups(data.groups || [])
+      }
+    } catch (error) {
+      console.error('Error searching groups:', error)
+    } finally {
+      setGroupSearchLoading(false)
     }
   }
 
@@ -833,41 +894,151 @@ export default function Dashboard() {
         {/* Groups Tab */}
         {activeTab === 'groups' && (
           <div className="space-y-6 animate-fade-in">
-                    <div className="text-center">
-              <h2 className="text-3xl font-bold text-white mb-2">My Groups</h2>
-              <p className="text-gray-300">Manage your golf groups and find new ones</p>
-                    <button
+            <div className="text-center">
+              <h2 className="text-3xl font-bold text-white mb-2">Golf Groups</h2>
+              <p className="text-gray-300">Manage your groups and discover new ones</p>
+              <button
                 onClick={() => setShowCreateGroupModal(true)}
                 className="mt-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-emerald-500/50 flex items-center space-x-2 mx-auto"
-                    >
-                      <Plus className="h-5 w-5" />
-                      <span>Create Group</span>
-                    </button>
+              >
+                <Plus className="h-5 w-5" />
+                <span>Create Group</span>
+              </button>
             </div>
 
-                  <div className="space-y-4">
+            {/* Search Bar */}
+            <div className="max-w-2xl mx-auto">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search groups by name or location..."
+                  value={groupSearchQuery}
+                  onChange={(e) => searchGroups(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500 transition-all"
+                />
+              </div>
+            </div>
+
+            {/* My Groups Section */}
+            <div>
+              <h3 className="text-xl font-bold text-white mb-4">My Groups</h3>
               {groupsLoading ? (
-                  <div className="flex items-center justify-center py-8">
+                <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-400"></div>
                   <span className="ml-3 text-gray-300">Loading groups...</span>
                 </div>
               ) : userGroups.length === 0 ? (
-                  <div className="text-center py-8">
+                <div className="text-center py-8 bg-white/5 rounded-xl border border-white/10">
                   <Trophy className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-300 mb-2">No Groups Yet</h3>
                   <p className="text-gray-400">Join or create golf groups to connect with fellow golfers!</p>
                 </div>
               ) : (
-                  <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {userGroups.map((group) => (
                     <div key={group.id} className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
-                      <h3 className="font-semibold text-white mb-2">{group.name}</h3>
-                      <p className="text-gray-300 text-sm">{group.description}</p>
-                                </div>
-                    ))}
+                      {/* Group Logo */}
+                      <div className="flex items-start space-x-4 mb-4">
+                        <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-emerald-500 flex-shrink-0">
+                          {group.logo_url ? (
+                            <img src={group.logo_url} alt={group.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center">
+                              <span className="text-white font-bold text-xl">{group.name?.[0] || 'G'}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-white text-lg truncate">{group.name}</h3>
+                          {group.location && (
+                            <div className="flex items-center text-gray-400 text-sm mt-1">
+                              <MapPin className="h-3 w-3 mr-1" />
+                              <span className="truncate">{group.location}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Description */}
+                      <p className="text-gray-300 text-sm mb-4 line-clamp-2">{group.description || 'No description'}</p>
+                      
+                      {/* Members Count */}
+                      <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                        <div className="flex items-center text-emerald-400 text-sm">
+                          <User className="h-4 w-4 mr-1" />
+                          <span>{group.member_count || 0} members</span>
+                        </div>
+                        <button className="text-emerald-400 hover:text-emerald-300 text-sm font-semibold">
+                          View
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
+
+            {/* Search Results / All Groups */}
+            {groupSearchQuery && (
+              <div>
+                <h3 className="text-xl font-bold text-white mb-4">Search Results</h3>
+                {groupSearchLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-400"></div>
+                    <span className="ml-3 text-gray-300">Searching...</span>
+                  </div>
+                ) : allGroups.length === 0 ? (
+                  <div className="text-center py-8 bg-white/5 rounded-xl border border-white/10">
+                    <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-300 mb-2">No Groups Found</h3>
+                    <p className="text-gray-400">Try a different search term</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {allGroups.map((group) => (
+                      <div key={group.id} className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
+                        {/* Group Logo */}
+                        <div className="flex items-start space-x-4 mb-4">
+                          <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-emerald-500 flex-shrink-0">
+                            {group.logo_url ? (
+                              <img src={group.logo_url} alt={group.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center">
+                                <span className="text-white font-bold text-xl">{group.name?.[0] || 'G'}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-bold text-white text-lg truncate">{group.name}</h3>
+                            {group.location && (
+                              <div className="flex items-center text-gray-400 text-sm mt-1">
+                                <MapPin className="h-3 w-3 mr-1" />
+                                <span className="truncate">{group.location}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Description */}
+                        <p className="text-gray-300 text-sm mb-4 line-clamp-2">{group.description || 'No description'}</p>
+                        
+                        {/* Members Count and Join Button */}
+                        <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                          <div className="flex items-center text-emerald-400 text-sm">
+                            <User className="h-4 w-4 mr-1" />
+                            <span>{group.member_count || 0} members</span>
+                          </div>
+                          <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-1 rounded-lg text-sm font-semibold transition-colors">
+                            Join
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -1089,29 +1260,72 @@ export default function Dashboard() {
                       </button>
                     </div>
 
-            <form onSubmit={handleCreateGroup} className="space-y-4">
+            <form onSubmit={handleCreateGroup} className="space-y-6">
+              {/* Group Logo Upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Group Logo</label>
+                <div className="flex items-center space-x-4">
+                  {groupLogoPreview ? (
+                    <div className="h-24 w-24 rounded-full overflow-hidden border-4 border-emerald-500 shadow-lg">
+                      <img src={groupLogoPreview} alt="Group logo preview" className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <div className="h-24 w-24 rounded-full bg-slate-700 border-2 border-dashed border-slate-600 flex items-center justify-center">
+                      <User className="h-10 w-10 text-gray-500" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleGroupLogoChange}
+                      className="hidden"
+                      id="group-logo-upload"
+                    />
+                    <label
+                      htmlFor="group-logo-upload"
+                      className="cursor-pointer inline-block px-4 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-lg transition-all border border-emerald-500/30"
+                    >
+                      {groupLogoPreview ? 'Change Logo' : 'Upload Logo'}
+                    </label>
+                    <p className="text-xs text-gray-400 mt-2">Recommended: Square image, at least 200x200px</p>
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Group Name *</label>
-                  <input
-                    type="text"
-                    value={groupForm.name}
-                    onChange={(e) => setGroupForm({...groupForm, name: e.target.value})}
+                <input
+                  type="text"
+                  value={groupForm.name}
+                  onChange={(e) => setGroupForm({...groupForm, name: e.target.value})}
                   className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-emerald-500"
                   placeholder="Enter group name"
                   required
-                  />
+                />
               </div>
               
               <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Location</label>
+                <input
+                  type="text"
+                  value={groupForm.location}
+                  onChange={(e) => setGroupForm({...groupForm, location: e.target.value})}
+                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                  placeholder="e.g., Nashville, TN"
+                />
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Description</label>
-                  <textarea
+                <textarea
                   rows={4}
-                    value={groupForm.description}
-                    onChange={(e) => setGroupForm({...groupForm, description: e.target.value})}
+                  value={groupForm.description}
+                  onChange={(e) => setGroupForm({...groupForm, description: e.target.value})}
                   className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-emerald-500"
                   placeholder="Describe your group..."
-              />
-                </div>
+                />
+              </div>
 
               <div className="flex justify-end space-x-3 pt-4">
                       <button

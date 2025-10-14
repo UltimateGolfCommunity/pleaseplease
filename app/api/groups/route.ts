@@ -5,10 +5,10 @@ import { createAdminClient } from '@/lib/supabase-admin'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { action, name, description, maxMembers, user_id: bodyUserId, invitees, group_id } = body
+    const { action, name, description, location, logo_url, maxMembers, user_id: bodyUserId, invitees, group_id } = body
 
     console.log('🔍 GROUPS POST: Action requested:', action)
-    console.log('📊 GROUPS POST: Group data:', { name, description, maxMembers, user_id: bodyUserId, group_id })
+    console.log('📊 GROUPS POST: Group data:', { name, description, location, logo_url, maxMembers, user_id: bodyUserId, group_id })
     
     // Get the current user from the request
     let user_id = bodyUserId
@@ -175,6 +175,8 @@ export async function POST(request: NextRequest) {
         .insert({
           name,
           description: description || '',
+          location: location || '',
+          logo_url: logo_url || null,
           max_members: maxMembers || 10,
           creator_id: user_id,
           status: 'active'
@@ -277,8 +279,9 @@ export async function GET(request: NextRequest) {
     console.log('🔍 GROUPS GET: Action:', action, 'Query:', query, 'User:', user_id)
 
     // Handle search action
-    if (action === 'search' && query) {
-      console.log('🔍 GROUPS GET: Searching for groups with query:', query)
+    if (action === 'search') {
+      const searchQuery = searchParams.get('query') || query || ''
+      console.log('🔍 GROUPS GET: Searching for groups with query:', searchQuery)
       
       // Use three-tier fallback system
       let supabase: any = null
@@ -300,19 +303,23 @@ export async function GET(request: NextRequest) {
 
       if (usingMockMode) {
         console.log('🔧 GROUPS GET: Using mock mode for search')
-        return NextResponse.json([])
+        return NextResponse.json({ success: true, groups: [] })
       }
 
-      // Search for groups by name or description
-      const { data, error } = await supabase
+      let dbQuery = supabase
         .from('golf_groups')
         .select(`
           *,
           creator:user_profiles(id, first_name, last_name, avatar_url)
         `)
-        .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
         .eq('status', 'active')
-        .limit(20)
+
+      // If there's a search query, filter by name, description, or location
+      if (searchQuery) {
+        dbQuery = dbQuery.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,location.ilike.%${searchQuery}%`)
+      }
+
+      const { data, error } = await dbQuery.limit(20)
 
       if (error) {
         console.error('❌ Error searching groups:', error)
@@ -335,7 +342,7 @@ export async function GET(request: NextRequest) {
       )
 
       console.log('👥 Found groups:', groupsWithMemberCount?.length || 0)
-      return NextResponse.json(groupsWithMemberCount || [])
+      return NextResponse.json({ success: true, groups: groupsWithMemberCount || [] })
     }
 
     // Original functionality for fetching user's groups
