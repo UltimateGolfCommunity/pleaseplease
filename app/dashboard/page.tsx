@@ -259,20 +259,39 @@ export default function Dashboard() {
       
       // Upload logo if provided
       if (groupLogo) {
-        const formData = new FormData()
-        formData.append('file', groupLogo)
-        formData.append('folder', 'group-logos')
-        
-        const uploadResponse = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        })
-        
-        const uploadData = await uploadResponse.json()
-        if (uploadData.success) {
-          logoUrl = uploadData.url
+        try {
+          console.log('📤 Uploading group logo...')
+          const formData = new FormData()
+          formData.append('file', groupLogo)
+          formData.append('folder', 'group-logos')
+          
+          const uploadResponse = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+          })
+          
+          const uploadData = await uploadResponse.json()
+          console.log('📤 Upload response:', uploadData)
+          
+          if (uploadData.success) {
+            logoUrl = uploadData.url
+            console.log('✅ Logo uploaded successfully:', logoUrl)
+          } else {
+            console.warn('⚠️ Logo upload failed, continuing without logo:', uploadData.error)
+          }
+        } catch (uploadError) {
+          console.error('❌ Error uploading logo:', uploadError)
+          console.log('⚠️ Continuing group creation without logo')
         }
       }
+
+      console.log('🏌️ Creating group with data:', {
+        name: groupForm.name,
+        description: groupForm.description,
+        location: groupForm.location,
+        logo_url: logoUrl,
+        user_id: user.id
+      })
 
       const response = await fetch('/api/groups', {
         method: 'POST',
@@ -291,6 +310,7 @@ export default function Dashboard() {
       })
 
       const data = await response.json()
+      console.log('🏌️ Group creation response:', data)
       
       if (data.success) {
         alert('Group created successfully!')
@@ -306,11 +326,12 @@ export default function Dashboard() {
         fetchUserGroups()
         searchGroups('')
       } else {
-        alert('Failed to create group: ' + (data.error || 'Unknown error'))
+        console.error('❌ Group creation failed:', data)
+        alert('Failed to create group: ' + (data.error || data.details || 'Unknown error'))
       }
     } catch (error) {
-      console.error('Error creating group:', error)
-      alert('Failed to create group. Please try again.')
+      console.error('❌ Error creating group:', error)
+      alert('Failed to create group. Please check the console for details.')
     } finally {
       setGroupSubmitting(false)
     }
