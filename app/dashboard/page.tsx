@@ -121,16 +121,47 @@ export default function Dashboard() {
     }
   }, [user?.id])
 
-  const fetchTeeTimes = async () => {
+  // Auto-refresh tee times and notifications every 60 seconds
+  useEffect(() => {
+    if (!user?.id) return
+
+    console.log('⏰ Setting up auto-refresh intervals (60 seconds)')
+
+    // Refresh tee times every 60 seconds (silent mode to avoid UI flashing)
+    const teeTimesInterval = setInterval(() => {
+      console.log('🔄 Auto-refreshing tee times...')
+      fetchTeeTimes(true) // true = silent mode
+    }, 60000) // 60 seconds
+
+    // Refresh notifications every 60 seconds (silent mode to avoid UI flashing)
+    const notificationsInterval = setInterval(() => {
+      console.log('🔔 Auto-refreshing notifications...')
+      fetchNotifications(true) // true = silent mode
+    }, 60000) // 60 seconds
+
+    // Cleanup intervals on unmount or when user changes
+    return () => {
+      console.log('🛑 Clearing auto-refresh intervals')
+      clearInterval(teeTimesInterval)
+      clearInterval(notificationsInterval)
+    }
+  }, [user?.id])
+
+  const fetchTeeTimes = async (silent = false) => {
     if (!user?.id) return
     
-    console.log('🔄 Starting to fetch tee times...')
-    setTeeTimesLoading(true)
+    if (!silent) {
+      console.log('🔄 Starting to fetch tee times...')
+      setTeeTimesLoading(true)
+    }
+    
     try {
       const response = await fetch(`/api/tee-times?action=available&_cache_bust=${Math.random()}`)
       const data = await response.json()
       
-      console.log('📊 Tee times API response:', data)
+      if (!silent) {
+        console.log('📊 Tee times API response:', data)
+      }
       
       // Handle both array response and object response formats
       let teeTimesArray = []
@@ -145,21 +176,27 @@ export default function Dashboard() {
         .sort((a: any, b: any) => new Date(a.tee_time_date).getTime() - new Date(b.tee_time_date).getTime())
       
       setTeeTimes(sortedTeeTimes)
-      console.log('🎯 Fetched and sorted tee times:', sortedTeeTimes)
       
-      // Debug each tee time's course name
-      sortedTeeTimes.forEach((tt: any, index: number) => {
-        console.log(`🏌️ Tee Time ${index + 1}:`, {
-          course_name: tt.course_name,
-          golf_courses_name: tt.golf_courses?.name,
-          course_location: tt.course_location,
+      if (!silent) {
+        console.log('🎯 Fetched and sorted tee times:', sortedTeeTimes)
+        
+        // Debug each tee time's course name
+        sortedTeeTimes.forEach((tt: any, index: number) => {
+          console.log(`🏌️ Tee Time ${index + 1}:`, {
+            course_name: tt.course_name,
+            golf_courses_name: tt.golf_courses?.name,
+            course_location: tt.course_location,
           creator: tt.creator
         })
       })
           } catch (error) {
-      console.error('❌ Error fetching tee times:', error)
+      if (!silent) {
+        console.error('❌ Error fetching tee times:', error)
+      }
     } finally {
-      setTeeTimesLoading(false)
+      if (!silent) {
+        setTeeTimesLoading(false)
+      }
     }
   }
 
@@ -187,21 +224,28 @@ export default function Dashboard() {
     }
   }
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (silent = false) => {
     if (!user?.id) return
     
+    if (!silent) {
       setNotificationsLoading(true)
+    }
+    
     try {
       const response = await fetch(`/api/notifications?user_id=${user.id}&_cache_bust=${Math.random()}`)
-        const data = await response.json()
+      const data = await response.json()
       
       if (data.success) {
         setNotifications(data.notifications || [])
       }
     } catch (error) {
-      console.error('Error fetching notifications:', error)
+      if (!silent) {
+        console.error('Error fetching notifications:', error)
+      }
     } finally {
-      setNotificationsLoading(false)
+      if (!silent) {
+        setNotificationsLoading(false)
+      }
     }
   }
 
