@@ -161,19 +161,58 @@ export default function Dashboard() {
       
       if (!silent) {
         console.log('📊 Tee times API response:', data)
+        console.log('📊 Response type:', typeof data, 'Is array:', Array.isArray(data))
+        console.log('📊 Has success property:', 'success' in data)
+        console.log('📊 Has teeTimes property:', 'teeTimes' in data)
       }
       
       // Handle both array response and object response formats
       let teeTimesArray = []
       if (data.success && data.teeTimes) {
         teeTimesArray = data.teeTimes
+        if (!silent) console.log('✅ Extracted from data.teeTimes:', teeTimesArray.length, 'items')
       } else if (Array.isArray(data)) {
         teeTimesArray = data
+        if (!silent) console.log('✅ Extracted from array response:', teeTimesArray.length, 'items')
+      } else {
+        if (!silent) console.warn('⚠️ Unexpected response format:', Object.keys(data))
+      }
+      
+      // Get today's date as YYYY-MM-DD string for comparison
+      const today = new Date()
+      today.setHours(0, 0, 0, 0) // Normalize to midnight
+      const todayString = today.toISOString().split('T')[0]
+      
+      if (!silent) {
+        console.log('📅 Today\'s date for filtering:', todayString)
+        console.log('📊 Raw tee times array length:', teeTimesArray.length)
       }
       
       const sortedTeeTimes = teeTimesArray
-        .filter((tt: any) => new Date(tt.tee_time_date) >= new Date())
-        .sort((a: any, b: any) => new Date(a.tee_time_date).getTime() - new Date(b.tee_time_date).getTime())
+        .filter((tt: any) => {
+          if (!tt.tee_time_date) {
+            if (!silent) console.log('⚠️ Tee time missing date:', tt)
+            return false
+          }
+          // Compare date strings directly (YYYY-MM-DD format)
+          const teeTimeDate = tt.tee_time_date.split('T')[0] // Handle datetime strings
+          const isFuture = teeTimeDate >= todayString
+          if (!silent && !isFuture) {
+            console.log('⏭️ Filtered out past tee time:', teeTimeDate, '<', todayString)
+          }
+          return isFuture
+        })
+        .sort((a: any, b: any) => {
+          const dateA = a.tee_time_date.split('T')[0]
+          const dateB = b.tee_time_date.split('T')[0]
+          if (dateA !== dateB) {
+            return dateA.localeCompare(dateB)
+          }
+          // If same date, sort by time
+          const timeA = a.tee_time_time || '00:00:00'
+          const timeB = b.tee_time_time || '00:00:00'
+          return timeA.localeCompare(timeB)
+        })
       
       setTeeTimes(sortedTeeTimes)
       

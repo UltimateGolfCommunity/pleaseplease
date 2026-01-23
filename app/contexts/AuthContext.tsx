@@ -205,7 +205,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase])
 
   const signIn = useCallback(async (email: string, password: string) => {
-    if (!supabase) throw new Error('Supabase client not initialized')
+    if (!supabase) {
+      const errorMsg = 'Supabase client not initialized. Please check your environment variables.'
+      console.error('❌', errorMsg)
+      console.error('   NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'exists' : 'MISSING')
+      console.error('   NEXT_PUBLIC_SUPABASE_ANON_KEY:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'exists' : 'MISSING')
+      throw new Error(errorMsg)
+    }
     
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -213,7 +219,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password
       })
       
-      if (error) throw error
+      if (error) {
+        // Check for network/DNS errors
+        if (error.message?.includes('Failed to fetch') || error.message?.includes('ERR_NAME_NOT_RESOLVED')) {
+          console.error('❌ Network error connecting to Supabase:')
+          console.error('   This usually means:')
+          console.error('   1. The Supabase project URL is incorrect')
+          console.error('   2. The Supabase project is paused or deleted')
+          console.error('   3. Environment variables are not set correctly in production')
+          console.error('   Current URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
+          throw new Error('Cannot connect to Supabase. Please check your project configuration.')
+        }
+        throw error
+      }
 
       if (data?.user && data?.session) {
         setUser(data.user)
@@ -222,6 +240,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('No user or session data received')
       }
     } catch (error) {
+      // Re-throw with better context for network errors
+      if (error instanceof Error && (
+        error.message.includes('Failed to fetch') || 
+        error.message.includes('ERR_NAME_NOT_RESOLVED') ||
+        error.message.includes('NetworkError')
+      )) {
+        throw new Error('Connection to Supabase failed. Please verify your project is active and environment variables are set correctly.')
+      }
       throw error
     }
   }, [supabase])
