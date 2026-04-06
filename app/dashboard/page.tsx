@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/app/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { 
@@ -9,28 +9,21 @@ import {
   MapPin,
   Calendar, 
   Clock,
-  TrendingUp,
   Plus,
-  Star,
-  Zap,
   Flag,
-  Home,
   Trophy,
-  Target,
   Camera,
   X,
   QrCode,
-  User
+  User,
+  ArrowUpRight,
+  Users
 } from 'lucide-react'
 import WeatherWidget from '@/components/WeatherWidget'
-import GolfRoundForm from '@/components/GolfRoundForm'
 import MessagingSystem from '@/components/MessagingSystem'
-import BadgeManagement from '@/components/BadgeManagement'
 import Logo from '@/components/Logo'
-import ThemeToggle from '@/components/ThemeToggle'
 import QRCodeGenerator from '@/components/QRCodeGenerator'
 import SimpleQRScanner from '@/components/SimpleQRScanner'
-import LoadingScreen from '@/components/LoadingScreen'
 import WelcomeAnimation from '@/components/WelcomeAnimation'
 
 type ActiveTab = 'tee-times' | 'groups' | 'messages' | 'profile'
@@ -769,35 +762,63 @@ export default function Dashboard() {
     { id: 'profile', label: 'Profile', icon: User },
   ]
 
-  const dashboardStats = useMemo(
-    () => [
-      {
-        label: 'Available Tee Times',
-        value: teeTimes.length,
-        accent: 'from-emerald-300/25 to-cyan-300/10',
-      },
-      {
-        label: 'My Groups',
-        value: userGroups.length,
-        accent: 'from-sky-300/25 to-cyan-300/10',
-      },
-      {
-        label: 'Notifications',
-        value: notifications.length,
-        accent: 'from-amber-300/25 to-orange-300/10',
-      },
-      {
-        label: 'Pending Requests',
-        value: pendingApplications.length,
-        accent: 'from-rose-300/25 to-pink-300/10',
-      },
-    ],
-    [teeTimes.length, userGroups.length, notifications.length, pendingApplications.length]
-  )
-
   const joinedGroupIds = useMemo(
     () => new Set(userGroups.map((group) => group.id)),
     [userGroups]
+  )
+
+  const dashboardActivity = useMemo(() => {
+    const today = new Date()
+    const thisWeekEnd = new Date()
+    thisWeekEnd.setDate(today.getDate() + 7)
+
+    const upcomingThisWeek = teeTimes.filter((teeTime) => {
+      const teeDate = new Date(teeTime.tee_time_date)
+      return teeDate >= today && teeDate <= thisWeekEnd
+    })
+
+    const groupTeeTimes = teeTimes.filter((teeTime) => teeTime.visibility_scope === 'group')
+    const connectionTeeTimes = teeTimes.filter((teeTime) => teeTime.visibility_scope === 'connections')
+    const hostedByYou = teeTimes.filter((teeTime) => teeTime.creator_id === user?.id)
+    const nextOpenTeeTime = upcomingThisWeek[0] || teeTimes[0] || null
+
+    return {
+      upcomingThisWeek,
+      groupTeeTimes,
+      connectionTeeTimes,
+      hostedByYou,
+      nextOpenTeeTime,
+    }
+  }, [teeTimes, user?.id])
+
+  const spotlightCards = useMemo(
+    () => [
+      {
+        label: 'This Week',
+        value: dashboardActivity.upcomingThisWeek.length,
+        description: 'tee times getting close',
+        accent: 'from-emerald-300/20 to-cyan-300/10',
+      },
+      {
+        label: 'Group Boards',
+        value: userGroups.length,
+        description: 'communities you can jump into',
+        accent: 'from-sky-300/22 to-blue-300/10',
+      },
+      {
+        label: 'Connections Only',
+        value: dashboardActivity.connectionTeeTimes.length,
+        description: 'private rounds in your network',
+        accent: 'from-amber-300/20 to-orange-300/10',
+      },
+      {
+        label: 'Requests Waiting',
+        value: pendingApplications.length,
+        description: 'people waiting on your response',
+        accent: 'from-rose-300/20 to-pink-300/10',
+      },
+    ],
+    [dashboardActivity.connectionTeeTimes.length, dashboardActivity.upcomingThisWeek.length, pendingApplications.length, userGroups.length]
   )
 
   // Show welcome animation while loading and after
@@ -868,9 +889,6 @@ export default function Dashboard() {
                                   >
                 <Camera className="h-5 w-5" />
                                   </button>
-
-              {/* Theme Toggle */}
-              <ThemeToggle />
 
               {/* Sign Out Button */}
                       <button 
@@ -945,31 +963,121 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
-        <div className="mb-8 overflow-hidden rounded-[2rem] border border-white/8 bg-[linear-gradient(135deg,rgba(14,35,29,0.96),rgba(8,20,15,0.98))] p-6 shadow-2xl shadow-black/20 sm:p-8">
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-end">
+        <div className="mb-8">
+          <WeatherWidget />
+        </div>
+
+        <div className="mb-8 overflow-hidden rounded-[2rem] border border-white/8 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_28%),linear-gradient(135deg,rgba(14,35,29,0.96),rgba(8,20,15,0.98))] p-6 shadow-2xl shadow-black/20 sm:p-8">
+          <div className="grid gap-8 xl:grid-cols-[minmax(0,1.15fr)_420px] xl:items-stretch">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.22em] text-emerald-200/75">
-                Dashboard
+                Activity Hub
               </p>
               <h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em] text-white sm:text-5xl">
                 Welcome back, {profile?.first_name || user?.email?.split('@')[0] || 'Golfer'}.
               </h1>
               <p className="mt-4 max-w-2xl text-base leading-8 text-white/68 sm:text-lg">
-                Manage tee times, grow your groups, respond to golfers, and keep your side of the
-                community moving.
+                Keep your next round moving. The most active tee times, group chatter, and pending
+                requests are all surfaced here so the dashboard feels alive the second you land.
               </p>
+
+              <div className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {spotlightCards.map((card) => (
+                  <div
+                    key={card.label}
+                    className={`rounded-[1.5rem] border border-white/8 bg-gradient-to-br ${card.accent} p-5`}
+                  >
+                    <p className="text-xs uppercase tracking-[0.18em] text-white/45">{card.label}</p>
+                    <p className="mt-3 text-3xl font-semibold text-white">{card.value}</p>
+                    <p className="mt-2 text-sm text-white/58">{card.description}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-8 flex flex-wrap gap-3">
+                <button
+                  onClick={() => setShowCreateTeeTimeModal(true)}
+                  className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-100"
+                >
+                  Post a Tee Time
+                </button>
+                <button
+                  onClick={() => setActiveTab('groups')}
+                  className="rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                >
+                  Open My Groups
+                </button>
+              </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              {dashboardStats.map((stat) => (
-                <div
-                  key={stat.label}
-                  className={`rounded-[1.5rem] border border-white/8 bg-gradient-to-br ${stat.accent} p-5`}
-                >
-                  <p className="text-sm uppercase tracking-[0.16em] text-white/45">{stat.label}</p>
-                  <p className="mt-3 text-3xl font-semibold text-white">{stat.value}</p>
+            <div className="grid gap-4">
+              <div className="rounded-[1.8rem] border border-white/10 bg-white/6 p-6 backdrop-blur-sm">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.18em] text-white/45">Next Best Opening</p>
+                    <h2 className="mt-3 text-2xl font-semibold text-white">
+                      {dashboardActivity.nextOpenTeeTime?.golf_courses?.name || dashboardActivity.nextOpenTeeTime?.course_name || 'No active tee times yet'}
+                    </h2>
+                  </div>
+                  <div className="rounded-full border border-white/10 bg-white/5 p-3">
+                    <ArrowUpRight className="h-5 w-5 text-emerald-200" />
+                  </div>
                 </div>
-              ))}
+                {dashboardActivity.nextOpenTeeTime ? (
+                  <>
+                    <div className="mt-4 flex flex-wrap gap-3 text-sm text-white/62">
+                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                        {new Date(dashboardActivity.nextOpenTeeTime.tee_time_date).toLocaleDateString()}
+                      </span>
+                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                        {dashboardActivity.nextOpenTeeTime.tee_time_time}
+                      </span>
+                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                        {dashboardActivity.nextOpenTeeTime.available_spots || dashboardActivity.nextOpenTeeTime.max_players - dashboardActivity.nextOpenTeeTime.current_players} spots open
+                      </span>
+                    </div>
+                    <p className="mt-4 text-sm leading-7 text-white/56">
+                      {dashboardActivity.nextOpenTeeTime.visibility_scope === 'group'
+                        ? `This one is tied to ${dashboardActivity.nextOpenTeeTime.group?.name || 'a group community'}.`
+                        : dashboardActivity.nextOpenTeeTime.visibility_scope === 'connections'
+                          ? 'This round is limited to connections in your network.'
+                          : 'This public tee time is visible to the whole community.'}
+                    </p>
+                  </>
+                ) : (
+                  <p className="mt-4 text-sm leading-7 text-white/56">
+                    Post the next round and turn this dashboard into a live board again.
+                  </p>
+                )}
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-[1.6rem] border border-white/10 bg-white/5 p-5">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-2xl bg-emerald-500/12 p-3">
+                      <Calendar className="h-5 w-5 text-emerald-200" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-white">Hosted By You</p>
+                      <p className="text-sm text-white/52">rounds you need to manage</p>
+                    </div>
+                  </div>
+                  <p className="mt-5 text-3xl font-semibold text-white">{dashboardActivity.hostedByYou.length}</p>
+                </div>
+
+                <div className="rounded-[1.6rem] border border-white/10 bg-white/5 p-5">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-2xl bg-sky-500/12 p-3">
+                      <Users className="h-5 w-5 text-sky-200" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-white">Group Tee Times</p>
+                      <p className="text-sm text-white/52">community-driven rounds</p>
+                    </div>
+                  </div>
+                  <p className="mt-5 text-3xl font-semibold text-white">{dashboardActivity.groupTeeTimes.length}</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -977,17 +1085,18 @@ export default function Dashboard() {
         {/* Tee Times Tab */}
         {activeTab === 'tee-times' && (
           <div className="space-y-6 animate-fade-in">
-            {/* Weather Widget */}
-            <WeatherWidget />
-
             {/* Tee Times Section */}
             <div className="space-y-6">
-              <div className="rounded-[1.8rem] border border-white/8 bg-white/5 p-6 text-center backdrop-blur-sm">
-                <h2 className="mb-2 text-3xl font-bold text-white">Available Tee Times</h2>
-                <p className="text-white/62">Join upcoming tee times with fellow golfers</p>
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+                <div className="rounded-[1.8rem] border border-white/8 bg-white/5 p-6 backdrop-blur-sm">
+                  <h2 className="text-3xl font-bold text-white">Available Tee Times</h2>
+                  <p className="mt-2 text-white/62">
+                    Fresh rounds, private connection invites, and group-posted tee times all in one place.
+                  </p>
+                </div>
                 <button 
                   onClick={() => setShowCreateTeeTimeModal(true)}
-                  className="mx-auto mt-4 flex items-center space-x-2 rounded-full bg-white px-6 py-3 font-semibold text-slate-950 transition-all duration-300 hover:bg-emerald-100"
+                  className="flex items-center justify-center space-x-2 rounded-[1.8rem] border border-emerald-300/14 bg-[linear-gradient(135deg,rgba(16,185,129,0.18),rgba(125,211,252,0.08))] px-6 py-6 font-semibold text-white transition-all duration-300 hover:border-emerald-200/25 hover:bg-[linear-gradient(135deg,rgba(16,185,129,0.24),rgba(125,211,252,0.14))]"
                 >
                   <Plus className="h-5 w-5" />
                   <span>Create Tee Time</span>
