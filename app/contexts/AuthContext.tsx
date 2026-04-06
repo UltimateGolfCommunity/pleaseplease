@@ -19,6 +19,21 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+function getOAuthRedirectUrl() {
+  if (typeof window === 'undefined') {
+    return process.env.NEXT_PUBLIC_SITE_URL || 'https://www.ultimategolfcommunity.com/auth/callback'
+  }
+
+  const origin = window.location.origin
+
+  if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+    return `${origin}/auth/callback`
+  }
+
+  const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.ultimategolfcommunity.com'
+  return `${configuredSiteUrl.replace(/\/$/, '')}/auth/callback`
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
@@ -258,10 +273,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Supabase client not initialized. Please check your environment variables.')
     }
 
-    const redirectTo =
-      typeof window !== 'undefined'
-        ? `${window.location.origin}/auth/callback`
-        : undefined
+    const redirectTo = getOAuthRedirectUrl()
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
