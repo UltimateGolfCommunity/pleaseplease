@@ -11,7 +11,7 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
     // Complete animation after 3.5 seconds
     const completeTimer = setTimeout(() => {
       onComplete()
-    }, 3500)
+    }, 3700)
 
     return () => {
       clearTimeout(completeTimer)
@@ -147,49 +147,42 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
           3% {
             opacity: 1;
           }
-          /* Smooth continuous acceleration */
           15% {
-            left: 15%;
+            left: 14%;
             transform: translateY(-50%) scale(1) rotate(180deg);
           }
           30% {
-            left: 35%;
+            left: 33%;
             transform: translateY(-50%) scale(1) rotate(420deg);
           }
           50% {
-            left: 60%;
+            left: 57%;
             transform: translateY(-50%) scale(1) rotate(720deg);
           }
-          /* Gentle deceleration */
           70% {
-            left: 80%;
-            transform: translateY(-50%) scale(1) rotate(1020deg);
+            left: 76%;
+            transform: translateY(-50%) scale(1) rotate(1000deg);
           }
-          /* Approach the front edge of hole */
           85% {
-            left: calc(100% - 96px);
-            transform: translateY(-50%) scale(1) rotate(1260deg);
+            left: calc(100% - 112px);
+            transform: translateY(-50%) scale(1) rotate(1220deg);
           }
-          /* Stop at front edge of hole */
-          88% {
-            left: calc(100% - 92px);
-            transform: translateY(-50%) scale(1) rotate(1300deg);
+          89% {
+            left: calc(100% - 101px);
+            transform: translateY(-50%) scale(1) rotate(1280deg);
           }
-          /* Teetering at edge */
-          90% {
-            left: calc(100% - 92px);
-            transform: translateY(-50%) scale(1) rotate(1320deg);
+          92% {
+            left: calc(100% - 95px);
+            transform: translateY(-48%) scale(0.96) rotate(1320deg);
           }
-          /* Drop straight down into hole */
           95% {
-            left: calc(100% - 92px);
-            transform: translateY(25px) scale(0.6) rotate(1380deg);
+            left: calc(100% - 90px);
+            transform: translateY(-16%) scale(0.82) rotate(1370deg);
             opacity: 1;
           }
-          /* Disappear into hole */
           100% {
-            left: calc(100% - 92px);
-            transform: translateY(35px) scale(0.2) rotate(1440deg);
+            left: calc(100% - 84px);
+            transform: translateY(18px) scale(0.12) rotate(1440deg);
             opacity: 0;
           }
         }
@@ -215,20 +208,20 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
             width: 42px;
             opacity: 0.45;
           }
-          88% {
-            width: 38px;
+          89% {
+            width: 37px;
             opacity: 0.4;
           }
-          90% {
-            width: 36px;
-            opacity: 0.35;
+          92% {
+            width: 32px;
+            opacity: 0.28;
           }
           95% {
-            width: 24px;
-            opacity: 0.2;
+            width: 18px;
+            opacity: 0.14;
           }
           100% {
-            width: 16px;
+            width: 10px;
             opacity: 0;
           }
         }
@@ -322,17 +315,17 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
         }
 
         @keyframes hole-pulse {
-          0%, 87% {
+          0%, 86% {
             transform: translateY(-50%) scale(1);
           }
           90% {
-            transform: translateY(-50%) scale(1.05);
+            transform: translateY(-50%) scale(1.04);
           }
-          93% {
-            transform: translateY(-50%) scale(1.08);
+          94% {
+            transform: translateY(-50%) scale(1.09);
           }
-          96% {
-            transform: translateY(-50%) scale(1);
+          98% {
+            transform: translateY(-50%) scale(1.02);
           }
           100% {
             transform: translateY(-50%) scale(1);
@@ -369,4 +362,3 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
     </div>
   )
 }
-

@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/app/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { createBrowserClient } from '@/lib/supabase'
 import { uploadGroupLogo } from '@/lib/group-logo-upload'
@@ -15,22 +15,16 @@ import {
   MapPin,
   Calendar,
   MessageCircle,
-  Settings,
   Camera,
   Upload,
-  Star,
   Trophy,
-  Clock,
-  Target,
   Plus,
-  Edit,
-  Trash2,
   UserPlus,
-  Share2
+  Sparkles
 } from 'lucide-react'
 
 export default function GroupDetail({ params }: { params: Promise<{ id: string }> }) {
-  const { user, profile } = useAuth()
+  const { user } = useAuth()
   const router = useRouter()
   const supabase = createBrowserClient()
   
@@ -70,44 +64,25 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
     }
   }, [groupId])
 
+  const founder = useMemo(
+    () => members.find((member) => member.role === 'admin' || member.role === 'owner') || members[0],
+    [members]
+  )
+
+  const locationLabel = group?.location || founder?.user_profiles?.location || 'Online and local golfers'
+
   const fetchGroupDetails = async () => {
     try {
       setLoading(true)
-      
-      // Fetch group details
-      const { data: groupData, error: groupError } = await supabase
-        .from('golf_groups')
-        .select('*')
-        .eq('id', groupId)
-        .single()
+      const response = await fetch(`/api/groups/${groupId}`, { cache: 'no-store' })
+      const data = await response.json()
 
-      if (groupError) throw groupError
-
-      // Fetch group members with their profiles
-      const { data: membersData, error: membersError } = await supabase
-        .from('group_members')
-        .select(`
-          *,
-          user_profiles (
-            id,
-            first_name,
-            last_name,
-            username,
-            avatar_url,
-            location,
-            handicap
-          )
-        `)
-        .eq('group_id', groupId)
-
-      if (membersError) {
-        console.error('Error fetching group members:', membersError)
-        // Don't throw here, just log and continue with empty members
-        console.log('Continuing without member details due to schema mismatch')
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to load group')
       }
 
-      setGroup(groupData)
-      setMembers(membersData || [])
+      setGroup(data.group)
+      setMembers(data.members || [])
     } catch (error) {
       console.error('Error fetching group details:', error)
       setGroup(null)
@@ -244,15 +219,15 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(24,111,76,0.26),transparent_28%),linear-gradient(180deg,#07140f,#0d1f18_44%,#09130f)] text-white">
       {/* Navigation */}
-      <div className="bg-slate-800/50 backdrop-blur-xl border-b border-slate-700/50 sticky top-0 z-40">
+      <div className="sticky top-0 z-40 border-b border-white/8 bg-[#07140f]/82 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Link 
                 href="/dashboard"
-                className="flex items-center space-x-2 text-slate-300 hover:text-white transition-colors"
+                className="flex items-center space-x-2 text-white/66 transition-colors hover:text-white"
               >
                 <ArrowLeft className="h-5 w-5" />
                 <span>Back to Dashboard</span>
@@ -262,7 +237,7 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
               <button 
                 onClick={() => document.getElementById('group-header-upload')?.click()}
                 disabled={uploadingHeader}
-                className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 disabled:from-slate-500 disabled:to-slate-600 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed flex items-center space-x-2"
+                className="hidden rounded-full border border-white/10 bg-white/6 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10 disabled:opacity-50 md:flex md:items-center md:space-x-2"
               >
                 {uploadingHeader ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -278,66 +253,44 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
                 onChange={handleHeaderUpload}
                 className="hidden"
               />
-              <button className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2">
-                <Share2 className="h-4 w-4" />
-                <span>Share</span>
-              </button>
-              <button className="bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white px-4 py-2 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2">
-                <Settings className="h-4 w-4" />
-                <span>Settings</span>
-              </button>
             </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        {/* Group Header */}
-        <div className="relative bg-gradient-to-r from-slate-800/60 to-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 mb-8 shadow-2xl overflow-hidden">
-          {/* Header Image Background */}
+        <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(12,33,25,0.96),rgba(8,21,16,0.98))] p-6 shadow-2xl shadow-black/25 sm:p-8">
           {group?.header_image_url && (
             <div className="absolute inset-0 rounded-3xl overflow-hidden">
               <img
                 src={group.header_image_url}
                 alt={`${group.name} header`}
-                className="w-full h-full object-cover opacity-20"
+                className="w-full h-full object-cover opacity-18"
               />
-              <div className="absolute inset-0 bg-gradient-to-r from-slate-800/80 to-slate-900/80"></div>
+              <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(7,20,15,0.92),rgba(7,20,15,0.62),rgba(7,20,15,0.9))]"></div>
             </div>
           )}
-          
-          {/* Decorative Elements */}
-          <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full -translate-y-12 translate-x-12"></div>
-          <div className="absolute bottom-0 left-0 w-16 h-16 bg-gradient-to-tr from-cyan-500/10 to-blue-500/10 rounded-full translate-y-8 -translate-x-8"></div>
-          
-          <div className="relative">
-            <div className="flex flex-col lg:flex-row gap-8">
-              {/* Group Image */}
-              <div className="flex-shrink-0">
-                <div className="relative group">
-                  <div className="w-32 h-32 rounded-2xl overflow-hidden border-4 border-blue-500/30 shadow-2xl">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_top,rgba(125,211,252,0.18),transparent_55%)]" />
+
+          <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div>
+              <div className="flex flex-wrap items-start gap-5">
+                <div className="relative">
+                  <div className="h-28 w-28 overflow-hidden rounded-[1.75rem] border border-white/14 bg-white/8 shadow-xl">
                     {group.image_url ? (
-                      <img
-                        src={group.image_url}
-                        alt={group.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
+                      <img src={group.image_url} alt={group.name} className="h-full w-full object-cover" />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                        <Users className="h-16 w-16 text-white" />
+                      <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,rgba(16,185,129,0.32),rgba(59,130,246,0.22))]">
+                        <Users className="h-12 w-12 text-white" />
                       </div>
                     )}
                   </div>
                   <button
                     onClick={() => document.getElementById('group-image-upload')?.click()}
                     disabled={uploadingImage}
-                    className="absolute -bottom-2 -right-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 disabled:from-slate-500 disabled:to-slate-600 text-white p-3 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed"
+                    className="absolute -bottom-2 -right-2 rounded-full border border-white/14 bg-white px-3 py-3 text-slate-950 transition hover:bg-emerald-100 disabled:opacity-60"
                   >
-                    {uploadingImage ? (
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    ) : (
-                      <Camera className="h-5 w-5" />
-                    )}
+                    {uploadingImage ? <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-slate-900"></div> : <Camera className="h-4 w-4" />}
                   </button>
                   <input
                     id="group-image-upload"
@@ -347,34 +300,178 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
                     className="hidden"
                   />
                 </div>
-              </div>
 
-              {/* Group Logo */}
-              <div className="flex-shrink-0">
-                <div className="relative group">
-                  <div className="w-24 h-24 rounded-xl overflow-hidden border-2 border-slate-500/30 shadow-lg">
-                    {group.logo_url ? (
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="rounded-full border border-emerald-300/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-100/85">
+                      Group Community
+                    </span>
+                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/60">
+                      Created {new Date(group.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <h1 className="mt-4 text-4xl font-semibold tracking-[-0.05em] text-white sm:text-5xl">
+                    {group.name}
+                  </h1>
+                  <p className="mt-4 max-w-3xl text-base leading-8 text-white/68 sm:text-lg">
+                    {group.description || 'A place for golfers to coordinate tee times, talk strategy, and keep the group active between rounds.'}
+                  </p>
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    <button
+                      onClick={() => setShowGroupChat(true)}
+                      className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-100"
+                    >
+                      Open Message Board
+                    </button>
+                    <button
+                      onClick={() => setShowInviteModal(true)}
+                      className="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                    >
+                      Invite Members
+                    </button>
+                    <button
+                      onClick={() => setShowLogRoundModal(true)}
+                      className="rounded-full border border-emerald-400/16 bg-emerald-500/10 px-5 py-3 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/18"
+                    >
+                      Log Round
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+              <div className="rounded-[1.4rem] border border-white/10 bg-white/6 p-5 backdrop-blur-sm">
+                <p className="text-xs uppercase tracking-[0.18em] text-white/45">Members</p>
+                <p className="mt-3 text-3xl font-semibold text-white">{members.length}</p>
+              </div>
+              <div className="rounded-[1.4rem] border border-white/10 bg-white/6 p-5 backdrop-blur-sm">
+                <p className="text-xs uppercase tracking-[0.18em] text-white/45">Based In</p>
+                <p className="mt-3 text-lg font-semibold text-white">{locationLabel}</p>
+              </div>
+              <div className="rounded-[1.4rem] border border-white/10 bg-white/6 p-5 backdrop-blur-sm">
+                <p className="text-xs uppercase tracking-[0.18em] text-white/45">Founder</p>
+                <p className="mt-3 text-lg font-semibold text-white">
+                  {founder?.user_profiles?.first_name
+                    ? `${founder.user_profiles.first_name} ${founder.user_profiles.last_name || ''}`.trim()
+                    : 'Community host'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="rounded-[1.8rem] border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-semibold tracking-[-0.03em] text-white">Community Members</h2>
+                <p className="mt-2 text-sm leading-7 text-white/60">
+                  See who is in the room, who is local, and who you can coordinate rounds with next.
+                </p>
+              </div>
+              <div className="hidden rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/60 md:block">
+                {members.length} golfers
+              </div>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {members.map((member) => (
+                <div
+                  key={member.id}
+                  className="rounded-[1.4rem] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] p-5 transition hover:border-white/18 hover:bg-white/9"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="h-16 w-16 overflow-hidden rounded-2xl border border-white/10 bg-white/8">
                       <img
-                        src={group.logo_url}
-                        alt={`${group.name} logo`}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        src={member.user_profiles?.avatar_url || '/default-avatar.svg'}
+                        alt={`${member.user_profiles?.first_name} ${member.user_profiles?.last_name}`}
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = '/default-avatar.svg'
+                        }}
                       />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate text-lg font-semibold text-white">
+                        {member.user_profiles?.first_name} {member.user_profiles?.last_name}
+                      </h3>
+                      <p className="truncate text-sm text-white/48">@{member.user_profiles?.username || 'member'}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 space-y-2 text-sm text-white/65">
+                    {member.user_profiles?.location && (
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-emerald-300" />
+                        <span>{member.user_profiles.location}</span>
+                      </div>
+                    )}
+                    {member.user_profiles?.handicap && (
+                      <div className="flex items-center gap-2">
+                        <Trophy className="h-4 w-4 text-amber-300" />
+                        <span>Handicap {member.user_profiles.handicap}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-sky-300" />
+                      <span className="capitalize">{member.role || 'member'}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <aside className="space-y-6">
+            <div className="rounded-[1.8rem] border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
+              <h3 className="text-xl font-semibold text-white">Keep The Group Moving</h3>
+              <p className="mt-3 text-sm leading-7 text-white/62">
+                Use the message board for updates, post group tee times from the dashboard, and invite more golfers when the community needs fresh energy.
+              </p>
+              <div className="mt-5 space-y-3">
+                <button
+                  onClick={() => setShowGroupChat(true)}
+                  className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-white/10"
+                >
+                  <span>Open group board</span>
+                  <MessageCircle className="h-4 w-4 text-emerald-300" />
+                </button>
+                <button
+                  onClick={() => setShowInviteModal(true)}
+                  className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-white/10"
+                >
+                  <span>Invite new members</span>
+                  <UserPlus className="h-4 w-4 text-sky-300" />
+                </button>
+                <button
+                  onClick={() => router.push('/dashboard')}
+                  className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-white/10"
+                >
+                  <span>Post a tee time</span>
+                  <Plus className="h-4 w-4 text-amber-300" />
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-[1.8rem] border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <div className="h-20 w-20 overflow-hidden rounded-2xl border border-white/10 bg-white/8">
+                    {group.logo_url ? (
+                      <img src={group.logo_url} alt={`${group.name} logo`} className="h-full w-full object-cover" />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center">
-                        <Trophy className="h-8 w-8 text-slate-300" />
+                      <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,rgba(250,204,21,0.22),rgba(249,115,22,0.22))]">
+                        <Trophy className="h-8 w-8 text-white" />
                       </div>
                     )}
                   </div>
                   <button
                     onClick={() => document.getElementById('group-logo-upload')?.click()}
                     disabled={uploadingLogo}
-                    className="absolute -bottom-1 -right-1 bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 disabled:from-slate-500 disabled:to-slate-600 text-white p-2 rounded-lg transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:cursor-not-allowed"
+                    className="absolute -bottom-2 -right-2 rounded-full border border-white/12 bg-white px-2.5 py-2.5 text-slate-950 transition hover:bg-amber-100 disabled:opacity-60"
                   >
-                    {uploadingLogo ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    ) : (
-                      <Upload className="h-4 w-4" />
-                    )}
+                    {uploadingLogo ? <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-slate-900"></div> : <Upload className="h-4 w-4" />}
                   </button>
                   <input
                     id="group-logo-upload"
@@ -384,118 +481,27 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
                     className="hidden"
                   />
                 </div>
-                <p className="text-xs text-slate-400 mt-2 text-center">Group Logo</p>
-              </div>
-
-              {/* Group Info */}
-              <div className="flex-1">
-                <h1 className="text-4xl font-bold text-white mb-4">{group.name}</h1>
-                <p className="text-slate-300 text-lg mb-6 leading-relaxed">{group.description}</p>
-                
-                <div className="flex flex-wrap gap-6 mb-6">
-                  <div className="flex items-center space-x-2 text-slate-300">
-                    <Users className="h-5 w-5 text-blue-400" />
-                    <span className="font-medium">{members.length} members</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-slate-300">
-                    <Calendar className="h-5 w-5 text-emerald-400" />
-                    <span className="font-medium">Created {new Date(group.created_at).toLocaleDateString()}</span>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex flex-wrap gap-4">
-                  <button
-                    onClick={() => setShowLogRoundModal(true)}
-                    className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 py-3 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2"
-                  >
-                    <Plus className="h-5 w-5" />
-                    <span>Log Your Round</span>
-                  </button>
-                  <button
-                    onClick={() => setShowInviteModal(true)}
-                    className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-6 py-3 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2"
-                  >
-                    <UserPlus className="h-5 w-5" />
-                    <span>Invite Members</span>
-                  </button>
-                  <button 
-                    onClick={() => setShowGroupChat(true)}
-                    className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white px-6 py-3 rounded-xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center space-x-2"
-                  >
-                    <MessageCircle className="h-5 w-5" />
-                    <span>Group Chat</span>
-                  </button>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.18em] text-white/42">Branding</p>
+                  <h3 className="mt-2 text-lg font-semibold text-white">Group visuals</h3>
+                  <p className="mt-2 text-sm leading-6 text-white/58">
+                    Update the logo or header to make this community feel more intentional.
+                  </p>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Members Section */}
-        <div className="relative bg-gradient-to-r from-slate-800/60 to-slate-900/60 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 mb-8 shadow-2xl overflow-hidden">
-          {/* Decorative Elements */}
-          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 rounded-full -translate-y-10 translate-x-10"></div>
-          
-          <div className="relative">
-            <h2 className="text-3xl font-bold text-white mb-8 flex items-center">
-              <div className="p-3 bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 rounded-xl mr-4">
-                <Users className="h-6 w-6 text-emerald-400" />
-              </div>
-              Group Members
-            </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {members.map((member) => (
-                <div key={member.id} className="group bg-slate-800/50 rounded-2xl p-6 border border-slate-600/50 hover:bg-slate-700/50 transition-all duration-300 shadow-lg hover:shadow-xl">
-                  <div className="flex items-center space-x-4 mb-4">
-                    <div className="relative">
-                      <div className="h-16 w-16 rounded-2xl overflow-hidden border-2 border-emerald-500/30 group-hover:border-emerald-400/60 transition-all duration-300">
-                        <img
-                          src={member.user_profiles?.avatar_url || '/default-avatar.svg'}
-                          alt={`${member.user_profiles?.first_name} ${member.user_profiles?.last_name}`}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          onError={(e) => {
-                            e.currentTarget.src = '/default-avatar.svg'
-                          }}
-                        />
-                      </div>
-                      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-2 border-slate-800"></div>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-white group-hover:text-emerald-400 transition-colors duration-300">
-                        {member.user_profiles?.first_name} {member.user_profiles?.last_name}
-                      </h3>
-                      <p className="text-slate-400 text-sm">@{member.user_profiles?.username}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    {member.user_profiles?.location && (
-                      <div className="flex items-center space-x-2 text-slate-300">
-                        <MapPin className="h-4 w-4 text-emerald-400" />
-                        <span className="text-sm font-medium">{member.user_profiles.location}</span>
-                      </div>
-                    )}
-                    {member.user_profiles?.handicap && (
-                      <div className="flex items-center space-x-2 text-slate-300">
-                        <Trophy className="h-4 w-4 text-yellow-400" />
-                        <span className="text-sm font-medium">Handicap: {member.user_profiles.handicap}</span>
-                      </div>
-                    )}
-                    {member.user_profiles?.location && (
-                      <div className="flex items-center space-x-2 text-slate-300">
-                        <MapPin className="h-4 w-4 text-blue-400" />
-                        <span className="text-sm font-medium">Location: {member.user_profiles.location}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          </aside>
         </div>
       </div>
+
+      {members.length === 0 && (
+        <div className="mx-auto mt-6 max-w-7xl px-4 sm:px-6">
+          <div className="rounded-[1.8rem] border border-white/10 bg-white/5 p-8 text-center text-white/65 backdrop-blur-sm">
+            <Users className="mx-auto h-10 w-10 text-white/35" />
+            <p className="mt-4">This group is ready for its first members.</p>
+          </div>
+        </div>
+      )}
 
       {/* Log Round Modal */}
       {showLogRoundModal && (
