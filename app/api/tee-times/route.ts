@@ -15,6 +15,114 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c
 }
 
+function getTeeTimeVisibility(teeTime: any) {
+  return teeTime.visibility_scope || teeTime.visibility || 'public'
+}
+
+function isMissingColumnError(error: any, columnName: string) {
+  if (!error) return false
+  const message = `${error.message || ''} ${error.details || ''}`.toLowerCase()
+  return message.includes(columnName.toLowerCase()) && (
+    message.includes('column') ||
+    message.includes('schema cache') ||
+    message.includes('could not find')
+  )
+}
+
+async function getAcceptedConnectionUserIds(supabase: any, userId: string): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from('user_connections')
+    .select('requester_id, recipient_id')
+    .or(`requester_id.eq.${userId},recipient_id.eq.${userId}`)
+    .eq('status', 'accepted')
+
+  if (error) {
+    console.log('⚠️ Could not fetch accepted connections:', error.message)
+    return new Set<string>()
+  }
+
+  return new Set<string>(
+    (data || []).map((connection: any) =>
+      connection.requester_id === userId ? connection.recipient_id : connection.requester_id
+    )
+  )
+}
+
+async function getJoinedGroupIds(supabase: any, userId: string): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from('group_members')
+    .select('group_id')
+    .eq('user_id', userId)
+    .eq('status', 'active')
+
+  if (error) {
+    console.log('⚠️ Could not fetch joined groups:', error.message)
+    return new Set<string>()
+  }
+
+  return new Set<string>((data || []).map((membership: any) => membership.group_id))
+}
+
+function filterVisibleTeeTimes(
+  teeTimes: any[],
+  viewerId?: string | null,
+  connectionIds?: Set<string>,
+  joinedGroupIds?: Set<string>
+) {
+  return (teeTimes || []).filter((teeTime) => {
+    const visibility = getTeeTimeVisibility(teeTime)
+
+    if (!viewerId) {
+      return visibility === 'public'
+    }
+
+    if (teeTime.creator_id === viewerId) {
+      return true
+    }
+
+    if (visibility === 'public') {
+      return true
+    }
+
+    if (visibility === 'connections') {
+      return connectionIds?.has(teeTime.creator_id) || false
+    }
+
+    if (visibility === 'group') {
+      return !!teeTime.group_id && (joinedGroupIds?.has(teeTime.group_id) || false)
+    }
+
+    return true
+  })
+}
+
+async function attachGroupDetails(supabase: any, teeTimes: any[]) {
+  const groupIds = Array.from(
+    new Set((teeTimes || []).map((teeTime: any) => teeTime.group_id).filter(Boolean))
+  )
+
+  if (groupIds.length === 0) {
+    return teeTimes
+  }
+
+  const { data: groups, error } = await supabase
+    .from('golf_groups')
+    .select('id, name, logo_url')
+    .in('id', groupIds)
+
+  if (error) {
+    console.log('⚠️ Could not attach group details:', error.message)
+    return teeTimes
+  }
+
+  const groupsById = new Map((groups || []).map((group: any) => [group.id, group]))
+
+  return (teeTimes || []).map((teeTime: any) => ({
+    ...teeTime,
+    group: teeTime.group_id ? groupsById.get(teeTime.group_id) || null : null
+  }))
+}
+
 // Mock tee time data for development with in-memory storage
 let mockTeeTimes = [
   {
@@ -185,8 +293,18 @@ export async function GET(request: NextRequest) {
         .order('tee_time_date', { ascending: true })
 
       if (error) throw error
+
+      const [connectionIds, joinedGroupIds]: [Set<string>, Set<string>] = userId
+        ? await Promise.all([
+            getAcceptedConnectionUserIds(supabase, userId),
+            getJoinedGroupIds(supabase, userId)
+          ])
+        : [new Set<string>(), new Set<string>()]
+
+      const visibleTeeTimes = filterVisibleTeeTimes(data || [], userId, connectionIds, joinedGroupIds)
+      const enrichedTeeTimes = await attachGroupDetails(supabase, visibleTeeTimes)
       
-      const response = NextResponse.json(data || [])
+      const response = NextResponse.json(enrichedTeeTimes || [])
       // Add cache-busting headers to prevent stale data
       response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
       response.headers.set('Pragma', 'no-cache')
@@ -532,7 +650,7 @@ export async function POST(request: NextRequest) {
     }
     
     // If both clients failed, use mock responses
-    if (usingMockMode && action === 'create') {
+      if (usingMockMode && action === 'create') {
       console.log('🔧 Using mock mode for tee time creation with data:', data)
       
       // Handle short course names by expanding them
@@ -552,6 +670,8 @@ export async function POST(request: NextRequest) {
         current_players: 1,
         handicap_requirement: data.handicap_requirement || 'any',
         description: data.description || '',
+        visibility_scope: data.visibility_scope || 'public',
+        group_id: data.group_id || null,
         status: 'active',
         available_spots: (data.max_players || 4) - 1,
         creator: { 
@@ -588,6 +708,8 @@ export async function POST(request: NextRequest) {
       }
       
       const creatorId = data.creator_id
+      const visibilityScope = data.visibility_scope || 'public'
+      const groupId = visibilityScope === 'group' ? data.group_id || null : null
       
       if (!data.tee_time_date) {
         return NextResponse.json({ 
@@ -601,6 +723,37 @@ export async function POST(request: NextRequest) {
           error: 'Missing required field: tee_time_time',
           details: 'Tee time is required'
         }, { status: 400 })
+      }
+
+      if (!['public', 'connections', 'group'].includes(visibilityScope)) {
+        return NextResponse.json({
+          error: 'Invalid visibility option',
+          details: 'Visibility must be public, connections, or group'
+        }, { status: 400 })
+      }
+
+      if (visibilityScope === 'group') {
+        if (!groupId) {
+          return NextResponse.json({
+            error: 'Missing required field: group_id',
+            details: 'Select a group when posting a group tee time'
+          }, { status: 400 })
+        }
+
+        const { data: membership, error: membershipError } = await supabase
+          .from('group_members')
+          .select('id')
+          .eq('group_id', groupId)
+          .eq('user_id', creatorId)
+          .eq('status', 'active')
+          .single()
+
+        if (membershipError || !membership) {
+          return NextResponse.json({
+            error: 'You must join the group first',
+            details: 'Only active group members can post tee times inside that community'
+          }, { status: 403 })
+        }
       }
       
       // First check if user profile exists
@@ -719,7 +872,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Use only the fields that exist in the database schema
-      const insertData = {
+      const insertData: Record<string, any> = {
         course_id: courseId,
         course_name: courseName || data.course_name || 'Unnamed Course',
         creator_id: creatorId,
@@ -732,14 +885,32 @@ export async function POST(request: NextRequest) {
         course_location: data.location || '',
         status: 'active'
       }
+
+      const extendedInsertData = {
+        ...insertData,
+        visibility_scope: visibilityScope,
+        group_id: groupId
+      }
       
-      console.log('🔍 Creating tee time with data:', insertData)
+      console.log('🔍 Creating tee time with data:', extendedInsertData)
       
-      const { data: newTeeTime, error } = await supabase
+      let { data: newTeeTime, error } = await supabase
         .from('tee_times')
-        .insert(insertData)
+        .insert(extendedInsertData)
         .select()
         .single()
+
+      if (error && (isMissingColumnError(error, 'visibility_scope') || isMissingColumnError(error, 'group_id'))) {
+        console.log('⚠️ Tee time visibility columns are missing, retrying with legacy schema')
+        const legacyResult = await supabase
+          .from('tee_times')
+          .insert(insertData)
+          .select()
+          .single()
+
+        newTeeTime = legacyResult.data
+        error = legacyResult.error
+      }
 
       if (error) {
         console.error('❌ Error creating tee time:', error)
@@ -1195,5 +1366,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
-
-

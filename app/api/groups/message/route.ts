@@ -3,6 +3,15 @@ import { createServerClient } from '@/lib/supabase'
 
 const supabase = createServerClient()
 
+function normalizeMessages(messages: any[], legacy = false) {
+  return (messages || []).map((message) => ({
+    ...message,
+    message_content: message.message_content ?? message.message ?? '',
+    created_at: message.created_at ?? message.sent_at ?? new Date().toISOString(),
+    user_profiles: message.user_profiles || message.sender || null
+  }))
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -32,7 +41,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch messages with sender information
-    const { data: messages, error } = await supabase
+    let messages: any[] | null = null
+    let error: any = null
+
+    const primaryResult = await supabase
       .from('group_messages')
       .select(`
         *,
@@ -47,6 +59,29 @@ export async function GET(request: NextRequest) {
       .eq('group_id', group_id)
       .order('created_at', { ascending: true })
 
+    messages = primaryResult.data
+    error = primaryResult.error
+
+    if (error) {
+      const fallbackResult = await supabase
+        .from('group_messages')
+        .select(`
+          *,
+          user_profiles!group_messages_sender_id_fkey (
+            id,
+            first_name,
+            last_name,
+            username,
+            avatar_url
+          )
+        `)
+        .eq('group_id', group_id)
+        .order('sent_at', { ascending: true })
+
+      messages = fallbackResult.data
+      error = fallbackResult.error
+    }
+
     if (error) {
       console.error('Database error:', error)
       return NextResponse.json(
@@ -57,7 +92,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ 
       success: true, 
-      messages: messages || []
+      messages: normalizeMessages(messages || [])
     })
 
   } catch (error) {
@@ -96,15 +131,54 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert message into group_messages table
-    const { data, error } = await supabase
+    let data: any = null
+    let error: any = null
+
+    const primaryInsert = await supabase
       .from('group_messages')
       .insert({
         group_id,
         sender_id: user_id,
         message_content: message
       })
-      .select()
+      .select(`
+        *,
+        user_profiles (
+          id,
+          first_name,
+          last_name,
+          username,
+          avatar_url
+        )
+      `)
       .single()
+
+    data = primaryInsert.data
+    error = primaryInsert.error
+
+    if (error) {
+      const fallbackInsert = await supabase
+        .from('group_messages')
+        .insert({
+          group_id,
+          sender_id: user_id,
+          message
+        })
+        .select(`
+          *,
+          user_profiles!group_messages_sender_id_fkey (
+            id,
+            first_name,
+            last_name,
+            username,
+            avatar_url
+          )
+        `)
+        .single()
+
+      data = fallbackInsert.data
+      error = fallbackInsert.error
+    }
 
     if (error) {
       console.error('Database error:', error)
@@ -135,7 +209,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ 
       success: true, 
-      message: data 
+      message: normalizeMessages([data])[0]
     })
 
   } catch (error) {

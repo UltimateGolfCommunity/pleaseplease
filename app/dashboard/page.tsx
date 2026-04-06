@@ -57,7 +57,9 @@ export default function Dashboard() {
     tee_time_date: '',
     tee_time_time: '',
     max_players: 4,
-    handicap_requirement: 'weekend-warrior'
+    handicap_requirement: 'weekend-warrior',
+    visibility_scope: 'public',
+    group_id: ''
   })
   const [teeTimeSubmitting, setTeeTimeSubmitting] = useState(false)
   
@@ -81,6 +83,7 @@ export default function Dashboard() {
   const [allGroups, setAllGroups] = useState<any[]>([])
   const [groupSearchQuery, setGroupSearchQuery] = useState('')
   const [groupSearchLoading, setGroupSearchLoading] = useState(false)
+  const [joiningGroupId, setJoiningGroupId] = useState<string | null>(null)
   
   // Messages
   const [showMessageModal, setShowMessageModal] = useState(false)
@@ -156,7 +159,7 @@ export default function Dashboard() {
     }
     
     try {
-      const response = await fetch(`/api/tee-times?action=available&_cache_bust=${Math.random()}`)
+      const response = await fetch(`/api/tee-times?action=available&user_id=${user.id}&_cache_bust=${Math.random()}`)
       const data = await response.json()
       
       if (!silent) {
@@ -252,8 +255,13 @@ export default function Dashboard() {
       console.log('📊 Groups API response:', data)
       
       if (data.success) {
-        setUserGroups(data.groups || [])
-        console.log('🎯 Fetched groups:', data.groups)
+        const normalizedGroups = (data.groups || []).map((group: any) => ({
+          ...group,
+          member_count: group.member_count || 0,
+          is_member: true
+        }))
+        setUserGroups(normalizedGroups)
+        console.log('🎯 Fetched groups:', normalizedGroups)
       } else {
         console.log('❌ Groups fetch failed:', data)
       }
@@ -438,7 +446,8 @@ export default function Dashboard() {
     setGroupSearchLoading(true)
     
     try {
-      const response = await fetch(`/api/groups?action=search&query=${encodeURIComponent(query)}`)
+      const searchUser = user?.id ? `&user_id=${user.id}` : ''
+      const response = await fetch(`/api/groups?action=search&query=${encodeURIComponent(query)}${searchUser}`)
       const data = await response.json()
       
       if (data.success) {
@@ -448,6 +457,42 @@ export default function Dashboard() {
       console.error('Error searching groups:', error)
     } finally {
       setGroupSearchLoading(false)
+    }
+  }
+
+  const handleJoinGroup = async (groupId: string) => {
+    if (!user?.id) {
+      alert('You must be logged in to join a group')
+      return
+    }
+
+    setJoiningGroupId(groupId)
+    try {
+      const response = await fetch('/api/groups', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'join',
+          group_id: groupId,
+          user_id: user.id
+        }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        alert('You joined the group successfully!')
+        await Promise.all([fetchUserGroups(), searchGroups(groupSearchQuery)])
+      } else {
+        alert(data.error || 'Failed to join group')
+      }
+    } catch (error) {
+      console.error('Error joining group:', error)
+      alert('Failed to join group. Please try again.')
+    } finally {
+      setJoiningGroupId(null)
     }
   }
 
@@ -479,7 +524,9 @@ export default function Dashboard() {
           tee_time_time: teeTimeForm.tee_time_time,
           location: teeTimeForm.location,
           handicap_requirement: teeTimeForm.handicap_requirement,
-          max_players: teeTimeForm.max_players
+          max_players: teeTimeForm.max_players,
+          visibility_scope: teeTimeForm.visibility_scope,
+          group_id: teeTimeForm.visibility_scope === 'group' ? teeTimeForm.group_id : null
         }),
       })
       
@@ -494,7 +541,9 @@ export default function Dashboard() {
           tee_time_date: '',
           tee_time_time: '',
           max_players: 4,
-          handicap_requirement: 'weekend-warrior'
+          handicap_requirement: 'weekend-warrior',
+          visibility_scope: 'public',
+          group_id: ''
         })
         // Refresh tee times list
         fetchTeeTimes()
@@ -744,6 +793,11 @@ export default function Dashboard() {
       },
     ],
     [teeTimes.length, userGroups.length, notifications.length, pendingApplications.length]
+  )
+
+  const joinedGroupIds = useMemo(
+    () => new Set(userGroups.map((group) => group.id)),
+    [userGroups]
   )
 
   // Show welcome animation while loading and after
@@ -1016,6 +1070,21 @@ export default function Dashboard() {
                               <span className="text-emerald-400 font-semibold">Skill Level:</span> {teeTime.handicap_requirement}
                             </p>
                           )}
+
+                          <div className="flex flex-wrap gap-2">
+                            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-200">
+                              {teeTime.visibility_scope === 'connections'
+                                ? 'Connections'
+                                : teeTime.visibility_scope === 'group'
+                                  ? 'Group'
+                                  : 'Public'}
+                            </span>
+                            {teeTime.group?.name && (
+                              <span className="rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-200">
+                                {teeTime.group.name}
+                              </span>
+                            )}
+                          </div>
                           
                           {/* Bottom Row: Players Info and Action Buttons */}
                           <div className="flex items-center justify-between gap-4 pt-2">
@@ -1129,8 +1198,11 @@ export default function Dashboard() {
                           <User className="h-4 w-4 mr-1" />
                           <span>{group.member_count || 0} members</span>
                         </div>
-                        <button className="text-emerald-400 hover:text-emerald-300 text-sm font-semibold">
-                          View
+                        <button
+                          onClick={() => router.push(`/groups/${group.id}`)}
+                          className="text-emerald-400 hover:text-emerald-300 text-sm font-semibold"
+                        >
+                          Open Community
                         </button>
                       </div>
                     </div>
@@ -1189,9 +1261,22 @@ export default function Dashboard() {
                             <User className="h-4 w-4 mr-1" />
                             <span>{group.member_count || 0} members</span>
                           </div>
-                          <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-1 rounded-lg text-sm font-semibold transition-colors">
-                            Join
-                          </button>
+                          {joinedGroupIds.has(group.id) || group.is_member ? (
+                            <button
+                              onClick={() => router.push(`/groups/${group.id}`)}
+                              className="rounded-lg border border-white/10 bg-white/5 px-4 py-1 text-sm font-semibold text-white/80 transition-colors hover:bg-white/10"
+                            >
+                              Open
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleJoinGroup(group.id)}
+                              disabled={joiningGroupId === group.id}
+                              className="bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-500/50 text-white px-4 py-1 rounded-lg text-sm font-semibold transition-colors"
+                            >
+                              {joiningGroupId === group.id ? 'Joining...' : 'Join'}
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -1386,6 +1471,45 @@ export default function Dashboard() {
                   <option value="pro">Pro - Serious golfer</option>
                     </select>
                 </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-emerald-400 mb-2">Who can see this?</label>
+                <select
+                  value={teeTimeForm.visibility_scope}
+                  onChange={(e) => setTeeTimeForm({
+                    ...teeTimeForm,
+                    visibility_scope: e.target.value,
+                    group_id: e.target.value === 'group' ? teeTimeForm.group_id : ''
+                  })}
+                  className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white focus:outline-none focus:border-emerald-500 transition-all"
+                >
+                  <option value="public">Public</option>
+                  <option value="connections">Connections only</option>
+                  <option value="group">Inside one of my groups</option>
+                </select>
+              </div>
+
+              {teeTimeForm.visibility_scope === 'group' && (
+                <div>
+                  <label className="block text-sm font-semibold text-emerald-400 mb-2">Choose Group *</label>
+                  <select
+                    value={teeTimeForm.group_id}
+                    onChange={(e) => setTeeTimeForm({ ...teeTimeForm, group_id: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-700/50 border-2 border-slate-600 rounded-xl text-white focus:outline-none focus:border-emerald-500 transition-all"
+                    required
+                  >
+                    <option value="">Select a group</option>
+                    {userGroups.map((group) => (
+                      <option key={group.id} value={group.id}>
+                        {group.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-2 text-xs text-gray-400">
+                    Group tee times double as community posts for that group board.
+                  </p>
+                </div>
+              )}
 
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4">

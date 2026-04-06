@@ -326,6 +326,18 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to search groups' }, { status: 500 })
       }
 
+      let memberGroupIds = new Set<string>()
+
+      if (user_id) {
+        const { data: memberships } = await supabase
+          .from('group_members')
+          .select('group_id')
+          .eq('user_id', user_id)
+          .eq('status', 'active')
+
+        memberGroupIds = new Set((memberships || []).map((membership: any) => membership.group_id))
+      }
+
       // Get member count for each group
       const groupsWithMemberCount = await Promise.all(
         (data || []).map(async (group: any) => {
@@ -336,7 +348,8 @@ export async function GET(request: NextRequest) {
           
           return {
             ...group,
-            member_count: count || 0
+            member_count: count || 0,
+            is_member: memberGroupIds.has(group.id)
           }
         })
       )
@@ -405,10 +418,31 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log('✅ Groups fetched successfully:', data?.length || 0)
+    const groupsWithMemberCount = await Promise.all(
+      (data || []).map(async (membership: any) => {
+        const group = membership.group || {}
+        const { count } = await supabase
+          .from('group_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('group_id', membership.group_id)
+          .eq('status', 'active')
+
+        return {
+          ...group,
+          membership_id: membership.id,
+          membership_role: membership.role,
+          membership_status: membership.status,
+          joined_at: membership.joined_at,
+          member_count: count || 0,
+          is_member: true
+        }
+      })
+    )
+
+    console.log('✅ Groups fetched successfully:', groupsWithMemberCount?.length || 0)
     return NextResponse.json({ 
       success: true, 
-      groups: data || [] 
+      groups: groupsWithMemberCount || [] 
     })
 
   } catch (error) {
