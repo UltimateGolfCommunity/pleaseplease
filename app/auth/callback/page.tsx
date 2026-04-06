@@ -11,8 +11,19 @@ export default function AuthCallback() {
     const handleAuthCallback = async () => {
       try {
         const supabase = createBrowserClient()
+        const currentUrl = new URL(window.location.href)
+        const code = currentUrl.searchParams.get('code')
+
+        if (code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+
+          if (exchangeError) {
+            console.error('Auth code exchange error:', exchangeError)
+            router.push('/auth/login?error=auth_callback_failed')
+            return
+          }
+        }
         
-        // Get the session from the URL
         const { data: { session }, error } = await supabase.auth.getSession()
         
         if (error) {

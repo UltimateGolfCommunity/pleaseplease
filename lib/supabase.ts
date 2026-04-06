@@ -102,22 +102,6 @@ export function createBrowserClient() {
       }
     })
     
-    // Test the connection by checking if we can reach the URL
-    if (typeof window !== 'undefined') {
-      // Add a test to verify the URL is reachable
-      fetch(`${url}/rest/v1/`, { 
-        method: 'HEAD',
-        mode: 'no-cors' 
-      }).catch((error) => {
-        console.error('❌ Supabase URL appears unreachable:', error)
-        console.error('   This could mean:')
-        console.error('   1. The Supabase project is paused or deleted')
-        console.error('   2. The URL is incorrect')
-        console.error('   3. There is a network/DNS issue')
-        console.error('   Please verify your Supabase project is active and the URL is correct.')
-      })
-    }
-    
     return cachedClient
   } catch (error) {
     console.error('❌ Failed to create Supabase client:', error)

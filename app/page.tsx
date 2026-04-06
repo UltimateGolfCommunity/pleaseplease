@@ -1,9 +1,26 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
+import { useAuth } from '@/contexts/AuthContext'
+import {
+  ArrowRight,
+  Calendar,
+  Droplets,
+  LogIn,
+  MapPin,
+  MessageSquare,
+  Sparkles,
+  Sun,
+  Trophy,
+  User,
+  UserPlus,
+  Users,
+  Wind,
+} from 'lucide-react'
+import Logo from '@/app/components/Logo'
+import PWAInstallPrompt from '@/app/components/PWAInstallPrompt'
 
 interface WeatherData {
   location: string
@@ -14,31 +31,49 @@ interface WeatherData {
   windSpeed: number
   feelsLike: number
 }
-import { 
-  LogIn, 
-  UserPlus, 
-  Users, 
-  Calendar, 
-  Trophy, 
-  Star,
-  Sun,
-  Wind,
-  Droplets,
-  Play,
-  ArrowRight,
-  Sparkles,
-  MapPin,
-  Clock,
-  TrendingUp,
-  User
-} from 'lucide-react'
-import Logo from '@/app/components/Logo'
-import PWAInstallPrompt from '@/app/components/PWAInstallPrompt'
 
+const featureCards = [
+  {
+    title: 'Post Open Tee Times',
+    description:
+      'Fill an empty slot fast and turn a canceled round into a new playing partner.',
+    icon: Calendar,
+  },
+  {
+    title: 'Build Real Groups',
+    description:
+      'Create city clubs, course crews, alumni circles, and tournament pods that actually stay active.',
+    icon: Users,
+  },
+  {
+    title: 'Run Better Events',
+    description:
+      'Organize money games, member events, and scrambles with one shared home base.',
+    icon: Trophy,
+  },
+  {
+    title: 'Keep The Conversation Going',
+    description:
+      'Message boards and group chat keep the round alive long after the 18th hole.',
+    icon: MessageSquare,
+  },
+]
+
+const highlights = [
+  'Course-based communities',
+  'Private and public groups',
+  'Modern profile and messaging tools',
+  'Tournament-ready social structure',
+]
+
+const founderPreview = {
+  name: 'Luke Restall',
+  title: 'Founder & CEO',
+  image: '/luke-about.jpg',
+}
 
 export default function HomePage() {
   const { user, profile, signOut } = useAuth()
-  const router = useRouter()
   const [weather, setWeather] = useState<WeatherData | null>(null)
   const [weatherLoading, setWeatherLoading] = useState(true)
 
@@ -47,12 +82,12 @@ export default function HomePage() {
       try {
         setWeatherLoading(true)
         const response = await fetch('/api/weather?city=San Francisco')
-        if (response.ok) {
-          const weatherData = await response.json()
-          setWeather(weatherData)
-        } else {
-          console.error('Failed to fetch weather:', response.statusText)
+        if (!response.ok) {
+          throw new Error('Weather request failed')
         }
+
+        const weatherData = await response.json()
+        setWeather(weatherData)
       } catch (error) {
         console.error('Failed to fetch weather:', error)
       } finally {
@@ -66,441 +101,440 @@ export default function HomePage() {
   const handleSignOut = async () => {
     try {
       await signOut()
-      // Force page refresh to clear any cached state
       window.location.href = '/'
     } catch (error) {
-      console.error('❌ Error signing out:', error)
+      console.error('Error signing out:', error)
       alert('Failed to sign out. Please try again.')
     }
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-md border-b border-gray-800">
-        <div className="max-w-7xl mx-auto px-0">
-          <div className="flex justify-between items-center h-28">
-            <div className="pl-6 sm:pl-8 lg:pl-12">
-              <Logo size="md" />
-            </div>
-            
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              {user ? (
-                <div className="flex items-center space-x-2 sm:space-x-4">
-                  <div className="hidden sm:block text-sm text-gray-300">
-                    Welcome, {profile?.first_name || user.email?.split('@')[0] || 'Golfer'}!
-                  </div>
-                  <div className="h-8 w-8 rounded-full overflow-hidden shadow-lg">
-                    {profile?.avatar_url ? (
-                      <img 
-                        src={profile.avatar_url} 
-                        alt="Profile" 
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="h-full w-full bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center">
-                        <User className="h-4 w-4 text-white" />
-                      </div>
-                    )}
-                  </div>
-                  <a
-                    href="/dashboard"
-                    className="bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white px-2 sm:px-4 py-2 rounded-lg transition-all duration-300 shadow-lg hover:shadow-emerald-500/25 text-sm sm:text-base"
-                  >
-                    <span className="hidden sm:inline">Go to Dashboard</span>
-                    <span className="sm:hidden">Dashboard</span>
-                  </a>
-                  <button
-                    onClick={handleSignOut}
-                    className="bg-red-600/20 hover:bg-red-600/40 text-red-400 hover:text-red-300 px-2 sm:px-4 py-2 rounded-lg transition-all duration-300 border border-red-600/30 text-sm sm:text-base"
-                  >
-                    <span className="hidden sm:inline">Sign Out</span>
-                    <span className="sm:hidden">Out</span>
-                  </button>
+    <div className="min-h-screen overflow-x-hidden bg-[#07140f] text-white">
+      <nav className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-[#07140f]/75 backdrop-blur-xl">
+        <div className="mx-auto flex h-24 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <Logo size="md" />
+
+          {user ? (
+            <div className="flex items-center gap-2 sm:gap-4">
+              <div className="hidden items-center gap-3 rounded-full border border-white/10 bg-white/5 px-3 py-2 sm:flex">
+                <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-emerald-500 to-cyan-400">
+                  {profile?.avatar_url ? (
+                    <img
+                      src={profile.avatar_url}
+                      alt="Profile"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <User className="h-4 w-4 text-white" />
+                  )}
                 </div>
-              ) : (
-                <div className="flex items-center space-x-2 sm:space-x-4">
-                  <a
-                    href="/auth/login"
-                    className="flex items-center text-gray-300 hover:text-emerald-400 transition-colors duration-300 text-sm sm:text-base"
-                  >
-                    <LogIn className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
-                    <span className="hidden sm:inline">Sign In</span>
-                    <span className="sm:hidden">In</span>
-                  </a>
-                  <a
-                    href="/auth/signup"
-                    className="bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white px-3 sm:px-6 py-2 rounded-lg transition-all duration-300 shadow-lg hover:shadow-emerald-500/25 text-sm sm:text-base"
-                  >
-                    <UserPlus className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 inline" />
-                    <span className="hidden sm:inline">Sign Up</span>
-                    <span className="sm:hidden">Up</span>
-                  </a>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      {/* Hero Section with Video Background */}
-      <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        {/* Video Background */}
-        <div className="absolute inset-0 w-full h-full">
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="w-full h-full object-cover opacity-40"
-            onError={(e) => console.error('Video error:', e)}
-            onLoadStart={() => console.log('Video loading started')}
-            onCanPlay={() => console.log('Video can play')}
-          >
-            <source src="/0901.mp4" type="video/mp4" />
-            <source src="/0901.mov" type="video/quicktime" />
-            <source src="/Firefly Have the two golfers exchanging contact information  636854.mp4" type="video/mp4" />
-            Your browser does not support the video tag.
-          </video>
-          {/* Dark overlay */}
-          <div className="absolute inset-0 bg-black/60"></div>
-        </div>
-        
-        {/* Hero Content */}
-        <div className="relative z-10 text-center max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-6 sm:mb-8">
-            <div className="inline-flex items-center px-3 sm:px-4 py-2 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs sm:text-sm font-medium mb-4 sm:mb-6">
-              <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              The Future of Golf is Here
-            </div>
-          </div>
-          
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 sm:mb-8 leading-tight">
-            <span className="text-white">Ultimate Golf</span>
-            <br />
-            <span className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent">
-              Community
-            </span>
-          </h1>
-          
-          <p className="text-lg sm:text-xl md:text-2xl text-gray-300 mb-8 sm:mb-12 max-w-4xl mx-auto leading-relaxed px-2">
-            Create golf groups, post and fill empty tee times, build message boards, organize tournaments, and connect with fellow golfers in the most vibrant golf community online.
-          </p>
-          
-          <div className="flex justify-center items-center">
-            <a
-              href="/auth/signup"
-              className="group border-2 border-emerald-400/50 text-emerald-400 hover:bg-emerald-400/10 hover:border-emerald-400 px-10 py-4 rounded-xl text-lg font-semibold transition-all duration-300 backdrop-blur-sm flex items-center"
-            >
-              Join Community
-              <ArrowRight className="h-5 w-5 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
-            </a>
-          </div>
-        </div>
-        
-        {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
-          <div className="w-6 h-10 border-2 border-emerald-400/50 rounded-full flex justify-center">
-            <div className="w-1 h-3 bg-emerald-400 rounded-full mt-2 animate-pulse"></div>
-          </div>
-        </div>
-      </div>
-
-      {/* Floating Stats Section */}
-      <div className="relative -mt-20 z-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            <div className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-md border border-gray-700/50 rounded-2xl p-6 text-center transform hover:scale-105 transition-all duration-300">
-              <div className="bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Users className="h-8 w-8 text-emerald-400" />
-              </div>
-              <div className="text-3xl font-bold text-white mb-2">500+</div>
-              <div className="text-gray-400">Active Groups</div>
-            </div>
-            
-            <div className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 backdrop-blur-md border border-gray-700/50 rounded-2xl p-6 text-center transform hover:scale-105 transition-all duration-300">
-              <div className="bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <MapPin className="h-8 w-8 text-emerald-400" />
-              </div>
-              <div className="text-3xl font-bold text-white mb-2">100+</div>
-              <div className="text-gray-400">Tournaments</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Features Section */}
-      <div className="py-24 bg-gradient-to-b from-gray-900 to-black">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-20">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              Build Your Golf
-              <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent"> Community</span>
-            </h2>
-            <p className="text-xl text-gray-400 max-w-3xl mx-auto">
-              Create groups, post and fill empty tee times, organize tournaments, and build message boards to connect golfers and grow your local golf community
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="group p-8 rounded-2xl bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-gray-700/50 hover:border-emerald-500/50 transition-all duration-300 hover:transform hover:scale-105 backdrop-blur-sm">
-              <div className="bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:from-emerald-500/30 group-hover:to-cyan-500/30 transition-all duration-300">
-                <Calendar className="h-10 w-10 text-emerald-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-3 text-center">Tee Times & Groups</h3>
-              <p className="text-gray-400 text-center group-hover:text-gray-300 transition-colors duration-300">Post and fill empty tee times, create golf groups for your course, skill level, or interests and build lasting connections</p>
-            </div>
-
-            <div className="group p-8 rounded-2xl bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-gray-700/50 hover:border-emerald-500/50 transition-all duration-300 hover:transform hover:scale-105 backdrop-blur-sm">
-              <div className="bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:from-emerald-500/30 group-hover:to-cyan-500/30 transition-all duration-300">
-                <Users className="h-10 w-10 text-emerald-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-3 text-center">Message Boards</h3>
-              <p className="text-gray-400 text-center group-hover:text-gray-300 transition-colors duration-300">Build community message boards for discussions, tips, and local golf events</p>
-            </div>
-
-            <div className="group p-8 rounded-2xl bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-gray-700/50 hover:border-emerald-500/50 transition-all duration-300 hover:transform hover:scale-105 backdrop-blur-sm">
-              <div className="bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:from-emerald-500/30 group-hover:to-cyan-500/30 transition-all duration-300">
-                <Trophy className="h-10 w-10 text-emerald-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-3 text-center">Organize Tournaments</h3>
-              <p className="text-gray-400 text-center group-hover:text-gray-300 transition-colors duration-300">Plan and manage golf tournaments with registration, scoring, and leaderboards</p>
-            </div>
-
-            <div className="group p-8 rounded-2xl bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-gray-700/50 hover:border-emerald-500/50 transition-all duration-300 hover:transform hover:scale-105 backdrop-blur-sm">
-              <div className="bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:from-emerald-500/30 group-hover:to-cyan-500/30 transition-all duration-300">
-                <Star className="h-10 w-10 text-emerald-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-3 text-center">Community Building</h3>
-              <p className="text-gray-400 text-center group-hover:text-gray-300 transition-colors duration-300">Foster lasting relationships and grow your local golf community with powerful tools</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Weather Widget */}
-      <div className="py-24 bg-gradient-to-br from-gray-900 via-black to-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              Perfect Weather for
-              <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent"> Golf</span>
-            </h2>
-            <p className="text-xl text-gray-400">
-              Check the conditions before you hit the course
-            </p>
-          </div>
-
-          {weatherLoading ? (
-            <div className="flex justify-center">
-              <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-emerald-400"></div>
-            </div>
-          ) : weather ? (
-            <div className="max-w-md mx-auto bg-gradient-to-br from-gray-800/80 to-gray-900/80 rounded-2xl shadow-2xl p-8 border border-gray-700/50 backdrop-blur-sm">
-              <div className="text-center">
-                <h3 className="text-2xl font-bold text-white mb-4">
-                  {weather.location}
-                </h3>
-                <div className="flex items-center justify-center mb-6">
-                  <img
-                    src={`https://openweathermap.org/img/wn/${weather.icon}@2x.png`}
-                    alt={weather.description}
-                    className="w-20 h-20"
-                  />
-                  <div className="text-left ml-6">
-                    <div className="text-4xl font-bold text-white">
-                      {weather.temperature}°C
-                    </div>
-                    <div className="text-emerald-400 capitalize text-lg">
-                      {weather.description}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-3 gap-6 text-sm">
-                  <div className="flex flex-col items-center justify-center p-3 rounded-lg bg-gray-800/50 border border-gray-700/50">
-                    <Droplets className="h-5 w-5 text-cyan-400 mb-2" />
-                    <span className="text-gray-300">{weather.humidity}%</span>
-                  </div>
-                  <div className="flex flex-col items-center justify-center p-3 rounded-lg bg-gray-800/50 border border-gray-700/50">
-                    <Wind className="h-5 w-5 text-gray-400 mb-2" />
-                    <span className="text-gray-300">{weather.windSpeed} km/h</span>
-                  </div>
-                  <div className="flex flex-col items-center justify-center p-3 rounded-lg bg-gray-800/50 border border-gray-700/50">
-                    <Sun className="h-5 w-5 text-yellow-400 mb-2" />
-                    <span className="text-gray-300">{weather.feelsLike}°C</span>
-                  </div>
+                <div className="text-sm text-white/80">
+                  {profile?.first_name || user.email?.split('@')[0] || 'Golfer'}
                 </div>
               </div>
+
+              <Link
+                href="/dashboard"
+                className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-emerald-100"
+              >
+                Dashboard
+              </Link>
+              <button
+                onClick={handleSignOut}
+                className="rounded-full border border-red-400/30 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/20"
+              >
+                Sign Out
+              </button>
             </div>
           ) : (
-            <div className="text-center text-gray-400">
-              <p>Weather information unavailable</p>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Link
+                href="/about"
+                className="hidden rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-white/75 transition hover:border-white/20 hover:text-white sm:inline-flex"
+              >
+                About
+              </Link>
+              <Link
+                href="/auth/login"
+                className="inline-flex items-center rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-white/85 transition hover:border-white/20 hover:bg-white/5"
+              >
+                <LogIn className="mr-2 h-4 w-4" />
+                Sign In
+              </Link>
+              <Link
+                href="/auth/signup"
+                className="inline-flex items-center rounded-full bg-gradient-to-r from-emerald-400 via-cyan-300 to-sky-300 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:brightness-105"
+              >
+                <UserPlus className="mr-2 h-4 w-4" />
+                Join Now
+              </Link>
             </div>
           )}
         </div>
-      </div>
+      </nav>
 
-      {/* CTA Section */}
-      <div className="py-24 bg-gradient-to-br from-black via-gray-900 to-black relative overflow-hidden">
-        {/* Animated background elements */}
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-10 w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-          <div className="absolute top-40 right-20 w-1 h-1 bg-cyan-400 rounded-full animate-ping"></div>
-          <div className="absolute bottom-20 left-1/4 w-3 h-3 bg-emerald-300 rounded-full animate-bounce"></div>
-          <div className="absolute bottom-40 right-1/3 w-1.5 h-1.5 bg-cyan-300 rounded-full animate-pulse"></div>
-        </div>
-        
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <div className="bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 backdrop-blur-sm border border-emerald-500/20 rounded-3xl p-12">
-            <h2 className="text-5xl md:text-6xl font-bold text-white mb-8">
-              Ready to Build Your
-              <span className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent"> Golf Community</span>?
-            </h2>
-            <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-4xl mx-auto leading-relaxed">
-              Start posting and filling tee times, creating groups, organizing tournaments, and building message boards to connect golfers and grow your local golf community
-            </p>
-            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-              <a
-                href="/auth/signup"
-                className="group bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500 hover:from-emerald-600 hover:via-cyan-600 hover:to-blue-600 text-white px-16 py-6 rounded-2xl text-2xl font-bold transition-all duration-500 shadow-2xl hover:shadow-emerald-500/50 transform hover:scale-110 inline-flex items-center relative overflow-hidden"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                <span className="relative">Get Started Today</span>
-                <ArrowRight className="h-7 w-7 ml-4 group-hover:translate-x-2 transition-transform duration-300 relative" />
-              </a>
-              <a
-                href="/dashboard"
-                className="group border-2 border-emerald-400/50 text-emerald-400 hover:bg-emerald-400/10 hover:border-emerald-400 px-16 py-6 rounded-2xl text-2xl font-bold transition-all duration-500 backdrop-blur-sm flex items-center"
-              >
-                Explore Dashboard
-                <ArrowRight className="h-7 w-7 ml-4 group-hover:translate-x-2 transition-transform duration-300" />
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Contact Us Section */}
-      <div className="py-24 bg-gradient-to-br from-gray-900 to-black">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              Get in
-              <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent"> Touch</span>
-            </h2>
-            <p className="text-xl text-gray-400 max-w-3xl mx-auto">
-              Have questions or want to partner with us? We'd love to hear from you
-            </p>
+      <main>
+        <section className="relative isolate overflow-hidden">
+          <div className="absolute inset-0">
+            <video
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="h-full w-full object-cover"
+            >
+              <source src="/homepagevideo.mp4" type="video/mp4" />
+            </video>
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,20,15,0.28)_0%,rgba(7,20,15,0.72)_45%,rgba(7,20,15,0.96)_100%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.32),transparent_34%),radial-gradient(circle_at_80%_20%,rgba(56,189,248,0.22),transparent_24%)]" />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-            {/* Partnership Opportunities */}
-            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-gray-700/50 rounded-2xl p-8 backdrop-blur-sm hover:border-emerald-500/50 transition-all duration-300">
-              <div className="bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <Users className="h-8 w-8 text-emerald-400" />
-              </div>
-              <h3 className="text-2xl font-bold text-white mb-4 text-center">Partnership Opportunities</h3>
-              <p className="text-gray-400 text-center mb-6">
-                Interested in partnering with Ultimate Golf Community? Let's explore how we can work together to grow the golf community.
-              </p>
-              <div className="text-center">
-                <a
-                  href="mailto:partners@ultimategolfcommunity.com"
-                  className="inline-flex items-center bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-emerald-500/25"
-                >
-                  <span>partners@ultimategolfcommunity.com</span>
-                </a>
-              </div>
-            </div>
+          <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col justify-center px-4 pb-16 pt-32 sm:px-6 lg:px-8">
+            <div className="grid gap-10 lg:grid-cols-[minmax(0,1.15fr)_420px] lg:items-end">
+              <div className="max-w-4xl">
+                <div className="mb-6 inline-flex items-center rounded-full border border-emerald-300/25 bg-emerald-300/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-emerald-100 sm:text-sm">
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  The network for golfers who actually want to connect
+                </div>
 
-            {/* Sales Inquiries */}
-            <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-gray-700/50 rounded-2xl p-8 backdrop-blur-sm hover:border-emerald-500/50 transition-all duration-300">
-              <div className="bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <TrendingUp className="h-8 w-8 text-emerald-400" />
-              </div>
-              <h3 className="text-2xl font-bold text-white mb-4 text-center">Sales Inquiries</h3>
-              <p className="text-gray-400 text-center mb-6">
-                Looking to learn more about our premium features or enterprise solutions? Our sales team is here to help.
-              </p>
-              <div className="text-center">
-                <a
-                  href="mailto:sales@ultimategolfcommunity.com"
-                  className="inline-flex items-center bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-emerald-500/25"
-                >
-                  <span>sales@ultimategolfcommunity.com</span>
-                </a>
-              </div>
-            </div>
-          </div>
+                <h1 className="max-w-4xl text-5xl font-semibold leading-[0.95] tracking-[-0.04em] text-white sm:text-6xl lg:text-8xl">
+                  Meet your next
+                  <span className="block bg-gradient-to-r from-emerald-200 via-cyan-200 to-sky-200 bg-clip-text text-transparent">
+                    foursome before
+                  </span>
+                  the first tee.
+                </h1>
 
-          {/* Social Media Section */}
-          <div className="mt-16 mb-8">
-            <div className="text-center mb-8">
-              <h3 className="text-2xl font-bold text-white mb-4">Follow Us on Social Media</h3>
-              <p className="text-gray-400">Stay connected and get the latest golf tips, community updates, and exclusive content</p>
-            </div>
-            
-            <div className="flex justify-center">
-              <a
-                href="https://www.tiktok.com/@ultimategolfcommunity"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group bg-gradient-to-r from-gray-800/50 to-gray-900/50 border border-gray-700/50 rounded-2xl p-6 backdrop-blur-sm hover:border-pink-500/50 transition-all duration-300 hover:transform hover:scale-105 max-w-sm"
-              >
-                <div className="flex items-center space-x-4">
-                  <div className="bg-gradient-to-br from-pink-500/20 to-purple-500/20 w-16 h-16 rounded-2xl flex items-center justify-center group-hover:from-pink-500/30 group-hover:to-purple-500/30 transition-all duration-300">
-                    <svg className="h-8 w-8 text-pink-400" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
-                    </svg>
+                <p className="mt-6 max-w-2xl text-lg leading-8 text-white/78 sm:text-xl">
+                  Ultimate Golf Community helps golfers find tee times, create local groups,
+                  organize events, and build a social golf scene with more energy than a static tee
+                  sheet ever could.
+                </p>
+
+                <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
+                  <Link
+                    href="/auth/signup"
+                    className="inline-flex items-center justify-center rounded-full bg-white px-8 py-4 text-base font-semibold text-slate-950 transition hover:bg-emerald-100"
+                  >
+                    Join Community
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Link>
+                  <Link
+                    href="/about"
+                    className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-8 py-4 text-base font-semibold text-white transition hover:border-white/30 hover:bg-white/10"
+                  >
+                    Meet the team
+                  </Link>
+                </div>
+
+                <div className="mt-12 grid gap-4 text-sm text-white/70 sm:grid-cols-2 lg:grid-cols-4">
+                  {highlights.map((item) => (
+                    <div
+                      key={item}
+                      className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4 backdrop-blur-md"
+                    >
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-[2rem] border border-white/10 bg-black/30 p-5 shadow-2xl shadow-black/30 backdrop-blur-xl">
+                <div className="rounded-[1.6rem] border border-white/10 bg-[linear-gradient(180deg,rgba(5,14,11,0.92),rgba(13,33,26,0.92))] p-6">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.28em] text-emerald-200/70">
+                        Community Snapshot
+                      </p>
+                      <h2 className="mt-3 text-2xl font-semibold text-white">
+                        Built for the modern golf scene
+                      </h2>
+                    </div>
+                    <div className="rounded-full border border-emerald-300/15 bg-emerald-300/10 px-3 py-1 text-xs font-semibold text-emerald-100">
+                      Live
+                    </div>
                   </div>
-                  <div className="text-left">
-                    <h4 className="text-lg font-semibold text-white group-hover:text-pink-300 transition-colors duration-300">
-                      @ultimategolfcommunity
-                    </h4>
-                    <p className="text-gray-400 text-sm group-hover:text-gray-300 transition-colors duration-300">
-                      Follow us on TikTok for golf tips, tricks, and community highlights
-                    </p>
+
+                  <div className="mt-8 grid grid-cols-2 gap-4">
+                    <div className="rounded-2xl border border-white/8 bg-white/5 p-4">
+                      <p className="text-xs uppercase tracking-[0.2em] text-white/45">Groups</p>
+                      <p className="mt-3 text-3xl font-semibold text-white">500+</p>
+                      <p className="mt-1 text-sm text-white/55">active communities</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/8 bg-white/5 p-4">
+                      <p className="text-xs uppercase tracking-[0.2em] text-white/45">Events</p>
+                      <p className="mt-3 text-3xl font-semibold text-white">100+</p>
+                      <p className="mt-1 text-sm text-white/55">tournaments and games</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 rounded-2xl border border-white/8 bg-white/5 p-4">
+                    <div className="flex items-center gap-3">
+                      <MapPin className="h-5 w-5 text-emerald-300" />
+                      <div>
+                        <p className="text-sm font-medium text-white">Where local golf gets social</p>
+                        <p className="text-sm text-white/55">
+                          Find your city, your course, or your kind of golfer.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-8 flex items-center gap-4 rounded-2xl border border-white/8 bg-black/15 p-4">
+                    <div className="relative h-16 w-16 overflow-hidden rounded-full border border-white/15 bg-white">
+                      <Image
+                        src={founderPreview.image}
+                        alt={founderPreview.name}
+                        fill
+                        className="object-cover object-[72%_center]"
+                        sizes="64px"
+                      />
+                    </div>
+                    <div>
+                      <p className="text-base font-semibold text-white">{founderPreview.name}</p>
+                      <p className="text-sm text-emerald-200/70">{founderPreview.title}</p>
+                    </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="relative z-10 -mt-10 px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto grid max-w-7xl gap-5 md:grid-cols-2 xl:grid-cols-4">
+            {featureCards.map(({ title, description, icon: Icon }) => (
+              <div
+                key={title}
+                className="rounded-[1.8rem] border border-white/8 bg-[#0d211a]/85 p-6 shadow-xl shadow-black/20 backdrop-blur-xl"
+              >
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-300/20 to-cyan-300/20 text-emerald-100">
+                  <Icon className="h-6 w-6" />
+                </div>
+                <h3 className="mt-6 text-xl font-semibold text-white">{title}</h3>
+                <p className="mt-3 text-sm leading-7 text-white/65">{description}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-emerald-300/80">
+                Why it works
+              </p>
+              <h2 className="mt-4 max-w-3xl text-4xl font-semibold tracking-[-0.03em] text-white sm:text-5xl">
+                We designed the platform around what actually happens in golf communities.
+              </h2>
+              <div className="mt-8 grid gap-5 md:grid-cols-2">
+                <div className="rounded-[1.8rem] border border-white/8 bg-[#0b1b15] p-6">
+                  <p className="text-sm uppercase tracking-[0.18em] text-white/45">Before the round</p>
+                  <p className="mt-4 text-lg font-medium text-white">
+                    Find a game, fill a slot, and coordinate with people who are nearby and ready to play.
+                  </p>
+                </div>
+                <div className="rounded-[1.8rem] border border-white/8 bg-[#0b1b15] p-6">
+                  <p className="text-sm uppercase tracking-[0.18em] text-white/45">During the season</p>
+                  <p className="mt-4 text-lg font-medium text-white">
+                    Keep your group active with recurring events, local leaderboards, and ongoing conversation.
+                  </p>
+                </div>
+                <div className="rounded-[1.8rem] border border-white/8 bg-[#0b1b15] p-6">
+                  <p className="text-sm uppercase tracking-[0.18em] text-white/45">For organizers</p>
+                  <p className="mt-4 text-lg font-medium text-white">
+                    Create a recognizable home for your club, outing, scramble, or weekly money game.
+                  </p>
+                </div>
+                <div className="rounded-[1.8rem] border border-white/8 bg-[#0b1b15] p-6">
+                  <p className="text-sm uppercase tracking-[0.18em] text-white/45">For members</p>
+                  <p className="mt-4 text-lg font-medium text-white">
+                    Stay looped in with the people, places, and rounds that matter most to your golf life.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-[2rem] border border-white/8 bg-[linear-gradient(180deg,#d8f6dd,#b8ebf5)] p-[1px]">
+              <div className="rounded-[calc(2rem-1px)] bg-[#07140f] p-6">
+                <div className="rounded-[1.7rem] bg-[linear-gradient(160deg,rgba(17,42,34,0.98),rgba(6,18,14,0.98))] p-6">
+                  <p className="text-xs uppercase tracking-[0.22em] text-emerald-200/70">
+                    Conditions snapshot
+                  </p>
+                  <h3 className="mt-3 text-2xl font-semibold text-white">Plan the round with confidence</h3>
+
+                  {weatherLoading ? (
+                    <div className="mt-8 flex h-44 items-center justify-center rounded-[1.4rem] border border-white/8 bg-white/5">
+                      <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-emerald-200" />
+                    </div>
+                  ) : weather ? (
+                    <div className="mt-8 rounded-[1.5rem] border border-white/8 bg-white/5 p-5">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="text-sm text-white/55">{weather.location}</p>
+                          <p className="mt-2 text-5xl font-semibold text-white">
+                            {weather.temperature}°
+                          </p>
+                          <p className="mt-2 capitalize text-emerald-200">{weather.description}</p>
+                        </div>
+                        <img
+                          src={`https://openweathermap.org/img/wn/${weather.icon}@2x.png`}
+                          alt={weather.description}
+                          className="h-20 w-20"
+                        />
+                      </div>
+
+                      <div className="mt-6 grid grid-cols-3 gap-3">
+                        <div className="rounded-2xl border border-white/8 bg-black/15 p-3 text-center">
+                          <Droplets className="mx-auto h-4 w-4 text-cyan-200" />
+                          <p className="mt-2 text-sm text-white">{weather.humidity}%</p>
+                        </div>
+                        <div className="rounded-2xl border border-white/8 bg-black/15 p-3 text-center">
+                          <Wind className="mx-auto h-4 w-4 text-sky-200" />
+                          <p className="mt-2 text-sm text-white">{weather.windSpeed} mph</p>
+                        </div>
+                        <div className="rounded-2xl border border-white/8 bg-black/15 p-3 text-center">
+                          <Sun className="mx-auto h-4 w-4 text-amber-200" />
+                          <p className="mt-2 text-sm text-white">{weather.feelsLike}°</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-8 rounded-[1.4rem] border border-white/8 bg-white/5 p-6 text-white/60">
+                      Weather information is unavailable right now.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-[linear-gradient(180deg,#081711,#0d211a)] py-24">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="grid gap-12 lg:grid-cols-[0.95fr_minmax(0,1.05fr)] lg:items-center">
+              <div className="rounded-[2.2rem] border border-white/8 bg-white/5 p-6 backdrop-blur-sm">
+                <div className="grid gap-6 sm:grid-cols-[220px_minmax(0,1fr)] sm:items-center">
+                  <div className="relative mx-auto aspect-[4/5] w-full max-w-[220px] overflow-hidden rounded-[1.8rem] border border-white/10 bg-white/90">
+                    <Image
+                      src={founderPreview.image}
+                      alt={founderPreview.name}
+                      fill
+                      className="object-cover object-[72%_center]"
+                      sizes="220px"
+                    />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold uppercase tracking-[0.22em] text-emerald-200/75">
+                      About the brand
+                    </p>
+                    <h3 className="mt-4 text-3xl font-semibold text-white">{founderPreview.name}</h3>
+                    <p className="mt-2 text-sm uppercase tracking-[0.18em] text-white/45">
+                      {founderPreview.title}
+                    </p>
+                    <p className="mt-5 max-w-xl text-base leading-8 text-white/68">
+                      Ultimate Golf Community is rooted in Luke&apos;s belief that the best rounds often
+                      start with unfamiliar people and end with real connection. The brand is being built
+                      to make that kind of experience easier to find again and again.
+                    </p>
+                    <Link
+                      href="/about"
+                      className="mt-6 inline-flex items-center rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/8"
+                    >
+                      Read Luke&apos;s story
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-200/80">
+                  Behind the brand
+                </p>
+                <h2 className="mt-4 text-4xl font-semibold tracking-[-0.03em] text-white sm:text-5xl">
+                  Built by people who believe golf gets better when it gets more connected.
+                </h2>
+                <p className="mt-6 max-w-2xl text-lg leading-8 text-white/70">
+                  Ultimate Golf Community started from a simple truth: some of the best rounds in life
+                  begin with people who were strangers an hour earlier. We are building the place where
+                  those introductions happen more often, with more ease, and with more energy.
+                </p>
+                <div className="mt-10 flex flex-col gap-4 sm:flex-row">
+                  <Link
+                    href="/about"
+                    className="inline-flex items-center justify-center rounded-full bg-white px-8 py-4 text-base font-semibold text-slate-950 transition hover:bg-emerald-100"
+                  >
+                    Explore About Us
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Link>
+                  {!user && (
+                    <Link
+                      href="/auth/signup"
+                      className="inline-flex items-center justify-center rounded-full border border-white/15 px-8 py-4 text-base font-semibold text-white transition hover:border-white/30 hover:bg-white/8"
+                    >
+                      Start your profile
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
+          <div className="overflow-hidden rounded-[2.5rem] border border-white/8 bg-[linear-gradient(135deg,#d7fae3_0%,#dff5ff_52%,#faf2da_100%)] p-[1px] shadow-2xl shadow-black/20">
+            <div className="rounded-[calc(2.5rem-1px)] bg-[#091711] px-6 py-16 sm:px-10 lg:px-16">
+              <div className="mx-auto max-w-4xl text-center">
+                <p className="text-sm font-semibold uppercase tracking-[0.22em] text-emerald-200/80">
+                  Ready to tee it up?
+                </p>
+                <h2 className="mt-4 text-4xl font-semibold tracking-[-0.03em] text-white sm:text-6xl">
+                  Start the kind of golf community people want to come back to.
+                </h2>
+                <p className="mt-6 text-lg leading-8 text-white/70 sm:text-xl">
+                  Create your space, invite your players, and make every open spot feel like an opportunity.
+                </p>
+
+                <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+                  <Link
+                    href={user ? '/dashboard' : '/auth/signup'}
+                    className="inline-flex items-center justify-center rounded-full bg-white px-8 py-4 text-base font-semibold text-slate-950 transition hover:bg-emerald-100"
+                  >
+                    {user ? 'Go to Dashboard' : 'Join Community'}
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Link>
+                  <a
+                    href="mailto:support@ultimategolfcommunity.com"
+                    className="inline-flex items-center justify-center rounded-full border border-white/15 px-8 py-4 text-base font-semibold text-white transition hover:border-white/30 hover:bg-white/8"
+                  >
+                    Contact Us
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <footer className="border-t border-white/8 bg-[#060f0c]">
+          <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-8 text-sm text-white/55 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+            <div className="flex flex-wrap items-center gap-5">
+              <Link href="/about" className="transition hover:text-white">
+                About Us
+              </Link>
+              <a href="/privacy" className="transition hover:text-white">
+                Privacy Policy
+              </a>
+              <a href="mailto:support@ultimategolfcommunity.com" className="transition hover:text-white">
+                Support
               </a>
             </div>
+            <p>© 2026 Ultimate Golf Community. All rights reserved.</p>
           </div>
+        </footer>
+      </main>
 
-          {/* Footer */}
-          <div className="mt-8 pt-8 border-t border-gray-800">
-            <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
-              <div className="flex items-center space-x-6">
-                <Link
-                  href="/about"
-                  className="text-gray-400 hover:text-emerald-400 transition-colors duration-300 text-sm font-medium"
-                >
-                  About Us
-                </Link>
-                <a
-                  href="mailto:support@ultimategolfcommunity.com"
-                  className="text-gray-400 hover:text-emerald-400 transition-colors duration-300 text-sm font-medium"
-                >
-                  Support
-                </a>
-                <a
-                  href="/privacy"
-                  className="text-gray-400 hover:text-emerald-400 transition-colors duration-300 text-sm font-medium"
-                >
-                  Privacy Policy
-                </a>
-              </div>
-              <p className="text-gray-500 text-sm">
-                © 2024 Ultimate Golf Community. All rights reserved.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* PWA Install Prompt */}
       <PWAInstallPrompt />
-
     </div>
   )
 }

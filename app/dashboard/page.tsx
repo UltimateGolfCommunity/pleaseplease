@@ -225,10 +225,11 @@ export default function Dashboard() {
             course_name: tt.course_name,
             golf_courses_name: tt.golf_courses?.name,
             course_location: tt.course_location,
-          creator: tt.creator
+            creator: tt.creator
+          })
         })
-      })
-          } catch (error) {
+      }
+    } catch (error) {
       if (!silent) {
         console.error('❌ Error fetching tee times:', error)
       }
@@ -719,16 +720,42 @@ export default function Dashboard() {
     { id: 'profile', label: 'Profile', icon: User },
   ]
 
+  const dashboardStats = useMemo(
+    () => [
+      {
+        label: 'Available Tee Times',
+        value: teeTimes.length,
+        accent: 'from-emerald-300/25 to-cyan-300/10',
+      },
+      {
+        label: 'My Groups',
+        value: userGroups.length,
+        accent: 'from-sky-300/25 to-cyan-300/10',
+      },
+      {
+        label: 'Notifications',
+        value: notifications.length,
+        accent: 'from-amber-300/25 to-orange-300/10',
+      },
+      {
+        label: 'Pending Requests',
+        value: pendingApplications.length,
+        accent: 'from-rose-300/25 to-pink-300/10',
+      },
+    ],
+    [teeTimes.length, userGroups.length, notifications.length, pendingApplications.length]
+  )
+
   // Show welcome animation while loading and after
   if (initialLoading || showWelcome) {
     return <WelcomeAnimation onComplete={() => setShowWelcome(false)} />
   }
 
   return (
-    <div className="min-h-screen bg-theme-gradient transition-colors duration-300 animate-fade-in">
+    <div className="min-h-screen animate-fade-in bg-[#07140f] text-white">
       {/* Navigation */}
-      <nav className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border-b border-gray-200/60 dark:border-slate-700/60 sticky top-0 z-50 shadow-xl transition-colors duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav className="sticky top-0 z-50 border-b border-white/8 bg-[#07140f]/85 backdrop-blur-xl">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20 sm:h-24">
             {/* Logo */}
             <div className="flex-shrink-0 -ml-2 sm:-ml-1">
@@ -736,7 +763,7 @@ export default function Dashboard() {
             </div>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-1">
+            <div className="hidden md:flex items-center space-x-2 rounded-full border border-white/8 bg-white/5 p-1">
               {tabs.map((tab) => {
                   const Icon = tab.icon
                   const isActive = activeTab === tab.id
@@ -744,10 +771,10 @@ export default function Dashboard() {
                     <button
                       key={tab.id}
                     onClick={() => setActiveTab(tab.id as ActiveTab)}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-300 font-medium ${
+                    className={`flex items-center space-x-2 rounded-full px-4 py-2.5 text-sm font-medium transition-all duration-300 ${
                         isActive
-                        ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
+                        ? 'bg-white text-slate-950 shadow-lg'
+                        : 'text-white/72 hover:bg-white/8 hover:text-white'
                       }`}
                     >
                     <Icon className="h-4 w-4" />
@@ -758,11 +785,11 @@ export default function Dashboard() {
               </div>
 
             {/* Right side buttons */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
                 {/* Notifications */}
                 <button 
                   onClick={() => setShowNotifications(!showNotifications)}
-                className="relative p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                className="relative rounded-full border border-white/8 bg-white/5 p-2.5 text-white/80 transition hover:bg-white/10"
               >
                 <Bell className="h-5 w-5" />
                 {notifications.length > 0 && (
@@ -773,17 +800,17 @@ export default function Dashboard() {
                 </button>
                 
               {/* QR Code */}
-                                  <button
+                <button
                 onClick={() => setShowQRCode(true)}
-                className="p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                className="rounded-full border border-white/8 bg-white/5 p-2.5 text-white/80 transition hover:bg-white/10"
                                   >
                 <QrCode className="h-5 w-5" />
                                   </button>
 
               {/* QR Scanner */}
-                                  <button
+                <button
                 onClick={() => setShowQRScanner(true)}
-                className="p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                className="rounded-full border border-white/8 bg-white/5 p-2.5 text-white/80 transition hover:bg-white/10"
                                   >
                 <Camera className="h-5 w-5" />
                                   </button>
@@ -794,7 +821,7 @@ export default function Dashboard() {
               {/* Sign Out Button */}
                       <button 
                 onClick={handleSignOut}
-                className="hidden md:block px-4 py-2 bg-red-600/20 hover:bg-red-600/40 text-red-400 hover:text-red-300 rounded-lg transition-all duration-300 border border-red-600/30 text-sm font-medium"
+                className="hidden rounded-full border border-red-400/20 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-200 transition hover:bg-red-500/20 md:block"
                       >
                 Sign Out
                 </button>
@@ -825,7 +852,7 @@ export default function Dashboard() {
 
           {/* Mobile Navigation */}
       {showMobileMenu && (
-            <div className="md:hidden py-4 border-t border-gray-200 dark:border-slate-700">
+            <div className="border-t border-white/8 py-4 md:hidden">
               <div className="flex flex-col space-y-2">
                 {tabs.map((tab) => {
               const Icon = tab.icon
@@ -837,10 +864,10 @@ export default function Dashboard() {
                         setActiveTab(tab.id as ActiveTab)
                     setShowMobileMenu(false)
                   }}
-                      className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300 font-medium ${
+                      className={`flex items-center space-x-3 rounded-2xl px-4 py-3 transition-all duration-300 font-medium ${
                     isActive
-                      ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg'
-                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
+                      ? 'bg-white text-slate-950 shadow-lg'
+                          : 'text-white/72 hover:bg-white/8 hover:text-white'
                   }`}
                 >
                       <Icon className="h-5 w-5" />
@@ -852,7 +879,7 @@ export default function Dashboard() {
             {/* Mobile Sign Out Button */}
               <button
               onClick={handleSignOut}
-              className="flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300 font-medium bg-red-600/20 hover:bg-red-600/40 text-red-400 hover:text-red-300 border border-red-600/30"
+              className="flex items-center space-x-3 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 font-medium text-red-200 transition hover:bg-red-500/20"
             >
               <span>Sign Out</span>
               </button>
@@ -863,7 +890,36 @@ export default function Dashboard() {
       </nav>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+        <div className="mb-8 overflow-hidden rounded-[2rem] border border-white/8 bg-[linear-gradient(135deg,rgba(14,35,29,0.96),rgba(8,20,15,0.98))] p-6 shadow-2xl shadow-black/20 sm:p-8">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-end">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-emerald-200/75">
+                Dashboard
+              </p>
+              <h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em] text-white sm:text-5xl">
+                Welcome back, {profile?.first_name || user?.email?.split('@')[0] || 'Golfer'}.
+              </h1>
+              <p className="mt-4 max-w-2xl text-base leading-8 text-white/68 sm:text-lg">
+                Manage tee times, grow your groups, respond to golfers, and keep your side of the
+                community moving.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              {dashboardStats.map((stat) => (
+                <div
+                  key={stat.label}
+                  className={`rounded-[1.5rem] border border-white/8 bg-gradient-to-br ${stat.accent} p-5`}
+                >
+                  <p className="text-sm uppercase tracking-[0.16em] text-white/45">{stat.label}</p>
+                  <p className="mt-3 text-3xl font-semibold text-white">{stat.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
         {/* Tee Times Tab */}
         {activeTab === 'tee-times' && (
           <div className="space-y-6 animate-fade-in">
@@ -872,12 +928,12 @@ export default function Dashboard() {
 
             {/* Tee Times Section */}
             <div className="space-y-6">
-              <div className="text-center">
-                <h2 className="text-3xl font-bold text-white mb-2">Available Tee Times</h2>
-                <p className="text-gray-300">Join upcoming tee times with fellow golfers</p>
+              <div className="rounded-[1.8rem] border border-white/8 bg-white/5 p-6 text-center backdrop-blur-sm">
+                <h2 className="mb-2 text-3xl font-bold text-white">Available Tee Times</h2>
+                <p className="text-white/62">Join upcoming tee times with fellow golfers</p>
                 <button 
                   onClick={() => setShowCreateTeeTimeModal(true)}
-                  className="mt-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-emerald-500/50 flex items-center space-x-2 mx-auto"
+                  className="mx-auto mt-4 flex items-center space-x-2 rounded-full bg-white px-6 py-3 font-semibold text-slate-950 transition-all duration-300 hover:bg-emerald-100"
                 >
                   <Plus className="h-5 w-5" />
                   <span>Create Tee Time</span>
@@ -899,7 +955,7 @@ export default function Dashboard() {
                 ) : (
                   <div className="space-y-4">
                     {teeTimes.map((teeTime) => (
-                      <div key={teeTime.id} className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
+                      <div key={teeTime.id} className="rounded-[1.7rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] p-6 backdrop-blur-sm transition-all duration-300 hover:border-white/20 hover:bg-white/10">
                         {/* Course Name */}
                         <h3 className="font-bold text-white text-xl mb-4">
                           {teeTime.golf_courses?.name || teeTime.course_name || 'Unknown Course'}
@@ -998,12 +1054,12 @@ export default function Dashboard() {
         {/* Groups Tab */}
         {activeTab === 'groups' && (
           <div className="space-y-6 animate-fade-in">
-            <div className="text-center">
-              <h2 className="text-3xl font-bold text-white mb-2">Golf Groups</h2>
-              <p className="text-gray-300">Manage your groups and discover new ones</p>
+            <div className="rounded-[1.8rem] border border-white/8 bg-white/5 p-6 text-center backdrop-blur-sm">
+              <h2 className="mb-2 text-3xl font-bold text-white">Golf Groups</h2>
+              <p className="text-white/62">Manage your groups and discover new ones</p>
               <button
                 onClick={() => setShowCreateGroupModal(true)}
-                className="mt-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-emerald-500/50 flex items-center space-x-2 mx-auto"
+                className="mx-auto mt-4 flex items-center space-x-2 rounded-full bg-white px-6 py-3 font-semibold text-slate-950 transition-all duration-300 hover:bg-emerald-100"
               >
                 <Plus className="h-5 w-5" />
                 <span>Create Group</span>
@@ -1019,7 +1075,7 @@ export default function Dashboard() {
                   placeholder="Search groups by name or location..."
                   value={groupSearchQuery}
                   onChange={(e) => searchGroups(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500 transition-all"
+                  className="w-full rounded-[1.2rem] border border-white/10 bg-white/5 py-3 pl-12 pr-4 text-white placeholder-gray-400 backdrop-blur-sm transition-all focus:border-emerald-400 focus:outline-none"
                 />
               </div>
             </div>
@@ -1041,7 +1097,7 @@ export default function Dashboard() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {userGroups.map((group) => (
-                    <div key={group.id} className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
+                    <div key={group.id} className="rounded-[1.7rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] p-6 backdrop-blur-sm transition-all duration-300 hover:border-white/20 hover:bg-white/10">
                       {/* Group Logo */}
                       <div className="flex items-start space-x-4 mb-4">
                         <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-emerald-500 flex-shrink-0">
@@ -1101,7 +1157,7 @@ export default function Dashboard() {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {allGroups.map((group) => (
-                      <div key={group.id} className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
+                      <div key={group.id} className="rounded-[1.7rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] p-6 backdrop-blur-sm transition-all duration-300 hover:border-white/20 hover:bg-white/10">
                         {/* Group Logo */}
                         <div className="flex items-start space-x-4 mb-4">
                           <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-emerald-500 flex-shrink-0">
@@ -1149,6 +1205,10 @@ export default function Dashboard() {
         {/* Messages Tab */}
         {activeTab === 'messages' && (
           <div className="space-y-6 animate-fade-in">
+            <div className="rounded-[1.8rem] border border-white/8 bg-white/5 p-6 text-center backdrop-blur-sm">
+              <h2 className="mb-2 text-3xl font-bold text-white">Messages</h2>
+              <p className="text-white/62">Stay in touch with your golf community and keep conversations moving.</p>
+            </div>
             <MessagingSystem />
           </div>
         )}
@@ -1156,11 +1216,11 @@ export default function Dashboard() {
         {/* Profile Tab */}
         {activeTab === 'profile' && (
           <div className="space-y-6 animate-fade-in">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-white mb-2">My Profile</h2>
-              <p className="text-gray-300">Manage your golf profile and settings</p>
-          </div>
-            
+            <div className="mb-8 rounded-[1.8rem] border border-white/8 bg-white/5 p-6 text-center backdrop-blur-sm">
+              <h2 className="mb-2 text-3xl font-bold text-white">My Profile</h2>
+              <p className="text-white/62">Manage your golf profile and settings</p>
+            </div>
+
             <div className="max-w-2xl mx-auto space-y-6">
               {/* Profile Picture */}
               <div className="flex justify-center">
@@ -1184,7 +1244,7 @@ export default function Dashboard() {
               </div>
 
               {/* User Info */}
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+              <div className="rounded-[1.8rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] p-6 backdrop-blur-sm">
                   <div className="space-y-4">
                               <div>
                     <label className="block text-sm font-medium text-gray-400 mb-1">Name</label>

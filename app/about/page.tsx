@@ -1,317 +1,254 @@
 'use client'
 
-import { useAuth } from '@/contexts/AuthContext'
-import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
+import { ArrowLeft, Heart, MapPin, Users } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 import Logo from '@/app/components/Logo'
 import ThemeToggle from '@/app/components/ThemeToggle'
-import { ArrowLeft, MapPin, Users, Heart } from 'lucide-react'
+
+const values = [
+  {
+    icon: MapPin,
+    title: 'Local Momentum',
+    description:
+      'Strong golf communities start locally, with familiar courses, recurring groups, and people who actually see each other again.',
+  },
+  {
+    icon: Users,
+    title: 'Belonging',
+    description:
+      'We want the first tee to feel less intimidating, more welcoming, and easier to return to with the right people around you.',
+  },
+  {
+    icon: Heart,
+    title: 'Long-Term Relationships',
+    description:
+      'The goal is not just to book a round. It is to build the kinds of relationships that keep golfers coming back every season.',
+  },
+]
 
 export default function AboutPage() {
-  const { user, loading } = useAuth()
-  const router = useRouter()
-
-  // No authentication required - anyone can view the About page
+  const { user } = useAuth()
 
   return (
-    <div className="min-h-screen bg-theme-gradient transition-colors duration-300">
-      {/* Header */}
-      <header className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border-b border-gray-200/60 dark:border-slate-700/60 sticky top-0 z-50 shadow-xl transition-colors duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20 sm:h-24">
-            {/* Logo */}
-            <div className="flex-shrink-0">
-              <Link href="/dashboard">
-                <Logo size="md" />
-              </Link>
-            </div>
+    <div className="min-h-screen bg-[#07140f] text-white">
+      <header className="sticky top-0 z-50 border-b border-white/8 bg-[#07140f]/80 backdrop-blur-xl">
+        <div className="mx-auto flex h-24 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <Link href={user ? '/dashboard' : '/'}>
+            <Logo size="md" />
+          </Link>
 
-            {/* Navigation */}
-            <div className="flex items-center space-x-4">
-              {user ? (
-                <Link
-                  href="/dashboard"
-                  className="flex items-center space-x-2 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white transition-colors duration-300"
-                >
-                  <ArrowLeft className="h-5 w-5" />
-                  <span className="font-medium">Back to Dashboard</span>
-                </Link>
-              ) : (
-                <Link
-                  href="/"
-                  className="flex items-center space-x-2 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white transition-colors duration-300"
-                >
-                  <ArrowLeft className="h-5 w-5" />
-                  <span className="font-medium">Back to Home</span>
-                </Link>
-              )}
-              
-              <ThemeToggle size="sm" />
-            </div>
+          <div className="flex items-center gap-3">
+            <Link
+              href={user ? '/dashboard' : '/'}
+              className="inline-flex items-center rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-white/80 transition hover:border-white/20 hover:bg-white/5 hover:text-white"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              {user ? 'Back to Dashboard' : 'Back to Home'}
+            </Link>
+            <ThemeToggle size="sm" />
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-        <div className="space-y-8">
-          {/* Page Header */}
-          <div className="text-center">
-            <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-emerald-400 to-teal-500 bg-clip-text text-transparent mb-4">
-              About Us
-            </h1>
-            <p className="text-lg text-gray-600 dark:text-slate-300 max-w-2xl mx-auto">
-              Building connections through the game we love, one round at a time.
-            </p>
-          </div>
-
-          {/* Leadership Team */}
-          <div className="space-y-8">
-            {/* Founder Section */}
-            <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-slate-700/50 rounded-3xl p-8 sm:p-12 shadow-xl">
-              <div className="space-y-8">
-                {/* Founder Video Widget */}
-                <div className="flex justify-center">
-                  <div className="relative">
-                    <video
-                      src="/luke-restall-video.mov"
-                      autoPlay
-                      loop
-                      muted
-                      playsInline
-                      className="w-[28rem] h-80 sm:w-[32rem] sm:h-96 rounded-2xl object-cover shadow-2xl border-4 border-emerald-500/20"
-                      poster="/founder-photo.jpeg"
-                    >
-                      Your browser does not support the video tag.
-                    </video>
-                    
-                    {/* Name and Title Overlay */}
-                    <div className="absolute inset-0 flex flex-col justify-center items-center bg-black/30 rounded-2xl">
-                      <div className="text-center">
-                        <h2 className="text-4xl sm:text-5xl font-bold text-white mb-2 drop-shadow-lg">
-                          Luke Restall
-                        </h2>
-                        <p className="text-xl sm:text-2xl text-emerald-400 font-semibold drop-shadow-lg">
-                          Founder & CEO
-                        </p>
-                      </div>
-                    </div>
-                    
-                    {/* Founder Badge */}
-                    <div className="absolute -bottom-4 -right-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-4 py-2 rounded-xl shadow-lg">
-                      <span className="font-semibold text-sm">Our Founder</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Founder Story */}
-                <div className="max-w-4xl mx-auto space-y-6">
-                  <div className="space-y-4 text-gray-700 dark:text-slate-300 leading-relaxed text-center">
-                    <p className="text-lg">
-                      Luke's journey into golf began like many others - showing up at a municipal golf course, 
-                      getting paired with strangers, and hoping for the best. What he discovered was something 
-                      magical: the power of golf to bring people together.
-                    </p>
-                    
-                    <p className="text-lg">
-                      Through countless rounds with random playing partners, Luke built a network of friends 
-                      that would become some of his closest relationships. These weren't just golf buddies - 
-                      they became lifelong friends, business partners, and even family.
-                    </p>
-                    
-                    <p className="text-lg">
-                      This experience inspired him to create Ultimate Golf Community, a platform that makes 
-                      it easier for golfers to connect, find playing partners, and build meaningful relationships 
-                      through the game we all love.
-                    </p>
-                  </div>
-                </div>
+      <main>
+        <section className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.24),transparent_26%),radial-gradient(circle_at_85%_0%,rgba(125,211,252,0.18),transparent_24%)]" />
+          <div className="mx-auto max-w-7xl px-4 pb-16 pt-20 sm:px-6 lg:px-8">
+            <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-end">
+              <div className="max-w-4xl">
+                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-200/75">
+                  About Ultimate Golf Community
+                </p>
+                <h1 className="mt-5 text-5xl font-semibold tracking-[-0.04em] text-white sm:text-6xl lg:text-7xl">
+                  We are building a home for the social side of golf.
+                </h1>
+                <p className="mt-8 max-w-3xl text-lg leading-8 text-white/70 sm:text-xl">
+                  Ultimate Golf Community exists to make it easier for golfers to find their people,
+                  create repeat experiences, and turn one good round into a lasting network.
+                </p>
               </div>
-            </div>
 
-            {/* CFO Section */}
-            <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-slate-700/50 rounded-3xl p-8 sm:p-12 shadow-xl">
-              <div className="space-y-8">
-                {/* CFO Photo Widget */}
-                <div className="flex justify-center mt-12">
-                  <div className="relative">
-                    <img
-                      src="/cfo-photo.jpeg"
-                      alt="Carden Ridge - CFO"
-                      className="w-[28rem] h-80 sm:w-[32rem] sm:h-96 rounded-2xl object-cover shadow-2xl border-4 border-blue-500/20"
+              <div className="rounded-[2rem] border border-white/8 bg-white/5 p-6 backdrop-blur-sm">
+                <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-200/75">
+                  Built around
+                </p>
+                <div className="mt-4 flex items-center gap-4">
+                  <div className="relative h-16 w-16 overflow-hidden rounded-full border border-white/15 bg-white">
+                    <Image
+                      src="/luke-about.jpg"
+                      alt="Luke Restall"
+                      fill
+                      className="object-cover object-[72%_center]"
+                      sizes="64px"
                     />
-                    
-                    {/* Name and Title Overlay */}
-                    <div className="absolute inset-0 flex flex-col justify-center items-center bg-black/30 rounded-2xl">
-                      <div className="text-center">
-                        <h2 className="text-4xl sm:text-5xl font-bold text-white mb-2 drop-shadow-lg">
-                          Carden Ridge
-                        </h2>
-                        <p className="text-xl sm:text-2xl text-blue-400 font-semibold drop-shadow-lg">
-                          Chief Financial Officer
-                        </p>
-                      </div>
-                    </div>
-                    
-                    {/* CFO Badge */}
-                    <div className="absolute -bottom-4 -right-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-2 rounded-xl shadow-lg">
-                      <span className="font-semibold text-sm">Our CFO</span>
-                    </div>
+                  </div>
+                  <div>
+                    <p className="text-lg font-semibold text-white">Luke Restall</p>
+                    <p className="text-sm text-emerald-200/70">Founder & CEO</p>
                   </div>
                 </div>
-
-                {/* CFO Story */}
-                <div className="max-w-4xl mx-auto space-y-6">
-                  <div className="space-y-4 text-gray-700 dark:text-slate-300 leading-relaxed text-center">
-                    <p className="text-lg">
-                      Carden brings a wealth of financial expertise and strategic vision to Ultimate Golf Community. 
-                      With a deep understanding of both traditional finance and emerging technology markets, 
-                      Carden ensures our platform remains financially sound while scaling to serve golfers worldwide.
-                    </p>
-                    
-                    <p className="text-lg">
-                      His passion for golf and commitment to building sustainable business models makes him 
-                      the perfect partner in our mission to revolutionize how golfers connect and play together. 
-                      Carden's strategic thinking helps us balance growth with the community values that make 
-                      our platform special.
-                    </p>
-                    
-                    <p className="text-lg">
-                      Under Carden's financial leadership, Ultimate Golf Community is positioned to become 
-                      the premier destination for golfers seeking meaningful connections and memorable experiences 
-                      on and off the course.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Chief of Design Section */}
-            <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-slate-700/50 rounded-3xl p-8 sm:p-12 shadow-xl">
-              <div className="space-y-8">
-                {/* Chief of Design Photo Widget */}
-                <div className="flex justify-center">
-                  <div className="relative">
-                    <img
-                      src="/grant-slater-photo.jpeg"
-                      alt="Grant Slater - Chief of Design"
-                      className="w-[28rem] h-80 sm:w-[32rem] sm:h-96 rounded-2xl object-cover shadow-2xl border-4 border-purple-500/20"
-                    />
-                    
-                    {/* Name and Title Overlay */}
-                    <div className="absolute inset-0 flex flex-col justify-center items-center bg-black/30 rounded-2xl">
-                      <div className="text-center">
-                        <h2 className="text-4xl sm:text-5xl font-bold text-white mb-2 drop-shadow-lg">
-                          Grant Slater
-                        </h2>
-                        <p className="text-xl sm:text-2xl text-purple-400 font-semibold drop-shadow-lg">
-                          Chief of Design
-                        </p>
-                      </div>
-                    </div>
-                    
-                    {/* Chief of Design Badge */}
-                    <div className="absolute -bottom-4 -right-4 bg-gradient-to-r from-purple-500 to-pink-600 text-white px-4 py-2 rounded-xl shadow-lg">
-                      <span className="font-semibold text-sm">Our Chief of Design</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Chief of Design Story */}
-                <div className="max-w-4xl mx-auto space-y-6">
-                  <div className="space-y-4 text-gray-700 dark:text-slate-300 leading-relaxed text-center">
-                    <p className="text-lg">
-                      Grant brings exceptional design expertise and creative vision to Ultimate Golf Community. 
-                      With a keen eye for aesthetics and user experience, Grant ensures that our platform not only 
-                      functions flawlessly but also provides a beautiful, intuitive interface that golfers love to use.
-                    </p>
-                    
-                    <p className="text-lg">
-                      His background in user interface design and creative direction makes him the perfect leader for 
-                      crafting our visual identity, designing seamless user experiences, and ensuring that every 
-                      interaction with our platform feels polished and professional.
-                    </p>
-                    
-                    <p className="text-lg">
-                      Under Grant's design leadership, Ultimate Golf Community maintains a cohesive, modern aesthetic 
-                      that reflects the elegance and sophistication of the game we all love, while remaining accessible 
-                      and enjoyable for golfers of all backgrounds.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Key Values */}
-            <div className="bg-gradient-to-br from-emerald-500/10 to-blue-500/10 backdrop-blur-sm border border-emerald-200/50 dark:border-emerald-700/50 rounded-3xl p-8 sm:p-12 shadow-xl">
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-8 text-center">
-                Our Core Values
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <div className="text-center p-6 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl">
-                  <MapPin className="h-12 w-12 text-emerald-500 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Community</h3>
-                  <p className="text-gray-600 dark:text-slate-400">
-                    Building connections through shared experiences and mutual respect
-                  </p>
-                </div>
-                
-                <div className="text-center p-6 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
-                  <Users className="h-12 w-12 text-blue-500 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Inclusivity</h3>
-                  <p className="text-gray-600 dark:text-slate-400">
-                    Welcoming golfers of all skill levels, backgrounds, and experiences
-                  </p>
-                </div>
-                
-                <div className="text-center p-6 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
-                  <Heart className="h-12 w-12 text-purple-500 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Passion</h3>
-                  <p className="text-gray-600 dark:text-slate-400">
-                    Fueled by love for the game and dedication to our community
-                  </p>
-                </div>
+                <p className="mt-4 text-sm leading-7 text-white/65">
+                  A founder-led brand shaped by real rounds, real introductions, and the belief that golf
+                  should make connection easier.
+                </p>
               </div>
             </div>
           </div>
+        </section>
 
-          {/* Mission Statement */}
-          <div className="bg-gradient-to-br from-emerald-500/10 to-teal-500/10 backdrop-blur-sm border border-emerald-200/50 dark:border-emerald-700/50 rounded-3xl p-8 sm:p-12 shadow-xl">
-            <div className="text-center space-y-6">
-              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">
-                Our Mission
-              </h2>
-              
-              <p className="text-xl text-gray-700 dark:text-slate-300 leading-relaxed max-w-3xl mx-auto">
-                To create a platform where golfers can easily find playing partners, discover new courses, 
-                and build lasting friendships through the shared love of golf. We believe that every round 
-                is an opportunity to make a new friend, and every friend is just one tee time away.
+        <section className="mx-auto max-w-7xl px-4 pb-24 sm:px-6 lg:px-8">
+          <div className="grid gap-8 xl:grid-cols-[1.08fr_0.92fr]">
+            <div className="rounded-[2.3rem] border border-white/8 bg-[linear-gradient(160deg,rgba(14,35,29,0.95),rgba(8,20,15,0.98))] p-8 sm:p-10">
+              <div className="grid gap-8 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
+                <div className="relative mx-auto aspect-[4/5] w-full max-w-[320px] overflow-hidden rounded-[1.8rem] border border-white/10 bg-white/90 shadow-2xl shadow-black/20">
+                  <Image
+                    src="/luke-about.jpg"
+                    alt="Luke Restall"
+                    fill
+                    className="object-cover object-[72%_center]"
+                    sizes="320px"
+                  />
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.22em] text-emerald-200/70">
+                    Founder
+                  </p>
+                  <h2 className="mt-4 text-3xl font-semibold tracking-[-0.03em] text-white sm:text-4xl">
+                    Luke Restall is building the kind of golf platform he always wished existed.
+                  </h2>
+                  <div className="mt-5 inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70">
+                    Founder-led, relationship-first, built for recurring community
+                  </div>
+                  <div className="mt-6 space-y-4 text-base leading-8 text-white/72">
+                    <p>
+                      Luke started with the same experience many golfers know well: showing up,
+                      getting paired with strangers, and discovering that some of the most memorable
+                      rounds happen with people you did not know an hour earlier.
+                    </p>
+                    <p>
+                      Over time, those pairings became real friendships, business opportunities,
+                      recurring games, and trusted relationships. That pattern felt too valuable to
+                      leave to chance.
+                    </p>
+                    <p>
+                      Ultimate Golf Community was created to give that experience a platform, making
+                      it easier for golfers to meet, return, organize, and build community with
+                      intention.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-8">
+              <div className="rounded-[2.2rem] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03))] p-8 sm:p-10">
+              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-200/70">
+                Our mission
               </p>
-              
-              <div className="pt-6">
-                {user ? (
-                  <Link
-                    href="/dashboard"
-                    className="inline-flex items-center space-x-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-8 py-4 rounded-2xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-                  >
-                    <span>Go to Dashboard</span>
-                    <ArrowLeft className="h-5 w-5 rotate-180" />
-                  </Link>
-                ) : (
-                  <Link
-                    href="/auth/signup"
-                    className="inline-flex items-center space-x-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-8 py-4 rounded-2xl transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-                  >
-                    <span>Join Our Community</span>
-                    <ArrowLeft className="h-5 w-5 rotate-180" />
-                  </Link>
-                )}
+              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.03em] text-white sm:text-4xl">
+                Make every round easier to start and every good connection easier to keep.
+              </h2>
+              <p className="mt-6 text-base leading-8 text-white/72">
+                We are building the digital infrastructure for golf communities that want more than a
+                tee sheet. The goal is to help people organize groups, share opportunities, and keep a
+                real sense of momentum around the game they love.
+              </p>
+
+              <div className="mt-8 space-y-4">
+                <div className="rounded-2xl border border-white/8 bg-black/15 p-4 text-white/70">
+                  Course-based groups with an actual identity
+                </div>
+                <div className="rounded-2xl border border-white/8 bg-black/15 p-4 text-white/70">
+                  Better discovery for players, organizers, and recurring events
+                </div>
+                <div className="rounded-2xl border border-white/8 bg-black/15 p-4 text-white/70">
+                  A social layer that keeps golfers engaged between rounds
+                </div>
+              </div>
+            </div>
+
+              <div className="rounded-[2.2rem] border border-white/8 bg-[#081711] p-8">
+                <p className="text-sm font-semibold uppercase tracking-[0.22em] text-emerald-200/70">
+                  What the brand stands for
+                </p>
+                <div className="mt-5 space-y-4 text-base leading-8 text-white/68">
+                  <p>
+                    The brand is not about making golf louder. It is about making golf more connected,
+                    more welcoming, and easier to return to with the right people around you.
+                  </p>
+                  <p>
+                    Every design choice and product decision is meant to support repeat rounds, stronger
+                    groups, and the kind of momentum that turns casual players into community members.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        </section>
+
+        <section className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
+          <div className="rounded-[2.4rem] border border-white/8 bg-[linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-8 sm:p-10 lg:p-12">
+            <div className="max-w-3xl">
+              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-200/75">
+                Core values
+              </p>
+              <h2 className="mt-4 text-4xl font-semibold tracking-[-0.03em] text-white sm:text-5xl">
+                The standards we want golfers to feel when they use the platform.
+              </h2>
+            </div>
+
+            <div className="mt-10 grid gap-5 md:grid-cols-3">
+              {values.map(({ icon: Icon, title, description }) => (
+                <div
+                  key={title}
+                  className="rounded-[1.8rem] border border-white/8 bg-[#081711] p-6"
+                >
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/6">
+                    <Icon className="h-6 w-6 text-emerald-200" />
+                  </div>
+                  <h3 className="mt-5 text-2xl font-semibold text-white">{title}</h3>
+                  <p className="mt-4 text-base leading-8 text-white/68">{description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="pb-24">
+          <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+            <div className="overflow-hidden rounded-[2.5rem] border border-white/8 bg-[linear-gradient(135deg,#d7fae3_0%,#ddf5ff_45%,#fff1d1_100%)] p-[1px]">
+              <div className="rounded-[calc(2.5rem-1px)] bg-[#091711] px-6 py-14 sm:px-10">
+                <div className="mx-auto max-w-3xl text-center">
+                  <h2 className="text-4xl font-semibold tracking-[-0.03em] text-white sm:text-5xl">
+                    We are building for golfers who want the round to mean more.
+                  </h2>
+                  <p className="mt-6 text-lg leading-8 text-white/70">
+                    If that sounds like your kind of community, come join us and help shape what this
+                    becomes.
+                  </p>
+                  <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+                    <Link
+                      href={user ? '/dashboard' : '/auth/signup'}
+                      className="inline-flex items-center justify-center rounded-full bg-white px-8 py-4 text-base font-semibold text-slate-950 transition hover:bg-emerald-100"
+                    >
+                      {user ? 'Go to Dashboard' : 'Join Our Community'}
+                    </Link>
+                    <Link
+                      href="/"
+                      className="inline-flex items-center justify-center rounded-full border border-white/15 px-8 py-4 text-base font-semibold text-white transition hover:border-white/30 hover:bg-white/8"
+                    >
+                      Back to Home
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
   )
 }

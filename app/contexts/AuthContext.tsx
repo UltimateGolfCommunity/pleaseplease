@@ -12,6 +12,7 @@ interface AuthContextType {
   loading: boolean
   signUp: (email: string, password: string, profileData: Partial<UserProfile>) => Promise<void>
   signIn: (email: string, password: string) => Promise<void>
+  signInWithGoogle: () => Promise<void>
   signOut: () => Promise<void>
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>
 }
@@ -252,6 +253,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [supabase])
 
+  const signInWithGoogle = useCallback(async () => {
+    if (!supabase) {
+      throw new Error('Supabase client not initialized. Please check your environment variables.')
+    }
+
+    const redirectTo =
+      typeof window !== 'undefined'
+        ? `${window.location.origin}/auth/callback`
+        : undefined
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+      },
+    })
+
+    if (error) {
+      throw error
+    }
+  }, [supabase])
+
   const signOut = useCallback(async () => {
     if (!supabase) return
     
@@ -299,9 +326,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     signUp,
     signIn,
+    signInWithGoogle,
     signOut,
     updateProfile
-  }), [user, session, profile, loading, signUp, signIn, signOut, updateProfile])
+  }), [user, session, profile, loading, signUp, signIn, signInWithGoogle, signOut, updateProfile])
 
   return (
     <AuthContext.Provider value={contextValue}>

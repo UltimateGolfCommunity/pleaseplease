@@ -1,272 +1,251 @@
 'use client'
 
-import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
+import { ArrowLeft, Database, Eye, Lock, Mail, Shield, Users } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 import Logo from '@/app/components/Logo'
 import ThemeToggle from '@/app/components/ThemeToggle'
-import { ArrowLeft, Shield, Eye, Database, Lock, Users, Mail, Phone } from 'lucide-react'
+
+const summaryCards = [
+  {
+    title: 'What we collect',
+    description: 'Basic account details, profile data, activity on the platform, and service-related usage information.',
+    icon: Database,
+  },
+  {
+    title: 'Why we use it',
+    description: 'To run the platform, improve the community experience, support safety, and keep core features working.',
+    icon: Eye,
+  },
+  {
+    title: 'How we protect it',
+    description: 'We use hosted infrastructure, access controls, and standard security practices to reduce risk.',
+    icon: Lock,
+  },
+]
+
+const sections = [
+  {
+    title: 'Introduction',
+    icon: Shield,
+    content: [
+      'Ultimate Golf Community ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform and related services.',
+      'By using our services, you agree to the collection and use of information in accordance with this Privacy Policy. If you do not agree with these practices, please do not use the platform.',
+    ],
+  },
+  {
+    title: 'Information We Collect',
+    icon: Database,
+    bullets: [
+      'Account details such as name, email address, username, and contact information.',
+      'Profile information including handicap, location, preferences, profile images, and activity you choose to post.',
+      'Golf-related usage such as group participation, messages, bookings, reviews, and round-related interactions.',
+      'Technical and usage information such as device type, browser type, pages visited, and general platform activity.',
+      'Location information when used to help surface nearby courses, groups, or relevant golf activity.',
+    ],
+  },
+  {
+    title: 'How We Use Information',
+    icon: Users,
+    bullets: [
+      'To provide and maintain the Ultimate Golf Community platform.',
+      'To help users discover relevant groups, courses, events, and playing opportunities.',
+      'To support communication, notifications, account access, and platform functionality.',
+      'To improve the product, understand usage patterns, and refine the user experience.',
+      'To support customer service, security, fraud prevention, and abuse monitoring.',
+      'To send product or marketing communications when permitted by law or your preferences.',
+    ],
+  },
+  {
+    title: 'Information Sharing',
+    icon: Lock,
+    content: [
+      'We do not sell your personal information. We may share information with service providers that help us operate the platform, with other users where your profile or community activity is inherently visible, when required by law, or in connection with a business transfer such as a merger or acquisition.',
+      'We may also share information when you explicitly direct us to do so or consent to a particular disclosure.',
+    ],
+  },
+  {
+    title: 'Data Security',
+    icon: Shield,
+    bullets: [
+      'Data encryption in transit where applicable.',
+      'Hosted infrastructure and access controls designed to reduce unauthorized access.',
+      'Reasonable administrative, technical, and operational safeguards.',
+      'Ongoing maintenance and updates intended to protect platform integrity.',
+    ],
+  },
+  {
+    title: 'Your Choices',
+    icon: Eye,
+    bullets: [
+      'Access or update account details through your profile and settings where available.',
+      'Request correction or deletion of personal information, subject to legal or operational limits.',
+      'Manage communication preferences and opt out of non-essential marketing messages.',
+      'Contact us if you need help understanding, exporting, or requesting changes to your data.',
+    ],
+  },
+  {
+    title: 'Cookies and Third-Party Services',
+    icon: Database,
+    content: [
+      'We may use cookies or similar technologies to support authentication, performance, analytics, and feature behavior. You can manage many cookie settings through your browser.',
+      'Our platform may also rely on third-party providers such as hosting, analytics, weather, payments, or authentication services. Those providers operate under their own terms and privacy policies.',
+    ],
+  },
+  {
+    title: 'Children’s Privacy',
+    icon: Shield,
+    content: [
+      'Our services are not intended for children under 13 years of age, and we do not knowingly collect personal information from children under 13. If you believe a child has submitted personal information to us, please contact us so we can review and address the issue.',
+    ],
+  },
+  {
+    title: 'Policy Updates',
+    icon: Eye,
+    content: [
+      'We may update this Privacy Policy from time to time. When we do, we will update the effective date on this page and post the revised version here. Continued use of the platform after changes are posted may constitute acceptance of the updated policy.',
+    ],
+  },
+]
 
 export default function PrivacyPolicyPage() {
   const { user } = useAuth()
 
   return (
-    <div className="min-h-screen bg-theme-gradient transition-colors duration-300">
-      {/* Header */}
-      <header className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border-b border-gray-200/60 dark:border-slate-700/60 sticky top-0 z-50 shadow-xl transition-colors duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20 sm:h-24">
-            {/* Logo */}
-            <div className="flex-shrink-0">
-              <Link href={user ? "/dashboard" : "/"}>
-                <Logo size="md" />
-              </Link>
-            </div>
+    <div className="min-h-screen bg-[#07140f] text-white">
+      <header className="sticky top-0 z-50 border-b border-white/8 bg-[#07140f]/80 backdrop-blur-xl">
+        <div className="mx-auto flex h-24 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <Link href={user ? '/dashboard' : '/'}>
+            <Logo size="md" />
+          </Link>
 
-            {/* Navigation */}
-            <div className="flex items-center space-x-4">
-              <Link
-                href={user ? "/dashboard" : "/"}
-                className="flex items-center space-x-2 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white transition-colors duration-300"
-              >
-                <ArrowLeft className="h-5 w-5" />
-                <span className="font-medium">{user ? "Back to Dashboard" : "Back to Home"}</span>
-              </Link>
-              
-              <ThemeToggle size="sm" />
-            </div>
+          <div className="flex items-center gap-3">
+            <Link
+              href={user ? '/dashboard' : '/'}
+              className="inline-flex items-center rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-white/80 transition hover:border-white/20 hover:bg-white/5 hover:text-white"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              {user ? 'Back to Dashboard' : 'Back to Home'}
+            </Link>
+            <ThemeToggle size="sm" />
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-        <div className="space-y-8">
-          {/* Page Header */}
-          <div className="text-center">
-            <div className="flex items-center justify-center mb-4">
-              <Shield className="h-12 w-12 text-emerald-500 mr-3" />
-              <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-emerald-400 to-teal-500 bg-clip-text text-transparent">
+      <main>
+        <section className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.24),transparent_26%),radial-gradient(circle_at_85%_0%,rgba(125,211,252,0.18),transparent_24%)]" />
+          <div className="mx-auto max-w-7xl px-4 pb-14 pt-20 sm:px-6 lg:px-8">
+            <div className="max-w-4xl">
+              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-200/75">
                 Privacy Policy
+              </p>
+              <h1 className="mt-5 text-5xl font-semibold tracking-[-0.04em] text-white sm:text-6xl lg:text-7xl">
+                Privacy and data use, explained more clearly.
               </h1>
+              <p className="mt-8 max-w-3xl text-lg leading-8 text-white/70 sm:text-xl">
+                This page explains what information Ultimate Golf Community may collect, how it may be
+                used, and the choices available to you when you use the platform.
+              </p>
+              <div className="mt-8 inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/65">
+                Effective date: April 6, 2026
+              </div>
             </div>
-            <p className="text-lg text-gray-600 dark:text-slate-300 max-w-2xl mx-auto">
-              Your privacy is important to us. Learn how we collect, use, and protect your information.
-            </p>
-            <p className="text-sm text-gray-500 dark:text-slate-400 mt-2">
-              Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-            </p>
           </div>
+        </section>
 
-          {/* Privacy Policy Content */}
-          <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border border-gray-200/50 dark:border-slate-700/50 rounded-3xl p-8 sm:p-12 shadow-xl">
-            <div className="prose prose-lg dark:prose-invert max-w-none">
-              
-              {/* Introduction */}
-              <section className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
-                  <Eye className="h-6 w-6 text-emerald-500 mr-2" />
-                  Introduction
-                </h2>
-                <p className="text-gray-700 dark:text-slate-300 leading-relaxed mb-4">
-                  Ultimate Golf Community ("we," "our," or "us") is committed to protecting your privacy. 
-                  This Privacy Policy explains how we collect, use, disclose, and safeguard your information 
-                  when you use our golf community platform and services.
-                </p>
-                <p className="text-gray-700 dark:text-slate-300 leading-relaxed">
-                  By using our services, you agree to the collection and use of information in accordance 
-                  with this Privacy Policy. If you do not agree with our policies and practices, please 
-                  do not use our services.
-                </p>
-              </section>
+        <section className="mx-auto max-w-7xl px-4 pb-14 sm:px-6 lg:px-8">
+          <div className="grid gap-5 md:grid-cols-3">
+            {summaryCards.map(({ title, description, icon: Icon }) => (
+              <div
+                key={title}
+                className="rounded-[1.9rem] border border-white/8 bg-[linear-gradient(160deg,rgba(14,35,29,0.92),rgba(8,20,15,0.96))] p-6"
+              >
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/6">
+                  <Icon className="h-6 w-6 text-emerald-200" />
+                </div>
+                <h2 className="mt-5 text-2xl font-semibold text-white">{title}</h2>
+                <p className="mt-3 text-base leading-8 text-white/68">{description}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
-              {/* Information We Collect */}
-              <section className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
-                  <Database className="h-6 w-6 text-emerald-500 mr-2" />
-                  Information We Collect
-                </h2>
-                
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Personal Information</h3>
-                <ul className="list-disc list-inside text-gray-700 dark:text-slate-300 mb-4 space-y-2">
-                  <li>Name, email address, and contact information</li>
-                  <li>Profile information including golf handicap, location, and preferences</li>
-                  <li>Profile pictures and header images</li>
-                  <li>Golf course reviews and ratings</li>
-                  <li>Tee time bookings and playing history</li>
-                  <li>Messages and communications with other users</li>
-                </ul>
+        <section className="mx-auto max-w-7xl px-4 pb-24 sm:px-6 lg:px-8">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="space-y-6">
+              {sections.map(({ title, icon: Icon, content, bullets }) => (
+                <section
+                  key={title}
+                  className="rounded-[2rem] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-7 sm:p-8"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/6">
+                      <Icon className="h-5 w-5 text-emerald-200" />
+                    </div>
+                    <h2 className="text-2xl font-semibold text-white sm:text-3xl">{title}</h2>
+                  </div>
 
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Usage Information</h3>
-                <ul className="list-disc list-inside text-gray-700 dark:text-slate-300 mb-4 space-y-2">
-                  <li>Device information and browser type</li>
-                  <li>IP address and location data</li>
-                  <li>Pages visited and features used</li>
-                  <li>Time spent on the platform</li>
-                  <li>Search queries and preferences</li>
-                </ul>
+                  {content && (
+                    <div className="mt-6 space-y-4 text-base leading-8 text-white/68">
+                      {content.map((paragraph) => (
+                        <p key={paragraph}>{paragraph}</p>
+                      ))}
+                    </div>
+                  )}
 
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Location Information</h3>
-                <p className="text-gray-700 dark:text-slate-300 leading-relaxed">
-                  We collect location information to help you find nearby golf courses and tee times. 
-                  This includes GPS coordinates when you enable location services, as well as general 
-                  location data based on your IP address.
-                </p>
-              </section>
+                  {bullets && (
+                    <div className="mt-6 space-y-3">
+                      {bullets.map((item) => (
+                        <div
+                          key={item}
+                          className="rounded-2xl border border-white/8 bg-black/15 px-4 py-4 text-base leading-7 text-white/70"
+                        >
+                          {item}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              ))}
+            </div>
 
-              {/* How We Use Information */}
-              <section className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
-                  <Users className="h-6 w-6 text-emerald-500 mr-2" />
-                  How We Use Your Information
-                </h2>
-                <ul className="list-disc list-inside text-gray-700 dark:text-slate-300 space-y-2">
-                  <li>Provide and maintain our golf community platform</li>
-                  <li>Match you with compatible playing partners</li>
-                  <li>Show you relevant golf courses and tee times</li>
-                  <li>Send notifications about bookings and messages</li>
-                  <li>Improve our services and user experience</li>
-                  <li>Provide customer support</li>
-                  <li>Send marketing communications (with your consent)</li>
-                  <li>Ensure platform security and prevent fraud</li>
-                </ul>
-              </section>
+            <aside className="h-fit rounded-[2rem] border border-white/8 bg-[#081711] p-7 lg:sticky lg:top-32">
+              <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-200/75">
+                Questions?
+              </p>
+              <h2 className="mt-4 text-3xl font-semibold text-white">Contact us about privacy.</h2>
+              <p className="mt-5 text-base leading-8 text-white/68">
+                If you have questions about this policy or want to make a data-related request, reach out
+                and we will review it.
+              </p>
 
-              {/* Information Sharing */}
-              <section className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
-                  <Lock className="h-6 w-6 text-emerald-500 mr-2" />
-                  Information Sharing and Disclosure
-                </h2>
-                <p className="text-gray-700 dark:text-slate-300 leading-relaxed mb-4">
-                  We do not sell, trade, or rent your personal information to third parties. We may share 
-                  your information in the following limited circumstances:
-                </p>
-                <ul className="list-disc list-inside text-gray-700 dark:text-slate-300 space-y-2">
-                  <li><strong>With other users:</strong> Your profile information is visible to other community members</li>
-                  <li><strong>Service providers:</strong> Trusted third parties who help us operate our platform</li>
-                  <li><strong>Legal requirements:</strong> When required by law or to protect our rights</li>
-                  <li><strong>Business transfers:</strong> In connection with mergers or acquisitions</li>
-                  <li><strong>Consent:</strong> When you explicitly consent to sharing</li>
-                </ul>
-              </section>
-
-              {/* Data Security */}
-              <section className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
-                  <Shield className="h-6 w-6 text-emerald-500 mr-2" />
-                  Data Security
-                </h2>
-                <p className="text-gray-700 dark:text-slate-300 leading-relaxed mb-4">
-                  We implement appropriate security measures to protect your personal information against 
-                  unauthorized access, alteration, disclosure, or destruction. These measures include:
-                </p>
-                <ul className="list-disc list-inside text-gray-700 dark:text-slate-300 space-y-2">
-                  <li>Encryption of data in transit and at rest</li>
-                  <li>Regular security audits and updates</li>
-                  <li>Access controls and authentication</li>
-                  <li>Secure hosting infrastructure</li>
-                  <li>Employee training on data protection</li>
-                </ul>
-              </section>
-
-              {/* Your Rights */}
-              <section className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-                  Your Rights and Choices
-                </h2>
-                <p className="text-gray-700 dark:text-slate-300 leading-relaxed mb-4">
-                  You have the following rights regarding your personal information:
-                </p>
-                <ul className="list-disc list-inside text-gray-700 dark:text-slate-300 space-y-2">
-                  <li><strong>Access:</strong> Request a copy of your personal data</li>
-                  <li><strong>Correction:</strong> Update or correct inaccurate information</li>
-                  <li><strong>Deletion:</strong> Request deletion of your account and data</li>
-                  <li><strong>Portability:</strong> Export your data in a portable format</li>
-                  <li><strong>Opt-out:</strong> Unsubscribe from marketing communications</li>
-                  <li><strong>Restriction:</strong> Limit how we process your data</li>
-                </ul>
-              </section>
-
-              {/* Cookies */}
-              <section className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-                  Cookies and Tracking Technologies
-                </h2>
-                <p className="text-gray-700 dark:text-slate-300 leading-relaxed mb-4">
-                  We use cookies and similar technologies to enhance your experience, analyze usage patterns, 
-                  and provide personalized content. You can control cookie settings through your browser preferences.
-                </p>
-              </section>
-
-              {/* Third-Party Services */}
-              <section className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-                  Third-Party Services
-                </h2>
-                <p className="text-gray-700 dark:text-slate-300 leading-relaxed mb-4">
-                  Our platform may integrate with third-party services such as:
-                </p>
-                <ul className="list-disc list-inside text-gray-700 dark:text-slate-300 space-y-2">
-                  <li>Weather services for course conditions</li>
-                  <li>Payment processors for bookings</li>
-                  <li>Analytics providers for usage insights</li>
-                  <li>Social media platforms for sharing</li>
-                </ul>
-                <p className="text-gray-700 dark:text-slate-300 leading-relaxed mt-4">
-                  These services have their own privacy policies, and we encourage you to review them.
-                </p>
-              </section>
-
-              {/* Children's Privacy */}
-              <section className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-                  Children's Privacy
-                </h2>
-                <p className="text-gray-700 dark:text-slate-300 leading-relaxed">
-                  Our services are not intended for children under 13 years of age. We do not knowingly 
-                  collect personal information from children under 13. If you are a parent or guardian and 
-                  believe your child has provided us with personal information, please contact us.
-                </p>
-              </section>
-
-              {/* Changes to Policy */}
-              <section className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-                  Changes to This Privacy Policy
-                </h2>
-                <p className="text-gray-700 dark:text-slate-300 leading-relaxed">
-                  We may update this Privacy Policy from time to time. We will notify you of any changes 
-                  by posting the new Privacy Policy on this page and updating the "Last updated" date. 
-                  We encourage you to review this Privacy Policy periodically for any changes.
-                </p>
-              </section>
-
-              {/* Contact Information */}
-              <section className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center">
-                  <Mail className="h-6 w-6 text-emerald-500 mr-2" />
-                  Contact Us
-                </h2>
-                <p className="text-gray-700 dark:text-slate-300 leading-relaxed mb-4">
-                  If you have any questions about this Privacy Policy or our data practices, please contact us:
-                </p>
-                <div className="bg-gray-50 dark:bg-slate-700/50 rounded-lg p-6">
-                  <div className="space-y-2">
-                    <p className="text-gray-700 dark:text-slate-300">
-                      <strong>Email:</strong> privacy@ultimategolfcommunity.com
-                    </p>
-                    <p className="text-gray-700 dark:text-slate-300">
-                      <strong>Address:</strong> Ultimate Golf Community<br />
-                      Privacy Department<br />
-                      San Francisco, CA 94105
-                    </p>
+              <div className="mt-8 rounded-[1.6rem] border border-white/8 bg-white/5 p-5">
+                <div className="flex items-start gap-3">
+                  <Mail className="mt-1 h-5 w-5 text-emerald-200" />
+                  <div>
+                    <p className="text-sm uppercase tracking-[0.18em] text-white/45">Email</p>
+                    <a
+                      href="mailto:privacy@ultimategolfcommunity.com"
+                      className="mt-2 block text-base font-medium text-white transition hover:text-emerald-200"
+                    >
+                      privacy@ultimategolfcommunity.com
+                    </a>
                   </div>
                 </div>
-              </section>
-            </div>
+              </div>
+
+              <div className="mt-5 rounded-[1.6rem] border border-white/8 bg-white/5 p-5 text-base leading-8 text-white/65">
+                Ultimate Golf Community
+                <br />
+                Privacy Requests
+                <br />
+                San Francisco, CA 94105
+              </div>
+            </aside>
           </div>
-        </div>
-      </div>
+        </section>
+      </main>
     </div>
   )
 }

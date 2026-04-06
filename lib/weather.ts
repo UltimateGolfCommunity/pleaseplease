@@ -9,7 +9,7 @@ export interface WeatherData {
 }
 
 export async function getWeatherData(city: string): Promise<WeatherData> {
-  const apiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY || '4f47bb853251d4df07d4e8d8c178c77f'
+  const apiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY
   
   if (!apiKey) {
     throw new Error('OpenWeather API key not configured')
