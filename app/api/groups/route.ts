@@ -5,10 +5,21 @@ import { createAdminClient } from '@/lib/supabase-admin'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { action, name, description, location, logo_url, maxMembers, user_id: bodyUserId, invitees, group_id } = body
+    const {
+      action,
+      name,
+      description,
+      location,
+      logo_url,
+      maxMembers,
+      group_type,
+      user_id: bodyUserId,
+      invitees,
+      group_id
+    } = body
 
     console.log('🔍 GROUPS POST: Action requested:', action)
-    console.log('📊 GROUPS POST: Group data:', { name, description, location, logo_url, maxMembers, user_id: bodyUserId, group_id })
+    console.log('📊 GROUPS POST: Group data:', { name, description, location, logo_url, maxMembers, group_type, user_id: bodyUserId, group_id })
     
     // Get the current user from the request
     let user_id = bodyUserId
@@ -148,6 +159,7 @@ export async function POST(request: NextRequest) {
           id: 'mock-group-' + Date.now(),
           name,
           description: description || '',
+          group_type: group_type || 'community',
           max_members: maxMembers || 10,
           creator_id: user_id,
           status: 'active',
@@ -177,6 +189,7 @@ export async function POST(request: NextRequest) {
           description: description || '',
           location: location || '',
           logo_url: logo_url || null,
+          group_type: group_type || 'community',
           max_members: maxMembers || 10,
           creator_id: user_id,
           status: 'active'

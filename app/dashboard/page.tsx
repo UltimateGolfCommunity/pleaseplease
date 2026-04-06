@@ -60,7 +60,8 @@ export default function Dashboard() {
   const [groupForm, setGroupForm] = useState({
     name: '',
     description: '',
-    location: ''
+    location: '',
+    group_type: 'community'
   })
   const [groupLogo, setGroupLogo] = useState<File | null>(null)
   const [groupLogoPreview, setGroupLogoPreview] = useState<string>('')
@@ -140,6 +141,12 @@ export default function Dashboard() {
       console.log('🛑 Clearing auto-refresh intervals')
       clearInterval(teeTimesInterval)
       clearInterval(notificationsInterval)
+    }
+  }, [user?.id])
+
+  useEffect(() => {
+    if (user?.id) {
+      searchGroups('')
     }
   }, [user?.id])
 
@@ -374,6 +381,7 @@ export default function Dashboard() {
         name: groupForm.name,
         description: groupForm.description,
         location: groupForm.location,
+        group_type: groupForm.group_type,
         logo_url: logoUrl,
         user_id: user.id
       })
@@ -388,6 +396,7 @@ export default function Dashboard() {
           name: groupForm.name,
           description: groupForm.description,
           location: groupForm.location,
+          group_type: groupForm.group_type,
           logo_url: logoUrl,
           user_id: user.id,
           status: 'active'
@@ -403,7 +412,8 @@ export default function Dashboard() {
         setGroupForm({
           name: '',
           description: '',
-          location: ''
+          location: '',
+          group_type: 'community'
         })
         setGroupLogo(null)
         setGroupLogoPreview('')
@@ -766,6 +776,33 @@ export default function Dashboard() {
     () => new Set(userGroups.map((group) => group.id)),
     [userGroups]
   )
+
+  const topGroups = useMemo(
+    () =>
+      [...allGroups]
+        .sort((a, b) => (b.member_count || 0) - (a.member_count || 0))
+        .slice(0, 6),
+    [allGroups]
+  )
+
+  const localGroups = useMemo(() => {
+    const profileLocation = (profile?.location || '').toLowerCase().trim()
+    if (!profileLocation) {
+      return topGroups.slice(0, 3)
+    }
+
+    const locationTokens = profileLocation
+      .split(/[,\s]+/)
+      .map((token) => token.trim())
+      .filter((token) => token.length > 2)
+
+    return topGroups
+      .filter((group) => {
+        const groupLocation = (group.location || '').toLowerCase()
+        return locationTokens.some((token) => groupLocation.includes(token))
+      })
+      .slice(0, 3)
+  }, [profile?.location, topGroups])
 
   const dashboardActivity = useMemo(() => {
     const today = new Date()
@@ -1232,16 +1269,45 @@ export default function Dashboard() {
         {/* Groups Tab */}
         {activeTab === 'groups' && (
           <div className="space-y-6 animate-fade-in">
-            <div className="rounded-[1.8rem] border border-white/8 bg-white/5 p-6 text-center backdrop-blur-sm">
-              <h2 className="mb-2 text-3xl font-bold text-white">Golf Groups</h2>
-              <p className="text-white/62">Manage your groups and discover new ones</p>
-              <button
-                onClick={() => setShowCreateGroupModal(true)}
-                className="mx-auto mt-4 flex items-center space-x-2 rounded-full bg-white px-6 py-3 font-semibold text-slate-950 transition-all duration-300 hover:bg-emerald-100"
-              >
-                <Plus className="h-5 w-5" />
-                <span>Create Group</span>
-              </button>
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_340px]">
+              <div className="rounded-[1.9rem] border border-white/8 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.14),transparent_30%),linear-gradient(135deg,rgba(14,35,29,0.96),rgba(8,20,15,0.98))] p-6 shadow-xl shadow-black/20 backdrop-blur-sm">
+                <h2 className="text-3xl font-bold text-white">Golf Groups</h2>
+                <p className="mt-3 max-w-2xl text-white/62">
+                  Find the communities with real momentum, join the best local rooms, and jump into message boards that keep rounds and conversation alive.
+                </p>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <button
+                    onClick={() => setShowCreateGroupModal(true)}
+                    className="flex items-center space-x-2 rounded-full bg-white px-6 py-3 font-semibold text-slate-950 transition-all duration-300 hover:bg-emerald-100"
+                  >
+                    <Plus className="h-5 w-5" />
+                    <span>Create Group</span>
+                  </button>
+                  <button
+                    onClick={() => setGroupSearchQuery('')}
+                    className="rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                  >
+                    Explore All
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+                <div className="rounded-[1.6rem] border border-white/10 bg-white/5 p-5">
+                  <p className="text-xs uppercase tracking-[0.18em] text-white/45">Top Nearby</p>
+                  <p className="mt-3 text-3xl font-semibold text-white">{localGroups.length}</p>
+                  <p className="mt-2 text-sm text-white/56">
+                    strongest groups around {profile?.location || 'your area'}
+                  </p>
+                </div>
+                <div className="rounded-[1.6rem] border border-white/10 bg-white/5 p-5">
+                  <p className="text-xs uppercase tracking-[0.18em] text-white/45">Top By Members</p>
+                  <p className="mt-3 text-3xl font-semibold text-white">{topGroups[0]?.member_count || 0}</p>
+                  <p className="mt-2 text-sm text-white/56">
+                    current size of the biggest active community
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Search Bar */}
@@ -1255,6 +1321,85 @@ export default function Dashboard() {
                   onChange={(e) => searchGroups(e.target.value)}
                   className="w-full rounded-[1.2rem] border border-white/10 bg-white/5 py-3 pl-12 pr-4 text-white placeholder-gray-400 backdrop-blur-sm transition-all focus:border-emerald-400 focus:outline-none"
                 />
+              </div>
+            </div>
+
+            <div className="grid gap-6 xl:grid-cols-2">
+              <div className="rounded-[1.8rem] border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-bold text-white">Top Local Groups</h3>
+                    <p className="mt-2 text-sm text-white/56">
+                      Communities with the strongest pull near you.
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-5 space-y-3">
+                  {localGroups.length === 0 ? (
+                    <div className="rounded-2xl border border-white/8 bg-white/5 p-4 text-sm text-white/56">
+                      Add your location in your profile to surface local communities here.
+                    </div>
+                  ) : (
+                    localGroups.map((group, index) => (
+                      <div
+                        key={group.id}
+                        className="flex items-center justify-between rounded-[1.4rem] border border-white/8 bg-white/5 p-4"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,rgba(16,185,129,0.24),rgba(56,189,248,0.16))] text-sm font-semibold text-white">
+                            #{index + 1}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-white">{group.name}</p>
+                            <p className="text-sm text-white/50">
+                              {(group.group_type === 'course' ? 'Course' : 'Community')} • {group.location || 'Community hub'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-emerald-200">{group.member_count || 0} members</p>
+                          <button
+                            onClick={() => (joinedGroupIds.has(group.id) || group.is_member ? router.push(`/groups/${group.id}`) : handleJoinGroup(group.id))}
+                            className="mt-2 text-sm font-semibold text-white/74 transition hover:text-white"
+                          >
+                            {joinedGroupIds.has(group.id) || group.is_member ? 'Open board' : 'Join group'}
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-[1.8rem] border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-bold text-white">Top Groups Right Now</h3>
+                    <p className="mt-2 text-sm text-white/56">
+                      Sorted by active member base so the biggest communities surface first.
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-5 grid gap-3">
+                  {topGroups.map((group) => (
+                    <div
+                      key={group.id}
+                      className="rounded-[1.4rem] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.04))] p-4"
+                    >
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-white">{group.name}</p>
+                          <p className="truncate text-sm text-white/50">
+                            {(group.group_type === 'course' ? 'Course' : 'Community')} • {group.description || 'Ongoing member activity and conversation.'}
+                          </p>
+                        </div>
+                        <div className="shrink-0 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-emerald-200">
+                          {group.member_count || 0}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -1289,6 +1434,9 @@ export default function Dashboard() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <h3 className="font-bold text-white text-lg truncate">{group.name}</h3>
+                          <div className="mt-1 inline-flex rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/58">
+                            {group.group_type === 'course' ? 'Course' : 'Community'}
+                          </div>
                           {group.location && (
                             <div className="flex items-center text-gray-400 text-sm mt-1">
                               <MapPin className="h-3 w-3 mr-1" />
@@ -1352,6 +1500,9 @@ export default function Dashboard() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <h3 className="font-bold text-white text-lg truncate">{group.name}</h3>
+                            <div className="mt-1 inline-flex rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/58">
+                              {group.group_type === 'course' ? 'Course' : 'Community'}
+                            </div>
                             {group.location && (
                               <div className="flex items-center text-gray-400 text-sm mt-1">
                                 <MapPin className="h-3 w-3 mr-1" />
@@ -1700,6 +1851,40 @@ export default function Dashboard() {
                   placeholder="Enter group name"
                   required
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Group Type *</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setGroupForm({ ...groupForm, group_type: 'community' })}
+                    className={`rounded-2xl border px-4 py-4 text-left transition ${
+                      groupForm.group_type === 'community'
+                        ? 'border-emerald-400/50 bg-emerald-500/12 text-white'
+                        : 'border-slate-600 bg-slate-700/40 text-gray-300 hover:border-slate-500'
+                    }`}
+                  >
+                    <p className="font-semibold">Community</p>
+                    <p className="mt-2 text-sm opacity-80">
+                      Like-minded golfers in the same area.
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGroupForm({ ...groupForm, group_type: 'course' })}
+                    className={`rounded-2xl border px-4 py-4 text-left transition ${
+                      groupForm.group_type === 'course'
+                        ? 'border-emerald-400/50 bg-emerald-500/12 text-white'
+                        : 'border-slate-600 bg-slate-700/40 text-gray-300 hover:border-slate-500'
+                    }`}
+                  >
+                    <p className="font-semibold">Course</p>
+                    <p className="mt-2 text-sm opacity-80">
+                      Golf course or club members and regular players.
+                    </p>
+                  </button>
+                </div>
               </div>
               
               <div>
