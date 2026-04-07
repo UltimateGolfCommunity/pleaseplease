@@ -1034,14 +1034,14 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-300 mb-3">Home Club</label>
+                  <label className="block text-sm font-semibold text-gray-300 mb-3">Home Course / Club</label>
                   {isEditing ? (
                     <input
                       type="text"
                       value={formData.home_club}
                       onChange={(e) => handleInputChange('home_club', e.target.value)}
                       className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 text-white placeholder-gray-400 transition-all duration-300 shadow-lg hover:shadow-emerald-500/10"
-                      placeholder="Your home golf club"
+                      placeholder="Your home course or club"
                     />
                   ) : (
                     <div className="px-4 py-3 bg-gray-700/30 rounded-xl border border-gray-600/30">

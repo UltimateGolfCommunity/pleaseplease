@@ -6,6 +6,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const user_id = searchParams.get('user_id')
     const limit = parseInt(searchParams.get('limit') || '10')
+    const action = searchParams.get('action')
 
     if (!user_id) {
       return NextResponse.json(
@@ -55,6 +56,57 @@ export async function GET(request: NextRequest) {
         success: true, 
         activities: [],
         message: 'Activity tracking feature not yet available'
+      })
+    }
+
+    if (action === 'feed') {
+      const { data: connections, error: connectionsError } = await supabase
+        .from('user_connections')
+        .select('requester_id, recipient_id')
+        .or(`requester_id.eq.${user_id},recipient_id.eq.${user_id}`)
+        .eq('status', 'accepted')
+
+      if (connectionsError) {
+        return NextResponse.json({ success: true, activities: [] })
+      }
+
+      const connectionIds = Array.from(
+        new Set(
+          (connections || []).map((connection: any) =>
+            connection.requester_id === user_id ? connection.recipient_id : connection.requester_id
+          )
+        )
+      )
+
+      if (connectionIds.length === 0) {
+        return NextResponse.json({ success: true, activities: [] })
+      }
+
+      const { data: activities, error: activitiesError } = await supabase
+        .from('user_activities')
+        .select('*')
+        .in('user_id', connectionIds)
+        .in('activity_type', ['tee_time_created', 'round_logged'])
+        .order('created_at', { ascending: false })
+        .limit(limit)
+
+      if (activitiesError) {
+        return NextResponse.json({ success: true, activities: [] })
+      }
+
+      const { data: actorProfiles } = await supabase
+        .from('user_profiles')
+        .select('id, first_name, last_name, username, avatar_url')
+        .in('id', connectionIds)
+
+      const actorMap = new Map((actorProfiles || []).map((profile: any) => [profile.id, profile]))
+
+      return NextResponse.json({
+        success: true,
+        activities: (activities || []).map((activity: any) => ({
+          ...activity,
+          actor: actorMap.get(activity.user_id) || null
+        }))
       })
     }
 
