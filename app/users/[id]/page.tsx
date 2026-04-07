@@ -13,6 +13,7 @@ import {
   MessageCircle,
   UserPlus,
   Users,
+  CheckCircle,
   Clock,
   Star,
   TrendingUp,
@@ -47,7 +48,7 @@ export default function UserProfilePage() {
   const { user: currentUser } = useAuth()
   const [user, setUser] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
-  const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'connected'>('none')
+  const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'incoming_pending' | 'connected'>('none')
   const [showMessageForm, setShowMessageForm] = useState(false)
   const [message, setMessage] = useState('')
   const [showQRCode, setShowQRCode] = useState(false)
@@ -91,6 +92,25 @@ export default function UserProfilePage() {
     }
   }, [params.id])
 
+  useEffect(() => {
+    const fetchConnectionStatus = async () => {
+      if (!currentUser?.id || !params.id || currentUser.id === params.id) return
+
+      try {
+        const response = await fetch(`/api/users?action=status&id=${params.id}&viewer_id=${currentUser.id}`)
+        const data = await response.json()
+
+        if (response.ok && data.status) {
+          setConnectionStatus(data.status)
+        }
+      } catch (error) {
+        console.error('Error fetching connection status:', error)
+      }
+    }
+
+    fetchConnectionStatus()
+  }, [currentUser?.id, params.id])
+
   const handleConnect = async () => {
     if (!currentUser?.id) {
       alert('You must be logged in to send connection requests')
@@ -117,8 +137,8 @@ export default function UserProfilePage() {
       if (response.ok) {
         const result = await response.json()
         console.log('✅ Connection request successful:', result)
-        setConnectionStatus('connected')
-        alert('Connection request sent successfully!')
+        setConnectionStatus(result.autoAccepted ? 'connected' : 'pending')
+        alert(result.autoAccepted ? 'Connection accepted successfully!' : 'Connection request sent successfully!')
       } else {
         const errorData = await response.json()
         console.error('❌ Connection request failed:', errorData)
@@ -370,6 +390,16 @@ export default function UserProfilePage() {
                   <button className="w-full sm:w-auto bg-gray-600/20 text-gray-300 border border-gray-600/30 px-6 py-3 rounded-lg flex items-center justify-center" disabled>
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-300 mr-2"></div>
                     Request Sent
+                  </button>
+                )}
+
+                {connectionStatus === 'incoming_pending' && (
+                  <button
+                    onClick={handleConnect}
+                    className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-semibold px-6 py-3 rounded-lg transition-all duration-300 flex items-center justify-center"
+                  >
+                    <CheckCircle className="h-5 w-5 mr-2" />
+                    Accept Connection
                   </button>
                 )}
                 

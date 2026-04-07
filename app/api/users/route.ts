@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 
+const connectionProfileFields = 'id, first_name, last_name, username, avatar_url, location, handicap, bio'
+
+const connectionSelect = `
+  *,
+  requester:user_profiles!user_connections_requester_id_fkey(${connectionProfileFields}),
+  recipient:user_profiles!user_connections_recipient_id_fkey(${connectionProfileFields})
+`
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -20,11 +27,7 @@ export async function GET(request: NextRequest) {
       
       const { data: connections, error } = await supabase
         .from('user_connections')
-        .select(`
-          *,
-          requester:user_profiles!user_connections_requester_id_fkey(id, first_name, last_name, username, avatar_url),
-          recipient:user_profiles!user_connections_recipient_id_fkey(id, first_name, last_name, username, avatar_url)
-        `)
+        .select(connectionSelect)
         .or(`requester_id.eq.${userId},recipient_id.eq.${userId}`)
         .eq('status', 'accepted')
 
@@ -41,6 +44,72 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         success: true,
         connections: connections || []
+      })
+    }
+
+    if (action === 'requests' && userId) {
+      console.log('🔗 Fetching pending requests for user:', userId)
+
+      const { data: requests, error } = await supabase
+        .from('user_connections')
+        .select(connectionSelect)
+        .or(`requester_id.eq.${userId},recipient_id.eq.${userId}`)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('❌ Requests fetch error:', error)
+        return NextResponse.json({
+          success: false,
+          error: 'Failed to fetch connection requests',
+          details: error.message
+        }, { status: 500 })
+      }
+
+      const incoming = (requests || []).filter((connection: any) => connection.recipient_id === userId)
+      const outgoing = (requests || []).filter((connection: any) => connection.requester_id === userId)
+
+      return NextResponse.json({
+        success: true,
+        incoming,
+        outgoing
+      })
+    }
+
+    if (action === 'status' && userId) {
+      const viewerId = searchParams.get('viewer_id')
+
+      if (!viewerId) {
+        return NextResponse.json({ success: true, status: 'none' })
+      }
+
+      const { data: connection, error } = await supabase
+        .from('user_connections')
+        .select('*')
+        .or(`and(requester_id.eq.${viewerId},recipient_id.eq.${userId}),and(requester_id.eq.${userId},recipient_id.eq.${viewerId})`)
+        .maybeSingle()
+
+      if (error) {
+        console.error('❌ Status fetch error:', error)
+        return NextResponse.json({
+          success: false,
+          error: 'Failed to fetch connection status',
+          details: error.message
+        }, { status: 500 })
+      }
+
+      let status = 'none'
+
+      if (connection?.status === 'accepted') {
+        status = 'connected'
+      } else if (connection?.status === 'pending') {
+        status = connection.recipient_id === viewerId ? 'incoming_pending' : 'pending'
+      }
+
+      return NextResponse.json({
+        success: true,
+        status,
+        connection: connection || null
       })
     }
     
@@ -161,9 +230,9 @@ export async function POST(request: NextRequest) {
           .from('user_connections')
           .select('*')
           .or(`and(requester_id.eq.${data.user_id},recipient_id.eq.${data.connected_user_id}),and(requester_id.eq.${data.connected_user_id},recipient_id.eq.${data.user_id})`)
-          .single()
+          .maybeSingle()
 
-        if (checkError && checkError.code !== 'PGRST116') {
+        if (checkError) {
           console.error('❌ Error checking existing connection:', checkError)
           return NextResponse.json({ 
             error: 'Failed to check existing connection', 
@@ -173,6 +242,34 @@ export async function POST(request: NextRequest) {
 
         if (existingConnection) {
           console.log('⚠️ Connection already exists:', existingConnection)
+
+          if (
+            existingConnection.status === 'pending' &&
+            existingConnection.requester_id === data.connected_user_id &&
+            existingConnection.recipient_id === data.user_id
+          ) {
+            const { data: acceptedConnection, error: acceptError } = await supabase
+              .from('user_connections')
+              .update({ status: 'accepted' })
+              .eq('id', existingConnection.id)
+              .select()
+              .single()
+
+            if (acceptError) {
+              return NextResponse.json({
+                error: 'Failed to accept existing connection request',
+                details: acceptError.message
+              }, { status: 400 })
+            }
+
+            return NextResponse.json({
+              success: true,
+              autoAccepted: true,
+              message: 'Connection accepted successfully',
+              connection: acceptedConnection
+            })
+          }
+
           return NextResponse.json({ 
             error: 'Connection already exists', 
             details: `Connection status: ${existingConnection.status}` 
@@ -203,6 +300,51 @@ export async function POST(request: NextRequest) {
           success: true, 
           message: 'Connection request sent successfully',
           connection: newConnection
+        })
+      }
+
+      if (action === 'respond_connection') {
+        const { connection_id, user_id, response } = data
+
+        if (!connection_id || !user_id || !response) {
+          return NextResponse.json({
+            error: 'connection_id, user_id, and response are required'
+          }, { status: 400 })
+        }
+
+        const nextStatus = response === 'accept' ? 'accepted' : 'declined'
+
+        const { data: connection, error: fetchError } = await supabase
+          .from('user_connections')
+          .select('*')
+          .eq('id', connection_id)
+          .eq('recipient_id', user_id)
+          .maybeSingle()
+
+        if (fetchError || !connection) {
+          return NextResponse.json({
+            error: 'Connection request not found'
+          }, { status: 404 })
+        }
+
+        const { data: updatedConnection, error: updateError } = await supabase
+          .from('user_connections')
+          .update({ status: nextStatus })
+          .eq('id', connection_id)
+          .select()
+          .single()
+
+        if (updateError) {
+          return NextResponse.json({
+            error: 'Failed to update connection request',
+            details: updateError.message
+          }, { status: 400 })
+        }
+
+        return NextResponse.json({
+          success: true,
+          message: response === 'accept' ? 'Connection accepted successfully' : 'Connection declined',
+          connection: updatedConnection
         })
       }
 
