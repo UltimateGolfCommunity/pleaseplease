@@ -17,7 +17,11 @@ import {
   QrCode,
   User,
   ArrowUpRight,
-  Users
+  Users,
+  LifeBuoy,
+  LogOut,
+  ChevronDown,
+  Mail
 } from 'lucide-react'
 import WeatherWidget from '@/components/WeatherWidget'
 import MessagingSystem from '@/components/MessagingSystem'
@@ -34,6 +38,7 @@ export default function Dashboard() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<ActiveTab>('tee-times')
   const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showQRCode, setShowQRCode] = useState(false)
   const [showQRScanner, setShowQRScanner] = useState(false)
   const [showCreateTeeTimeModal, setShowCreateTeeTimeModal] = useState(false)
@@ -817,7 +822,6 @@ export default function Dashboard() {
     { id: 'tee-times', label: 'Tee Times', icon: Calendar },
     { id: 'groups', label: 'Groups', icon: Trophy },
     { id: 'messages', label: 'Messages', icon: Flag },
-    { id: 'profile', label: 'Profile', icon: User },
   ]
 
   const joinedGroupIds = useMemo(
@@ -938,9 +942,95 @@ export default function Dashboard() {
       <nav className="sticky top-0 z-50 border-b border-white/8 bg-[#07140f]/85 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20 sm:h-24">
-            {/* Logo */}
-            <div className="flex-shrink-0 -ml-2 sm:-ml-1">
-              <Logo size="md" />
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <button
+                  onClick={() => setShowProfileMenu((value) => !value)}
+                  className="flex items-center gap-3 rounded-full border border-white/8 bg-white/5 px-2.5 py-2 text-white/85 transition hover:bg-white/10"
+                >
+                  <div className="h-10 w-10 rounded-full overflow-hidden border-2 border-emerald-500 shadow-lg">
+                    {profile?.avatar_url ? (
+                      <img
+                        src={profile.avatar_url}
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center">
+                        <span className="text-white font-bold text-lg">
+                          {profile?.first_name?.[0] || user?.email?.[0]?.toUpperCase() || 'U'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="hidden text-left lg:block">
+                    <p className="text-sm font-semibold text-white">
+                      {profile?.first_name || user?.email?.split('@')[0] || 'Golfer'}
+                    </p>
+                    <p className="text-xs text-white/45">Open menu</p>
+                  </div>
+                  <ChevronDown className="hidden h-4 w-4 text-white/50 lg:block" />
+                </button>
+
+                {showProfileMenu && (
+                  <div className="absolute left-0 top-[calc(100%+12px)] z-50 w-72 rounded-[1.6rem] border border-white/10 bg-slate-950/95 p-3 shadow-2xl backdrop-blur-xl">
+                    <button
+                      onClick={() => {
+                        setActiveTab('profile')
+                        setShowProfileMenu(false)
+                      }}
+                      className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-white/80 transition hover:bg-white/8 hover:text-white"
+                    >
+                      <User className="h-5 w-5" />
+                      <div>
+                        <p className="font-semibold">My Profile</p>
+                        <p className="text-xs text-white/45">Profile details, QR tools, and score tracking</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveTab('messages')
+                        setShowProfileMenu(false)
+                      }}
+                      className="mt-1 flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-white/80 transition hover:bg-white/8 hover:text-white"
+                    >
+                      <Mail className="h-5 w-5" />
+                      <div>
+                        <p className="font-semibold">Inbox</p>
+                        <p className="text-xs text-white/45">Direct messages and conversations</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => {
+                        router.push('/help')
+                        setShowProfileMenu(false)
+                      }}
+                      className="mt-1 flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-white/80 transition hover:bg-white/8 hover:text-white"
+                    >
+                      <LifeBuoy className="h-5 w-5" />
+                      <div>
+                        <p className="font-semibold">Help & Support</p>
+                        <p className="text-xs text-white/45">How to post tee times, join groups, and more</p>
+                      </div>
+                    </button>
+                    <div className="my-2 border-t border-white/8" />
+                    <button
+                      onClick={handleSignOut}
+                      className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-red-200 transition hover:bg-red-500/10"
+                    >
+                      <LogOut className="h-5 w-5" />
+                      <div>
+                        <p className="font-semibold">Sign Out</p>
+                        <p className="text-xs text-red-200/65">End this session</p>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-shrink-0 -ml-1 sm:-ml-1">
+                <Logo size="md" />
+              </div>
             </div>
 
             {/* Desktop Navigation */}
@@ -967,9 +1057,8 @@ export default function Dashboard() {
 
             {/* Right side buttons */}
             <div className="flex items-center space-x-3">
-                {/* Notifications */}
-                <button 
-                  onClick={() => setShowNotifications(!showNotifications)}
+              <button 
+                onClick={() => setShowNotifications(!showNotifications)}
                 className="relative rounded-full border border-white/8 bg-white/5 p-2.5 text-white/80 transition hover:bg-white/10"
               >
                 <Bell className="h-5 w-5" />
@@ -979,54 +1068,17 @@ export default function Dashboard() {
                       </span>
                   )}
                 </button>
-                
-              {/* QR Code */}
-                <button
-                onClick={() => setShowQRCode(true)}
-                className="rounded-full border border-white/8 bg-white/5 p-2.5 text-white/80 transition hover:bg-white/10"
-                                  >
-                <QrCode className="h-5 w-5" />
-                                  </button>
 
-              {/* QR Scanner */}
-                <button
-                onClick={() => setShowQRScanner(true)}
-                className="rounded-full border border-white/8 bg-white/5 p-2.5 text-white/80 transition hover:bg-white/10"
-                                  >
-                <Camera className="h-5 w-5" />
-                                  </button>
-
-              {/* Sign Out Button */}
-                      <button 
-                onClick={handleSignOut}
-                className="hidden rounded-full border border-red-400/20 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-200 transition hover:bg-red-500/20 md:block"
-                      >
-                Sign Out
-                </button>
-
-              {/* Mobile menu button - Profile Picture */}
               <button
                 onClick={() => setShowMobileMenu(!showMobileMenu)}
                 className="md:hidden relative"
               >
-                <div className="h-10 w-10 rounded-full overflow-hidden border-2 border-emerald-500 shadow-lg hover:border-emerald-400 transition-all">
-                    {profile?.avatar_url ? (
-                      <img 
-                        src={profile.avatar_url} 
-                        alt="Profile" 
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center">
-                      <span className="text-white font-bold text-lg">
-                        {profile?.first_name?.[0] || user?.email?.[0]?.toUpperCase() || 'U'}
-                      </span>
-                      </div>
-                    )}
-                  </div>
-                      </button>
-                  </div>
-                  </div>
+                <div className="rounded-full border border-white/8 bg-white/5 p-2.5">
+                  <ChevronDown className="h-5 w-5 text-white/80" />
+                </div>
+              </button>
+            </div>
+          </div>
 
           {/* Mobile Navigation */}
       {showMobileMenu && (
@@ -1053,12 +1105,41 @@ export default function Dashboard() {
                 </button>
               )
             })}
-            
-            {/* Mobile Sign Out Button */}
-              <button
+            <button
+              onClick={() => {
+                setActiveTab('profile')
+                setShowMobileMenu(false)
+              }}
+              className="flex items-center space-x-3 rounded-2xl px-4 py-3 font-medium text-white/72 transition hover:bg-white/8 hover:text-white"
+            >
+              <User className="h-5 w-5" />
+              <span>My Profile</span>
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('messages')
+                setShowMobileMenu(false)
+              }}
+              className="flex items-center space-x-3 rounded-2xl px-4 py-3 font-medium text-white/72 transition hover:bg-white/8 hover:text-white"
+            >
+              <Mail className="h-5 w-5" />
+              <span>Inbox</span>
+            </button>
+            <button
+              onClick={() => {
+                router.push('/help')
+                setShowMobileMenu(false)
+              }}
+              className="flex items-center space-x-3 rounded-2xl px-4 py-3 font-medium text-white/72 transition hover:bg-white/8 hover:text-white"
+            >
+              <LifeBuoy className="h-5 w-5" />
+              <span>Help & Support</span>
+            </button>
+            <button
               onClick={handleSignOut}
               className="flex items-center space-x-3 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 font-medium text-red-200 transition hover:bg-red-500/20"
             >
+              <LogOut className="h-5 w-5" />
               <span>Sign Out</span>
               </button>
           </div>
@@ -1731,6 +1812,44 @@ export default function Dashboard() {
                     <label className="block text-sm font-medium text-gray-400 mb-1">Home Course / Club</label>
                     <p className="text-white font-semibold">{profile?.home_club || profile?.home_course || 'Not added yet'}</p>
                   </div>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-[1.8rem] border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-2xl bg-emerald-500/12 p-3">
+                      <QrCode className="h-5 w-5 text-emerald-200" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">My QR Code</h3>
+                      <p className="text-sm text-white/55">Share your code so golfers can connect with you faster.</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowQRCode(true)}
+                    className="mt-5 w-full rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-100"
+                  >
+                    Open My QR Code
+                  </button>
+                </div>
+
+                <div className="rounded-[1.8rem] border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-2xl bg-sky-500/12 p-3">
+                      <Camera className="h-5 w-5 text-sky-200" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">Scan a Golfer</h3>
+                      <p className="text-sm text-white/55">Use the camera to connect with another player in person.</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowQRScanner(true)}
+                    className="mt-5 w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                  >
+                    Open Scanner
+                  </button>
                 </div>
               </div>
 
