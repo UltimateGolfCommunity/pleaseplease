@@ -901,36 +901,6 @@ export default function Dashboard() {
     }
   }, [teeTimes, user?.id, userApplications])
 
-  const spotlightCards = useMemo(
-    () => [
-      {
-        label: 'Upcoming',
-        value: dashboardActivity.upcomingThisWeek.length,
-        description: 'rounds landing this week',
-        accent: 'from-emerald-300/20 to-cyan-300/10',
-      },
-      {
-        label: 'My Groups',
-        value: userGroups.length,
-        description: 'communities you belong to',
-        accent: 'from-sky-300/22 to-blue-300/10',
-      },
-      {
-        label: 'Network Feed',
-        value: activityFeed.length,
-        description: 'new posts from your connections',
-        accent: 'from-amber-300/20 to-orange-300/10',
-      },
-      {
-        label: 'Pending Decisions',
-        value: pendingApplications.length,
-        description: 'players waiting on your response',
-        accent: 'from-rose-300/20 to-pink-300/10',
-      },
-    ],
-    [activityFeed.length, dashboardActivity.upcomingThisWeek.length, pendingApplications.length, userGroups.length]
-  )
-
   // Show welcome animation while loading and after
   if (initialLoading || showWelcome) {
     return <WelcomeAnimation onComplete={() => setShowWelcome(false)} />
@@ -1155,7 +1125,7 @@ export default function Dashboard() {
         </div>
 
         <div className="mb-8 grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-          <div className="rounded-[2rem] border border-white/8 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_26%),linear-gradient(135deg,rgba(14,35,29,0.96),rgba(8,20,15,0.98))] p-6 shadow-2xl shadow-black/20 sm:p-7">
+          <div className="rounded-[2rem] border border-white/8 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_26%),linear-gradient(135deg,rgba(14,35,29,0.96),rgba(8,20,15,0.98))] p-6 shadow-2xl shadow-black/20 sm:p-7 xl:col-span-2">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-200/70">Activity Hub</p>
             <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">
               Great day to play, {profile?.first_name || user?.email?.split('@')[0] || 'Golfer'}.
@@ -1163,38 +1133,8 @@ export default function Dashboard() {
             <p className="mt-4 max-w-2xl text-sm leading-7 text-white/62 sm:text-base">
               Your next round, the best opening in the network, and fresh movement from your connections all stay in one calm place.
             </p>
-
-            <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {spotlightCards.map((card) => (
-                <div
-                  key={card.label}
-                  className={`rounded-[1.5rem] border border-white/8 bg-gradient-to-br ${card.accent} p-5`}
-                >
-                  <p className="text-xs uppercase tracking-[0.18em] text-white/45">{card.label}</p>
-                  <p className="mt-3 text-3xl font-semibold text-white">{card.value}</p>
-                  <p className="mt-2 text-sm text-white/58">{card.description}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <button
-                onClick={() => setShowCreateTeeTimeModal(true)}
-                className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-100"
-              >
-                Post a Tee Time
-              </button>
-              <button
-                onClick={() => setActiveTab('groups')}
-                className="rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
-              >
-                Open My Groups
-              </button>
-            </div>
-          </div>
-
-          <div className="grid gap-4">
-            <div className="rounded-[1.8rem] border border-white/10 bg-white/6 p-6 backdrop-blur-sm">
+            <div className="mt-6 grid gap-4 xl:grid-cols-3">
+              <div className="rounded-[1.8rem] border border-white/10 bg-white/6 p-6 backdrop-blur-sm">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.18em] text-white/45">Your Next Tee Time</p>
@@ -1230,13 +1170,12 @@ export default function Dashboard() {
                   </p>
                 </>
               ) : (
-                <p className="mt-4 text-sm leading-7 text-white/56">
-                  Post one or join one and your next round will stay parked here.
-                </p>
-              )}
-            </div>
+                  <p className="mt-4 text-sm leading-7 text-white/56">
+                    Post one or join one and your next round will stay parked here.
+                  </p>
+                )}
+              </div>
 
-            <div className="grid gap-4 lg:grid-cols-2">
               <div className="rounded-[1.8rem] border border-white/10 bg-white/6 p-6 backdrop-blur-sm">
                 <div className="flex items-center justify-between gap-4">
                   <div>
@@ -1306,6 +1245,21 @@ export default function Dashboard() {
                   )}
                 </div>
               </div>
+            </div>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button
+                onClick={() => setShowCreateTeeTimeModal(true)}
+                className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-100"
+              >
+                Post a Tee Time
+              </button>
+              <button
+                onClick={() => setActiveTab('groups')}
+                className="rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+              >
+                Open My Groups
+              </button>
             </div>
           </div>
         </div>
