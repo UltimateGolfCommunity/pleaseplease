@@ -25,7 +25,6 @@ import {
 } from 'lucide-react'
 import WeatherWidget from '@/components/WeatherWidget'
 import MessagingSystem from '@/components/MessagingSystem'
-import Logo from '@/components/Logo'
 import QRCodeGenerator from '@/components/QRCodeGenerator'
 import SimpleQRScanner from '@/components/SimpleQRScanner'
 import WelcomeAnimation from '@/components/WelcomeAnimation'
@@ -39,6 +38,18 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('tee-times')
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false)
+  const [globalSearchQuery, setGlobalSearchQuery] = useState('')
+  const [globalSearchLoading, setGlobalSearchLoading] = useState(false)
+  const [globalSearchResults, setGlobalSearchResults] = useState<{
+    users: any[]
+    groups: any[]
+    teeTimes: any[]
+  }>({
+    users: [],
+    groups: [],
+    teeTimes: []
+  })
   const [showQRCode, setShowQRCode] = useState(false)
   const [showQRScanner, setShowQRScanner] = useState(false)
   const [showCreateTeeTimeModal, setShowCreateTeeTimeModal] = useState(false)
@@ -387,6 +398,91 @@ export default function Dashboard() {
       if (!silent) {
         console.error('Error fetching unread messages:', error)
       }
+    }
+  }
+
+  useEffect(() => {
+    if (!showGlobalSearch) return
+
+    if (!globalSearchQuery.trim()) {
+      setGlobalSearchResults({ users: [], groups: [], teeTimes: [] })
+      return
+    }
+
+    const timer = window.setTimeout(async () => {
+      setGlobalSearchLoading(true)
+
+      try {
+        const [usersResponse, groupsResponse] = await Promise.all([
+          fetch(`/api/users?action=search&q=${encodeURIComponent(globalSearchQuery)}`),
+          fetch(`/api/groups?action=search&query=${encodeURIComponent(globalSearchQuery)}${user?.id ? `&user_id=${user.id}` : ''}`)
+        ])
+
+        const [usersData, groupsData] = await Promise.all([
+          usersResponse.json(),
+          groupsResponse.json()
+        ])
+
+        const normalizedQuery = globalSearchQuery.toLowerCase()
+        const teeTimeResults = teeTimes.filter((teeTime) => {
+          const searchable = [
+            teeTime.golf_courses?.name,
+            teeTime.course_name,
+            teeTime.course_location,
+            teeTime.group?.name,
+            teeTime.creator?.first_name,
+            teeTime.creator?.last_name
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase()
+
+          return searchable.includes(normalizedQuery)
+        })
+
+        setGlobalSearchResults({
+          users: (usersData.users || []).filter((result: any) => result.id !== user?.id).slice(0, 5),
+          groups: (groupsData.groups || []).slice(0, 5),
+          teeTimes: teeTimeResults.slice(0, 5)
+        })
+      } catch (error) {
+        console.error('Error running global search:', error)
+      } finally {
+        setGlobalSearchLoading(false)
+      }
+    }, 220)
+
+    return () => window.clearTimeout(timer)
+  }, [globalSearchQuery, showGlobalSearch, teeTimes, user?.id])
+
+  const handleQuickConnect = async (targetUserId: string) => {
+    if (!user?.id) {
+      alert('You must be logged in to connect with golfers')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'connect',
+          user_id: user.id,
+          connected_user_id: targetUserId
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        alert(data.error || 'Unable to send connection request')
+        return
+      }
+
+      alert(data.autoAccepted ? 'Connection accepted successfully!' : 'Connection request sent successfully!')
+    } catch (error) {
+      console.error('Error sending quick connection:', error)
+      alert('Unable to send connection request right now')
     }
   }
 
@@ -927,8 +1023,8 @@ export default function Dashboard() {
       {/* Navigation */}
       <nav className="sticky top-0 z-50 border-b border-white/8 bg-[#07140f]/85 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20 sm:h-24">
-            <div className="flex items-center gap-4">
+          <div className="relative flex items-center justify-between h-20 sm:h-24">
+            <div className="flex items-center gap-3 sm:gap-4">
               <div className="relative">
                 <button
                   onClick={() => setShowProfileMenu((value) => !value)}
@@ -971,8 +1067,8 @@ export default function Dashboard() {
                       <div>
                         <p className="font-semibold">Tee Times</p>
                         <p className="text-xs text-white/45">Open rounds, next tee time, and new posts</p>
-                      </div>
-                    </button>
+                  </div>
+                </button>
                     <button
                       onClick={() => {
                         setActiveTab('groups')
@@ -1040,12 +1136,25 @@ export default function Dashboard() {
                 )}
               </div>
 
-              <div className="flex-shrink-0 -ml-1 sm:-ml-1">
-                <Logo size="md" />
-              </div>
+              <button
+                onClick={() => {
+                  setShowGlobalSearch(true)
+                  setShowProfileMenu(false)
+                  setShowMobileMenu(false)
+                }}
+                className="rounded-full border border-white/8 bg-white/5 p-2.5 text-white/80 transition hover:bg-white/10"
+              >
+                <Search className="h-5 w-5" />
+              </button>
             </div>
 
-            <div className="hidden md:block" />
+            <div className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 justify-center">
+              <img
+                src="/UGClogonew.png"
+                alt="UGC"
+                className="h-12 w-auto object-contain sm:h-16"
+              />
+            </div>
 
             {/* Right side buttons */}
             <div className="flex items-center space-x-3">
@@ -1160,20 +1269,20 @@ export default function Dashboard() {
         </div>
 
         <div className="mb-8 grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-          <div className="rounded-[2rem] border border-white/8 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_26%),linear-gradient(135deg,rgba(14,35,29,0.96),rgba(8,20,15,0.98))] p-6 shadow-2xl shadow-black/20 sm:p-7 xl:col-span-2">
+          <div className="rounded-[2rem] border border-white/8 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_26%),linear-gradient(135deg,rgba(14,35,29,0.96),rgba(8,20,15,0.98))] p-4 shadow-2xl shadow-black/20 sm:p-7 xl:col-span-2">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-200/70">Activity Hub</p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">
+            <h1 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">
               Great day to play, {profile?.first_name || user?.email?.split('@')[0] || 'Golfer'}.
             </h1>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-white/62 sm:text-base">
               Your next round, the best opening in the network, and fresh movement from your connections all stay in one calm place.
             </p>
-            <div className="mt-6 grid gap-4 xl:grid-cols-3">
-              <div className="rounded-[1.8rem] border border-white/10 bg-white/6 p-6 backdrop-blur-sm">
+            <div className="mt-6 grid gap-3 xl:grid-cols-3">
+              <div className="rounded-[1.8rem] border border-white/10 bg-white/6 p-4 backdrop-blur-sm sm:p-6">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.18em] text-white/45">Your Next Tee Time</p>
-                  <h2 className="mt-3 text-2xl font-semibold text-white">
+                  <h2 className="mt-3 text-xl font-semibold text-white sm:text-2xl">
                     {dashboardActivity.nextHostedOrJoined?.golf_courses?.name || dashboardActivity.nextHostedOrJoined?.course_name || 'Nothing scheduled yet'}
                   </h2>
                 </div>
@@ -1211,11 +1320,11 @@ export default function Dashboard() {
                 )}
               </div>
 
-              <div className="rounded-[1.8rem] border border-white/10 bg-white/6 p-6 backdrop-blur-sm">
+              <div className="rounded-[1.8rem] border border-white/10 bg-white/6 p-4 backdrop-blur-sm sm:p-6">
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="text-xs uppercase tracking-[0.18em] text-white/45">Next Best Opening</p>
-                    <h2 className="mt-3 text-xl font-semibold text-white">
+                    <h2 className="mt-3 text-lg font-semibold text-white sm:text-xl">
                       {dashboardActivity.nextOpenTeeTime?.golf_courses?.name || dashboardActivity.nextOpenTeeTime?.course_name || 'No active tee times yet'}
                     </h2>
                   </div>
@@ -1251,11 +1360,11 @@ export default function Dashboard() {
                 )}
               </div>
 
-              <div className="rounded-[1.8rem] border border-white/10 bg-white/6 p-6 backdrop-blur-sm">
+              <div className="rounded-[1.8rem] border border-white/10 bg-white/6 p-4 backdrop-blur-sm sm:p-6">
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="text-xs uppercase tracking-[0.18em] text-white/45">Connection Feed</p>
-                    <h2 className="mt-3 text-xl font-semibold text-white">What your network is doing</h2>
+                    <h2 className="mt-3 text-lg font-semibold text-white sm:text-xl">What your network is doing</h2>
                   </div>
                   {activityFeedLoading && <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-emerald-300" />}
                 </div>
@@ -1860,6 +1969,143 @@ export default function Dashboard() {
                 </div>
         )}
       </div>
+
+      {showGlobalSearch && (
+        <div className="fixed inset-0 z-50 bg-black/70 p-4 backdrop-blur-md sm:p-6">
+          <div className="mx-auto flex h-full max-w-4xl flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/95 shadow-2xl">
+            <div className="border-b border-white/8 p-4 sm:p-6">
+              <div className="flex items-center gap-3">
+                <div className="rounded-2xl bg-emerald-500/12 p-3">
+                  <Search className="h-5 w-5 text-emerald-200" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-200/70">Universal Search</p>
+                  <div className="mt-3 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                    <Search className="h-4 w-4 text-white/35" />
+                    <input
+                      autoFocus
+                      value={globalSearchQuery}
+                      onChange={(event) => setGlobalSearchQuery(event.target.value)}
+                      placeholder="Search golfers, tee times, or groups..."
+                      className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/30"
+                    />
+                    {globalSearchLoading && <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-emerald-300" />}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowGlobalSearch(false)}
+                  className="rounded-full border border-white/10 bg-white/5 p-2 text-white/70 transition hover:bg-white/10 hover:text-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="grid flex-1 gap-0 overflow-hidden lg:grid-cols-3">
+              {[
+                { key: 'users', title: 'Golfers', items: globalSearchResults.users },
+                { key: 'teeTimes', title: 'Tee Times', items: globalSearchResults.teeTimes },
+                { key: 'groups', title: 'Groups', items: globalSearchResults.groups }
+              ].map((section) => (
+                <div key={section.key} className="overflow-y-auto border-t border-white/8 p-4 lg:border-t-0 lg:border-r lg:last:border-r-0 sm:p-5">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-white">{section.title}</h3>
+                    <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-white/45">
+                      {section.items.length}
+                    </span>
+                  </div>
+
+                  {!globalSearchQuery.trim() ? (
+                    <div className="rounded-[1.3rem] border border-dashed border-white/12 bg-white/5 px-4 py-6 text-sm text-white/45">
+                      Start typing to search {section.title.toLowerCase()}.
+                    </div>
+                  ) : section.items.length === 0 ? (
+                    <div className="rounded-[1.3rem] border border-dashed border-white/12 bg-white/5 px-4 py-6 text-sm text-white/45">
+                      No {section.title.toLowerCase()} matched your search.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {section.key === 'users' && section.items.map((result: any) => (
+                        <div key={result.id} className="rounded-[1.3rem] border border-white/10 bg-white/5 p-4">
+                          <p className="font-semibold text-white">
+                            {[result.first_name, result.last_name].filter(Boolean).join(' ') || result.username || 'Golfer'}
+                          </p>
+                          <p className="mt-1 text-sm text-white/45">@{result.username || 'golfer'}</p>
+                          {result.location && <p className="mt-2 text-sm text-white/55">{result.location}</p>}
+                          <div className="mt-3 flex gap-2">
+                            <button
+                              onClick={() => {
+                                router.push(`/users/${result.id}`)
+                                setShowGlobalSearch(false)
+                              }}
+                              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80"
+                            >
+                              View
+                            </button>
+                            <button
+                              onClick={() => handleQuickConnect(result.id)}
+                              className="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-950"
+                            >
+                              Connect
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+
+                      {section.key === 'teeTimes' && section.items.map((result: any) => (
+                        <div key={result.id} className="rounded-[1.3rem] border border-white/10 bg-white/5 p-4">
+                          <p className="font-semibold text-white">{result.golf_courses?.name || result.course_name}</p>
+                          <p className="mt-1 text-sm text-white/45">
+                            {new Date(result.tee_time_date).toLocaleDateString()} • {result.tee_time_time}
+                          </p>
+                          {result.course_location && <p className="mt-2 text-sm text-white/55">{result.course_location}</p>}
+                          <div className="mt-3">
+                            <button
+                              onClick={() => {
+                                setShowGlobalSearch(false)
+                                if (result.creator_id === user?.id) return
+                                handleJoinTeeTime(result.id)
+                              }}
+                              className="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-950"
+                            >
+                              {result.creator_id === user?.id ? 'Your post' : 'Join'}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+
+                      {section.key === 'groups' && section.items.map((result: any) => (
+                        <div key={result.id} className="rounded-[1.3rem] border border-white/10 bg-white/5 p-4">
+                          <p className="font-semibold text-white">{result.name}</p>
+                          <p className="mt-1 text-sm text-white/45">
+                            {result.group_type === 'course' ? 'Course' : 'Community'}
+                          </p>
+                          {result.location && <p className="mt-2 text-sm text-white/55">{result.location}</p>}
+                          <div className="mt-3">
+                            <button
+                              onClick={() => {
+                                setShowGlobalSearch(false)
+                                if (joinedGroupIds.has(result.id) || result.is_member) {
+                                  router.push(`/groups/${result.id}`)
+                                } else {
+                                  handleJoinGroup(result.id)
+                                }
+                              }}
+                              className="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-950"
+                            >
+                              {joinedGroupIds.has(result.id) || result.is_member ? 'Open' : 'Join'}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Modals */}
       
