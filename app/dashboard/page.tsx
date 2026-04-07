@@ -92,6 +92,7 @@ export default function Dashboard() {
     subject: '',
     message: ''
   })
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0)
   
   // Applications
   const [pendingApplications, setPendingApplications] = useState<any[]>([])
@@ -119,7 +120,8 @@ export default function Dashboard() {
           fetchNotifications(),
       fetchPendingApplications(),
           fetchUserApplications(),
-          fetchActivityFeed()
+          fetchActivityFeed(),
+          fetchUnreadMessages()
         ])
         setInitialLoading(false)
         // Show welcome animation after data is loaded
@@ -152,12 +154,17 @@ export default function Dashboard() {
       fetchUserApplications(true)
     }, 60000)
 
+    const messagesInterval = setInterval(() => {
+      fetchUnreadMessages(true)
+    }, 60000)
+
     // Cleanup intervals on unmount or when user changes
     return () => {
       console.log('🛑 Clearing auto-refresh intervals')
       clearInterval(teeTimesInterval)
       clearInterval(notificationsInterval)
       clearInterval(activityInterval)
+      clearInterval(messagesInterval)
     }
   }, [user?.id])
 
@@ -364,6 +371,21 @@ export default function Dashboard() {
     } finally {
       if (!silent) {
         setActivityFeedLoading(false)
+      }
+    }
+  }
+
+  const fetchUnreadMessages = async (silent = false) => {
+    if (!user?.id) return
+
+    try {
+      const response = await fetch(`/api/messages?action=inbox&user_id=${user.id}`)
+      const data = await response.json()
+      const inboxMessages = Array.isArray(data) ? data : []
+      setUnreadMessageCount(inboxMessages.filter((message: any) => !message.is_read).length)
+    } catch (error) {
+      if (!silent) {
+        console.error('Error fetching unread messages:', error)
       }
     }
   }
@@ -818,12 +840,6 @@ export default function Dashboard() {
     }
   }
 
-  const tabs = [
-    { id: 'tee-times', label: 'Tee Times', icon: Calendar },
-    { id: 'groups', label: 'Groups', icon: Trophy },
-    { id: 'messages', label: 'Messages', icon: Flag },
-  ]
-
   const joinedGroupIds = useMemo(
     () => new Set(userGroups.map((group) => group.id)),
     [userGroups]
@@ -946,10 +962,36 @@ export default function Dashboard() {
                   <div className="absolute left-0 top-[calc(100%+12px)] z-50 w-72 rounded-[1.6rem] border border-white/10 bg-slate-950/95 p-3 shadow-2xl backdrop-blur-xl">
                     <button
                       onClick={() => {
-                        setActiveTab('profile')
+                        setActiveTab('tee-times')
                         setShowProfileMenu(false)
                       }}
                       className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-white/80 transition hover:bg-white/8 hover:text-white"
+                    >
+                      <Calendar className="h-5 w-5" />
+                      <div>
+                        <p className="font-semibold">Tee Times</p>
+                        <p className="text-xs text-white/45">Open rounds, next tee time, and new posts</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveTab('groups')
+                        setShowProfileMenu(false)
+                      }}
+                      className="mt-1 flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-white/80 transition hover:bg-white/8 hover:text-white"
+                    >
+                      <Trophy className="h-5 w-5" />
+                      <div>
+                        <p className="font-semibold">Groups</p>
+                        <p className="text-xs text-white/45">Communities, courses, and message boards</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveTab('profile')
+                        setShowProfileMenu(false)
+                      }}
+                      className="mt-1 flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-white/80 transition hover:bg-white/8 hover:text-white"
                     >
                       <User className="h-5 w-5" />
                       <div>
@@ -1003,30 +1045,19 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-2 rounded-full border border-white/8 bg-white/5 p-1">
-              {tabs.map((tab) => {
-                  const Icon = tab.icon
-                  const isActive = activeTab === tab.id
-                  return (
-                    <button
-                      key={tab.id}
-                    onClick={() => setActiveTab(tab.id as ActiveTab)}
-                    className={`flex items-center space-x-2 rounded-full px-4 py-2.5 text-sm font-medium transition-all duration-300 ${
-                        isActive
-                        ? 'bg-white text-slate-950 shadow-lg'
-                        : 'text-white/72 hover:bg-white/8 hover:text-white'
-                      }`}
-                    >
-                    <Icon className="h-4 w-4" />
-                    <span>{tab.label}</span>
-                    </button>
-                  )
-                })}
-              </div>
+            <div className="hidden md:block" />
 
             {/* Right side buttons */}
             <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setActiveTab('messages')}
+                className="relative rounded-full border border-white/8 bg-white/5 p-2.5 text-white/80 transition hover:bg-white/10"
+              >
+                <Mail className="h-5 w-5" />
+                {unreadMessageCount > 0 && (
+                  <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500" />
+                )}
+              </button>
               <button 
                 onClick={() => setShowNotifications(!showNotifications)}
                 className="relative rounded-full border border-white/8 bg-white/5 p-2.5 text-white/80 transition hover:bg-white/10"
@@ -1054,7 +1085,11 @@ export default function Dashboard() {
       {showMobileMenu && (
             <div className="border-t border-white/8 py-4 md:hidden">
               <div className="flex flex-col space-y-2">
-                {tabs.map((tab) => {
+                {[
+                  { id: 'tee-times', label: 'Tee Times', icon: Calendar },
+                  { id: 'groups', label: 'Groups', icon: Trophy },
+                  { id: 'messages', label: 'Messages', icon: Mail }
+                ].map((tab) => {
               const Icon = tab.icon
               const isActive = activeTab === tab.id
               return (
