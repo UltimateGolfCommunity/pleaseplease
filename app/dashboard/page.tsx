@@ -1033,9 +1033,9 @@ export default function Dashboard() {
               <div className="relative">
                 <button
                   onClick={() => setShowProfileMenu((value) => !value)}
-                  className="flex items-center gap-3 rounded-full border border-white/8 bg-white/5 px-2.5 py-2 text-white/85 transition hover:bg-white/10"
+                  className="flex items-center gap-3 rounded-full border border-white/8 bg-white/5 p-2.5 text-white/85 transition hover:bg-white/10 lg:px-2.5 lg:py-2"
                 >
-                  <div className="h-10 w-10 rounded-full overflow-hidden border-2 border-emerald-500 shadow-lg">
+                  <div className="h-5 w-5 overflow-hidden rounded-full border border-emerald-400/70 shadow-lg lg:h-10 lg:w-10 lg:border-2 lg:border-emerald-500">
                     {profile?.avatar_url ? (
                       <img
                         src={profile.avatar_url}
@@ -1044,7 +1044,7 @@ export default function Dashboard() {
                       />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center">
-                        <span className="text-white font-bold text-lg">
+                        <span className="text-xs font-bold text-white lg:text-lg">
                           {profile?.first_name?.[0] || user?.email?.[0]?.toUpperCase() || 'U'}
                         </span>
                       </div>
@@ -1115,11 +1115,11 @@ export default function Dashboard() {
               </button>
             </div>
 
-            <div className="pointer-events-none absolute left-[44%] top-1/2 flex -translate-x-1/2 -translate-y-1/2 justify-center md:left-1/2">
+            <div className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 justify-center">
               <img
                 src="/UGClogonew.png"
                 alt="UGC"
-                className="h-20 w-[176px] object-contain sm:h-24 sm:w-[210px] md:h-24 md:w-auto"
+                className="h-24 w-[198px] object-contain sm:h-24 sm:w-[210px] md:h-24 md:w-auto"
               />
             </div>
 
