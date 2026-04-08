@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { 
   User, 
@@ -45,6 +45,7 @@ interface UserProfile {
 export default function UserProfilePage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user: currentUser } = useAuth()
   const [user, setUser] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -53,6 +54,7 @@ export default function UserProfilePage() {
   const [message, setMessage] = useState('')
   const [showQRCode, setShowQRCode] = useState(false)
   const [showQRScanner, setShowQRScanner] = useState(false)
+  const [processedConnectLink, setProcessedConnectLink] = useState(false)
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -110,6 +112,25 @@ export default function UserProfilePage() {
 
     fetchConnectionStatus()
   }, [currentUser?.id, params.id])
+
+  useEffect(() => {
+    const shouldConnect = searchParams.get('connect') === '1'
+    if (!shouldConnect || processedConnectLink || !user?.id) return
+
+    if (!currentUser?.id) {
+      const redirect = encodeURIComponent(`/users/${user.id}?connect=1`)
+      router.push(`/auth/signup?redirect=${redirect}`)
+      return
+    }
+
+    if (currentUser.id === user.id || connectionStatus !== 'none') {
+      setProcessedConnectLink(true)
+      return
+    }
+
+    setProcessedConnectLink(true)
+    handleConnect()
+  }, [searchParams, processedConnectLink, user?.id, currentUser?.id, connectionStatus])
 
   const handleConnect = async () => {
     if (!currentUser?.id) {

@@ -70,6 +70,11 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
   )
 
   const locationLabel = group?.location || founder?.user_profiles?.location || 'Online and local golfers'
+  const founderName = founder?.user_profiles?.first_name
+    ? `${founder.user_profiles.first_name} ${founder.user_profiles.last_name || ''}`.trim()
+    : 'Community host'
+  const heroImage = group?.header_image_url || group?.image_url || group?.logo_url || ''
+  const groupAvatar = group?.logo_url || group?.image_url || ''
 
   const fetchGroupDetails = async () => {
     try {
@@ -260,10 +265,10 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(12,33,25,0.96),rgba(8,21,16,0.98))] p-6 shadow-2xl shadow-black/25 sm:p-8">
-          {group?.header_image_url && (
+          {heroImage && (
             <div className="absolute inset-0 rounded-3xl overflow-hidden">
               <img
-                src={group.header_image_url}
+                src={heroImage}
                 alt={`${group.name} header`}
                 className="w-full h-full object-cover opacity-18"
               />
@@ -272,13 +277,13 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
           )}
           <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_top,rgba(125,211,252,0.18),transparent_55%)]" />
 
-          <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
             <div>
               <div className="flex flex-wrap items-start gap-5">
                 <div className="relative">
                   <div className="h-28 w-28 overflow-hidden rounded-[1.75rem] border border-white/14 bg-white/8 shadow-xl">
-                    {group.image_url ? (
-                      <img src={group.image_url} alt={group.name} className="h-full w-full object-cover" />
+                    {groupAvatar ? (
+                      <img src={groupAvatar} alt={group.name} className="h-full w-full object-cover" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,rgba(16,185,129,0.32),rgba(59,130,246,0.22))]">
                         <Users className="h-12 w-12 text-white" />
@@ -304,7 +309,7 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-3">
                     <span className="rounded-full border border-emerald-300/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-100/85">
-                      Group Community
+                      {group.group_type === 'course' ? 'Course Group' : 'Community Group'}
                     </span>
                     <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/60">
                       Created {new Date(group.created_at).toLocaleDateString()}
@@ -313,9 +318,20 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
                   <h1 className="mt-4 text-4xl font-semibold tracking-[-0.05em] text-white sm:text-5xl">
                     {group.name}
                   </h1>
-                  <p className="mt-4 max-w-3xl text-base leading-8 text-white/68 sm:text-lg">
-                    {group.description || 'A place for golfers to coordinate tee times, talk strategy, and keep the group active between rounds.'}
-                  </p>
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    <div className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/72">
+                      <MapPin className="mr-2 inline h-4 w-4 text-emerald-300" />
+                      {locationLabel}
+                    </div>
+                    <div className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/72">
+                      <Users className="mr-2 inline h-4 w-4 text-sky-300" />
+                      {members.length} members
+                    </div>
+                    <div className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/72">
+                      <Sparkles className="mr-2 inline h-4 w-4 text-amber-300" />
+                      Founded by {founderName}
+                    </div>
+                  </div>
                   <div className="mt-6 flex flex-wrap gap-3">
                     <button
                       onClick={() => setShowGroupChat(true)}
@@ -363,6 +379,26 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="rounded-[1.8rem] border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
+            <div className="mb-6 rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-200/70">About This Group</p>
+              <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-white">What this club is about</h2>
+              <p className="mt-3 text-sm leading-7 text-white/68">
+                {group.description || 'A place for golfers to coordinate rounds, build a consistent community, and keep conversations moving between tee times.'}
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/45">Founder</p>
+                  <p className="mt-2 text-sm font-semibold text-white">{founderName}</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/45">Purpose</p>
+                  <p className="mt-2 text-sm font-semibold text-white">
+                    {group.group_type === 'course' ? 'Daily course and club community' : 'Local golf community'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-semibold tracking-[-0.03em] text-white">Community Members</h2>
@@ -458,8 +494,8 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
               <div className="flex items-center gap-4">
                 <div className="relative">
                   <div className="h-20 w-20 overflow-hidden rounded-2xl border border-white/10 bg-white/8">
-                    {group.logo_url ? (
-                      <img src={group.logo_url} alt={`${group.name} logo`} className="h-full w-full object-cover" />
+                    {(group.logo_url || group.image_url) ? (
+                      <img src={group.logo_url || group.image_url} alt={`${group.name} logo`} className="h-full w-full object-cover" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,rgba(250,204,21,0.22),rgba(249,115,22,0.22))]">
                         <Trophy className="h-8 w-8 text-white" />

@@ -20,6 +20,8 @@ import {
   Users,
   Clock,
   QrCode,
+  CheckCircle,
+  Link as LinkIcon,
   Menu,
   Home,
   Search,
@@ -137,6 +139,7 @@ export default function ProfilePage() {
   const [connectionsLoading, setConnectionsLoading] = useState(false)
   const [showConnectionsModal, setShowConnectionsModal] = useState(false)
   const [activeProfileTab, setActiveProfileTab] = useState<'overview' | 'info'>('overview')
+  const [shareCopied, setShareCopied] = useState(false)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -393,6 +396,20 @@ export default function ProfilePage() {
   const displayLocation = profile?.location || 'Add location'
   const displayAvatar = formData.avatar_url || profile?.avatar_url || ''
   const displayHeaderImage = formData.header_image_url || profile?.header_image_url || ''
+  const isEmailVerified = Boolean((user as any)?.email_confirmed_at)
+  const hasFounderBadge = Boolean((profile as any)?.badges?.some((entry: any) => entry?.badge?.name === 'Founding Member'))
+
+  const handleCopyConnectionLink = async () => {
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://www.ultimategolfcommunity.com'
+    const inviteUrl = `${baseUrl}/users/${user.id}?connect=1`
+    try {
+      await navigator.clipboard.writeText(inviteUrl)
+      setShareCopied(true)
+      window.setTimeout(() => setShareCopied(false), 2200)
+    } catch (error) {
+      alert(inviteUrl)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
@@ -621,7 +638,10 @@ export default function ProfilePage() {
               </div>
 
               <div className="mt-4">
-                <h1 className="text-3xl font-semibold tracking-[-0.04em] text-white">{displayName}</h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-3xl font-semibold tracking-[-0.04em] text-white">{displayName}</h1>
+                  {isEmailVerified && <CheckCircle className="h-5 w-5 text-sky-300" />}
+                </div>
                 <p className="mt-1 text-sm text-white/58">{displayUsername}</p>
               </div>
 
@@ -638,6 +658,21 @@ export default function ProfilePage() {
                   <p className="text-[11px] uppercase tracking-[0.18em] text-white/45">Location</p>
                   <p className="mt-2 text-sm font-semibold text-white">{displayLocation}</p>
                 </div>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-3">
+                {hasFounderBadge && (
+                  <div className="rounded-full border border-amber-300/20 bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-100">
+                    Founding Member
+                  </div>
+                )}
+                <button
+                  onClick={handleCopyConnectionLink}
+                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+                >
+                  <LinkIcon className="h-4 w-4" />
+                  {shareCopied ? 'Link Copied' : 'Copy Add-Me Link'}
+                </button>
               </div>
             </div>
           </div>
@@ -690,6 +725,13 @@ export default function ProfilePage() {
                   <p className="mt-3 text-sm font-semibold text-white">Scan Golfer</p>
                 </button>
               </div>
+
+              {hasFounderBadge && (
+                <div className="rounded-[1.4rem] border border-amber-300/18 bg-amber-500/10 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-100/70">Badge</p>
+                  <p className="mt-2 text-sm font-semibold text-white">Founding Member</p>
+                </div>
+              )}
 
               <button
                 onClick={handleConnectionsClick}
@@ -939,12 +981,22 @@ export default function ProfilePage() {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
                 <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-6">
                   <div className="space-y-2">
-                    <h1 className="text-5xl sm:text-6xl font-bold bg-gradient-to-r from-white via-emerald-100 to-cyan-100 bg-clip-text text-transparent leading-tight">
-                      {profile?.first_name && profile?.last_name 
-                        ? `${profile.first_name} ${profile.last_name}`
-                        : user.email?.split('@')[0] || 'Golfer'
-                      }
-                    </h1>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h1 className="text-5xl sm:text-6xl font-bold bg-gradient-to-r from-white via-emerald-100 to-cyan-100 bg-clip-text text-transparent leading-tight">
+                        {displayName}
+                      </h1>
+                      {isEmailVerified && (
+                        <span className="inline-flex items-center rounded-full border border-sky-300/20 bg-sky-500/10 px-3 py-1 text-sm font-semibold text-sky-100">
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Verified
+                        </span>
+                      )}
+                      {hasFounderBadge && (
+                        <span className="inline-flex items-center rounded-full border border-amber-300/20 bg-amber-500/10 px-3 py-1 text-sm font-semibold text-amber-100">
+                          Founding Member
+                        </span>
+                      )}
+                    </div>
                     {profile?.username && (
                       <p className="text-xl text-slate-300 font-medium">@{profile.username}</p>
                     )}
@@ -1000,6 +1052,13 @@ export default function ProfilePage() {
               
               {/* Profile Badges */}
               <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={handleCopyConnectionLink}
+                  className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+                >
+                  <LinkIcon className="mr-2 h-4 w-4" />
+                  {shareCopied ? 'Link Copied' : 'Copy Add-Me Link'}
+                </button>
                 {/* Member Since Badge */}
                 <div className="inline-flex items-center bg-gray-700/50 text-gray-300 px-3 py-2 rounded-lg text-sm">
                   <Calendar className="h-4 w-4 mr-2" />

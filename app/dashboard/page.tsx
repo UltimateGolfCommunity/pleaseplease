@@ -1397,43 +1397,28 @@ export default function Dashboard() {
         {/* Groups Tab */}
         {activeTab === 'groups' && (
           <div className="space-y-6 animate-fade-in">
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_340px]">
-              <div className="rounded-[1.9rem] border border-white/8 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.14),transparent_30%),linear-gradient(135deg,rgba(14,35,29,0.96),rgba(8,20,15,0.98))] p-6 shadow-xl shadow-black/20 backdrop-blur-sm">
-                <h2 className="text-3xl font-bold text-white">Golf Groups</h2>
-                <p className="mt-3 max-w-2xl text-white/62">
-                  Find the communities with real momentum, join the best local rooms, and jump into message boards that keep rounds and conversation alive.
-                </p>
-                <div className="mt-6 flex flex-wrap gap-3">
+            <div className="rounded-[1.9rem] border border-white/8 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.14),transparent_30%),linear-gradient(135deg,rgba(14,35,29,0.96),rgba(8,20,15,0.98))] p-5 shadow-xl shadow-black/20 backdrop-blur-sm sm:p-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-white sm:text-3xl">Groups</h2>
+                  <p className="mt-2 text-sm text-white/56 sm:hidden">
+                    Your clubs, local communities, and course groups.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
                   <button
                     onClick={() => setShowCreateGroupModal(true)}
-                    className="flex items-center space-x-2 rounded-full bg-white px-6 py-3 font-semibold text-slate-950 transition-all duration-300 hover:bg-emerald-100"
+                    className="flex items-center justify-center space-x-2 rounded-full bg-white px-5 py-3 font-semibold text-slate-950 transition-all duration-300 hover:bg-emerald-100"
                   >
                     <Plus className="h-5 w-5" />
                     <span>Create Group</span>
                   </button>
                   <button
                     onClick={() => setGroupSearchQuery('')}
-                    className="rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                    className="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
                   >
                     Explore All
                   </button>
-                </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-                <div className="rounded-[1.6rem] border border-white/10 bg-white/5 p-5">
-                  <p className="text-xs uppercase tracking-[0.18em] text-white/45">Top Nearby</p>
-                  <p className="mt-3 text-3xl font-semibold text-white">{localGroups.length}</p>
-                  <p className="mt-2 text-sm text-white/56">
-                    strongest groups around {profile?.location || 'your area'}
-                  </p>
-                </div>
-                <div className="rounded-[1.6rem] border border-white/10 bg-white/5 p-5">
-                  <p className="text-xs uppercase tracking-[0.18em] text-white/45">Top By Members</p>
-                  <p className="mt-3 text-3xl font-semibold text-white">{topGroups[0]?.member_count || 0}</p>
-                  <p className="mt-2 text-sm text-white/56">
-                    current size of the biggest active community
-                  </p>
                 </div>
               </div>
             </div>
@@ -1452,7 +1437,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="grid gap-6 xl:grid-cols-2">
+            <div className="hidden gap-6 xl:grid-cols-2 sm:grid">
               <div className="rounded-[1.8rem] border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
                 <div className="flex items-center justify-between">
                   <div>
@@ -1552,8 +1537,8 @@ export default function Dashboard() {
                       {/* Group Logo */}
                       <div className="flex items-start space-x-4 mb-4">
                         <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-emerald-500 flex-shrink-0">
-                          {group.logo_url ? (
-                            <img src={group.logo_url} alt={group.name} className="w-full h-full object-cover" />
+                          {(group.logo_url || group.image_url) ? (
+                            <img src={group.logo_url || group.image_url} alt={group.name} className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center">
                               <span className="text-white font-bold text-xl">{group.name?.[0] || 'G'}</span>
@@ -1575,7 +1560,7 @@ export default function Dashboard() {
                       </div>
                       
                       {/* Description */}
-                      <p className="text-gray-300 text-sm mb-4 line-clamp-2">{group.description || 'No description'}</p>
+                      <p className="text-gray-300 text-sm mb-4 line-clamp-2">{group.description || 'A golf community for local rounds and conversation.'}</p>
                       
                       {/* Members Count */}
                       <div className="flex items-center justify-between pt-4 border-t border-white/10">
@@ -1618,8 +1603,8 @@ export default function Dashboard() {
                         {/* Group Logo */}
                         <div className="flex items-start space-x-4 mb-4">
                           <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-emerald-500 flex-shrink-0">
-                            {group.logo_url ? (
-                              <img src={group.logo_url} alt={group.name} className="w-full h-full object-cover" />
+                            {(group.logo_url || group.image_url) ? (
+                              <img src={group.logo_url || group.image_url} alt={group.name} className="w-full h-full object-cover" />
                             ) : (
                               <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center">
                                 <span className="text-white font-bold text-xl">{group.name?.[0] || 'G'}</span>
