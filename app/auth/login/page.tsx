@@ -121,13 +121,9 @@ export default function LoginPage() {
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-200/75">
               Welcome back
             </p>
-            <h1 className="mt-5 max-w-3xl text-5xl font-semibold tracking-[-0.04em] text-white sm:text-6xl">
+            <h1 className="mt-5 max-w-3xl text-4xl font-semibold tracking-[-0.04em] text-white sm:text-5xl">
               Step back into your golf community.
             </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-white/68">
-              Jump back into tee times, group activity, and conversations with the people you want to
-              play with again.
-            </p>
           </section>
 
           <section className="overflow-hidden rounded-[2.2rem] border border-white/8 bg-[linear-gradient(160deg,rgba(14,35,29,0.95),rgba(8,20,15,0.98))] shadow-2xl shadow-black/25">

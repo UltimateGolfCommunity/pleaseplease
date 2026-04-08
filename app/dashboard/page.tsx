@@ -1035,7 +1035,7 @@ export default function Dashboard() {
                   onClick={() => setShowProfileMenu((value) => !value)}
                   className="flex items-center gap-3 rounded-full border border-white/8 bg-white/5 p-2.5 text-white/85 transition hover:bg-white/10 lg:px-2.5 lg:py-2"
                 >
-                  <div className="h-5 w-5 overflow-hidden rounded-full border border-emerald-400/70 shadow-lg lg:h-10 lg:w-10 lg:border-2 lg:border-emerald-500">
+                  <div className="-m-2.5 h-10 w-10 overflow-hidden rounded-full border border-emerald-400/70 shadow-lg lg:m-0 lg:h-10 lg:w-10 lg:border-2 lg:border-emerald-500">
                     {profile?.avatar_url ? (
                       <img
                         src={profile.avatar_url}
@@ -1164,10 +1164,7 @@ export default function Dashboard() {
             <h1 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-white sm:mt-3 sm:text-4xl">
               Great day to play, {profile?.first_name || user?.email?.split('@')[0] || 'Golfer'}.
             </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/62 sm:mt-4 sm:text-base sm:leading-7">
-              Your next round, the best opening in the network, and fresh movement from your connections all stay in one calm place.
-            </p>
-            <div className="-mx-1 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2 sm:mx-0 sm:mt-6 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0">
+            <div className="-mx-1 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2 sm:mx-0 sm:mt-6 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0">
               <div className="min-w-[250px] snap-start rounded-[1.5rem] border border-white/10 bg-white/6 p-4 backdrop-blur-sm sm:min-w-0 sm:rounded-[1.8rem] sm:p-6">
               <div className="flex items-center justify-between gap-4">
                 <div>
@@ -1197,17 +1194,8 @@ export default function Dashboard() {
                         : 'Hosted by you'}
                     </span>
                   </div>
-                  <p className="mt-3 text-sm leading-6 text-white/56 sm:mt-4 sm:leading-7">
-                    {dashboardActivity.nextHostedOrJoined.source === 'application'
-                      ? 'This is the next round you asked to join or have already locked in.'
-                      : 'This is the next tee time you posted for the community.'}
-                  </p>
                 </>
-              ) : (
-                  <p className="mt-3 text-sm leading-6 text-white/56 sm:mt-4 sm:leading-7">
-                    Post one or join one and your next round will stay parked here.
-                  </p>
-                )}
+              ) : null}
               </div>
 
               <div className="min-w-[250px] snap-start rounded-[1.5rem] border border-white/10 bg-white/6 p-4 backdrop-blur-sm sm:min-w-0 sm:rounded-[1.8rem] sm:p-6">
@@ -1235,62 +1223,22 @@ export default function Dashboard() {
                         {dashboardActivity.nextOpenTeeTime.available_spots || dashboardActivity.nextOpenTeeTime.max_players - dashboardActivity.nextOpenTeeTime.current_players} spots open
                       </span>
                     </div>
-                    <p className="mt-3 text-sm leading-6 text-white/56 sm:mt-4 sm:leading-7">
-                      {dashboardActivity.nextOpenTeeTime.visibility_scope === 'group'
-                        ? `Shared inside ${dashboardActivity.nextOpenTeeTime.group?.name || 'a group community'}.`
-                        : dashboardActivity.nextOpenTeeTime.visibility_scope === 'connections'
-                          ? 'Limited to connections in your network.'
-                          : 'Open to the wider community.'}
-                    </p>
                   </>
-                ) : (
-                  <p className="mt-3 text-sm leading-6 text-white/56 sm:mt-4 sm:leading-7">
-                    The next open round will show up here automatically.
-                  </p>
-                )}
+                ) : null}
               </div>
 
-              <div className="min-w-[280px] snap-start rounded-[1.5rem] border border-white/10 bg-white/6 p-4 backdrop-blur-sm sm:min-w-0 sm:rounded-[1.8rem] sm:p-6">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.18em] text-white/45">Connection Feed</p>
-                    <h2 className="mt-2 text-base font-semibold text-white sm:mt-3 sm:text-xl">What your network is doing</h2>
-                  </div>
-                  {activityFeedLoading && <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-emerald-300" />}
-                </div>
-
-                <div className="mt-3 space-y-3 sm:mt-4">
-                  {activityFeed.length === 0 ? (
-                    <p className="text-sm leading-6 text-white/56 sm:leading-7">
-                      When your connections post tee times or log rounds, that movement will show up here.
-                    </p>
-                  ) : (
-                    activityFeed.slice(0, 2).map((activity) => (
-                      <div key={activity.id} className="rounded-[1.2rem] border border-white/10 bg-white/5 p-3 sm:p-4">
-                        <p className="text-sm font-semibold text-white">
-                          {(activity.actor?.first_name || activity.actor?.username || 'A connection')} {activity.activity_type === 'tee_time_created' ? 'posted a tee time' : 'logged a score'}
-                        </p>
-                        <p className="mt-1 text-sm text-white/55">{activity.description || activity.title}</p>
-                        <p className="mt-2 text-xs uppercase tracking-[0.16em] text-white/35">
-                          {new Date(activity.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
             </div>
 
-            <div className="mt-5 flex flex-wrap gap-3 sm:mt-6">
+            <div className="mt-5 grid grid-cols-2 gap-3 sm:mt-6 sm:flex sm:flex-wrap">
               <button
                 onClick={() => setShowCreateTeeTimeModal(true)}
-                className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-100"
+                className="rounded-full bg-white px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-100"
               >
                 Post a Tee Time
               </button>
               <button
                 onClick={() => setActiveTab('groups')}
-                className="rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                className="rounded-full border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
               >
                 Open My Groups
               </button>
@@ -1307,9 +1255,6 @@ export default function Dashboard() {
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
                 <div className="rounded-[1.8rem] border border-white/8 bg-white/5 p-6 backdrop-blur-sm">
                   <h2 className="text-3xl font-bold text-white">Available Tee Times</h2>
-                  <p className="mt-2 text-white/62">
-                    Fresh rounds, private connection invites, and group-posted tee times all in one place.
-                  </p>
                 </div>
                 <button 
                   onClick={() => setShowCreateTeeTimeModal(true)}
