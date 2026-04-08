@@ -1133,11 +1133,11 @@ export default function Dashboard() {
               </button>
             </div>
 
-            <div className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 justify-center">
+            <div className="pointer-events-none absolute left-[44%] top-1/2 flex -translate-x-1/2 -translate-y-1/2 justify-center md:left-1/2">
               <img
                 src="/UGClogonew.png"
                 alt="UGC"
-                className="h-16 w-[150px] object-contain sm:h-20 sm:w-[190px] md:h-24 md:w-auto"
+                className="h-20 w-[176px] object-contain sm:h-24 sm:w-[210px] md:h-24 md:w-auto"
               />
             </div>
 

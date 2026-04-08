@@ -112,7 +112,7 @@ export default function HomePage() {
     <div className="min-h-screen overflow-x-hidden bg-[#07140f] text-white">
       <nav className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-[#07140f]/75 backdrop-blur-xl">
         <div className="mx-auto flex h-24 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Logo size="md" />
+          <Logo size="md" className="scale-100 origin-left lg:scale-[1.55]" />
 
           {user ? (
             <div className="flex items-center gap-2 sm:gap-4">
