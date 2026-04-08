@@ -128,21 +128,6 @@ export default function LoginPage() {
               Jump back into tee times, group activity, and conversations with the people you want to
               play with again.
             </p>
-
-            <div className="mt-10 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-[1.8rem] border border-white/8 bg-white/5 p-5">
-                <p className="text-sm uppercase tracking-[0.18em] text-white/45">Fast access</p>
-                <p className="mt-3 text-lg font-medium text-white">
-                  Get to your groups, rounds, and messages without friction.
-                </p>
-              </div>
-              <div className="rounded-[1.8rem] border border-white/8 bg-white/5 p-5">
-                <p className="text-sm uppercase tracking-[0.18em] text-white/45">Built for golfers</p>
-                <p className="mt-3 text-lg font-medium text-white">
-                  Designed around the rhythm of playing, planning, and staying connected.
-                </p>
-              </div>
-            </div>
           </section>
 
           <section className="overflow-hidden rounded-[2.2rem] border border-white/8 bg-[linear-gradient(160deg,rgba(14,35,29,0.95),rgba(8,20,15,0.98))] shadow-2xl shadow-black/25">

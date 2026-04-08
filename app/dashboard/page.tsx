@@ -1137,7 +1137,7 @@ export default function Dashboard() {
               <img
                 src="/UGClogonew.png"
                 alt="UGC"
-                className="h-12 w-auto object-contain sm:h-16"
+                className="h-16 w-[150px] object-contain sm:h-20 sm:w-[190px] md:h-24 md:w-auto"
               />
             </div>
 
