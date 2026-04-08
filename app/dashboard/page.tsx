@@ -486,6 +486,13 @@ export default function Dashboard() {
     }
   }
 
+  const openDashboardTab = (tab: ActiveTab) => {
+    setActiveTab(tab)
+    setShowProfileMenu(false)
+    setShowMobileMenu(false)
+    setShowNotifications(false)
+  }
+
 
   const handleQRScan = (data: string) => {
     console.log('QR Code scanned:', data)
@@ -1057,10 +1064,7 @@ export default function Dashboard() {
                 {showProfileMenu && (
                   <div className="absolute left-0 top-[calc(100%+12px)] z-50 w-72 rounded-[1.6rem] border border-white/10 bg-slate-950/95 p-3 shadow-2xl backdrop-blur-xl">
                     <button
-                      onClick={() => {
-                        setActiveTab('tee-times')
-                        setShowProfileMenu(false)
-                      }}
+                      onClick={() => openDashboardTab('tee-times')}
                       className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-white/80 transition hover:bg-white/8 hover:text-white"
                     >
                       <Calendar className="h-5 w-5" />
@@ -1070,10 +1074,7 @@ export default function Dashboard() {
                   </div>
                 </button>
                     <button
-                      onClick={() => {
-                        setActiveTab('groups')
-                        setShowProfileMenu(false)
-                      }}
+                      onClick={() => openDashboardTab('groups')}
                       className="mt-1 flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-white/80 transition hover:bg-white/8 hover:text-white"
                     >
                       <Trophy className="h-5 w-5" />
@@ -1083,29 +1084,13 @@ export default function Dashboard() {
                       </div>
                     </button>
                     <button
-                      onClick={() => {
-                        setActiveTab('profile')
-                        setShowProfileMenu(false)
-                      }}
+                      onClick={() => openDashboardTab('profile')}
                       className="mt-1 flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-white/80 transition hover:bg-white/8 hover:text-white"
                     >
                       <User className="h-5 w-5" />
                       <div>
                         <p className="font-semibold">My Profile</p>
                         <p className="text-xs text-white/45">Profile details, QR tools, and score tracking</p>
-                      </div>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setActiveTab('messages')
-                        setShowProfileMenu(false)
-                      }}
-                      className="mt-1 flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-white/80 transition hover:bg-white/8 hover:text-white"
-                    >
-                      <Mail className="h-5 w-5" />
-                      <div>
-                        <p className="font-semibold">Inbox</p>
-                        <p className="text-xs text-white/45">Direct messages and conversations</p>
                       </div>
                     </button>
                     <button
@@ -1159,7 +1144,7 @@ export default function Dashboard() {
             {/* Right side buttons */}
             <div className="flex items-center space-x-3">
               <button
-                onClick={() => setActiveTab('messages')}
+                onClick={() => openDashboardTab('messages')}
                 className="relative rounded-full border border-white/8 bg-white/5 p-2.5 text-white/80 transition hover:bg-white/10"
               >
                 <Mail className="h-5 w-5" />
@@ -1205,8 +1190,7 @@ export default function Dashboard() {
                 <button
                   key={tab.id}
                   onClick={() => {
-                        setActiveTab(tab.id as ActiveTab)
-                    setShowMobileMenu(false)
+                        openDashboardTab(tab.id as ActiveTab)
                   }}
                       className={`flex items-center space-x-3 rounded-2xl px-4 py-3 transition-all duration-300 font-medium ${
                     isActive
@@ -1220,24 +1204,11 @@ export default function Dashboard() {
               )
             })}
             <button
-              onClick={() => {
-                setActiveTab('profile')
-                setShowMobileMenu(false)
-              }}
+              onClick={() => openDashboardTab('profile')}
               className="flex items-center space-x-3 rounded-2xl px-4 py-3 font-medium text-white/72 transition hover:bg-white/8 hover:text-white"
             >
               <User className="h-5 w-5" />
               <span>My Profile</span>
-            </button>
-            <button
-              onClick={() => {
-                setActiveTab('messages')
-                setShowMobileMenu(false)
-              }}
-              className="flex items-center space-x-3 rounded-2xl px-4 py-3 font-medium text-white/72 transition hover:bg-white/8 hover:text-white"
-            >
-              <Mail className="h-5 w-5" />
-              <span>Inbox</span>
             </button>
             <button
               onClick={() => {
@@ -1268,6 +1239,7 @@ export default function Dashboard() {
           <WeatherWidget />
         </div>
 
+        {activeTab === 'tee-times' && (
         <div className="mb-8 grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
           <div className="rounded-[2rem] border border-white/8 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_26%),linear-gradient(135deg,rgba(14,35,29,0.96),rgba(8,20,15,0.98))] p-4 shadow-2xl shadow-black/20 sm:p-7 xl:col-span-2">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-200/70">Activity Hub</p>
@@ -1407,6 +1379,7 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+        )}
 
         {/* Tee Times Tab */}
         {activeTab === 'tee-times' && (
