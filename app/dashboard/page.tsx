@@ -1076,7 +1076,10 @@ export default function Dashboard() {
                       <span className="font-semibold">Groups</span>
                     </button>
                     <button
-                      onClick={() => openDashboardTab('profile')}
+                      onClick={() => {
+                        router.push('/profile')
+                        setShowProfileMenu(false)
+                      }}
                       className="mt-1 flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-white/80 transition hover:bg-white/8 hover:text-white"
                     >
                       <User className="h-5 w-5" />

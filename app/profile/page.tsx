@@ -31,6 +31,58 @@ import QRCodeGenerator from '@/app/components/QRCodeGenerator'
 import QRCodeScanner from '@/app/components/QRCodeScanner'
 import ConnectionsHub from '@/app/components/ConnectionsHub'
 
+async function compressImageToDataUrl(
+  file: File,
+  {
+    maxWidth,
+    maxHeight,
+    quality = 0.92
+  }: {
+    maxWidth: number
+    maxHeight: number
+    quality?: number
+  }
+) {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => resolve(e.target?.result as string)
+    reader.onerror = () => reject(new Error('Failed to read image file'))
+    reader.readAsDataURL(file)
+  })
+
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image()
+    image.onload = () => resolve(image)
+    image.onerror = () => reject(new Error('Failed to load image'))
+    image.src = dataUrl
+  })
+
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d')
+  if (!ctx) {
+    throw new Error('Canvas is not available')
+  }
+
+  let { width, height } = img
+  const aspectRatio = width / height
+
+  if (width > maxWidth) {
+    width = maxWidth
+    height = width / aspectRatio
+  }
+
+  if (height > maxHeight) {
+    height = maxHeight
+    width = height * aspectRatio
+  }
+
+  canvas.width = Math.round(width)
+  canvas.height = Math.round(height)
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+
+  return canvas.toDataURL('image/jpeg', quality)
+}
+
 
 interface ProfileFormData {
   first_name: string
@@ -84,6 +136,7 @@ export default function ProfilePage() {
   const [connectionCount, setConnectionCount] = useState(0)
   const [connectionsLoading, setConnectionsLoading] = useState(false)
   const [showConnectionsModal, setShowConnectionsModal] = useState(false)
+  const [activeProfileTab, setActiveProfileTab] = useState<'overview' | 'info'>('overview')
 
   useEffect(() => {
     if (!loading && !user) {
@@ -151,65 +204,24 @@ export default function ProfilePage() {
       return
     }
 
-    // Validate file size (max 2MB for better performance)
-    if (file.size > 2 * 1024 * 1024) {
-      alert('Image size must be less than 2MB')
+    // Validate file size
+    if (file.size > 8 * 1024 * 1024) {
+      alert('Image size must be less than 8MB')
       return
     }
 
     setUploadingImage(true)
     try {
-      // Compress image before converting to base64
-      const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')
-      const img = new Image()
-      
-      img.onload = () => {
-        // Set canvas size (max 200x200 for profile pictures)
-        const maxSize = 200
-        let { width, height } = img
-        
-        if (width > height) {
-          if (width > maxSize) {
-            height = (height * maxSize) / width
-            width = maxSize
-          }
-        } else {
-          if (height > maxSize) {
-            width = (width * maxSize) / height
-            height = maxSize
-          }
-        }
-        
-        canvas.width = width
-        canvas.height = height
-        
-        // Draw and compress image
-        ctx?.drawImage(img, 0, 0, width, height)
-        
-        // Convert to base64 with compression
-        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7) // 70% quality
-        
-        console.log('🔍 Compressed image uploaded:', compressedDataUrl.substring(0, 50) + '...')
-        setFormData(prev => ({ ...prev, avatar_url: compressedDataUrl }))
-        setUploadingImage(false)
-      }
-      
-      img.onerror = () => {
-        console.error('Error loading image')
-        alert('Failed to process image. Please try again.')
-        setUploadingImage(false)
-      }
-      
-      // Load image from file
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        img.src = e.target?.result as string
-      }
-      reader.readAsDataURL(file)
+      const compressedDataUrl = await compressImageToDataUrl(file, {
+        maxWidth: 1200,
+        maxHeight: 1200,
+        quality: 0.94
+      })
+      setFormData(prev => ({ ...prev, avatar_url: compressedDataUrl }))
     } catch (error) {
       console.error('Error uploading image:', error)
       alert('Failed to upload image. Please try again.')
+    } finally {
       setUploadingImage(false)
     }
   }
@@ -224,66 +236,24 @@ export default function ProfilePage() {
       return
     }
 
-    // Validate file size (max 5MB for header images)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Image size must be less than 5MB')
+    // Validate file size
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Image size must be less than 10MB')
       return
     }
 
     setUploadingHeaderImage(true)
     try {
-      // Compress image before converting to base64
-      const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')
-      const img = new Image()
-      
-      img.onload = () => {
-        // Set canvas size (max 1200x400 for header images)
-        const maxWidth = 1200
-        const maxHeight = 400
-        let { width, height } = img
-        
-        if (width > height) {
-          if (width > maxWidth) {
-            height = (height * maxWidth) / width
-            width = maxWidth
-          }
-        } else {
-          if (height > maxHeight) {
-            width = (width * maxHeight) / height
-            height = maxHeight
-          }
-        }
-        
-        canvas.width = width
-        canvas.height = height
-        
-        // Draw and compress image
-        ctx?.drawImage(img, 0, 0, width, height)
-        
-        // Convert to base64 with compression
-        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8) // 80% quality
-        
-        console.log('🔍 Compressed header image uploaded:', compressedDataUrl.substring(0, 50) + '...')
-        setFormData(prev => ({ ...prev, header_image_url: compressedDataUrl }))
-        setUploadingHeaderImage(false)
-      }
-      
-      img.onerror = () => {
-        console.error('Error loading header image')
-        alert('Failed to process header image. Please try again.')
-        setUploadingHeaderImage(false)
-      }
-      
-      // Load image from file
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        img.src = e.target?.result as string
-      }
-      reader.readAsDataURL(file)
+      const compressedDataUrl = await compressImageToDataUrl(file, {
+        maxWidth: 1800,
+        maxHeight: 900,
+        quality: 0.95
+      })
+      setFormData(prev => ({ ...prev, header_image_url: compressedDataUrl }))
     } catch (error) {
       console.error('Error uploading header image:', error)
       alert('Failed to upload header image. Please try again.')
+    } finally {
       setUploadingHeaderImage(false)
     }
   }
@@ -413,6 +383,16 @@ export default function ProfilePage() {
       alert('Failed to process QR code')
     }
   }
+
+  const displayName = profile?.first_name && profile?.last_name
+    ? `${profile.first_name} ${profile.last_name}`
+    : user.email?.split('@')[0] || 'Golfer'
+  const displayUsername = profile?.username ? `@${profile.username}` : 'Add a username'
+  const displayHomeCourse = profile?.home_club || (profile as any)?.home_course || 'Add home course'
+  const displayHandicap = profile?.handicap ? `${profile.handicap}` : 'Add handicap'
+  const displayLocation = profile?.location || 'Add location'
+  const displayAvatar = formData.avatar_url || profile?.avatar_url || ''
+  const displayHeaderImage = formData.header_image_url || profile?.header_image_url || ''
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
@@ -556,6 +536,290 @@ export default function ProfilePage() {
 
       {/* Profile Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="space-y-5 lg:hidden">
+          <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(160deg,rgba(14,35,29,0.96),rgba(8,20,15,0.98))] shadow-2xl shadow-black/25">
+            <div className="relative h-40">
+              {displayHeaderImage ? (
+                <img
+                  src={displayHeaderImage}
+                  alt="Profile Header"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="h-full w-full bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.26),transparent_34%),linear-gradient(140deg,rgba(13,37,29,0.98),rgba(8,20,15,1))]" />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#07140f] via-[#07140f]/25 to-transparent" />
+              {isEditing && (
+                <label className="absolute right-4 top-4 flex cursor-pointer items-center gap-2 rounded-full border border-white/15 bg-black/35 px-3 py-2 text-sm font-medium text-white backdrop-blur-md">
+                  <Camera className="h-4 w-4" />
+                  Header
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleHeaderImageUpload}
+                    className="hidden"
+                    disabled={uploadingHeaderImage}
+                  />
+                </label>
+              )}
+            </div>
+
+            <div className="relative px-5 pb-5">
+              <div className="-mt-14 flex items-end justify-between gap-4">
+                <div className="relative">
+                  <div className="h-24 w-24 overflow-hidden rounded-[1.75rem] border-4 border-[#07140f] bg-white/10 shadow-2xl">
+                    {displayAvatar ? (
+                      <img src={displayAvatar} alt="Profile" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-500 to-cyan-500">
+                        <span className="text-3xl font-bold text-white">
+                          {profile?.first_name?.[0] || user?.email?.[0]?.toUpperCase() || 'U'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {isEditing && (
+                    <label className="absolute -bottom-2 -right-2 flex cursor-pointer items-center justify-center rounded-full bg-white p-2 text-slate-950 shadow-lg">
+                      <Camera className="h-4 w-4" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                        disabled={uploadingImage}
+                      />
+                    </label>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {!isEditing ? (
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-100"
+                    >
+                      Edit Profile
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-100 disabled:opacity-60"
+                      >
+                        {saving ? 'Saving...' : 'Save'}
+                      </button>
+                      <button
+                        onClick={handleCancel}
+                        className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <h1 className="text-3xl font-semibold tracking-[-0.04em] text-white">{displayName}</h1>
+                <p className="mt-1 text-sm text-white/58">{displayUsername}</p>
+              </div>
+
+              <div className="mt-4 grid grid-cols-3 gap-3">
+                <div className="rounded-[1.2rem] border border-white/10 bg-white/5 p-3">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/45">Home</p>
+                  <p className="mt-2 text-sm font-semibold text-white">{displayHomeCourse}</p>
+                </div>
+                <div className="rounded-[1.2rem] border border-white/10 bg-white/5 p-3">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/45">Handicap</p>
+                  <p className="mt-2 text-sm font-semibold text-white">{displayHandicap}</p>
+                </div>
+                <div className="rounded-[1.2rem] border border-white/10 bg-white/5 p-3">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/45">Location</p>
+                  <p className="mt-2 text-sm font-semibold text-white">{displayLocation}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => setActiveProfileTab('overview')}
+              className={`rounded-full px-4 py-3 text-sm font-semibold transition ${
+                activeProfileTab === 'overview'
+                  ? 'bg-white text-slate-950'
+                  : 'border border-white/10 bg-white/5 text-white'
+              }`}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveProfileTab('info')}
+              className={`rounded-full px-4 py-3 text-sm font-semibold transition ${
+                activeProfileTab === 'info'
+                  ? 'bg-white text-slate-950'
+                  : 'border border-white/10 bg-white/5 text-white'
+              }`}
+            >
+              Info
+            </button>
+          </div>
+
+          {activeProfileTab === 'overview' ? (
+            <div className="space-y-4">
+              <div className="rounded-[1.7rem] border border-white/10 bg-white/5 p-5 backdrop-blur-sm">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-200/70">Bio</p>
+                <p className="mt-3 text-sm leading-7 text-white/72">
+                  {profile?.bio || 'Add a short bio so other golfers know your game, your vibe, and what kind of rounds you like to play.'}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setShowQRCode(true)}
+                  className="rounded-[1.4rem] border border-white/10 bg-white/5 p-4 text-left transition hover:bg-white/10"
+                >
+                  <QrCode className="h-5 w-5 text-emerald-200" />
+                  <p className="mt-3 text-sm font-semibold text-white">My QR Code</p>
+                </button>
+                <button
+                  onClick={() => setShowQRScanner(true)}
+                  className="rounded-[1.4rem] border border-white/10 bg-white/5 p-4 text-left transition hover:bg-white/10"
+                >
+                  <Camera className="h-5 w-5 text-sky-200" />
+                  <p className="mt-3 text-sm font-semibold text-white">Scan Golfer</p>
+                </button>
+              </div>
+
+              <button
+                onClick={handleConnectionsClick}
+                className="flex w-full items-center justify-between rounded-[1.4rem] border border-white/10 bg-white/5 p-4 text-left transition hover:bg-white/10"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-white">Connections</p>
+                  <p className="mt-1 text-xs text-white/50">
+                    {connectionsLoading ? 'Loading...' : `${connectionCount} connection${connectionCount === 1 ? '' : 's'}`}
+                  </p>
+                </div>
+                <Users className="h-5 w-5 text-white/55" />
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="rounded-[1.7rem] border border-white/10 bg-white/5 p-5 backdrop-blur-sm">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-200/70">Golf Details</p>
+                <div className="mt-4 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-white/60">Home Course / Club</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={formData.home_club}
+                        onChange={(e) => handleInputChange('home_club', e.target.value)}
+                        className="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder:text-white/30"
+                        placeholder="Your home course or club"
+                      />
+                    ) : (
+                      <p className="mt-2 text-white">{displayHomeCourse}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white/60">Location</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={formData.location}
+                        onChange={(e) => handleInputChange('location', e.target.value)}
+                        className="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder:text-white/30"
+                        placeholder="City or area"
+                      />
+                    ) : (
+                      <p className="mt-2 text-white">{displayLocation}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white/60">Handicap</label>
+                    {isEditing ? (
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={formData.handicap || ''}
+                        onChange={(e) => handleInputChange('handicap', e.target.value ? parseFloat(e.target.value) : null)}
+                        className="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder:text-white/30"
+                        placeholder="Enter handicap"
+                      />
+                    ) : (
+                      <p className="mt-2 text-white">{displayHandicap}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white/60">Years Playing</label>
+                    {isEditing ? (
+                      <input
+                        type="number"
+                        value={formData.years_playing || ''}
+                        onChange={(e) => handleInputChange('years_playing', e.target.value ? parseInt(e.target.value) : null)}
+                        className="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder:text-white/30"
+                        placeholder="Years playing"
+                      />
+                    ) : (
+                      <p className="mt-2 text-white">{profile?.years_playing ? `${profile.years_playing} years` : 'Not set'}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white/60">Favorite Course</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={formData.favorite_course}
+                        onChange={(e) => handleInputChange('favorite_course', e.target.value)}
+                        className="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder:text-white/30"
+                        placeholder="Favorite course"
+                      />
+                    ) : (
+                      <p className="mt-2 text-white">{profile?.favorite_course || 'Not set'}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white/60">Playing Style</label>
+                    {isEditing ? (
+                      <select
+                        value={formData.playing_style}
+                        onChange={(e) => handleInputChange('playing_style', e.target.value)}
+                        className="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white"
+                      >
+                        <option value="">Select playing style</option>
+                        <option value="competitive">Competitive</option>
+                        <option value="casual">Casual</option>
+                        <option value="social">Social</option>
+                        <option value="beginner">Beginner</option>
+                        <option value="professional">Professional</option>
+                      </select>
+                    ) : (
+                      <p className="mt-2 text-white">{profile?.playing_style || 'Not set'}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white/60">Golf Goals</label>
+                    {isEditing ? (
+                      <textarea
+                        value={formData.goals}
+                        onChange={(e) => handleInputChange('goals', e.target.value)}
+                        rows={4}
+                        className="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder:text-white/30"
+                        placeholder="What are you working on this season?"
+                      />
+                    ) : (
+                      <p className="mt-2 text-white/72">{profile?.goals || 'Add your golf goals here.'}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="hidden lg:block">
         {/* Header Image */}
         {(formData.header_image_url || profile?.header_image_url) && (
           <div className="relative mb-8 rounded-2xl overflow-hidden">
@@ -1192,6 +1456,7 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
+        </div>
         </div>
       </div>
 
