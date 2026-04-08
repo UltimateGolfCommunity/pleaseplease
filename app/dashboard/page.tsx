@@ -1240,21 +1240,21 @@ export default function Dashboard() {
         </div>
 
         {activeTab === 'tee-times' && (
-        <div className="mb-8 grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-          <div className="rounded-[2rem] border border-white/8 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_26%),linear-gradient(135deg,rgba(14,35,29,0.96),rgba(8,20,15,0.98))] p-4 shadow-2xl shadow-black/20 sm:p-7 xl:col-span-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-200/70">Activity Hub</p>
-            <h1 className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">
+        <div className="mb-6">
+          <div className="rounded-[1.75rem] border border-white/8 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_26%),linear-gradient(135deg,rgba(14,35,29,0.96),rgba(8,20,15,0.98))] p-4 shadow-2xl shadow-black/20 sm:rounded-[2rem] sm:p-7">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-200/70 sm:text-xs">Dashboard</p>
+            <h1 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-white sm:mt-3 sm:text-4xl">
               Great day to play, {profile?.first_name || user?.email?.split('@')[0] || 'Golfer'}.
             </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-white/62 sm:text-base">
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/62 sm:mt-4 sm:text-base sm:leading-7">
               Your next round, the best opening in the network, and fresh movement from your connections all stay in one calm place.
             </p>
-            <div className="mt-6 grid gap-3 xl:grid-cols-3">
-              <div className="rounded-[1.8rem] border border-white/10 bg-white/6 p-4 backdrop-blur-sm sm:p-6">
+            <div className="-mx-1 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2 sm:mx-0 sm:mt-6 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0">
+              <div className="min-w-[250px] snap-start rounded-[1.5rem] border border-white/10 bg-white/6 p-4 backdrop-blur-sm sm:min-w-0 sm:rounded-[1.8rem] sm:p-6">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.18em] text-white/45">Your Next Tee Time</p>
-                  <h2 className="mt-3 text-xl font-semibold text-white sm:text-2xl">
+                  <h2 className="mt-2 text-lg font-semibold text-white sm:mt-3 sm:text-2xl">
                     {dashboardActivity.nextHostedOrJoined?.golf_courses?.name || dashboardActivity.nextHostedOrJoined?.course_name || 'Nothing scheduled yet'}
                   </h2>
                 </div>
@@ -1264,7 +1264,7 @@ export default function Dashboard() {
               </div>
               {dashboardActivity.nextHostedOrJoined ? (
                 <>
-                  <div className="mt-4 flex flex-wrap gap-3 text-sm text-white/62">
+                  <div className="mt-3 flex flex-wrap gap-2 text-sm text-white/62 sm:mt-4 sm:gap-3">
                     <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
                       {new Date(dashboardActivity.nextHostedOrJoined.tee_time_date).toLocaleDateString()}
                     </span>
@@ -1279,24 +1279,24 @@ export default function Dashboard() {
                         : 'Hosted by you'}
                     </span>
                   </div>
-                  <p className="mt-4 text-sm leading-7 text-white/56">
+                  <p className="mt-3 text-sm leading-6 text-white/56 sm:mt-4 sm:leading-7">
                     {dashboardActivity.nextHostedOrJoined.source === 'application'
                       ? 'This is the next round you asked to join or have already locked in.'
                       : 'This is the next tee time you posted for the community.'}
                   </p>
                 </>
               ) : (
-                  <p className="mt-4 text-sm leading-7 text-white/56">
+                  <p className="mt-3 text-sm leading-6 text-white/56 sm:mt-4 sm:leading-7">
                     Post one or join one and your next round will stay parked here.
                   </p>
                 )}
               </div>
 
-              <div className="rounded-[1.8rem] border border-white/10 bg-white/6 p-4 backdrop-blur-sm sm:p-6">
+              <div className="min-w-[250px] snap-start rounded-[1.5rem] border border-white/10 bg-white/6 p-4 backdrop-blur-sm sm:min-w-0 sm:rounded-[1.8rem] sm:p-6">
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="text-xs uppercase tracking-[0.18em] text-white/45">Next Best Opening</p>
-                    <h2 className="mt-3 text-lg font-semibold text-white sm:text-xl">
+                    <h2 className="mt-2 text-base font-semibold text-white sm:mt-3 sm:text-xl">
                       {dashboardActivity.nextOpenTeeTime?.golf_courses?.name || dashboardActivity.nextOpenTeeTime?.course_name || 'No active tee times yet'}
                     </h2>
                   </div>
@@ -1306,7 +1306,7 @@ export default function Dashboard() {
                 </div>
                 {dashboardActivity.nextOpenTeeTime ? (
                   <>
-                    <div className="mt-4 flex flex-wrap gap-3 text-sm text-white/62">
+                    <div className="mt-3 flex flex-wrap gap-2 text-sm text-white/62 sm:mt-4 sm:gap-3">
                       <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
                         {new Date(dashboardActivity.nextOpenTeeTime.tee_time_date).toLocaleDateString()}
                       </span>
@@ -1317,7 +1317,7 @@ export default function Dashboard() {
                         {dashboardActivity.nextOpenTeeTime.available_spots || dashboardActivity.nextOpenTeeTime.max_players - dashboardActivity.nextOpenTeeTime.current_players} spots open
                       </span>
                     </div>
-                    <p className="mt-4 text-sm leading-7 text-white/56">
+                    <p className="mt-3 text-sm leading-6 text-white/56 sm:mt-4 sm:leading-7">
                       {dashboardActivity.nextOpenTeeTime.visibility_scope === 'group'
                         ? `Shared inside ${dashboardActivity.nextOpenTeeTime.group?.name || 'a group community'}.`
                         : dashboardActivity.nextOpenTeeTime.visibility_scope === 'connections'
@@ -1326,29 +1326,29 @@ export default function Dashboard() {
                     </p>
                   </>
                 ) : (
-                  <p className="mt-4 text-sm leading-7 text-white/56">
+                  <p className="mt-3 text-sm leading-6 text-white/56 sm:mt-4 sm:leading-7">
                     The next open round will show up here automatically.
                   </p>
                 )}
               </div>
 
-              <div className="rounded-[1.8rem] border border-white/10 bg-white/6 p-4 backdrop-blur-sm sm:p-6">
+              <div className="min-w-[280px] snap-start rounded-[1.5rem] border border-white/10 bg-white/6 p-4 backdrop-blur-sm sm:min-w-0 sm:rounded-[1.8rem] sm:p-6">
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="text-xs uppercase tracking-[0.18em] text-white/45">Connection Feed</p>
-                    <h2 className="mt-3 text-lg font-semibold text-white sm:text-xl">What your network is doing</h2>
+                    <h2 className="mt-2 text-base font-semibold text-white sm:mt-3 sm:text-xl">What your network is doing</h2>
                   </div>
                   {activityFeedLoading && <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-emerald-300" />}
                 </div>
 
-                <div className="mt-4 space-y-3">
+                <div className="mt-3 space-y-3 sm:mt-4">
                   {activityFeed.length === 0 ? (
-                    <p className="text-sm leading-7 text-white/56">
+                    <p className="text-sm leading-6 text-white/56 sm:leading-7">
                       When your connections post tee times or log rounds, that movement will show up here.
                     </p>
                   ) : (
-                    activityFeed.slice(0, 3).map((activity) => (
-                      <div key={activity.id} className="rounded-[1.2rem] border border-white/10 bg-white/5 p-4">
+                    activityFeed.slice(0, 2).map((activity) => (
+                      <div key={activity.id} className="rounded-[1.2rem] border border-white/10 bg-white/5 p-3 sm:p-4">
                         <p className="text-sm font-semibold text-white">
                           {(activity.actor?.first_name || activity.actor?.username || 'A connection')} {activity.activity_type === 'tee_time_created' ? 'posted a tee time' : 'logged a score'}
                         </p>
@@ -1363,7 +1363,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="mt-6 flex flex-wrap gap-3">
+            <div className="mt-5 flex flex-wrap gap-3 sm:mt-6">
               <button
                 onClick={() => setShowCreateTeeTimeModal(true)}
                 className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-100"
