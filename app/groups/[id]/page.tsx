@@ -356,7 +356,7 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+            <div className="hidden gap-3 lg:grid">
               <div className="rounded-[1.4rem] border border-white/10 bg-white/6 p-5 backdrop-blur-sm">
                 <p className="text-xs uppercase tracking-[0.18em] text-white/45">Members</p>
                 <p className="mt-3 text-3xl font-semibold text-white">{members.length}</p>
@@ -459,7 +459,7 @@ export default function GroupDetail({ params }: { params: Promise<{ id: string }
             </div>
           </div>
 
-          <aside className="space-y-6">
+          <aside className="hidden space-y-6 lg:block">
             <div className="rounded-[1.8rem] border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
               <h3 className="text-xl font-semibold text-white">Keep The Group Moving</h3>
               <p className="mt-3 text-sm leading-7 text-white/62">

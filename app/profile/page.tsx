@@ -14,7 +14,6 @@ import {
   X,
   Camera,
   Settings,
-  ArrowLeft,
   Star,
   TrendingUp,
   Users,
@@ -22,13 +21,8 @@ import {
   QrCode,
   CheckCircle,
   Link as LinkIcon,
-  Menu,
-  Home,
-  Search,
-  MessageCircle,
   Bell
 } from 'lucide-react'
-import Logo from '@/app/components/Logo'
 import QRCodeGenerator from '@/app/components/QRCodeGenerator'
 import QRCodeScanner from '@/app/components/QRCodeScanner'
 import ConnectionsHub from '@/app/components/ConnectionsHub'
@@ -134,7 +128,6 @@ export default function ProfilePage() {
   const [uploadingHeaderImage, setUploadingHeaderImage] = useState(false)
   const [showQRCode, setShowQRCode] = useState(false)
   const [showQRScanner, setShowQRScanner] = useState(false)
-  const [showNavigationMenu, setShowNavigationMenu] = useState(false)
   const [connectionCount, setConnectionCount] = useState(0)
   const [connectionsLoading, setConnectionsLoading] = useState(false)
   const [showConnectionsModal, setShowConnectionsModal] = useState(false)
@@ -425,128 +418,35 @@ export default function ProfilePage() {
       {/* Modern Navigation */}
       <nav className="bg-gray-900/95 backdrop-blur-xl border-b border-gray-700/50 sticky top-0 z-50 shadow-2xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            <div className="flex items-center space-x-6">
+          <div className="relative flex items-center justify-between h-20">
+            <div className="flex items-center">
               <button
                 onClick={() => router.push('/dashboard')}
-                className="flex items-center text-gray-300 hover:text-emerald-400 transition-all duration-300 group"
+                className="flex items-center justify-center rounded-full border border-white/10 bg-white/5 p-2.5 text-white/85 transition hover:bg-white/10"
               >
-                <div className="p-2 rounded-lg bg-gray-800/50 group-hover:bg-emerald-500/20 transition-colors">
-                  <ArrowLeft className="h-5 w-5" />
-                </div>
-                <span className="ml-3 font-medium">Back to Dashboard</span>
-              </button>
-              <div className="h-8 w-px bg-gray-600"></div>
-              <Logo size="lg" />
-            </div>
-            
-            <div className="flex items-center space-x-3">
-              {/* Navigation Menu */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowNavigationMenu(!showNavigationMenu)}
-                  className="flex items-center bg-gradient-to-r from-gray-500/20 to-gray-600/20 text-gray-300 border border-gray-400/30 px-4 py-2.5 rounded-xl hover:from-gray-500/30 hover:to-gray-600/30 transition-all duration-300 shadow-lg hover:shadow-gray-500/20 group"
-                >
-                  <Menu className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
-                  <span className="font-medium">Menu</span>
-                </button>
-                
-                {showNavigationMenu && (
-                  <div className="absolute right-0 mt-2 w-48 bg-slate-800 rounded-xl shadow-lg border border-slate-700 z-50">
-                    <div className="p-2">
-                      <button
-                        onClick={() => {
-                          router.push('/dashboard')
-                          setShowNavigationMenu(false)
-                        }}
-                        className="flex items-center w-full px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
-                      >
-                        <Home className="h-4 w-4 mr-3" />
-                        Dashboard
-                      </button>
-                      <button
-                        onClick={() => {
-                          router.push('/dashboard?tab=find-someone')
-                          setShowNavigationMenu(false)
-                        }}
-                        className="flex items-center w-full px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
-                      >
-                        <Search className="h-4 w-4 mr-3" />
-                        Find Golfers
-                      </button>
-                      <button
-                        onClick={() => {
-                          router.push('/dashboard?tab=courses')
-                          setShowNavigationMenu(false)
-                        }}
-                        className="flex items-center w-full px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
-                      >
-                        <Flag className="h-4 w-4 mr-3" />
-                        Golf Courses
-                      </button>
-                      <button
-                        onClick={() => {
-                          router.push('/dashboard?tab=messages')
-                          setShowNavigationMenu(false)
-                        }}
-                        className="flex items-center w-full px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
-                      >
-                        <MessageCircle className="h-4 w-4 mr-3" />
-                        Messages
-                      </button>
-                      <button
-                        onClick={() => {
-                          router.push('/dashboard?tab=badges')
-                          setShowNavigationMenu(false)
-                        }}
-                        className="flex items-center w-full px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
-                      >
-                        <Trophy className="h-4 w-4 mr-3" />
-                        Badges
-                      </button>
-                      <div className="border-t border-slate-700 my-2"></div>
-                      {isEditing ? (
-                        <>
-                          <button
-                            onClick={handleCancel}
-                            className="flex items-center w-full px-3 py-2 text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
-                          >
-                            <X className="h-4 w-4 mr-3" />
-                            Cancel Edit
-                          </button>
-                          <button
-                            onClick={() => {
-                              handleSave()
-                              setShowNavigationMenu(false)
-                            }}
-                            disabled={saving}
-                            className="flex items-center w-full px-3 py-2 text-emerald-400 hover:bg-emerald-900/20 rounded-lg transition-colors disabled:opacity-50"
-                          >
-                            {saving ? (
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-400 mr-3"></div>
-                            ) : (
-                              <Save className="h-4 w-4 mr-3" />
-                            )}
-                            {saving ? 'Saving...' : 'Save Changes'}
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          onClick={() => {
-                            setIsEditing(true)
-                            setShowNavigationMenu(false)
-                          }}
-                          className="flex items-center w-full px-3 py-2 text-emerald-400 hover:bg-emerald-900/20 rounded-lg transition-colors"
-                        >
-                          <Edit3 className="h-4 w-4 mr-3" />
-                          Edit Profile
-                        </button>
-                      )}
+                <div className="h-5 w-5 overflow-hidden rounded-full border border-emerald-400/70 lg:h-10 lg:w-10 lg:border-2 lg:border-emerald-500">
+                  {displayAvatar ? (
+                    <img src={displayAvatar} alt="Profile" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-500 to-cyan-600">
+                      <span className="text-xs font-bold text-white lg:text-lg">
+                        {profile?.first_name?.[0] || user?.email?.[0]?.toUpperCase() || 'U'}
+                      </span>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              </button>
             </div>
+
+            <div className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 justify-center">
+              <img
+                src="/UGClogonew.png"
+                alt="UGC"
+                className="h-16 w-[144px] object-contain sm:h-20 sm:w-[180px]"
+              />
+            </div>
+
+            <div className="w-10 lg:w-12" />
           </div>
         </div>
       </nav>

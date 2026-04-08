@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
 
 async function updateGroupImageWithFallback(supabase: any, groupId: string, imageType: string, publicUrl: string) {
   const attempts = imageType === 'header'
@@ -62,29 +60,31 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create group-images directory if it doesn't exist
-    const groupImagesDir = join(process.cwd(), 'public', 'group-images')
-    try {
-      await mkdir(groupImagesDir, { recursive: true })
-    } catch (error) {
-      // Directory might already exist, that's fine
-    }
-
-    // Generate unique filename
+    const supabase = createAdminClient()
     const fileExtension = file.name.split('.').pop() || 'png'
-    const fileName = `group-${groupId}-${imageType}-${Date.now()}.${fileExtension}`
-    const filePath = join(groupImagesDir, fileName)
-
-    // Convert file to buffer and save
+    const filePath = `group-images/group-${groupId}-${imageType}-${Date.now()}.${fileExtension}`
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
-    await writeFile(filePath, buffer)
 
-    // Generate public URL
-    const publicUrl = `/group-images/${fileName}`
+    const { error: uploadError } = await supabase.storage
+      .from('uploads')
+      .upload(filePath, buffer, {
+        contentType: file.type,
+        upsert: true
+      })
 
-    // Update group with image URL
-    const supabase = createAdminClient()
+    if (uploadError) {
+      console.error('Error uploading group image to storage:', uploadError)
+      return NextResponse.json(
+        { error: 'Failed to upload group image' },
+        { status: 500 }
+      )
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('uploads')
+      .getPublicUrl(filePath)
+
     const updateError = await updateGroupImageWithFallback(supabase, groupId, imageType, publicUrl)
 
     if (updateError) {
