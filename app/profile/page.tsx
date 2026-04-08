@@ -444,23 +444,6 @@ export default function ProfilePage() {
             </div>
             
             <div className="flex items-center space-x-3">
-              {/* QR Code Buttons */}
-              <button
-                onClick={() => setShowQRCode(true)}
-                className="flex items-center bg-gradient-to-r from-blue-500/20 to-blue-600/20 text-blue-400 border border-blue-400/30 px-4 py-2.5 rounded-xl hover:from-blue-500/30 hover:to-blue-600/30 transition-all duration-300 shadow-lg hover:shadow-blue-500/20 group"
-              >
-                <QrCode className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
-                <span className="font-medium">My QR Code</span>
-              </button>
-              
-              <button
-                onClick={() => setShowQRScanner(true)}
-                className="flex items-center bg-gradient-to-r from-purple-500/20 to-purple-600/20 text-purple-400 border border-purple-400/30 px-4 py-2.5 rounded-xl hover:from-purple-500/30 hover:to-purple-600/30 transition-all duration-300 shadow-lg hover:shadow-purple-500/20 group"
-              >
-                <QrCode className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
-                <span className="font-medium">Scan QR</span>
-              </button>
-
               {/* Navigation Menu */}
               <div className="relative">
                 <button
