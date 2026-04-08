@@ -48,6 +48,17 @@ async function createGroupWithFallback(
       max_members: maxMembers || 10,
       creator_id: user_id,
       status: 'active'
+    },
+    {
+      name,
+      description: description || '',
+      max_members: maxMembers || 10,
+      creator_id: user_id
+    },
+    {
+      name,
+      description: description || '',
+      creator_id: user_id
     }
   ]
 
@@ -73,6 +84,38 @@ async function createGroupWithFallback(
   }
 
   return { group: null, error: lastError }
+}
+
+async function ensureUserProfileExists(supabase: any, userId: string) {
+  const { data: existingProfile, error: profileError } = await supabase
+    .from('user_profiles')
+    .select('id')
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (!profileError && existingProfile) {
+    return
+  }
+
+  console.warn('⚠️ GROUPS POST: User profile missing, creating fallback profile for group creator:', {
+    userId,
+    profileError: profileError?.message
+  })
+
+  const { error: createProfileError } = await supabase
+    .from('user_profiles')
+    .insert({
+      id: userId,
+      email: 'user@example.com',
+      username: `user_${Date.now()}`,
+      first_name: 'User',
+      last_name: 'Profile',
+      full_name: 'User Profile'
+    })
+
+  if (createProfileError) {
+    console.warn('⚠️ GROUPS POST: Failed to create fallback user profile:', createProfileError)
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -251,6 +294,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('🔍 GROUPS POST: Using database for operations')
+    await ensureUserProfileExists(supabase, user_id)
 
     // Create the group
     try {

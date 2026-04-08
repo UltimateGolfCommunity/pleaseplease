@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { createServerClient } from '@/lib/supabase'
 
+const DEFAULT_UPLOAD_IMAGE = '/logos/golfcoursedefaultimage.png'
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
@@ -40,7 +42,7 @@ export async function POST(request: NextRequest) {
         // Return a mock URL for development
         return NextResponse.json({ 
           success: true, 
-          url: `/logos/DefaultPicPNG.png`,
+          url: DEFAULT_UPLOAD_IMAGE,
           message: 'Using default image (Supabase not configured)'
         })
       }
@@ -50,7 +52,7 @@ export async function POST(request: NextRequest) {
       // Return a mock URL for development
       return NextResponse.json({ 
         success: true, 
-        url: `/logos/DefaultPicPNG.png`,
+        url: DEFAULT_UPLOAD_IMAGE,
         message: 'Using default image (Supabase not configured)'
       })
     }
@@ -82,7 +84,7 @@ export async function POST(request: NextRequest) {
         console.log('⚠️ Storage bucket not configured, using default image')
         return NextResponse.json({ 
           success: true, 
-          url: `/logos/DefaultPicPNG.png`,
+          url: DEFAULT_UPLOAD_IMAGE,
           message: 'Using default image (storage bucket not configured)'
         })
       }
@@ -120,4 +122,3 @@ export const config = {
     bodyParser: false,
   },
 }
-

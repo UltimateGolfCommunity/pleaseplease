@@ -3,6 +3,34 @@ import { createAdminClient } from '@/lib/supabase-admin'
 import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 
+async function updateGroupImageWithFallback(supabase: any, groupId: string, imageType: string, publicUrl: string) {
+  const attempts = imageType === 'header'
+    ? [{ header_image_url: publicUrl }, { image_url: publicUrl }]
+    : [{ image_url: publicUrl }, { logo_url: publicUrl }]
+
+  let lastError: any = null
+
+  for (const payload of attempts) {
+    const { error } = await supabase
+      .from('golf_groups')
+      .update(payload)
+      .eq('id', groupId)
+
+    if (!error) {
+      return null
+    }
+
+    lastError = error
+    console.warn('⚠️ GROUP IMAGE: Update attempt failed, trying fallback payload:', {
+      payloadKeys: Object.keys(payload),
+      code: error.code,
+      message: error.message
+    })
+  }
+
+  return lastError
+}
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
@@ -57,14 +85,7 @@ export async function POST(request: NextRequest) {
 
     // Update group with image URL
     const supabase = createAdminClient()
-    const updateData = imageType === 'header' 
-      ? { header_image_url: publicUrl }
-      : { image_url: publicUrl }
-
-    const { error: updateError } = await supabase
-      .from('golf_groups')
-      .update(updateData)
-      .eq('id', groupId)
+    const updateError = await updateGroupImageWithFallback(supabase, groupId, imageType, publicUrl)
 
     if (updateError) {
       console.error('Error updating group image:', updateError)
