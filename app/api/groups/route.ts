@@ -2,6 +2,79 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { createAdminClient } from '@/lib/supabase-admin'
 
+async function createGroupWithFallback(
+  supabase: any,
+  {
+    name,
+    description,
+    location,
+    logo_url,
+    group_type,
+    maxMembers,
+    user_id
+  }: {
+    name: string
+    description?: string
+    location?: string
+    logo_url?: string | null
+    group_type?: string
+    maxMembers?: number
+    user_id: string
+  }
+) {
+  const attempts = [
+    {
+      name,
+      description: description || '',
+      location: location || '',
+      logo_url: logo_url || null,
+      group_type: group_type || 'community',
+      max_members: maxMembers || 10,
+      creator_id: user_id,
+      status: 'active'
+    },
+    {
+      name,
+      description: description || '',
+      location: location || '',
+      logo_url: logo_url || null,
+      max_members: maxMembers || 10,
+      creator_id: user_id,
+      status: 'active'
+    },
+    {
+      name,
+      description: description || '',
+      max_members: maxMembers || 10,
+      creator_id: user_id,
+      status: 'active'
+    }
+  ]
+
+  let lastError: any = null
+
+  for (const payload of attempts) {
+    const { data, error } = await supabase
+      .from('golf_groups')
+      .insert(payload)
+      .select()
+      .single()
+
+    if (!error) {
+      return { group: data, error: null }
+    }
+
+    lastError = error
+    console.warn('⚠️ GROUPS POST: Group insert attempt failed, trying fallback payload:', {
+      payloadKeys: Object.keys(payload),
+      code: error.code,
+      message: error.message
+    })
+  }
+
+  return { group: null, error: lastError }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -182,20 +255,15 @@ export async function POST(request: NextRequest) {
     // Create the group
     try {
       console.log('🏌️ GROUPS POST: Creating group in database...')
-      const { data: group, error: groupError } = await supabase
-        .from('golf_groups')
-        .insert({
-          name,
-          description: description || '',
-          location: location || '',
-          logo_url: logo_url || null,
-          group_type: group_type || 'community',
-          max_members: maxMembers || 10,
-          creator_id: user_id,
-          status: 'active'
-        })
-        .select()
-        .single()
+      const { group, error: groupError } = await createGroupWithFallback(supabase, {
+        name,
+        description,
+        location,
+        logo_url,
+        group_type,
+        maxMembers,
+        user_id
+      })
 
       if (groupError) {
         console.error('❌ Database error creating group:', groupError)
