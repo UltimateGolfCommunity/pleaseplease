@@ -36,7 +36,6 @@ export default function Dashboard() {
   const { user, profile, signOut } = useAuth()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<ActiveTab>('tee-times')
-  const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showGlobalSearch, setShowGlobalSearch] = useState(false)
   const [globalSearchQuery, setGlobalSearchQuery] = useState('')
@@ -489,7 +488,6 @@ export default function Dashboard() {
   const openDashboardTab = (tab: ActiveTab) => {
     setActiveTab(tab)
     setShowProfileMenu(false)
-    setShowMobileMenu(false)
     setShowNotifications(false)
   }
 
@@ -1068,30 +1066,21 @@ export default function Dashboard() {
                       className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-white/80 transition hover:bg-white/8 hover:text-white"
                     >
                       <Calendar className="h-5 w-5" />
-                      <div>
-                        <p className="font-semibold">Tee Times</p>
-                        <p className="text-xs text-white/45">Open rounds, next tee time, and new posts</p>
-                  </div>
-                </button>
+                      <span className="font-semibold">Tee Times</span>
+                    </button>
                     <button
                       onClick={() => openDashboardTab('groups')}
                       className="mt-1 flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-white/80 transition hover:bg-white/8 hover:text-white"
                     >
                       <Trophy className="h-5 w-5" />
-                      <div>
-                        <p className="font-semibold">Groups</p>
-                        <p className="text-xs text-white/45">Communities, courses, and message boards</p>
-                      </div>
+                      <span className="font-semibold">Groups</span>
                     </button>
                     <button
                       onClick={() => openDashboardTab('profile')}
                       className="mt-1 flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-white/80 transition hover:bg-white/8 hover:text-white"
                     >
                       <User className="h-5 w-5" />
-                      <div>
-                        <p className="font-semibold">My Profile</p>
-                        <p className="text-xs text-white/45">Profile details, QR tools, and score tracking</p>
-                      </div>
+                      <span className="font-semibold">My Profile</span>
                     </button>
                     <button
                       onClick={() => {
@@ -1101,10 +1090,7 @@ export default function Dashboard() {
                       className="mt-1 flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-white/80 transition hover:bg-white/8 hover:text-white"
                     >
                       <LifeBuoy className="h-5 w-5" />
-                      <div>
-                        <p className="font-semibold">Help & Support</p>
-                        <p className="text-xs text-white/45">How to post tee times, join groups, and more</p>
-                      </div>
+                      <span className="font-semibold">Help & Support</span>
                     </button>
                     <div className="my-2 border-t border-white/8" />
                     <button
@@ -1112,10 +1098,7 @@ export default function Dashboard() {
                       className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-red-200 transition hover:bg-red-500/10"
                     >
                       <LogOut className="h-5 w-5" />
-                      <div>
-                        <p className="font-semibold">Sign Out</p>
-                        <p className="text-xs text-red-200/65">End this session</p>
-                      </div>
+                      <span className="font-semibold">Sign Out</span>
                     </button>
                   </div>
                 )}
@@ -1125,7 +1108,6 @@ export default function Dashboard() {
                 onClick={() => {
                   setShowGlobalSearch(true)
                   setShowProfileMenu(false)
-                  setShowMobileMenu(false)
                 }}
                 className="rounded-full border border-white/8 bg-white/5 p-2.5 text-white/80 transition hover:bg-white/10"
               >
@@ -1164,72 +1146,8 @@ export default function Dashboard() {
                   )}
                 </button>
 
-              <button
-                onClick={() => setShowMobileMenu(!showMobileMenu)}
-                className="md:hidden relative"
-              >
-                <div className="rounded-full border border-white/8 bg-white/5 p-2.5">
-                  <ChevronDown className="h-5 w-5 text-white/80" />
-                </div>
-              </button>
             </div>
           </div>
-
-          {/* Mobile Navigation */}
-      {showMobileMenu && (
-            <div className="border-t border-white/8 py-4 md:hidden">
-              <div className="flex flex-col space-y-2">
-                {[
-                  { id: 'tee-times', label: 'Tee Times', icon: Calendar },
-                  { id: 'groups', label: 'Groups', icon: Trophy },
-                  { id: 'messages', label: 'Messages', icon: Mail }
-                ].map((tab) => {
-              const Icon = tab.icon
-              const isActive = activeTab === tab.id
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                        openDashboardTab(tab.id as ActiveTab)
-                  }}
-                      className={`flex items-center space-x-3 rounded-2xl px-4 py-3 transition-all duration-300 font-medium ${
-                    isActive
-                      ? 'bg-white text-slate-950 shadow-lg'
-                          : 'text-white/72 hover:bg-white/8 hover:text-white'
-                  }`}
-                >
-                      <Icon className="h-5 w-5" />
-                      <span>{tab.label}</span>
-                </button>
-              )
-            })}
-            <button
-              onClick={() => openDashboardTab('profile')}
-              className="flex items-center space-x-3 rounded-2xl px-4 py-3 font-medium text-white/72 transition hover:bg-white/8 hover:text-white"
-            >
-              <User className="h-5 w-5" />
-              <span>My Profile</span>
-            </button>
-            <button
-              onClick={() => {
-                router.push('/help')
-                setShowMobileMenu(false)
-              }}
-              className="flex items-center space-x-3 rounded-2xl px-4 py-3 font-medium text-white/72 transition hover:bg-white/8 hover:text-white"
-            >
-              <LifeBuoy className="h-5 w-5" />
-              <span>Help & Support</span>
-            </button>
-            <button
-              onClick={handleSignOut}
-              className="flex items-center space-x-3 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 font-medium text-red-200 transition hover:bg-red-500/20"
-            >
-              <LogOut className="h-5 w-5" />
-              <span>Sign Out</span>
-              </button>
-          </div>
-        </div>
-      )}
         </div>
       </nav>
 
