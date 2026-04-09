@@ -121,18 +121,59 @@ async function updateGroupWithFallback(
       name,
       description,
       location,
+      group_type,
+      header_image_url
+    },
+    {
+      name,
+      description,
+      location,
+      group_type,
+      logo_url
+    },
+    {
+      name,
+      description,
+      location,
+      group_type,
+      image_url
+    },
+    {
+      name,
+      description,
+      location,
       logo_url,
+      header_image_url,
       image_url
     },
     {
       name,
       description,
       logo_url,
+      header_image_url,
       image_url
     },
     {
       name,
+      header_image_url,
       logo_url,
+      image_url
+    },
+    {
+      name,
+      header_image_url
+    },
+    {
+      name,
+      logo_url,
+      image_url
+    },
+    {
+      name,
+      logo_url
+    },
+    {
+      name,
       image_url
     }
   ].map((payload) =>
