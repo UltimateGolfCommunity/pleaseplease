@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Redirect, router } from 'expo-router'
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker'
 import Ionicons from '@expo/vector-icons/Ionicons'
-import * as Location from 'expo-location'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   ActivityIndicator,
@@ -191,6 +190,8 @@ export default function HomeTab() {
 
   const requestWeatherLocation = useCallback(async () => {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const Location = require('expo-location')
       const { status } = await Location.requestForegroundPermissionsAsync()
 
       if (status !== 'granted') {
