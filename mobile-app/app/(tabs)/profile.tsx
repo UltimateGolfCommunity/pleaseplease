@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Linking,
   Modal,
   Pressable,
   RefreshControl,
@@ -20,7 +21,7 @@ import {
 import { BrandHeader } from '@/components/BrandHeader'
 import { Avatar } from '@/components/Avatar'
 import { PrimaryButton } from '@/components/PrimaryButton'
-import { apiGet, apiPost } from '@/lib/api'
+import { apiDelete, apiGet, apiPost } from '@/lib/api'
 import { getShareableProfileLink, uploadImageToStorage } from '@/lib/supabase'
 import { palette } from '@/lib/theme'
 import { useAuth } from '@/providers/AuthProvider'
@@ -488,9 +489,45 @@ export default function ProfileTab() {
               </View>
             ))}
           </View>
-          <View style={styles.actions}>
+        <View style={styles.actions}>
+            <PrimaryButton label="Help & Support" variant="ghost" onPress={() => router.push('/help')} />
+            <PrimaryButton
+              label="Privacy Policy"
+              variant="ghost"
+              onPress={() => void Linking.openURL('https://www.ultimategolfcommunity.com/privacy')}
+            />
             <PrimaryButton label="Scores" variant="ghost" onPress={() => router.push('/scores')} />
             <PrimaryButton label="Sign Out" variant="ghost" onPress={signOut} />
+            <PrimaryButton
+              label="Delete Account"
+              variant="ghost"
+              onPress={() => {
+                if (!user?.id) return
+
+                Alert.alert(
+                  'Delete account?',
+                  'This permanently removes your account access from Ultimate Golf Community.',
+                  [
+                    { style: 'cancel', text: 'Cancel' },
+                    {
+                      style: 'destructive',
+                      text: 'Delete',
+                      onPress: async () => {
+                        try {
+                          await apiDelete('/api/account/delete', { user_id: user.id })
+                          await signOut()
+                        } catch (error) {
+                          Alert.alert(
+                            'Unable to delete account',
+                            error instanceof Error ? error.message : 'Please try again.'
+                          )
+                        }
+                      }
+                    }
+                  ]
+                )
+              }}
+            />
           </View>
         </View>
 

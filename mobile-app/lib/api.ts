@@ -47,6 +47,24 @@ export async function apiPost<T>(path: string, body: Record<string, unknown>) {
   return payload as T
 }
 
+export async function apiDelete<T>(path: string, body?: Record<string, unknown>) {
+  const response = await fetch(getApiUrl(path), {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: body ? JSON.stringify(body) : undefined
+  })
+
+  const payload = await parseJson(response)
+
+  if (!response.ok) {
+    throw new Error(payload?.error || payload?.message || 'Delete request failed.')
+  }
+
+  return payload as T
+}
+
 export async function apiUploadImage<T>(path: string, formData: FormData) {
   const response = await fetch(getApiUrl(path), {
     method: 'POST',
