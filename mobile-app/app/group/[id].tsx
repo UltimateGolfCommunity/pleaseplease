@@ -312,11 +312,20 @@ export default function GroupScreen() {
       })
 
       if (response.group) {
-        setGroup(response.group)
+        setGroup((current) =>
+          current
+            ? {
+                ...current,
+                ...response.group,
+                logo_url: response.group.logo_url || current.logo_url,
+                header_image_url: response.group.header_image_url || current.header_image_url,
+                image_url: response.group.image_url || current.image_url
+              }
+            : response.group
+        )
       }
 
       setIsEditing(false)
-      await loadGroup()
     } catch (error) {
       Alert.alert('Unable to update group', error instanceof Error ? error.message : 'Please try again.')
     } finally {
