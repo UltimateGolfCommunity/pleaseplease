@@ -132,6 +132,17 @@ export default function ProfileTab() {
 
   const isVerified = !!session?.user?.email_confirmed_at
   const founderBadge = badges.find((badge) => badge.badge?.name === 'Founding Member')
+  const profileSummary = useMemo(() => {
+    const bits = [
+      profile?.home_course || profile?.home_club || null,
+      profile?.location || null,
+      profile?.handicap !== null && profile?.handicap !== undefined
+        ? `Handicap ${profile.handicap}`
+        : null
+    ].filter(Boolean)
+
+    return bits.length ? bits.join(' • ') : 'Complete your golfer profile'
+  }, [profile?.handicap, profile?.home_club, profile?.home_course, profile?.location])
   const acceptedConnections = useMemo(() => {
     return connections
       .map((connection) =>
@@ -412,13 +423,7 @@ export default function ProfileTab() {
                 </View>
               ) : null}
               <View style={styles.infoRibbon}>
-                <Text style={styles.headlineMeta}>
-                  {(profile?.home_course || profile?.home_club || 'Add your home course') +
-                    ' • ' +
-                    (profile?.location || 'Location not set') +
-                    ' • Handicap ' +
-                    (profile?.handicap ?? 'N/A')}
-                </Text>
+                <Text style={styles.headlineMeta}>{profileSummary}</Text>
               </View>
               {profile?.bio ? (
                 <View style={styles.bioCard}>
@@ -458,9 +463,7 @@ export default function ProfileTab() {
                             connection.username ||
                             'UGC Golfer'}
                         </Text>
-                        <Text style={styles.connectionMeta}>
-                          {connection.location || 'Location not set'}
-                        </Text>
+                        <Text style={styles.connectionMeta}>{connection.location || 'Local golfer'}</Text>
                       </View>
                     </View>
                   ))}

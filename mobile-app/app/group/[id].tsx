@@ -456,7 +456,7 @@ export default function GroupScreen() {
               <Image source={{ uri: group?.header_image_url || group?.image_url || undefined }} style={styles.coverImage} />
             ) : (
               <View style={styles.coverFallback}>
-                <Text style={styles.coverFallbackText}>Add a group cover photo</Text>
+                <Text style={styles.coverFallbackText}>Add cover photo</Text>
               </View>
             )}
             {isEditing ? (
@@ -498,7 +498,7 @@ export default function GroupScreen() {
                   <Text style={styles.heroSubtitle}>{groupTypeLabel} group</Text>
                   <Text style={styles.heroStory}>
                     {group?.description ||
-                      'Give this club a stronger story so local golfers know exactly what the group is for.'}
+                      'Build the story of this group so local golfers know exactly who it is for.'}
                   </Text>
                 </>
               )}
@@ -586,7 +586,7 @@ export default function GroupScreen() {
             ) : (
               <Text style={styles.body}>
                 {group?.description ||
-                  'Add a stronger club story, who it is for, and how members use it so new golfers understand the purpose right away.'}
+                  'Add what this group is for, who it serves, and why golfers should join.'}
               </Text>
             )}
             <View style={styles.infoGrid}>
@@ -647,7 +647,7 @@ export default function GroupScreen() {
                               connection.username ||
                               'UGC Golfer'}
                           </Text>
-                          <Text style={styles.memberMeta}>{connection.location || 'Location not set'}</Text>
+                          <Text style={styles.memberMeta}>{connection.location || 'Local golfer'}</Text>
                         </View>
                       </View>
                       <PrimaryButton

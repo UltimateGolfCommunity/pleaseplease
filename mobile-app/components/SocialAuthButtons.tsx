@@ -33,8 +33,8 @@ function SocialAuthButtonsWithoutGoogle({ onSuccess }: { onSuccess?: () => void 
 
   const handleGoogleUnavailable = () => {
     Alert.alert(
-      'Google sign in not ready',
-      'Add the Google client IDs in mobile-app/.env before testing native sign in.'
+      'Google sign in unavailable',
+      'This build is not configured for native Google sign in yet.'
     )
   }
 
@@ -152,8 +152,8 @@ function SocialAuthButtonsWithGoogle({ onSuccess }: { onSuccess?: () => void }) 
   const handleGoogle = async () => {
     if (!request) {
       Alert.alert(
-        'Google sign in not ready',
-        'Add the Google client IDs in mobile-app/.env before testing native sign in.'
+        'Google sign in unavailable',
+        'This build is not configured for native Google sign in yet.'
       )
       return
     }
