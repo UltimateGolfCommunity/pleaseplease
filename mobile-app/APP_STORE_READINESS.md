@@ -38,7 +38,7 @@ This Expo app lives in [`mobile-app`](/Users/lukerestall/Documents/GitHub/please
    - Privacy Policy live at production URL
    - Support URL live
    - account deletion path available if required for this auth model
-   - App Privacy answers prepared
+   - App Privacy answers prepared in [APP_PRIVACY_DRAFT.md](/Users/lukerestall/Documents/GitHub/pleaseplease/mobile-app/APP_PRIVACY_DRAFT.md)
    - export compliance/encryption answers prepared
 
 5. Prepare store assets:
@@ -74,6 +74,7 @@ npm run submit:ios:production
    - `SET_IN_EAS_WHEN_APP_STORE_CONNECT_APP_EXISTS`
 
 3. Build a preview/TestFlight binary first.
+   - follow [TESTFLIGHT_RUNBOOK.md](/Users/lukerestall/Documents/GitHub/pleaseplease/mobile-app/TESTFLIGHT_RUNBOOK.md)
 
 4. Test on a real iPhone before production submission:
    - sign in
