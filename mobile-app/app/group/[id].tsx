@@ -168,13 +168,11 @@ export default function GroupScreen() {
         const displayUrl = `${upload.publicUrl}${upload.publicUrl.includes('?') ? '&' : '?'}v=${Date.now()}`
 
         if (target === 'logo') {
-          await apiPost<{ success: boolean; group: GroupDetail }>('/api/groups', {
-            action: 'update',
+          await apiPost<{ success: boolean; group: GroupDetail }>('/api/groups/media', {
             group_id: group.id,
             user_id: user?.id,
-            name: group.name,
-            logo_url: upload.publicUrl,
-            image_url: upload.publicUrl
+            target: 'logo',
+            url: upload.publicUrl
           })
           setGroup((current) =>
             current
@@ -185,12 +183,11 @@ export default function GroupScreen() {
               : current
           )
         } else {
-          await apiPost<{ success: boolean; group: GroupDetail }>('/api/groups', {
-            action: 'update',
+          await apiPost<{ success: boolean; group: GroupDetail }>('/api/groups/media', {
             group_id: group.id,
             user_id: user?.id,
-            name: group.name,
-            header_image_url: upload.publicUrl
+            target: 'cover',
+            url: upload.publicUrl
           })
           setGroup((current) =>
             current
