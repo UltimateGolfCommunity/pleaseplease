@@ -37,7 +37,10 @@ const requiredEnv = [
   'EXPO_PUBLIC_SITE_URL',
   'EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID',
   'EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID',
-  'EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID',
+  'EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID'
+]
+
+const recommendedEnv = [
   'EXPO_PUBLIC_SUPPORT_EMAIL',
   'EXPO_PUBLIC_PRIVACY_URL'
 ]
@@ -67,6 +70,10 @@ const checks = [
   },
   ...requiredEnv.map((key) => ({
     label: `${key} is set`,
+    ok: Boolean(env[key])
+  })),
+  ...recommendedEnv.map((key) => ({
+    label: `${key} is set (recommended)`,
     ok: Boolean(env[key])
   }))
 ]
