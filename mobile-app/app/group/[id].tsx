@@ -159,8 +159,7 @@ export default function GroupScreen() {
       }
 
       const formData = new FormData()
-      formData.append('groupId', group.id)
-      formData.append('userId', user?.id || '')
+      formData.append('folder', target === 'logo' ? 'group-logos' : 'group-covers')
       formData.append(
         'file',
         {
@@ -171,18 +170,39 @@ export default function GroupScreen() {
       )
 
       try {
+        const upload = await apiUploadImage<{ success: boolean; url: string }>('/api/upload', formData)
+
         if (target === 'logo') {
-          const response = await apiUploadImage<{ success: boolean; logoUrl?: string }>('/api/groups/upload-logo', formData)
-          setGroup((current) => (current ? { ...current, logo_url: response.logoUrl || current.logo_url } : current))
-        } else {
-          formData.append('imageType', 'header')
-          const response = await apiUploadImage<{ success: boolean; imageUrl?: string }>('/api/groups/upload-image', formData)
+          const response = await apiPost<{ success: boolean; group: GroupDetail }>('/api/groups', {
+            action: 'update',
+            group_id: group.id,
+            user_id: user?.id,
+            logo_url: upload.url,
+            image_url: upload.url
+          })
           setGroup((current) =>
             current
               ? {
                   ...current,
-                  header_image_url: response.imageUrl || current.header_image_url,
-                  image_url: response.imageUrl || current.image_url
+                  logo_url: response.group?.logo_url || upload.url,
+                  image_url: response.group?.image_url || current.image_url
+                }
+              : current
+          )
+        } else {
+          const response = await apiPost<{ success: boolean; group: GroupDetail }>('/api/groups', {
+            action: 'update',
+            group_id: group.id,
+            user_id: user?.id,
+            header_image_url: upload.url,
+            image_url: upload.url
+          })
+          setGroup((current) =>
+            current
+              ? {
+                  ...current,
+                  header_image_url: response.group?.header_image_url || upload.url,
+                  image_url: response.group?.image_url || upload.url
                 }
               : current
           )

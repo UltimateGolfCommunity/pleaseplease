@@ -93,12 +93,18 @@ async function updateGroupWithFallback(
     name,
     description,
     location,
-    group_type
+    group_type,
+    logo_url,
+    header_image_url,
+    image_url
   }: {
     name?: string
     description?: string
     location?: string
     group_type?: string
+    logo_url?: string | null
+    header_image_url?: string | null
+    image_url?: string | null
   }
 ) {
   const attempts = [
@@ -106,19 +112,28 @@ async function updateGroupWithFallback(
       name,
       description,
       location,
-      group_type
+      group_type,
+      logo_url,
+      header_image_url,
+      image_url
     },
     {
       name,
       description,
-      location
+      location,
+      logo_url,
+      image_url
     },
     {
       name,
-      description
+      description,
+      logo_url,
+      image_url
     },
     {
-      name
+      name,
+      logo_url,
+      image_url
     }
   ].map((payload) =>
     Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined))
@@ -424,7 +439,10 @@ export async function POST(request: NextRequest) {
         name,
         description,
         location,
-        group_type
+        group_type,
+        logo_url,
+        header_image_url,
+        image_url
       })
 
       if (updateError) {
