@@ -41,7 +41,7 @@ This is the starting point for:
 - App Store submission through EAS
 
 See [APP_STORE_READINESS.md](/Users/lukerestall/Documents/GitHub/pleaseplease/mobile-app/APP_STORE_READINESS.md) for the next concrete build and submission checklist.
-See [APP_STORE_METADATA.md](/Users/lukerestall/Documents/GitHub/pleaseplease/mobile-app/APP_STORE_METADATA.md) for listing copy, [SCREENSHOT_PLAN.md](/Users/lukerestall/Documents/GitHub/pleaseplease/mobile-app/SCREENSHOT_PLAN.md) for the first screenshot pass, [APP_PRIVACY_DRAFT.md](/Users/lukerestall/Documents/GitHub/pleaseplease/mobile-app/APP_PRIVACY_DRAFT.md) for App Privacy setup, and [TESTFLIGHT_RUNBOOK.md](/Users/lukerestall/Documents/GitHub/pleaseplease/mobile-app/TESTFLIGHT_RUNBOOK.md) for the first real build/test pass.
+See [APP_STORE_METADATA.md](/Users/lukerestall/Documents/GitHub/pleaseplease/mobile-app/APP_STORE_METADATA.md) for listing copy, [SCREENSHOT_PLAN.md](/Users/lukerestall/Documents/GitHub/pleaseplease/mobile-app/SCREENSHOT_PLAN.md) for the first screenshot pass, [APP_PRIVACY_DRAFT.md](/Users/lukerestall/Documents/GitHub/pleaseplease/mobile-app/APP_PRIVACY_DRAFT.md) for App Privacy setup, [TESTFLIGHT_RUNBOOK.md](/Users/lukerestall/Documents/GitHub/pleaseplease/mobile-app/TESTFLIGHT_RUNBOOK.md) for the first real build/test pass, [APP_REVIEW_NOTES.md](/Users/lukerestall/Documents/GitHub/pleaseplease/mobile-app/APP_REVIEW_NOTES.md) for reviewer guidance, and [FIRST_RELEASE_NOTES.md](/Users/lukerestall/Documents/GitHub/pleaseplease/mobile-app/FIRST_RELEASE_NOTES.md) for the first release notes.
 
 ## Recommended next steps
 

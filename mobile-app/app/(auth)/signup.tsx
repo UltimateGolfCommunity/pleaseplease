@@ -1,7 +1,7 @@
 import { Link, Redirect, router } from 'expo-router'
 import { useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Alert, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { BrandHeader } from '@/components/BrandHeader'
 import { PrimaryButton } from '@/components/PrimaryButton'
 import { SocialAuthButtons } from '@/components/SocialAuthButtons'
@@ -96,6 +96,14 @@ export default function SignupScreen() {
             <Text style={styles.helper}>
               Your same Supabase account powers both the mobile app and the live web experience.
             </Text>
+            <View style={styles.legalRow}>
+              <Pressable onPress={() => void Linking.openURL(process.env.EXPO_PUBLIC_PRIVACY_URL || 'https://www.ultimategolfcommunity.com/privacy')}>
+                <Text style={styles.legalLink}>Privacy Policy</Text>
+              </Pressable>
+              <Pressable onPress={() => void Linking.openURL(`mailto:${process.env.EXPO_PUBLIC_SUPPORT_EMAIL || 'support@ultimategolfcommunity.com'}`)}>
+                <Text style={styles.legalLink}>Support</Text>
+              </Pressable>
+            </View>
           </View>
 
           <Link href="/login" style={styles.link}>
@@ -153,6 +161,16 @@ const styles = StyleSheet.create({
     color: palette.textMuted,
     fontSize: 13,
     lineHeight: 18
+  },
+  legalRow: {
+    flexDirection: 'row',
+    gap: 16,
+    justifyContent: 'center'
+  },
+  legalLink: {
+    color: palette.aqua,
+    fontSize: 12,
+    fontWeight: '600'
   },
   link: {
     color: palette.aqua,
