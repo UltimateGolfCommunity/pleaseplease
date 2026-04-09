@@ -62,6 +62,24 @@ type GroupMessage = {
   } | null
 }
 
+type UserCard = {
+  id: string
+  first_name?: string | null
+  last_name?: string | null
+  username?: string | null
+  avatar_url?: string | null
+  location?: string | null
+  handicap?: number | null
+}
+
+type ConnectionRecord = {
+  id: string
+  requester_id?: string
+  recipient_id?: string
+  requester?: UserCard | null
+  recipient?: UserCard | null
+}
+
 export default function GroupScreen() {
   const { loading, user } = useAuth()
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -72,11 +90,13 @@ export default function GroupScreen() {
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [uploadingCover, setUploadingCover] = useState(false)
   const [savingEdit, setSavingEdit] = useState(false)
+  const [invitingId, setInvitingId] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [group, setGroup] = useState<GroupDetail | null>(null)
   const [members, setMembers] = useState<Member[]>([])
   const [messages, setMessages] = useState<GroupMessage[]>([])
+  const [connections, setConnections] = useState<ConnectionRecord[]>([])
   const [draft, setDraft] = useState('')
   const [activeSection, setActiveSection] = useState<'info' | 'members' | 'board'>('info')
   const [editForm, setEditForm] = useState({
@@ -90,11 +110,19 @@ export default function GroupScreen() {
     if (!id) return
 
     try {
-      const response = await apiGet<{ success: boolean; group: GroupDetail; members: Member[] }>(
-        `/api/groups/${encodeURIComponent(id)}`
-      )
+      const [response, connectionsResponse] = await Promise.all([
+        apiGet<{ success: boolean; group: GroupDetail; members: Member[] }>(
+          `/api/groups/${encodeURIComponent(id)}`
+        ),
+        user?.id
+          ? apiGet<{ success: boolean; connections: ConnectionRecord[] }>(
+              `/api/users?action=connections&id=${encodeURIComponent(user.id)}`
+            ).catch(() => ({ success: true, connections: [] }))
+          : Promise.resolve({ success: true, connections: [] as ConnectionRecord[] })
+      ])
       setGroup(response.group)
       setMembers(response.members || [])
+      setConnections(connectionsResponse.connections || [])
 
       if (user?.id) {
         try {
@@ -145,6 +173,13 @@ export default function GroupScreen() {
   const isOwner =
     group?.creator_id === user?.id ||
     ['admin', 'owner', 'creator'].includes((myMembership?.role || '').toLowerCase())
+  const acceptedConnections = connections
+    .map((connection) =>
+      connection.requester_id === user?.id ? connection.recipient : connection.requester
+    )
+    .filter(Boolean) as UserCard[]
+  const memberIds = new Set(members.map((member) => member.user_id).filter(Boolean))
+  const inviteableConnections = acceptedConnections.filter((connection) => !memberIds.has(connection.id))
 
   const handlePickGroupImage = async (target: 'logo' | 'cover') => {
     if (!group?.id || !isOwner) return
@@ -365,6 +400,30 @@ export default function GroupScreen() {
     }
   }
 
+  const handleInviteConnection = async (invitedUserId: string) => {
+    if (!user?.id || !group?.id) return
+
+    setInvitingId(invitedUserId)
+    try {
+      const response = await apiPost<{ success?: boolean; error?: string }>('/api/groups/invitations', {
+        action: 'create',
+        group_id: group.id,
+        invited_user_id: invitedUserId,
+        user_id: user.id
+      })
+
+      if (response?.error) {
+        throw new Error(response.error)
+      }
+
+      Alert.alert('Invite sent', 'That golfer can now join this group from their invitations.')
+    } catch (error) {
+      Alert.alert('Unable to add member', error instanceof Error ? error.message : 'Please try again.')
+    } finally {
+      setInvitingId(null)
+    }
+  }
+
   const formatAuthor = (message: GroupMessage) =>
     message.user_profiles?.first_name ||
     message.user_profiles?.username ||
@@ -559,6 +618,48 @@ export default function GroupScreen() {
           <View style={styles.card}>
             <Text style={styles.sectionEyebrow}>People</Text>
             <Text style={styles.sectionTitle}>Member snapshot</Text>
+            {isOwner ? (
+              <View style={styles.inviteSection}>
+                <Text style={styles.inviteTitle}>Add members</Text>
+                <Text style={styles.body}>
+                  Invite golfers from your connections directly into this group.
+                </Text>
+                {inviteableConnections.length === 0 ? (
+                  <Text style={styles.body}>
+                    Everyone in your network is already here, or you have no connections yet.
+                  </Text>
+                ) : (
+                  inviteableConnections.slice(0, 6).map((connection) => (
+                    <View key={connection.id} style={styles.inviteRow}>
+                      <View style={styles.invitePerson}>
+                        <Avatar
+                          label={
+                            [connection.first_name, connection.last_name].filter(Boolean).join(' ') ||
+                            connection.username ||
+                            'UGC'
+                          }
+                          size={48}
+                          uri={connection.avatar_url}
+                        />
+                        <View style={styles.inviteCopy}>
+                          <Text style={styles.memberName}>
+                            {[connection.first_name, connection.last_name].filter(Boolean).join(' ') ||
+                              connection.username ||
+                              'UGC Golfer'}
+                          </Text>
+                          <Text style={styles.memberMeta}>{connection.location || 'Location not set'}</Text>
+                        </View>
+                      </View>
+                      <PrimaryButton
+                        label="Add"
+                        loading={invitingId === connection.id}
+                        onPress={() => void handleInviteConnection(connection.id)}
+                      />
+                    </View>
+                  ))
+                )}
+              </View>
+            ) : null}
             {members.length === 0 ? (
               <Text style={styles.body}>
                 No members are visible yet. Once people join, this group roster will start filling in.
@@ -927,6 +1028,35 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600'
   },
+  inviteSection: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 12,
+    padding: 14
+  },
+  inviteTitle: {
+    color: palette.text,
+    fontSize: 18,
+    fontWeight: '700'
+  },
+  inviteRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between'
+  },
+  invitePerson: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: 12
+  },
+  inviteCopy: {
+    flex: 1,
+    gap: 2
+  },
   memberRow: {
     backgroundColor: palette.cardSoft,
     borderColor: palette.border,
@@ -938,6 +1068,10 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 15,
     fontWeight: '600'
+  },
+  memberMeta: {
+    color: palette.textMuted,
+    fontSize: 13
   },
   composeInput: {
     backgroundColor: palette.cardSoft,
