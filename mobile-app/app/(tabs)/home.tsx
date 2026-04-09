@@ -19,6 +19,7 @@ import { PrimaryButton } from '@/components/PrimaryButton'
 import { StatCard } from '@/components/StatCard'
 import { apiGet, apiPost } from '@/lib/api'
 import { palette } from '@/lib/theme'
+import { getMobileWeather, type MobileWeatherData } from '@/lib/weather'
 import { useAuth } from '@/providers/AuthProvider'
 
 type TeeTime = {
@@ -52,15 +53,7 @@ type Activity = {
   } | null
 }
 
-type WeatherData = {
-  location: string
-  temperature: number
-  description: string
-  icon: string
-  humidity: number
-  windSpeed: number
-  feelsLike: number
-}
+type WeatherData = MobileWeatherData
 
 function formatDisplayDate(date?: string, time?: string) {
   if (!date) return 'No round on the books'
@@ -236,8 +229,7 @@ export default function HomeTab() {
   const loadWeather = useCallback(async () => {
     try {
       setWeatherLoading(true)
-      const query = `/api/weather?city=${encodeURIComponent(weatherQuery)}`
-      const response = await apiGet<WeatherData>(query)
+      const response = await getMobileWeather(weatherQuery)
       setWeather(response)
     } catch {
       setWeather(null)
