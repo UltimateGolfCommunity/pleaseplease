@@ -86,6 +86,73 @@ async function createGroupWithFallback(
   return { group: null, error: lastError }
 }
 
+async function updateGroupWithFallback(
+  supabase: any,
+  groupId: string,
+  {
+    name,
+    description,
+    location,
+    group_type
+  }: {
+    name?: string
+    description?: string
+    location?: string
+    group_type?: string
+  }
+) {
+  const attempts = [
+    {
+      name,
+      description,
+      location,
+      group_type
+    },
+    {
+      name,
+      description,
+      location
+    },
+    {
+      name,
+      description
+    },
+    {
+      name
+    }
+  ].map((payload) =>
+    Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined))
+  )
+
+  let lastError: any = null
+
+  for (const payload of attempts) {
+    if (!Object.keys(payload).length) {
+      continue
+    }
+
+    const { data, error } = await supabase
+      .from('golf_groups')
+      .update(payload)
+      .eq('id', groupId)
+      .select()
+      .single()
+
+    if (!error) {
+      return { group: data, error: null }
+    }
+
+    lastError = error
+    console.warn('⚠️ GROUPS POST: Group update attempt failed, trying fallback payload:', {
+      payloadKeys: Object.keys(payload),
+      code: error.code,
+      message: error.message
+    })
+  }
+
+  return { group: null, error: lastError }
+}
+
 async function ensureUserProfileExists(supabase: any, userId: string) {
   const { data: existingProfile, error: profileError } = await supabase
     .from('user_profiles')
@@ -115,6 +182,39 @@ async function ensureUserProfileExists(supabase: any, userId: string) {
 
   if (createProfileError) {
     console.warn('⚠️ GROUPS POST: Failed to create fallback user profile:', createProfileError)
+  }
+}
+
+async function canManageGroup(supabase: any, groupId: string, userId: string) {
+  const { data: existingGroup, error: existingGroupError } = await supabase
+    .from('golf_groups')
+    .select('id, creator_id')
+    .eq('id', groupId)
+    .single()
+
+  if (existingGroupError || !existingGroup) {
+    return { allowed: false, group: null, reason: 'not_found' as const }
+  }
+
+  if (existingGroup.creator_id === userId) {
+    return { allowed: true, group: existingGroup, reason: null }
+  }
+
+  const { data: membership } = await supabase
+    .from('group_members')
+    .select('role, status')
+    .eq('group_id', groupId)
+    .eq('user_id', userId)
+    .eq('status', 'active')
+    .maybeSingle()
+
+  const role = (membership?.role || '').toLowerCase()
+  const allowed = ['admin', 'owner', 'creator'].includes(role)
+
+  return {
+    allowed,
+    group: existingGroup,
+    reason: allowed ? null : ('forbidden' as const)
   }
 }
 
@@ -295,6 +395,55 @@ export async function POST(request: NextRequest) {
 
     console.log('🔍 GROUPS POST: Using database for operations')
     await ensureUserProfileExists(supabase, user_id)
+
+    if (action === 'update') {
+      if (!group_id) {
+        return NextResponse.json(
+          { error: 'Group ID is required' },
+          { status: 400 }
+        )
+      }
+
+      const permission = await canManageGroup(supabase, group_id, user_id)
+
+      if (permission.reason === 'not_found') {
+        return NextResponse.json(
+          { error: 'Group not found' },
+          { status: 404 }
+        )
+      }
+
+      if (!permission.allowed) {
+        return NextResponse.json(
+          { error: 'Only the group owner or admin can edit this group' },
+          { status: 403 }
+        )
+      }
+
+      const { group, error: updateError } = await updateGroupWithFallback(supabase, group_id, {
+        name,
+        description,
+        location,
+        group_type
+      })
+
+      if (updateError) {
+        return NextResponse.json(
+          {
+            error: 'Failed to update group',
+            details: updateError.message,
+            code: updateError.code
+          },
+          { status: 500 }
+        )
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Group updated successfully',
+        group
+      })
+    }
 
     // Create the group
     try {

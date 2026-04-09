@@ -37,7 +37,19 @@ export async function PUT(request: NextRequest) {
     const body = await request.json()
     console.log('🔍 Request body:', body)
     
-    const { id, first_name, last_name, username, bio, avatar_url, header_image_url, handicap, location } = body
+    const {
+      id,
+      first_name,
+      last_name,
+      username,
+      bio,
+      avatar_url,
+      header_image_url,
+      handicap,
+      location,
+      home_course,
+      home_club
+    } = body
     
     if (!id) {
       console.log('❌ No user ID provided')
@@ -118,6 +130,8 @@ export async function PUT(request: NextRequest) {
     if (header_image_url !== undefined) updateData.header_image_url = header_image_url
     if (handicap !== undefined) updateData.handicap = handicap
     if (location !== undefined) updateData.location = location
+    if (home_course !== undefined) updateData.home_course = home_course
+    if (home_club !== undefined) updateData.home_club = home_club
     
     // Only set full_name if both first_name and last_name are provided
     if (first_name && last_name) {
@@ -154,6 +168,8 @@ export async function PUT(request: NextRequest) {
           header_image_url: header_image_url || '',
           handicap: handicap || 0,
           location: location || '',
+          home_course: home_course || '',
+          home_club: home_club || home_course || '',
           updated_at: new Date().toISOString()
         })
         .select()

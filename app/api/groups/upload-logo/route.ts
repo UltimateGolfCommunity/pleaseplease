@@ -27,11 +27,38 @@ async function updateGroupLogoWithFallback(supabase: any, groupId: string, publi
   return lastError
 }
 
+async function canManageGroup(supabase: any, groupId: string, userId: string) {
+  const { data: group } = await supabase
+    .from('golf_groups')
+    .select('creator_id')
+    .eq('id', groupId)
+    .maybeSingle()
+
+  if (!group) {
+    return false
+  }
+
+  if (group.creator_id === userId) {
+    return true
+  }
+
+  const { data: membership } = await supabase
+    .from('group_members')
+    .select('role, status')
+    .eq('group_id', groupId)
+    .eq('user_id', userId)
+    .eq('status', 'active')
+    .maybeSingle()
+
+  return ['admin', 'owner', 'creator'].includes((membership?.role || '').toLowerCase())
+}
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File
     const groupId = formData.get('groupId') as string
+    const userId = formData.get('userId') as string
 
     if (!file || !groupId) {
       return NextResponse.json(
@@ -57,6 +84,17 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createAdminClient()
+
+    if (userId) {
+      const allowed = await canManageGroup(supabase, groupId, userId)
+      if (!allowed) {
+        return NextResponse.json(
+          { error: 'Only the group owner or admin can update the group logo' },
+          { status: 403 }
+        )
+      }
+    }
+
     const fileExtension = file.name.split('.').pop() || 'png'
     const filePath = `group-logos/group-${groupId}-${Date.now()}.${fileExtension}`
     const bytes = await file.arrayBuffer()

@@ -1,0 +1,61 @@
+{
+  "expo": {
+    "name": "Ultimate Golf Community",
+    "slug": "ultimate-golf-community",
+    "scheme": "ugcapp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "icon": "./assets/ugc-app-icon.png",
+    "splash": {
+      "image": "./assets/ugc-splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#07140f"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ultimategolfcommunity.app",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Ultimate Golf Community uses your photo library so you can choose a profile photo.",
+        "NSCameraUsageDescription": "Ultimate Golf Community uses the camera so you can take a profile photo."
+      },
+      "associatedDomains": [
+        "applinks:www.ultimategolfcommunity.com"
+      ]
+    },
+    "android": {
+      "package": "com.ultimategolfcommunity.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/ugc-android-foreground.png",
+        "backgroundColor": "#07140f"
+      },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "www.ultimategolfcommunity.com"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-apple-authentication",
+      "expo-image-picker"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

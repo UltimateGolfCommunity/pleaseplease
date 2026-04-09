@@ -121,6 +121,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to save round' }, { status: 500 })
     }
 
+    const activityPayload = {
+      user_id,
+      activity_type: 'round_logged',
+      title: 'Logged a score',
+      description: `Logged ${totalScore} at ${course_name}`,
+      metadata: {
+        course_name,
+        score: totalScore,
+        holes_played: Number(holes_played)
+      }
+    }
+
+    const { error: activityError } = await supabase
+      .from('user_activities')
+      .insert(activityPayload)
+
+    if (activityError) {
+      console.warn('Score saved, but activity log failed:', activityError)
+    }
+
     return NextResponse.json({ success: true, round: data })
   } catch (error) {
     console.error('Error in scores POST:', error)

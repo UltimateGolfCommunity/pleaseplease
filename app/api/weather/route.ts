@@ -1,87 +1,166 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+type WeatherResponse = {
+  location: string
+  temperature: number
+  description: string
+  icon: string
+  humidity: number
+  windSpeed: number
+  feelsLike: number
+}
+
+const WEATHER_GOV_HEADERS = {
+  Accept: 'application/geo+json',
+  'User-Agent': '(ultimategolfcommunity.com, support@ultimategolfcommunity.com)'
+}
+
+function mockWeather(location: string): WeatherResponse {
+  return {
+    location,
+    temperature: 72,
+    description: 'partly cloudy',
+    icon: '02d',
+    humidity: 65,
+    windSpeed: 8,
+    feelsLike: 72
+  }
+}
+
+function mapForecastToIcon(description: string) {
+  const value = description.toLowerCase()
+
+  if (value.includes('thunder')) return '11d'
+  if (value.includes('snow') || value.includes('sleet') || value.includes('ice')) return '13d'
+  if (value.includes('rain') || value.includes('drizzle') || value.includes('shower')) return '10d'
+  if (value.includes('fog') || value.includes('mist') || value.includes('haze') || value.includes('smoke')) return '50d'
+  if (value.includes('few clouds')) return '02d'
+  if (value.includes('partly cloudy')) return '03d'
+  if (value.includes('mostly cloudy') || value.includes('cloudy') || value.includes('overcast')) return '04d'
+  if (value.includes('sunny') || value.includes('clear')) return '01d'
+
+  return '03d'
+}
+
+function parseWindSpeed(value?: string | null) {
+  if (!value) return 0
+  const matches = value.match(/\d+/g)?.map(Number) || []
+
+  if (matches.length === 0) return 0
+  if (matches.length === 1) return matches[0]
+
+  return Math.round(matches.reduce((sum, current) => sum + current, 0) / matches.length)
+}
+
+async function getCoordinatesFromCity(city: string) {
+  const response = await fetch(
+    `https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=${encodeURIComponent(
+      city
+    )}&benchmark=Public_AR_Current&format=json`,
+    {
+      headers: {
+        Accept: 'application/json',
+        'User-Agent': WEATHER_GOV_HEADERS['User-Agent']
+      },
+      next: { revalidate: 3600 }
+    }
+  )
+
+  if (!response.ok) {
+    throw new Error(`Census geocoder error: ${response.status}`)
+  }
+
+  const data = await response.json()
+  const match = data?.result?.addressMatches?.[0]
+
+  if (!match?.coordinates) {
+    throw new Error('No coordinates found for the requested location.')
+  }
+
+  return {
+    latitude: match.coordinates.y,
+    longitude: match.coordinates.x,
+    matchedAddress: match.matchedAddress as string
+  }
+}
+
+async function getWeatherFromWeatherGov(latitude: number, longitude: number, fallbackLocation: string) {
+  const pointsResponse = await fetch(`https://api.weather.gov/points/${latitude},${longitude}`, {
+    headers: WEATHER_GOV_HEADERS,
+    next: { revalidate: 1800 }
+  })
+
+  if (!pointsResponse.ok) {
+    throw new Error(`weather.gov points error: ${pointsResponse.status}`)
+  }
+
+  const pointsData = await pointsResponse.json()
+  const hourlyUrl = pointsData?.properties?.forecastHourly
+
+  if (!hourlyUrl) {
+    throw new Error('weather.gov did not return an hourly forecast endpoint.')
+  }
+
+  const hourlyResponse = await fetch(hourlyUrl, {
+    headers: WEATHER_GOV_HEADERS,
+    next: { revalidate: 1800 }
+  })
+
+  if (!hourlyResponse.ok) {
+    throw new Error(`weather.gov hourly forecast error: ${hourlyResponse.status}`)
+  }
+
+  const hourlyData = await hourlyResponse.json()
+  const period = hourlyData?.properties?.periods?.[0]
+
+  if (!period) {
+    throw new Error('weather.gov hourly forecast did not include any periods.')
+  }
+
+  const relativeLocation = pointsData?.properties?.relativeLocation?.properties
+  const location =
+    relativeLocation?.city && relativeLocation?.state
+      ? `${relativeLocation.city}, ${relativeLocation.state}`
+      : fallbackLocation
+
+  return {
+    location,
+    temperature: Math.round(period.temperature ?? 72),
+    description: (period.shortForecast || 'Clear').toLowerCase(),
+    icon: mapForecastToIcon(period.shortForecast || ''),
+    humidity: Math.round(period.relativeHumidity?.value ?? 60),
+    windSpeed: parseWindSpeed(period.windSpeed),
+    feelsLike: Math.round(period.temperature ?? 72)
+  } satisfies WeatherResponse
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const city = searchParams.get('city')
   const lat = searchParams.get('lat')
   const lon = searchParams.get('lon')
-  
-  // Check if we have a valid OpenWeather API key
-  const apiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY
-  const hasValidApiKey = apiKey && 
-                        !apiKey.includes('your_openweather_api_key_here') && 
-                        apiKey.length > 10
-  
-  // If no valid API key is configured, use mock data only in development.
-  if (!hasValidApiKey) {
-    if (process.env.NODE_ENV === 'production') {
-      return NextResponse.json(
-        { error: 'Weather service is not configured.' },
-        { status: 503 }
-      )
-    }
 
-    console.log('⚠️  Invalid or placeholder OpenWeather API key. Using mock data for development.')
-
-    const mockWeatherData = {
-      location: city || 'Monterey',
-      temperature: 72,
-      description: 'partly cloudy',
-      icon: '02d',
-      humidity: 65,
-      windSpeed: 8,
-      feelsLike: 74
-    }
-    
-    return NextResponse.json(mockWeatherData)
-  }
-  
   try {
-    let response: Response
-    
-    // If coordinates are provided, use them (more accurate)
     if (lat && lon) {
-      response = await fetch(
-        `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=imperial`
-      )
-    } else {
-      // Use city name (fallback)
-      const cityName = city || 'Monterey'
-      
-      // Try different city formats if the first one fails
-      response = await fetch(
-        `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(cityName)}&appid=${apiKey}&units=imperial`
-      )
-      
-      // If city not found, try without state/country
-      if (response.status === 404) {
-        const cityOnly = cityName.split(',')[0].trim()
-        response = await fetch(
-          `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(cityOnly)}&appid=${apiKey}&units=imperial`
-        )
+      const latitude = Number(lat)
+      const longitude = Number(lon)
+
+      if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
+        return NextResponse.json({ error: 'Invalid coordinates supplied.' }, { status: 400 })
       }
+
+      const weather = await getWeatherFromWeatherGov(latitude, longitude, city || 'Current location')
+      return NextResponse.json(weather)
     }
 
-    if (!response.ok) {
-      throw new Error(`Weather API error: ${response.status}`)
-    }
+    const requestedCity = city || 'Monterey, CA'
+    const { latitude, longitude, matchedAddress } = await getCoordinatesFromCity(requestedCity)
+    const weather = await getWeatherFromWeatherGov(latitude, longitude, matchedAddress)
 
-    const data = await response.json()
-
-    const weatherData = {
-      location: data.name,
-      temperature: Math.round(data.main.temp),
-      description: data.weather[0].description,
-      icon: data.weather[0].icon,
-      humidity: data.main.humidity,
-      windSpeed: Math.round(data.wind.speed), // Wind speed in mph (imperial units)
-      feelsLike: Math.round(data.main.feels_like)
-    }
-
-    return NextResponse.json(weatherData)
+    return NextResponse.json(weather)
   } catch (error) {
-    console.error('Error fetching weather data:', error)
-    
+    console.error('Error fetching weather data from weather.gov:', error)
+
     if (process.env.NODE_ENV === 'production') {
       return NextResponse.json(
         { error: 'Unable to fetch weather data.' },
@@ -89,16 +168,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const mockWeatherData = {
-      location: city || 'Monterey',
-      temperature: 72,
-      description: 'partly cloudy',
-      icon: '02d',
-      humidity: 65,
-      windSpeed: 8,
-      feelsLike: 74
-    }
-
-    return NextResponse.json(mockWeatherData)
+    return NextResponse.json(mockWeather(city || 'Monterey, CA'))
   }
 }
