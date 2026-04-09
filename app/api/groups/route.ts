@@ -283,6 +283,8 @@ export async function POST(request: NextRequest) {
       description,
       location,
       logo_url,
+      header_image_url,
+      image_url,
       maxMembers,
       group_type,
       user_id: bodyUserId,
