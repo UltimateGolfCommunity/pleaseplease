@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -40,11 +43,18 @@ export async function GET(
       console.error('Error fetching group members:', membersError)
     }
 
-    return NextResponse.json({
-      success: true,
-      group,
-      members: members || []
-    })
+    return NextResponse.json(
+      {
+        success: true,
+        group,
+        members: members || []
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
+        }
+      }
+    )
   } catch (error) {
     console.error('Error fetching group detail:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
