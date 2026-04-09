@@ -160,14 +160,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(weather)
   } catch (error) {
     console.error('Error fetching weather data from weather.gov:', error)
-
-    if (process.env.NODE_ENV === 'production') {
-      return NextResponse.json(
-        { error: 'Unable to fetch weather data.' },
-        { status: 502 }
-      )
-    }
-
     return NextResponse.json(mockWeather(city || 'Monterey, CA'))
   }
 }

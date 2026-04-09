@@ -161,8 +161,6 @@ export default function HomeTab() {
   const [unreadNotifications, setUnreadNotifications] = useState(0)
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [weather, setWeather] = useState<WeatherData | null>(null)
-  const [locationCoords, setLocationCoords] = useState<{ latitude: number; longitude: number } | null>(null)
-  const [locationStatus, setLocationStatus] = useState<'idle' | 'granted' | 'denied' | 'error'>('idle')
   const [form, setForm] = useState({
     course_name: '',
     location: '',
@@ -185,35 +183,8 @@ export default function HomeTab() {
 
   const weatherQuery = useMemo(() => {
     const locationText = profile?.location || nextTeeTime?.location || ''
-    return locationText.split(',')[0]?.trim() || 'Monterey'
+    return locationText.trim() || 'Monterey, CA'
   }, [nextTeeTime?.location, profile?.location])
-
-  const requestWeatherLocation = useCallback(async () => {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const Location = require('expo-location')
-      const { status } = await Location.requestForegroundPermissionsAsync()
-
-      if (status !== 'granted') {
-        setLocationStatus('denied')
-        setLocationCoords(null)
-        return
-      }
-
-      const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced
-      })
-
-      setLocationCoords({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude
-      })
-      setLocationStatus('granted')
-    } catch {
-      setLocationStatus('error')
-      setLocationCoords(null)
-    }
-  }, [])
 
   const loadHome = useCallback(async () => {
     if (!user?.id) return
@@ -265,11 +236,7 @@ export default function HomeTab() {
   const loadWeather = useCallback(async () => {
     try {
       setWeatherLoading(true)
-      const query = locationCoords
-        ? `/api/weather?lat=${encodeURIComponent(locationCoords.latitude)}&lon=${encodeURIComponent(
-            locationCoords.longitude
-          )}&city=${encodeURIComponent(weatherQuery)}`
-        : `/api/weather?city=${encodeURIComponent(weatherQuery)}`
+      const query = `/api/weather?city=${encodeURIComponent(weatherQuery)}`
       const response = await apiGet<WeatherData>(query)
       setWeather(response)
     } catch {
@@ -277,7 +244,7 @@ export default function HomeTab() {
     } finally {
       setWeatherLoading(false)
     }
-  }, [locationCoords, weatherQuery])
+  }, [weatherQuery])
 
   useEffect(() => {
     if (user?.id) {
@@ -285,12 +252,6 @@ export default function HomeTab() {
       loadHome()
     }
   }, [loadHome, user?.id])
-
-  useEffect(() => {
-    if (user?.id) {
-      void requestWeatherLocation()
-    }
-  }, [requestWeatherLocation, user?.id])
 
   useEffect(() => {
     void loadWeather()
@@ -480,19 +441,6 @@ export default function HomeTab() {
                 : 'Weather is unavailable right now.'}
             </Text>
           )}
-
-          {locationStatus !== 'granted' ? (
-            <Pressable onPress={() => void requestWeatherLocation()} style={styles.weatherLocationButton}>
-              <Ionicons color={palette.aqua} name="location-outline" size={16} />
-              <Text style={styles.weatherLocationButtonText}>
-                {locationStatus === 'denied'
-                  ? 'Enable current location'
-                  : locationStatus === 'error'
-                    ? 'Retry location for weather'
-                    : 'Use current location'}
-              </Text>
-            </Pressable>
-          ) : null}
         </View>
 
         {showCreateForm ? (
