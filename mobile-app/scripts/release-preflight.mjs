@@ -35,9 +35,7 @@ const requiredEnv = [
   'EXPO_PUBLIC_SUPABASE_URL',
   'EXPO_PUBLIC_SUPABASE_ANON_KEY',
   'EXPO_PUBLIC_SITE_URL',
-  'EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID',
-  'EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID',
-  'EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID'
+  'EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID'
 ]
 
 const recommendedEnv = [
@@ -57,6 +55,10 @@ const checks = [
   {
     label: 'iOS build number is set',
     ok: Boolean(appJson?.expo?.ios?.buildNumber)
+  },
+  {
+    label: 'Apple Sign In is enabled in app config',
+    ok: Boolean(appJson?.expo?.ios?.usesAppleSignIn)
   },
   {
     label: 'EAS production profile exists',

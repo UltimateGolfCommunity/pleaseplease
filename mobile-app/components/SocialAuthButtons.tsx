@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Alert, StyleSheet, View } from 'react-native'
+import { Alert, Platform, StyleSheet, View } from 'react-native'
 import * as AppleAuthentication from 'expo-apple-authentication'
 import * as Google from 'expo-auth-session/providers/google'
 import * as WebBrowser from 'expo-web-browser'
@@ -11,7 +11,12 @@ WebBrowser.maybeCompleteAuthSession()
 const googleIOSClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID
 const googleAndroidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID
 const googleExpoClientId = process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID
-const googleConfigured = Boolean(googleIOSClientId && googleAndroidClientId && googleExpoClientId)
+const googleConfigured =
+  Platform.OS === 'ios'
+    ? Boolean(googleIOSClientId)
+    : Platform.OS === 'android'
+      ? Boolean(googleAndroidClientId)
+      : Boolean(googleExpoClientId)
 
 export function SocialAuthButtons({ onSuccess }: { onSuccess?: () => void }) {
   if (!googleConfigured) {
@@ -103,7 +108,7 @@ function SocialAuthButtonsWithGoogle({ onSuccess }: { onSuccess?: () => void }) 
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     iosClientId: googleIOSClientId!,
     androidClientId: googleAndroidClientId!,
-    clientId: googleExpoClientId!
+    webClientId: googleExpoClientId!
   })
 
   useEffect(() => {
