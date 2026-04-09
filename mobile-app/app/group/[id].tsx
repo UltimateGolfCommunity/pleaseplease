@@ -166,9 +166,10 @@ export default function GroupScreen() {
           mimeType,
           uri: asset.uri
         })
+        const displayUrl = `${upload.publicUrl}${upload.publicUrl.includes('?') ? '&' : '?'}v=${Date.now()}`
 
         if (target === 'logo') {
-          const response = await apiPost<{ success: boolean; group: GroupDetail }>('/api/groups', {
+          await apiPost<{ success: boolean; group: GroupDetail }>('/api/groups', {
             action: 'update',
             group_id: group.id,
             user_id: user?.id,
@@ -180,13 +181,12 @@ export default function GroupScreen() {
             current
               ? {
                   ...current,
-                  logo_url: response.group?.logo_url || upload.publicUrl,
-                  image_url: response.group?.image_url || current.image_url
+                  logo_url: displayUrl
                 }
               : current
           )
         } else {
-          const response = await apiPost<{ success: boolean; group: GroupDetail }>('/api/groups', {
+          await apiPost<{ success: boolean; group: GroupDetail }>('/api/groups', {
             action: 'update',
             group_id: group.id,
             user_id: user?.id,
@@ -198,14 +198,12 @@ export default function GroupScreen() {
             current
               ? {
                   ...current,
-                  header_image_url: response.group?.header_image_url || upload.publicUrl,
-                  image_url: response.group?.image_url || upload.publicUrl
+                  header_image_url: displayUrl,
+                  image_url: displayUrl
                 }
               : current
           )
         }
-
-        await loadGroup()
       } catch (error) {
         Alert.alert('Unable to update image', error instanceof Error ? error.message : 'Please try again.')
       } finally {
@@ -384,11 +382,7 @@ export default function GroupScreen() {
           />
         }
       >
-        <BrandHeader
-          title="Group"
-          subtitle="A cleaner club page with the essentials up front and the story just below."
-          showBack
-        />
+        <BrandHeader showBack />
 
         <Modal
           animationType="slide"
