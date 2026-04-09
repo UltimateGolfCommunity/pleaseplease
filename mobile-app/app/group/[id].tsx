@@ -387,77 +387,6 @@ export default function GroupScreen() {
           onRightPress={isOwner ? () => setIsEditing((current) => !current) : undefined}
         />
 
-        {isEditing ? (
-          <View style={styles.editCard}>
-            <Text style={styles.editTitle}>Edit Group</Text>
-            <Text style={styles.editBody}>
-              Update the club story, location, type, logo, and cover directly on this page.
-            </Text>
-
-            <TextInput
-              onChangeText={(value) => setEditForm((current) => ({ ...current, name: value }))}
-              placeholder="Group name"
-              placeholderTextColor={palette.textMuted}
-              style={styles.editInput}
-              value={editForm.name}
-            />
-            <TextInput
-              multiline
-              onChangeText={(value) => setEditForm((current) => ({ ...current, description: value }))}
-              placeholder="What is this group about?"
-              placeholderTextColor={palette.textMuted}
-              style={[styles.editInput, styles.editTextarea]}
-              value={editForm.description}
-            />
-            <TextInput
-              onChangeText={(value) => setEditForm((current) => ({ ...current, location: value }))}
-              placeholder="City or course area"
-              placeholderTextColor={palette.textMuted}
-              style={styles.editInput}
-              value={editForm.location}
-            />
-
-            <View style={styles.typeRow}>
-              {[
-                { label: 'Community', value: 'community' },
-                { label: 'Course', value: 'course' }
-              ].map((option) => {
-                const active = editForm.group_type === option.value
-
-                return (
-                  <Pressable
-                    key={option.value}
-                    onPress={() => setEditForm((current) => ({ ...current, group_type: option.value }))}
-                    style={[styles.typeChip, active && styles.typeChipActive]}
-                  >
-                    <Text style={[styles.typeLabel, active && styles.typeLabelActive]}>{option.label}</Text>
-                  </Pressable>
-                )
-              })}
-            </View>
-
-            <View style={styles.mediaActions}>
-              <PrimaryButton
-                label={uploadingLogo ? 'Updating logo...' : 'Edit Logo'}
-                variant="ghost"
-                loading={uploadingLogo}
-                onPress={() => void handlePickGroupImage('logo')}
-              />
-              <PrimaryButton
-                label={uploadingCover ? 'Updating cover...' : 'Edit Cover'}
-                variant="ghost"
-                loading={uploadingCover}
-                onPress={() => void handlePickGroupImage('cover')}
-              />
-            </View>
-
-            <View style={styles.editActions}>
-              <PrimaryButton label="Cancel" variant="ghost" onPress={() => setIsEditing(false)} />
-              <PrimaryButton label={savingEdit ? 'Saving...' : 'Save Group'} loading={savingEdit} onPress={handleSaveEdit} />
-            </View>
-          </View>
-        ) : null}
-
         <View style={styles.hero}>
           <View style={styles.coverShell}>
             {group?.header_image_url || group?.image_url ? (
@@ -467,6 +396,11 @@ export default function GroupScreen() {
                 <Text style={styles.coverFallbackText}>Add a group cover photo</Text>
               </View>
             )}
+            {isEditing ? (
+              <Pressable onPress={() => void handlePickGroupImage('cover')} style={styles.inlineMediaButton}>
+                <Text style={styles.inlineMediaButtonText}>{uploadingCover ? 'Updating...' : 'Edit Cover'}</Text>
+              </Pressable>
+            ) : null}
           </View>
           <View style={styles.heroTop}>
             <View style={styles.logoColumn}>
@@ -476,19 +410,49 @@ export default function GroupScreen() {
                 size={92}
                 uri={group?.logo_url || group?.image_url}
               />
+              {isEditing ? (
+                <Pressable onPress={() => void handlePickGroupImage('logo')} style={styles.inlineLogoButton}>
+                  <Text style={styles.inlineMediaButtonText}>{uploadingLogo ? 'Updating...' : 'Edit Logo'}</Text>
+                </Pressable>
+              ) : null}
             </View>
             <View style={styles.heroCopy}>
               {busy ? <ActivityIndicator color={palette.aqua} /> : null}
-              <Text style={styles.name}>{group?.name || id?.replace(/-/g, ' ') || 'Group'}</Text>
-              <Text style={styles.heroSubtitle}>{groupTypeLabel} group</Text>
-              <Text style={styles.heroStory}>
-                {group?.description ||
-                  'Give this club a stronger story so local golfers know exactly what the group is for.'}
-              </Text>
+              {isEditing ? (
+                <>
+                  <TextInput
+                    onChangeText={(value) => setEditForm((current) => ({ ...current, name: value }))}
+                    placeholder="Group name"
+                    placeholderTextColor={palette.textMuted}
+                    style={styles.inlineNameInput}
+                    value={editForm.name}
+                  />
+                  <Text style={styles.heroSubtitle}>{(editForm.group_type || 'community').replace(/^./, (char) => char.toUpperCase())} group</Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.name}>{group?.name || id?.replace(/-/g, ' ') || 'Group'}</Text>
+                  <Text style={styles.heroSubtitle}>{groupTypeLabel} group</Text>
+                  <Text style={styles.heroStory}>
+                    {group?.description ||
+                      'Give this club a stronger story so local golfers know exactly what the group is for.'}
+                  </Text>
+                </>
+              )}
             </View>
           </View>
           <View style={styles.metaRow}>
-            {group?.location ? <Text style={styles.metaPill}>{group.location}</Text> : null}
+            {isEditing ? (
+              <TextInput
+                onChangeText={(value) => setEditForm((current) => ({ ...current, location: value }))}
+                placeholder="City or course area"
+                placeholderTextColor={palette.textMuted}
+                style={styles.inlineMetaInput}
+                value={editForm.location}
+              />
+            ) : group?.location ? (
+              <Text style={styles.metaPill}>{group.location}</Text>
+            ) : null}
             <Text style={styles.metaPill}>{members.length} members</Text>
             <Text style={styles.metaPill}>Founded by {founderName}</Text>
           </View>
@@ -519,14 +483,57 @@ export default function GroupScreen() {
           <View style={styles.card}>
             <Text style={styles.sectionEyebrow}>About</Text>
             <Text style={styles.sectionTitle}>What this group is about</Text>
-            <Text style={styles.body}>
-              {group?.description ||
-                'Add a stronger club story, who it is for, and how members use it so new golfers understand the purpose right away.'}
-            </Text>
+            {isEditing ? (
+              <>
+                <TextInput
+                  multiline
+                  onChangeText={(value) => setEditForm((current) => ({ ...current, description: value }))}
+                  placeholder="What is this group about?"
+                  placeholderTextColor={palette.textMuted}
+                  style={[styles.editInput, styles.editTextarea]}
+                  value={editForm.description}
+                />
+                <View style={styles.typeRow}>
+                  {[
+                    { label: 'Community', value: 'community' },
+                    { label: 'Course', value: 'course' }
+                  ].map((option) => {
+                    const active = editForm.group_type === option.value
+
+                    return (
+                      <Pressable
+                        key={option.value}
+                        onPress={() => setEditForm((current) => ({ ...current, group_type: option.value }))}
+                        style={[styles.typeChip, active && styles.typeChipActive]}
+                      >
+                        <Text style={[styles.typeLabel, active && styles.typeLabelActive]}>{option.label}</Text>
+                      </Pressable>
+                    )
+                  })}
+                </View>
+                <View style={styles.editActions}>
+                  <PrimaryButton label="Cancel" variant="ghost" onPress={() => setIsEditing(false)} />
+                  <PrimaryButton
+                    label={savingEdit ? 'Saving...' : 'Save Group'}
+                    loading={savingEdit}
+                    onPress={handleSaveEdit}
+                  />
+                </View>
+              </>
+            ) : (
+              <Text style={styles.body}>
+                {group?.description ||
+                  'Add a stronger club story, who it is for, and how members use it so new golfers understand the purpose right away.'}
+              </Text>
+            )}
             <View style={styles.infoGrid}>
               <View style={styles.infoPill}>
                 <Text style={styles.infoLabel}>Type</Text>
-                <Text style={styles.infoValue}>{groupTypeLabel}</Text>
+                <Text style={styles.infoValue}>
+                  {isEditing
+                    ? (editForm.group_type || 'community').replace(/^./, (char) => char.toUpperCase())
+                    : groupTypeLabel}
+                </Text>
               </View>
               <View style={styles.infoPill}>
                 <Text style={styles.infoLabel}>Founder</Text>
@@ -534,7 +541,9 @@ export default function GroupScreen() {
               </View>
               <View style={styles.infoPill}>
                 <Text style={styles.infoLabel}>Location</Text>
-                <Text style={styles.infoValue}>{group?.location || 'Set a home area'}</Text>
+                <Text style={styles.infoValue}>
+                  {isEditing ? editForm.location || 'Set a home area' : group?.location || 'Set a home area'}
+                </Text>
               </View>
               <View style={styles.infoPill}>
                 <Text style={styles.infoLabel}>Members</Text>
@@ -632,24 +641,6 @@ const styles = StyleSheet.create({
     gap: 20,
     padding: 20
   },
-  editCard: {
-    backgroundColor: palette.card,
-    borderColor: palette.border,
-    borderRadius: 28,
-    borderWidth: 1,
-    gap: 14,
-    padding: 20
-  },
-  editTitle: {
-    color: palette.text,
-    fontSize: 22,
-    fontWeight: '700'
-  },
-  editBody: {
-    color: palette.textMuted,
-    fontSize: 14,
-    lineHeight: 21
-  },
   editInput: {
     backgroundColor: palette.cardSoft,
     borderColor: palette.border,
@@ -733,6 +724,31 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600'
   },
+  inlineMediaButton: {
+    backgroundColor: 'rgba(7, 20, 15, 0.82)',
+    borderColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 999,
+    borderWidth: 1,
+    bottom: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    position: 'absolute',
+    right: 12
+  },
+  inlineLogoButton: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderColor: palette.border,
+    borderRadius: 999,
+    borderWidth: 1,
+    marginTop: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 7
+  },
+  inlineMediaButtonText: {
+    color: palette.text,
+    fontSize: 12,
+    fontWeight: '700'
+  },
   heroTop: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -750,6 +766,17 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: '700',
     textTransform: 'capitalize'
+  },
+  inlineNameInput: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderColor: palette.border,
+    borderRadius: 16,
+    borderWidth: 1,
+    color: palette.text,
+    fontSize: 24,
+    fontWeight: '700',
+    minHeight: 52,
+    paddingHorizontal: 14
   },
   heroSubtitle: {
     color: palette.textMuted,
@@ -777,6 +804,18 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     paddingHorizontal: 12,
     paddingVertical: 8
+  },
+  inlineMetaInput: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderColor: palette.border,
+    borderRadius: 999,
+    borderWidth: 1,
+    color: palette.text,
+    flexGrow: 1,
+    fontSize: 13,
+    minHeight: 38,
+    minWidth: 180,
+    paddingHorizontal: 12
   },
   card: {
     backgroundColor: palette.card,
