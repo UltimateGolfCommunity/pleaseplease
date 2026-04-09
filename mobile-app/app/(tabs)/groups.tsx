@@ -33,24 +33,6 @@ type Group = {
   image_url?: string | null
 }
 
-type UserCard = {
-  id: string
-  first_name?: string | null
-  last_name?: string | null
-  username?: string | null
-  avatar_url?: string | null
-  location?: string | null
-  handicap?: number | null
-}
-
-type ConnectionRecord = {
-  id: string
-  requester_id?: string
-  recipient_id?: string
-  requester?: UserCard | null
-  recipient?: UserCard | null
-}
-
 type GroupMessage = {
   id: string
   message_content?: string
@@ -98,12 +80,9 @@ export default function GroupsTab() {
   const [uploadingImage, setUploadingImage] = useState(false)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [joiningId, setJoiningId] = useState<string | null>(null)
-  const [invitingId, setInvitingId] = useState<string | null>(null)
-  const [selectedInviteGroupId, setSelectedInviteGroupId] = useState<string | null>(null)
   const [myGroups, setMyGroups] = useState<Group[]>([])
   const [discoverGroups, setDiscoverGroups] = useState<Group[]>([])
   const [groupActivity, setGroupActivity] = useState<GroupActivity[]>([])
-  const [connections, setConnections] = useState<ConnectionRecord[]>([])
   const [form, setForm] = useState({
     name: '',
     description: '',
@@ -122,28 +101,15 @@ export default function GroupsTab() {
     return [...pool].sort((a, b) => (b.member_count || 0) - (a.member_count || 0)).slice(0, 8)
   }, [discoverGroups, profile?.location])
 
-  const inviteableGroups = useMemo(() => myGroups.slice(0, 8), [myGroups])
-
-  const acceptedConnections = useMemo(() => {
-    return connections
-      .map((connection) =>
-        connection.requester_id === user?.id ? connection.recipient : connection.requester
-      )
-      .filter(Boolean) as UserCard[]
-  }, [connections, user?.id])
-
   const loadGroups = useCallback(async () => {
     if (!user?.id) return
 
     try {
-      const [mine, discover, connectionResponse] = await Promise.all([
+      const [mine, discover] = await Promise.all([
         apiGet<{ success: boolean; groups: Group[] }>(`/api/groups?user_id=${encodeURIComponent(user.id)}`),
         apiGet<{ success: boolean; groups: Group[] }>(
           `/api/groups?action=search&user_id=${encodeURIComponent(user.id)}&query=`
-        ),
-        apiGet<{ success: boolean; connections: ConnectionRecord[] }>(
-          `/api/users?action=connections&id=${encodeURIComponent(user.id)}`
-        ).catch(() => ({ success: true, connections: [] }))
+        )
       ])
 
       const myGroupList = mine.groups || []
@@ -151,8 +117,6 @@ export default function GroupsTab() {
 
       setMyGroups(myGroupList)
       setDiscoverGroups(discoverList)
-      setConnections(connectionResponse.connections || [])
-      setSelectedInviteGroupId((current) => current || myGroupList[0]?.id || null)
 
       const boardResponses = await Promise.all(
         myGroupList.slice(0, 8).map(async (group) => {
@@ -300,30 +264,6 @@ export default function GroupsTab() {
       Alert.alert('Unable to join group', error instanceof Error ? error.message : 'Please try again.')
     } finally {
       setJoiningId(null)
-    }
-  }
-
-  const handleInviteConnection = async (invitedUserId: string) => {
-    if (!user?.id || !selectedInviteGroupId) return
-
-    setInvitingId(invitedUserId)
-    try {
-      const response = await apiPost<{ success?: boolean; error?: string }>('/api/groups/invitations', {
-        action: 'create',
-        group_id: selectedInviteGroupId,
-        invited_user_id: invitedUserId,
-        user_id: user.id
-      })
-
-      if (response?.error) {
-        throw new Error(response.error)
-      }
-
-      Alert.alert('Invite sent', 'Your connection can now join this group from their invitations.')
-    } catch (error) {
-      Alert.alert('Unable to add to group', error instanceof Error ? error.message : 'Please try again.')
-    } finally {
-      setInvitingId(null)
     }
   }
 
@@ -487,70 +427,6 @@ export default function GroupsTab() {
               </View>
             </Pressable>
           ))}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Add connections to a group</Text>
-          <Text style={styles.helper}>
-            Pick one of your groups, then invite people from your network into it.
-          </Text>
-          {inviteableGroups.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>Create or join a group first</Text>
-              <Text style={styles.empty}>
-                Once you have a group here, you can start inviting your connections into it.
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.selectorWrap}>
-              {inviteableGroups.map((group) => {
-                const active = selectedInviteGroupId === group.id
-
-                return (
-                  <Pressable
-                    key={group.id}
-                    onPress={() => setSelectedInviteGroupId(group.id)}
-                    style={[styles.selectorChip, active && styles.selectorChipActive]}
-                  >
-                    <Text style={[styles.selectorChipText, active && styles.selectorChipTextActive]}>
-                      {group.name}
-                    </Text>
-                  </Pressable>
-                )
-              })}
-            </View>
-          )}
-          {inviteableGroups.length > 0 && acceptedConnections.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>No connections yet</Text>
-              <Text style={styles.empty}>
-                Add golfers as connections and they will show up here for quick group invites.
-              </Text>
-            </View>
-          ) : null}
-          {inviteableGroups.length > 0 &&
-            acceptedConnections.map((connection) => (
-              <View key={connection.id} style={styles.card}>
-                <Pressable onPress={() => router.push(`/users/${connection.id}`)} style={styles.groupRow}>
-                  <Avatar label={connection.first_name || connection.username || 'UGC'} size={56} uri={connection.avatar_url} />
-                  <View style={styles.groupCopy}>
-                    <Text style={styles.cardTitle}>
-                      {[connection.first_name, connection.last_name].filter(Boolean).join(' ') ||
-                        connection.username ||
-                        'UGC Golfer'}
-                    </Text>
-                    <Text style={styles.cardMeta}>
-                      {connection.location || 'Location not set'} • Handicap {connection.handicap ?? 'N/A'}
-                    </Text>
-                  </View>
-                </Pressable>
-                <PrimaryButton
-                  label="Add to Group"
-                  loading={invitingId === connection.id}
-                  onPress={() => void handleInviteConnection(connection.id)}
-                />
-              </View>
-            ))}
         </View>
 
         <View style={styles.section}>
@@ -729,31 +605,6 @@ const styles = StyleSheet.create({
     color: palette.textMuted,
     fontSize: 14,
     lineHeight: 20
-  },
-  selectorWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10
-  },
-  selectorChip: {
-    backgroundColor: palette.cardSoft,
-    borderColor: palette.border,
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 10
-  },
-  selectorChipActive: {
-    backgroundColor: 'rgba(103,232,249,0.14)',
-    borderColor: 'rgba(103,232,249,0.26)'
-  },
-  selectorChipText: {
-    color: palette.textMuted,
-    fontSize: 13,
-    fontWeight: '700'
-  },
-  selectorChipTextActive: {
-    color: palette.aqua
   },
   card: {
     backgroundColor: palette.card,
