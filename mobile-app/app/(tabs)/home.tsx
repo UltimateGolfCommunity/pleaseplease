@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Redirect, router } from 'expo-router'
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker'
 import Ionicons from '@expo/vector-icons/Ionicons'
+import * as Location from 'expo-location'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   ActivityIndicator,
@@ -161,6 +162,8 @@ export default function HomeTab() {
   const [unreadNotifications, setUnreadNotifications] = useState(0)
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [weather, setWeather] = useState<WeatherData | null>(null)
+  const [locationCoords, setLocationCoords] = useState<{ latitude: number; longitude: number } | null>(null)
+  const [locationStatus, setLocationStatus] = useState<'idle' | 'granted' | 'denied' | 'error'>('idle')
   const [form, setForm] = useState({
     course_name: '',
     location: '',
@@ -185,6 +188,31 @@ export default function HomeTab() {
     const locationText = profile?.location || nextTeeTime?.location || ''
     return locationText.split(',')[0]?.trim() || 'Monterey'
   }, [nextTeeTime?.location, profile?.location])
+
+  const requestWeatherLocation = useCallback(async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync()
+
+      if (status !== 'granted') {
+        setLocationStatus('denied')
+        setLocationCoords(null)
+        return
+      }
+
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced
+      })
+
+      setLocationCoords({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude
+      })
+      setLocationStatus('granted')
+    } catch {
+      setLocationStatus('error')
+      setLocationCoords(null)
+    }
+  }, [])
 
   const loadHome = useCallback(async () => {
     if (!user?.id) return
@@ -236,14 +264,19 @@ export default function HomeTab() {
   const loadWeather = useCallback(async () => {
     try {
       setWeatherLoading(true)
-      const response = await apiGet<WeatherData>(`/api/weather?city=${encodeURIComponent(weatherQuery)}`)
+      const query = locationCoords
+        ? `/api/weather?lat=${encodeURIComponent(locationCoords.latitude)}&lon=${encodeURIComponent(
+            locationCoords.longitude
+          )}&city=${encodeURIComponent(weatherQuery)}`
+        : `/api/weather?city=${encodeURIComponent(weatherQuery)}`
+      const response = await apiGet<WeatherData>(query)
       setWeather(response)
     } catch {
       setWeather(null)
     } finally {
       setWeatherLoading(false)
     }
-  }, [weatherQuery])
+  }, [locationCoords, weatherQuery])
 
   useEffect(() => {
     if (user?.id) {
@@ -251,6 +284,12 @@ export default function HomeTab() {
       loadHome()
     }
   }, [loadHome, user?.id])
+
+  useEffect(() => {
+    if (user?.id) {
+      void requestWeatherLocation()
+    }
+  }, [requestWeatherLocation, user?.id])
 
   useEffect(() => {
     void loadWeather()
@@ -440,6 +479,19 @@ export default function HomeTab() {
                 : 'Weather is unavailable right now.'}
             </Text>
           )}
+
+          {locationStatus !== 'granted' ? (
+            <Pressable onPress={() => void requestWeatherLocation()} style={styles.weatherLocationButton}>
+              <Ionicons color={palette.aqua} name="location-outline" size={16} />
+              <Text style={styles.weatherLocationButtonText}>
+                {locationStatus === 'denied'
+                  ? 'Enable current location'
+                  : locationStatus === 'error'
+                    ? 'Retry location for weather'
+                    : 'Use current location'}
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
 
         {showCreateForm ? (
@@ -802,6 +854,24 @@ const styles = StyleSheet.create({
     color: palette.textMuted,
     fontSize: 15,
     lineHeight: 22
+  },
+  weatherLocationButton: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(103,232,249,0.08)',
+    borderColor: 'rgba(103,232,249,0.18)',
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8
+  },
+  weatherLocationButtonText: {
+    color: palette.aqua,
+    fontSize: 13,
+    fontWeight: '700'
   },
   formCard: {
     backgroundColor: palette.card,

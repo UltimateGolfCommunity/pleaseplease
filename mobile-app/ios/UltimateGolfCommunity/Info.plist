@@ -47,6 +47,8 @@
     </dict>
     <key>NSCameraUsageDescription</key>
     <string>Ultimate Golf Community uses the camera so you can take a profile or group photo.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Ultimate Golf Community uses your location to show golf weather near you.</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>Ultimate Golf Community uses your photo library so you can choose a profile or group photo.</string>
     <key>NSUserActivityTypes</key>
