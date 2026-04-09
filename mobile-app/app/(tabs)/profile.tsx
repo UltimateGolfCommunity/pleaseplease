@@ -41,6 +41,24 @@ type ActivityItem = {
   metadata?: Record<string, unknown>
 }
 
+type UserCard = {
+  id: string
+  first_name?: string | null
+  last_name?: string | null
+  username?: string | null
+  avatar_url?: string | null
+  location?: string | null
+  handicap?: number | null
+}
+
+type ConnectionRecord = {
+  id: string
+  requester_id?: string
+  recipient_id?: string
+  requester?: UserCard | null
+  recipient?: UserCard | null
+}
+
 function formatActivityTime(value: string) {
   const date = new Date(value)
   const diff = Date.now() - date.getTime()
@@ -87,6 +105,7 @@ export default function ProfileTab() {
   const [refreshing, setRefreshing] = useState(false)
   const [badges, setBadges] = useState<BadgeRecord[]>([])
   const [activities, setActivities] = useState<ActivityItem[]>([])
+  const [connections, setConnections] = useState<ConnectionRecord[]>([])
   const [form, setForm] = useState({
     first_name: '',
     last_name: '',
@@ -112,21 +131,32 @@ export default function ProfileTab() {
 
   const isVerified = !!session?.user?.email_confirmed_at
   const founderBadge = badges.find((badge) => badge.badge?.name === 'Founding Member')
+  const acceptedConnections = useMemo(() => {
+    return connections
+      .map((connection) =>
+        connection.requester_id === user?.id ? connection.recipient : connection.requester
+      )
+      .filter(Boolean) as UserCard[]
+  }, [connections, user?.id])
 
   const loadProfile = useCallback(async () => {
     if (!user?.id) return
 
     try {
       await refreshProfile(user.id)
-      const [userBadges, activityResponse] = await Promise.all([
+      const [userBadges, activityResponse, connectionResponse] = await Promise.all([
         apiGet<BadgeRecord[]>(`/api/badges?action=user_badges&user_id=${encodeURIComponent(user.id)}`),
         apiGet<{ success: boolean; activities: ActivityItem[] }>(
           `/api/activities?user_id=${encodeURIComponent(user.id)}&limit=6`
-        ).catch(() => ({ success: true, activities: [] }))
+        ).catch(() => ({ success: true, activities: [] })),
+        apiGet<{ success: boolean; connections: ConnectionRecord[] }>(
+          `/api/users?action=connections&id=${encodeURIComponent(user.id)}`
+        ).catch(() => ({ success: true, connections: [] }))
       ])
 
       setBadges(userBadges || [])
       setActivities(activityResponse?.activities || [])
+      setConnections(connectionResponse?.connections || [])
     } finally {
       setBusy(false)
       setRefreshing(false)
@@ -397,6 +427,46 @@ export default function ProfileTab() {
             </View>
           </View>
           <View style={styles.activityCard}>
+            <Pressable onPress={() => router.push('/connections')} style={styles.connectionCard}>
+              <View style={styles.connectionHeader}>
+                <Text style={styles.infoTitle}>Connections</Text>
+                <View style={styles.activityCountPill}>
+                  <Text style={styles.activityCountText}>{acceptedConnections.length}</Text>
+                </View>
+              </View>
+              {acceptedConnections.length === 0 ? (
+                <Text style={styles.infoLine}>
+                  Start connecting with golfers and your network will show up here.
+                </Text>
+              ) : (
+                <>
+                  {acceptedConnections.slice(0, 3).map((connection) => (
+                    <View key={connection.id} style={styles.connectionRow}>
+                      <Avatar
+                        label={
+                          [connection.first_name, connection.last_name].filter(Boolean).join(' ') ||
+                          connection.username ||
+                          'UGC'
+                        }
+                        size={42}
+                        uri={connection.avatar_url}
+                      />
+                      <View style={styles.connectionCopy}>
+                        <Text style={styles.connectionName}>
+                          {[connection.first_name, connection.last_name].filter(Boolean).join(' ') ||
+                            connection.username ||
+                            'UGC Golfer'}
+                        </Text>
+                        <Text style={styles.connectionMeta}>
+                          {connection.location || 'Location not set'}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                  <Text style={styles.connectionFooter}>Open connections</Text>
+                </>
+              )}
+            </Pressable>
             <View style={styles.activityHeader}>
               <Text style={styles.infoTitle}>Activity</Text>
               <View style={styles.activityCountPill}>
@@ -695,6 +765,43 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     width: '100%'
+  },
+  connectionCard: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 12,
+    padding: 14
+  },
+  connectionHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between'
+  },
+  connectionRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12
+  },
+  connectionCopy: {
+    flex: 1,
+    gap: 2
+  },
+  connectionName: {
+    color: palette.text,
+    fontSize: 15,
+    fontWeight: '700'
+  },
+  connectionMeta: {
+    color: palette.textMuted,
+    fontSize: 13
+  },
+  connectionFooter: {
+    color: palette.aqua,
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center'
   },
   activityCard: {
     backgroundColor: 'rgba(255,255,255,0.04)',
