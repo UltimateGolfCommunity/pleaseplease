@@ -20,8 +20,8 @@ import {
 import { BrandHeader } from '@/components/BrandHeader'
 import { Avatar } from '@/components/Avatar'
 import { PrimaryButton } from '@/components/PrimaryButton'
-import { apiGet, apiPost, apiUploadImage } from '@/lib/api'
-import { getShareableProfileLink } from '@/lib/supabase'
+import { apiGet, apiPost } from '@/lib/api'
+import { getShareableProfileLink, uploadImageToStorage } from '@/lib/supabase'
 import { palette } from '@/lib/theme'
 import { useAuth } from '@/providers/AuthProvider'
 
@@ -224,23 +224,20 @@ export default function ProfileTab() {
       }
 
       try {
-        const formData = new FormData()
-        formData.append('folder', target === 'avatar' ? 'avatars' : 'profile-covers')
-        formData.append('file', {
-          uri: asset.uri,
-          name: fileName,
-          type: mimeType
-        } as unknown as Blob)
-
-        const upload = await apiUploadImage<{ success: boolean; url: string }>('/api/upload', formData)
+        const upload = await uploadImageToStorage({
+          folder: target === 'avatar' ? 'avatars' : 'profile-covers',
+          fileName,
+          mimeType,
+          uri: asset.uri
+        })
 
         await updateProfile(
           target === 'avatar'
             ? {
-                avatar_url: upload.url
+                avatar_url: upload.publicUrl
               }
             : {
-                header_image_url: upload.url
+                header_image_url: upload.publicUrl
               }
         )
 

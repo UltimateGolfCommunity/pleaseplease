@@ -17,6 +17,43 @@ export const mobileSupabase = createClient(supabaseUrl, supabaseAnonKey, {
   }
 })
 
+export async function uploadImageToStorage({
+  uri,
+  fileName,
+  mimeType,
+  folder
+}: {
+  uri: string
+  fileName: string
+  mimeType?: string
+  folder: string
+}) {
+  const extension = fileName.split('.').pop() || 'jpg'
+  const normalizedMimeType = mimeType || 'image/jpeg'
+  const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`
+  const blob = await fetch(uri).then((response) => response.blob())
+
+  const { error } = await mobileSupabase.storage
+    .from('uploads')
+    .upload(path, blob, {
+      contentType: normalizedMimeType,
+      upsert: false
+    })
+
+  if (error) {
+    throw new Error(error.message || 'Unable to upload image.')
+  }
+
+  const {
+    data: { publicUrl }
+  } = mobileSupabase.storage.from('uploads').getPublicUrl(path)
+
+  return {
+    path,
+    publicUrl
+  }
+}
+
 export function getShareableProfileLink(userId: string) {
   const siteUrl = process.env.EXPO_PUBLIC_SITE_URL || 'https://www.ultimategolfcommunity.com'
   return `${siteUrl}/users/${userId}?connect=1`

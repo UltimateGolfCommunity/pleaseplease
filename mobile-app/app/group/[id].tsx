@@ -18,7 +18,8 @@ import {
 import { Avatar } from '@/components/Avatar'
 import { BrandHeader } from '@/components/BrandHeader'
 import { PrimaryButton } from '@/components/PrimaryButton'
-import { apiGet, apiPost, apiUploadImage } from '@/lib/api'
+import { apiGet, apiPost } from '@/lib/api'
+import { uploadImageToStorage } from '@/lib/supabase'
 import { palette } from '@/lib/theme'
 import { useAuth } from '@/providers/AuthProvider'
 
@@ -158,33 +159,27 @@ export default function GroupScreen() {
         setUploadingCover(true)
       }
 
-      const formData = new FormData()
-      formData.append('folder', target === 'logo' ? 'group-logos' : 'group-covers')
-      formData.append(
-        'file',
-        {
-          uri: asset.uri,
-          name: fileName,
-          type: mimeType
-        } as any
-      )
-
       try {
-        const upload = await apiUploadImage<{ success: boolean; url: string }>('/api/upload', formData)
+        const upload = await uploadImageToStorage({
+          folder: target === 'logo' ? 'group-logos' : 'group-covers',
+          fileName,
+          mimeType,
+          uri: asset.uri
+        })
 
         if (target === 'logo') {
           const response = await apiPost<{ success: boolean; group: GroupDetail }>('/api/groups', {
             action: 'update',
             group_id: group.id,
             user_id: user?.id,
-            logo_url: upload.url,
-            image_url: upload.url
+            logo_url: upload.publicUrl,
+            image_url: upload.publicUrl
           })
           setGroup((current) =>
             current
               ? {
                   ...current,
-                  logo_url: response.group?.logo_url || upload.url,
+                  logo_url: response.group?.logo_url || upload.publicUrl,
                   image_url: response.group?.image_url || current.image_url
                 }
               : current
@@ -194,15 +189,15 @@ export default function GroupScreen() {
             action: 'update',
             group_id: group.id,
             user_id: user?.id,
-            header_image_url: upload.url,
-            image_url: upload.url
+            header_image_url: upload.publicUrl,
+            image_url: upload.publicUrl
           })
           setGroup((current) =>
             current
               ? {
                   ...current,
-                  header_image_url: response.group?.header_image_url || upload.url,
-                  image_url: response.group?.image_url || upload.url
+                  header_image_url: response.group?.header_image_url || upload.publicUrl,
+                  image_url: response.group?.image_url || upload.publicUrl
                 }
               : current
           )
