@@ -9,6 +9,8 @@ type BrandHeaderProps = {
   showLogo?: boolean
   showBack?: boolean
   largeLogo?: boolean
+  rightIconName?: keyof typeof Ionicons.glyphMap
+  onRightPress?: () => void
 }
 
 export function BrandHeader({
@@ -16,13 +18,20 @@ export function BrandHeader({
   subtitle,
   showLogo = true,
   showBack = false,
-  largeLogo = false
+  largeLogo = false,
+  rightIconName,
+  onRightPress
 }: BrandHeaderProps) {
   return (
     <View style={styles.wrapper}>
       {showBack ? (
         <Pressable onPress={() => router.back()} style={styles.backButton}>
           <Ionicons color={palette.text} name="chevron-back" size={22} />
+        </Pressable>
+      ) : null}
+      {rightIconName && onRightPress ? (
+        <Pressable onPress={onRightPress} style={styles.rightButton}>
+          <Ionicons color={palette.text} name={rightIconName} size={20} />
         </Pressable>
       ) : null}
       {showLogo ? (
@@ -54,6 +63,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     left: 0,
     position: 'absolute',
+    top: 10,
+    width: 42,
+    zIndex: 5
+  },
+  rightButton: {
+    alignItems: 'center',
+    backgroundColor: palette.card,
+    borderColor: palette.border,
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 42,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 0,
     top: 10,
     width: 42,
     zIndex: 5

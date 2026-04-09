@@ -6,7 +6,6 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -73,7 +72,7 @@ export default function GroupScreen() {
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [uploadingCover, setUploadingCover] = useState(false)
   const [savingEdit, setSavingEdit] = useState(false)
-  const [showEditModal, setShowEditModal] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [group, setGroup] = useState<GroupDetail | null>(null)
   const [members, setMembers] = useState<Member[]>([])
@@ -316,7 +315,7 @@ export default function GroupScreen() {
         setGroup(response.group)
       }
 
-      setShowEditModal(false)
+      setIsEditing(false)
       await loadGroup()
     } catch (error) {
       Alert.alert('Unable to update group', error instanceof Error ? error.message : 'Please try again.')
@@ -382,70 +381,82 @@ export default function GroupScreen() {
           />
         }
       >
-        <BrandHeader showBack />
+        <BrandHeader
+          showBack
+          rightIconName={isOwner ? 'create-outline' : undefined}
+          onRightPress={isOwner ? () => setIsEditing((current) => !current) : undefined}
+        />
 
-        <Modal
-          animationType="slide"
-          onRequestClose={() => setShowEditModal(false)}
-          transparent
-          visible={showEditModal}
-        >
-          <View style={styles.modalBackdrop}>
-            <View style={styles.modalCard}>
-              <Text style={styles.modalTitle}>Edit Group</Text>
-              <Text style={styles.modalBody}>
-                Update the club story, location, and type here. Cover and logo edits stay on the group header.
-              </Text>
+        {isEditing ? (
+          <View style={styles.editCard}>
+            <Text style={styles.editTitle}>Edit Group</Text>
+            <Text style={styles.editBody}>
+              Update the club story, location, type, logo, and cover directly on this page.
+            </Text>
 
-              <TextInput
-                onChangeText={(value) => setEditForm((current) => ({ ...current, name: value }))}
-                placeholder="Group name"
-                placeholderTextColor={palette.textMuted}
-                style={styles.modalInput}
-                value={editForm.name}
+            <TextInput
+              onChangeText={(value) => setEditForm((current) => ({ ...current, name: value }))}
+              placeholder="Group name"
+              placeholderTextColor={palette.textMuted}
+              style={styles.editInput}
+              value={editForm.name}
+            />
+            <TextInput
+              multiline
+              onChangeText={(value) => setEditForm((current) => ({ ...current, description: value }))}
+              placeholder="What is this group about?"
+              placeholderTextColor={palette.textMuted}
+              style={[styles.editInput, styles.editTextarea]}
+              value={editForm.description}
+            />
+            <TextInput
+              onChangeText={(value) => setEditForm((current) => ({ ...current, location: value }))}
+              placeholder="City or course area"
+              placeholderTextColor={palette.textMuted}
+              style={styles.editInput}
+              value={editForm.location}
+            />
+
+            <View style={styles.typeRow}>
+              {[
+                { label: 'Community', value: 'community' },
+                { label: 'Course', value: 'course' }
+              ].map((option) => {
+                const active = editForm.group_type === option.value
+
+                return (
+                  <Pressable
+                    key={option.value}
+                    onPress={() => setEditForm((current) => ({ ...current, group_type: option.value }))}
+                    style={[styles.typeChip, active && styles.typeChipActive]}
+                  >
+                    <Text style={[styles.typeLabel, active && styles.typeLabelActive]}>{option.label}</Text>
+                  </Pressable>
+                )
+              })}
+            </View>
+
+            <View style={styles.mediaActions}>
+              <PrimaryButton
+                label={uploadingLogo ? 'Updating logo...' : 'Edit Logo'}
+                variant="ghost"
+                loading={uploadingLogo}
+                onPress={() => void handlePickGroupImage('logo')}
               />
-              <TextInput
-                multiline
-                onChangeText={(value) => setEditForm((current) => ({ ...current, description: value }))}
-                placeholder="What is this group about?"
-                placeholderTextColor={palette.textMuted}
-                style={[styles.modalInput, styles.modalTextarea]}
-                value={editForm.description}
+              <PrimaryButton
+                label={uploadingCover ? 'Updating cover...' : 'Edit Cover'}
+                variant="ghost"
+                loading={uploadingCover}
+                onPress={() => void handlePickGroupImage('cover')}
               />
-              <TextInput
-                onChangeText={(value) => setEditForm((current) => ({ ...current, location: value }))}
-                placeholder="City or course area"
-                placeholderTextColor={palette.textMuted}
-                style={styles.modalInput}
-                value={editForm.location}
-              />
+            </View>
 
-              <View style={styles.typeRow}>
-                {[
-                  { label: 'Community', value: 'community' },
-                  { label: 'Course', value: 'course' }
-                ].map((option) => {
-                  const active = editForm.group_type === option.value
-
-                  return (
-                    <Pressable
-                      key={option.value}
-                      onPress={() => setEditForm((current) => ({ ...current, group_type: option.value }))}
-                      style={[styles.typeChip, active && styles.typeChipActive]}
-                    >
-                      <Text style={[styles.typeLabel, active && styles.typeLabelActive]}>{option.label}</Text>
-                    </Pressable>
-                  )
-                })}
-              </View>
-
-              <View style={styles.modalActions}>
-                <PrimaryButton label="Cancel" variant="ghost" onPress={() => setShowEditModal(false)} />
-                <PrimaryButton label={savingEdit ? 'Saving...' : 'Save Group'} loading={savingEdit} onPress={handleSaveEdit} />
-              </View>
+            <View style={styles.editActions}>
+              <PrimaryButton label="Cancel" variant="ghost" onPress={() => setIsEditing(false)} />
+              <PrimaryButton label={savingEdit ? 'Saving...' : 'Save Group'} loading={savingEdit} onPress={handleSaveEdit} />
             </View>
           </View>
-        </Modal>
+        ) : null}
 
         <View style={styles.hero}>
           <View style={styles.coverShell}>
@@ -456,16 +467,6 @@ export default function GroupScreen() {
                 <Text style={styles.coverFallbackText}>Add a group cover photo</Text>
               </View>
             )}
-            {isOwner ? (
-              <View style={styles.coverActions}>
-                <Pressable onPress={() => setShowEditModal(true)} style={[styles.coverButton, styles.coverButtonLeft]}>
-                  <Text style={styles.coverButtonText}>Edit Group</Text>
-                </Pressable>
-                <Pressable onPress={() => void handlePickGroupImage('cover')} style={styles.coverButton}>
-                  <Text style={styles.coverButtonText}>{uploadingCover ? 'Updating...' : 'Edit Cover'}</Text>
-                </Pressable>
-              </View>
-            ) : null}
           </View>
           <View style={styles.heroTop}>
             <View style={styles.logoColumn}>
@@ -475,11 +476,6 @@ export default function GroupScreen() {
                 size={92}
                 uri={group?.logo_url || group?.image_url}
               />
-              {isOwner ? (
-                <Pressable onPress={() => void handlePickGroupImage('logo')} style={styles.logoEditChip}>
-                  <Text style={styles.logoEditChipText}>{uploadingLogo ? 'Updating...' : 'Edit Logo'}</Text>
-                </Pressable>
-              ) : null}
             </View>
             <View style={styles.heroCopy}>
               {busy ? <ActivityIndicator color={palette.aqua} /> : null}
@@ -521,32 +517,6 @@ export default function GroupScreen() {
 
         {activeSection === 'info' ? (
           <View style={styles.card}>
-            {isOwner ? (
-              <View style={styles.ownerPanel}>
-                <View style={styles.ownerPanelCopy}>
-                  <Text style={styles.ownerPanelEyebrow}>Creator tools</Text>
-                  <Text style={styles.ownerPanelTitle}>Manage your club</Text>
-                  <Text style={styles.ownerPanelBody}>
-                    Update the group story, change the home area, and refresh the logo or cover any time.
-                  </Text>
-                </View>
-                <View style={styles.ownerPanelActions}>
-                  <PrimaryButton label="Edit Group" onPress={() => setShowEditModal(true)} />
-                  <PrimaryButton
-                    label={uploadingLogo ? 'Updating logo...' : 'Change Logo'}
-                    variant="ghost"
-                    loading={uploadingLogo}
-                    onPress={() => void handlePickGroupImage('logo')}
-                  />
-                  <PrimaryButton
-                    label={uploadingCover ? 'Updating cover...' : 'Change Cover'}
-                    variant="ghost"
-                    loading={uploadingCover}
-                    onPress={() => void handlePickGroupImage('cover')}
-                  />
-                </View>
-              </View>
-            ) : null}
             <Text style={styles.sectionEyebrow}>About</Text>
             <Text style={styles.sectionTitle}>What this group is about</Text>
             <Text style={styles.body}>
@@ -662,34 +632,25 @@ const styles = StyleSheet.create({
     gap: 20,
     padding: 20
   },
-  modalBackdrop: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(2, 8, 6, 0.72)',
-    flex: 1,
-    justifyContent: 'center',
-    padding: 20
-  },
-  modalCard: {
+  editCard: {
     backgroundColor: palette.card,
     borderColor: palette.border,
     borderRadius: 28,
     borderWidth: 1,
     gap: 14,
-    maxWidth: 520,
-    padding: 20,
-    width: '100%'
+    padding: 20
   },
-  modalTitle: {
+  editTitle: {
     color: palette.text,
     fontSize: 22,
     fontWeight: '700'
   },
-  modalBody: {
+  editBody: {
     color: palette.textMuted,
     fontSize: 14,
     lineHeight: 21
   },
-  modalInput: {
+  editInput: {
     backgroundColor: palette.cardSoft,
     borderColor: palette.border,
     borderRadius: 18,
@@ -698,7 +659,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
     paddingHorizontal: 16
   },
-  modalTextarea: {
+  editTextarea: {
     minHeight: 110,
     paddingBottom: 16,
     paddingTop: 16,
@@ -723,6 +684,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(103,232,249,0.14)',
     borderColor: 'rgba(103,232,249,0.26)'
   },
+  mediaActions: {
+    gap: 10,
+    marginTop: 4
+  },
   typeLabel: {
     color: palette.textMuted,
     fontSize: 14,
@@ -731,7 +696,7 @@ const styles = StyleSheet.create({
   typeLabelActive: {
     color: palette.aqua
   },
-  modalActions: {
+  editActions: {
     flexDirection: 'row',
     gap: 12,
     justifyContent: 'flex-end'
@@ -768,54 +733,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600'
   },
-  coverActions: {
-    bottom: 12,
-    flexDirection: 'row',
-    gap: 10,
-    left: 12,
-    position: 'absolute',
-    right: 12
-  },
-  coverButton: {
-    backgroundColor: 'rgba(7, 20, 15, 0.82)',
-    borderColor: 'rgba(255,255,255,0.12)',
-    borderRadius: 999,
-    borderWidth: 1,
-    flex: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    position: 'relative'
-  },
-  coverButtonLeft: {
-    backgroundColor: 'rgba(103,232,249,0.12)',
-    borderColor: 'rgba(103,232,249,0.22)'
-  },
-  coverButtonText: {
-    color: palette.white,
-    fontSize: 12,
-    fontWeight: '700'
-  },
   heroTop: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: 16
   },
   logoColumn: {
-    alignItems: 'center',
-    gap: 10
-  },
-  logoEditChip: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderColor: palette.border,
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 7
-  },
-  logoEditChipText: {
-    color: palette.text,
-    fontSize: 12,
-    fontWeight: '700'
+    alignItems: 'center'
   },
   heroCopy: {
     flex: 1,
