@@ -31,11 +31,18 @@ export async function uploadImageToStorage({
   const extension = fileName.split('.').pop() || 'jpg'
   const normalizedMimeType = mimeType || 'image/jpeg'
   const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`
-  const blob = await fetch(uri).then((response) => response.blob())
+  const response = await fetch(uri)
+  const arrayBuffer = await response.arrayBuffer()
+
+  if (!arrayBuffer.byteLength) {
+    throw new Error('Selected image file was empty.')
+  }
+
+  const fileBytes = new Uint8Array(arrayBuffer)
 
   const { error } = await mobileSupabase.storage
     .from('uploads')
-    .upload(path, blob, {
+    .upload(path, fileBytes, {
       contentType: normalizedMimeType,
       upsert: false
     })
