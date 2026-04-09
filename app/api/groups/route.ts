@@ -341,14 +341,6 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Handle create action (original functionality)
-    if (!name) {
-      return NextResponse.json(
-        { error: 'Group name is required' },
-        { status: 400 }
-      )
-    }
-    
     // If still no user_id, return error
     if (!user_id) {
       return NextResponse.json(
@@ -461,6 +453,13 @@ export async function POST(request: NextRequest) {
         message: 'Group updated successfully',
         group
       })
+    }
+
+    if (!name) {
+      return NextResponse.json(
+        { error: 'Group name is required' },
+        { status: 400 }
+      )
     }
 
     // Create the group
