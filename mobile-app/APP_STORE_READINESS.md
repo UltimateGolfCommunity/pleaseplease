@@ -60,6 +60,7 @@ Scripts now available in [package.json](/Users/lukerestall/Documents/GitHub/plea
 ```bash
 cd mobile-app
 npm install
+npm run preflight:release
 npm run build:ios:preview
 npm run build:ios:production
 npm run submit:ios:production

@@ -9,6 +9,7 @@
     "android": "expo run:android",
     "web": "expo start --web",
     "lint": "eslint .",
+    "preflight:release": "node ./scripts/release-preflight.mjs",
     "build:ios:preview": "eas build --platform ios --profile preview",
     "build:ios:production": "eas build --platform ios --profile production",
     "submit:ios:production": "eas submit --platform ios --profile production"

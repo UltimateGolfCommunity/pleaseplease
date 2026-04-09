@@ -16,6 +16,7 @@ Use this when the app is ready for the first iOS preview/TestFlight pass.
 ```bash
 cd mobile-app
 npm install
+npm run preflight:release
 npm run build:ios:preview
 ```
 
