@@ -190,15 +190,13 @@ export default function GroupScreen() {
             group_id: group.id,
             user_id: user?.id,
             name: group.name,
-            header_image_url: upload.publicUrl,
-            image_url: upload.publicUrl
+            header_image_url: upload.publicUrl
           })
           setGroup((current) =>
             current
               ? {
                   ...current,
-                  header_image_url: displayUrl,
-                  image_url: displayUrl
+                  header_image_url: displayUrl
                 }
               : current
           )
