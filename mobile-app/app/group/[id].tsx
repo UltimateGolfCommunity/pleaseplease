@@ -172,6 +172,7 @@ export default function GroupScreen() {
             action: 'update',
             group_id: group.id,
             user_id: user?.id,
+            name: group.name,
             logo_url: upload.publicUrl,
             image_url: upload.publicUrl
           })
@@ -189,6 +190,7 @@ export default function GroupScreen() {
             action: 'update',
             group_id: group.id,
             user_id: user?.id,
+            name: group.name,
             header_image_url: upload.publicUrl,
             image_url: upload.publicUrl
           })
