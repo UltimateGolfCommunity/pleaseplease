@@ -151,18 +151,6 @@ export default function ProfileTab() {
 
   const isVerified = !!session?.user?.email_confirmed_at
   const founderBadge = badges.find((badge) => badge.badge?.name === 'Founding Member')
-  const profileSummary = useMemo(() => {
-    const bits = [
-      profile?.home_course || profile?.home_club || null,
-      profile?.location || null,
-      profile?.handicap !== null && profile?.handicap !== undefined
-        ? `Handicap ${profile.handicap}`
-        : null,
-      ratingSummary.average ? `${ratingSummary.average.toFixed(1)}★` : null
-    ].filter(Boolean)
-
-    return bits.length ? bits.join(' • ') : 'Complete your golfer profile'
-  }, [profile?.handicap, profile?.home_club, profile?.home_course, profile?.location, ratingSummary.average])
   const acceptedConnections = useMemo(() => {
     return connections
       .map((connection) =>
@@ -170,6 +158,26 @@ export default function ProfileTab() {
       )
       .filter(Boolean) as UserCard[]
   }, [connections, user?.id])
+  const profileSummary = useMemo(() => {
+    const bits = [
+      profile?.home_course || profile?.home_club || null,
+      profile?.location || null,
+      profile?.handicap !== null && profile?.handicap !== undefined
+        ? `Handicap ${profile.handicap}`
+        : null,
+      `${acceptedConnections.length} Connections`,
+      ratingSummary.average ? `${ratingSummary.average.toFixed(1)}★` : null
+    ].filter(Boolean)
+
+    return bits.length ? bits.join(' • ') : 'Complete your golfer profile'
+  }, [
+    acceptedConnections.length,
+    profile?.handicap,
+    profile?.home_club,
+    profile?.home_course,
+    profile?.location,
+    ratingSummary.average
+  ])
 
   const loadProfile = useCallback(async () => {
     if (!user?.id) return
@@ -467,44 +475,6 @@ export default function ProfileTab() {
             </View>
           </View>
           <View style={styles.activityCard}>
-            <Pressable onPress={() => router.push('/connections')} style={styles.connectionCard}>
-              <View style={styles.connectionHeader}>
-                <Text style={styles.infoTitle}>Connections</Text>
-                <View style={styles.activityCountPill}>
-                  <Text style={styles.activityCountText}>{acceptedConnections.length}</Text>
-                </View>
-              </View>
-              {acceptedConnections.length === 0 ? (
-                <Text style={styles.infoLine}>
-                  Start connecting with golfers and your network will show up here.
-                </Text>
-              ) : (
-                <>
-                  {acceptedConnections.slice(0, 3).map((connection) => (
-                    <View key={connection.id} style={styles.connectionRow}>
-                      <Avatar
-                        label={
-                          [connection.first_name, connection.last_name].filter(Boolean).join(' ') ||
-                          connection.username ||
-                          'UGC'
-                        }
-                        size={42}
-                        uri={connection.avatar_url}
-                      />
-                      <View style={styles.connectionCopy}>
-                        <Text style={styles.connectionName}>
-                          {[connection.first_name, connection.last_name].filter(Boolean).join(' ') ||
-                            connection.username ||
-                            'UGC Golfer'}
-                        </Text>
-                        <Text style={styles.connectionMeta}>{connection.location || 'Local golfer'}</Text>
-                      </View>
-                    </View>
-                  ))}
-                  <Text style={styles.connectionFooter}>Open connections</Text>
-                </>
-              )}
-            </Pressable>
             <View style={styles.activityHeader}>
               <Text style={styles.infoTitle}>Activity</Text>
               <View style={styles.activityCountPill}>
@@ -870,43 +840,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     width: '100%'
-  },
-  connectionCard: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 18,
-    borderWidth: 1,
-    gap: 12,
-    padding: 14
-  },
-  connectionHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between'
-  },
-  connectionRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 12
-  },
-  connectionCopy: {
-    flex: 1,
-    gap: 2
-  },
-  connectionName: {
-    color: palette.text,
-    fontSize: 15,
-    fontWeight: '700'
-  },
-  connectionMeta: {
-    color: palette.textMuted,
-    fontSize: 13
-  },
-  connectionFooter: {
-    color: palette.aqua,
-    fontSize: 13,
-    fontWeight: '700',
-    textAlign: 'center'
   },
   activityCard: {
     backgroundColor: 'rgba(255,255,255,0.04)',
