@@ -183,7 +183,7 @@ export default function HomeTab() {
     if (!user?.id) return
 
     try {
-      const [myRounds, openings, feed] = await Promise.all([
+      const [myRoundsResult, openingsResult, feedResult] = await Promise.allSettled([
         apiGet<TeeTime[]>(`/api/tee-times?action=user&user_id=${encodeURIComponent(user.id)}`),
         apiGet<TeeTime[]>(`/api/tee-times?action=available&user_id=${encodeURIComponent(user.id)}`),
         apiGet<{ activities: Activity[] }>(
@@ -191,10 +191,21 @@ export default function HomeTab() {
         )
       ])
 
-      const futureMyRounds = (myRounds || []).filter((teeTime) => teeTime.tee_time_date)
+      const myRounds = myRoundsResult.status === 'fulfilled' ? myRoundsResult.value : []
+      const openings = openingsResult.status === 'fulfilled' ? openingsResult.value : []
+      const feed = feedResult.status === 'fulfilled' ? feedResult.value : { activities: [] }
+
+      const futureMyRounds = (myRounds || [])
+        .filter((teeTime) => teeTime.tee_time_date)
+        .sort((a, b) => {
+          const aValue = `${a.tee_time_date || ''}T${a.tee_time_time || '00:00:00'}`
+          const bValue = `${b.tee_time_date || ''}T${b.tee_time_time || '00:00:00'}`
+          return aValue.localeCompare(bValue)
+        })
+
       const nextMine = futureMyRounds[0] || null
       setNextTeeTime(nextMine)
-      setAvailableTeeTimes((openings || []).filter((teeTime) => teeTime.creator_id !== user.id).slice(0, 6))
+      setAvailableTeeTimes((openings || []).filter((teeTime) => teeTime.creator_id !== user.id))
       setActivityFeed(feed.activities || [])
     } finally {
       setBusy(false)
