@@ -405,7 +405,7 @@ export default function ProfileTab() {
           />
         }
       >
-        <BrandHeader rightIconName="settings-outline" onRightPress={() => setShowSettingsModal(true)} />
+        <BrandHeader />
 
         <View style={styles.headerCard}>
           <View style={styles.coverShell}>
@@ -430,6 +430,12 @@ export default function ProfileTab() {
                 <Ionicons color={palette.text} name="share-social-outline" size={18} />
               </Pressable>
             </View>
+            <Pressable
+              onPress={() => setShowSettingsModal(true)}
+              style={styles.settingsButton}
+            >
+              <Ionicons color={palette.text} name="settings-outline" size={18} />
+            </Pressable>
             {profile?.header_image_url ? (
               <Image source={{ uri: profile.header_image_url }} style={styles.coverImage} />
             ) : (
@@ -750,6 +756,20 @@ const styles = StyleSheet.create({
     height: 42,
     justifyContent: 'center',
     width: 42
+  },
+  settingsButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(7,15,12,0.46)',
+    borderColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 42,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 14,
+    top: 68,
+    width: 42,
+    zIndex: 2
   },
   coverImage: {
     height: '100%',
