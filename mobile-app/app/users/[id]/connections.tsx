@@ -115,14 +115,6 @@ export default function PublicUserConnectionsScreen() {
           showBack
         />
 
-        <View style={styles.card}>
-          <Text style={styles.sectionEyebrow}>Network</Text>
-          <Text style={styles.sectionTitle}>{connectedGolfers.length} connections</Text>
-          <Text style={styles.helper}>
-            Everyone this golfer is already connected with shows up here.
-          </Text>
-        </View>
-
         <View style={styles.section}>
           {busy ? <ActivityIndicator color={palette.aqua} /> : null}
           {!busy && connectedGolfers.length === 0 ? (
@@ -175,18 +167,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 10,
     padding: 20
-  },
-  sectionEyebrow: {
-    color: palette.aqua,
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1.4,
-    textTransform: 'uppercase'
-  },
-  sectionTitle: {
-    color: palette.text,
-    fontSize: 24,
-    fontWeight: '700'
   },
   helper: {
     color: palette.textMuted,
