@@ -514,105 +514,119 @@ export default function HomeTab() {
 
         {showCreateForm ? (
           <View style={styles.formCard}>
-            <Text style={styles.sectionTitle}>{editingTeeTimeId ? 'Edit tee time' : 'Post a tee time'}</Text>
-            <Text style={styles.body}>
-              Keep this quick: set the course, choose a vibe, and use the fast date and time presets if they fit.
-            </Text>
-            <TextInput
-              onChangeText={(value) => setForm((current) => ({ ...current, course_name: value }))}
-              placeholder="Course name"
-              placeholderTextColor={palette.textMuted}
-              style={styles.input}
-              value={form.course_name}
-            />
-            <TextInput
-              onChangeText={(value) => setForm((current) => ({ ...current, location: value }))}
-              placeholder="Location"
-              placeholderTextColor={palette.textMuted}
-              style={styles.input}
-              value={form.location}
-            />
-            <View style={styles.segmentRow}>
-              {[
-                { label: 'Today', offset: 0 },
-                { label: 'Tomorrow', offset: 1 },
-                { label: 'Weekend', offset: null }
-              ].map((option) => {
-                const comparisonDate = (() => {
-                  if (option.offset === null) {
+            <View style={styles.composerHeader}>
+              <View style={styles.composerTitleWrap}>
+                <Text style={styles.cardAccent}>{editingTeeTimeId ? 'Edit round' : 'Quick post'}</Text>
+                <Text style={styles.sectionTitle}>{editingTeeTimeId ? 'Edit tee time' : 'Post a tee time'}</Text>
+              </View>
+              <Text style={styles.composerHint}>Fast choices, clean details, and you are live.</Text>
+            </View>
+
+            <View style={styles.composerSection}>
+              <Text style={styles.formSectionLabel}>Where</Text>
+              <TextInput
+                onChangeText={(value) => setForm((current) => ({ ...current, course_name: value }))}
+                placeholder="Course name"
+                placeholderTextColor={palette.textMuted}
+                style={styles.input}
+                value={form.course_name}
+              />
+              <TextInput
+                onChangeText={(value) => setForm((current) => ({ ...current, location: value }))}
+                placeholder="Area or city"
+                placeholderTextColor={palette.textMuted}
+                style={styles.input}
+                value={form.location}
+              />
+            </View>
+
+            <View style={styles.composerSection}>
+              <View style={styles.formSectionHeader}>
+                <Text style={styles.formSectionLabel}>When</Text>
+                <Text style={styles.formSectionHint}>Pick a day, then fine-tune the time</Text>
+              </View>
+              <View style={styles.segmentRow}>
+                {[
+                  { label: 'Today', offset: 0 },
+                  { label: 'Tomorrow', offset: 1 },
+                  { label: 'Weekend', offset: null }
+                ].map((option) => {
+                  const comparisonDate = (() => {
+                    if (option.offset === null) {
+                      const next = new Date()
+                      const day = next.getDay()
+                      const daysUntilSaturday = (6 - day + 7) % 7 || 7
+                      next.setDate(next.getDate() + daysUntilSaturday)
+                      next.setHours(12, 0, 0, 0)
+                      return next
+                    }
+
                     const next = new Date()
-                    const day = next.getDay()
-                    const daysUntilSaturday = (6 - day + 7) % 7 || 7
-                    next.setDate(next.getDate() + daysUntilSaturday)
+                    next.setDate(next.getDate() + option.offset)
                     next.setHours(12, 0, 0, 0)
                     return next
-                  }
+                  })()
 
-                  const next = new Date()
-                  next.setDate(next.getDate() + option.offset)
-                  next.setHours(12, 0, 0, 0)
-                  return next
-                })()
+                  const active = selectedDate && toApiDate(selectedDate) === toApiDate(comparisonDate)
 
-                const active = selectedDate && toApiDate(selectedDate) === toApiDate(comparisonDate)
+                  return (
+                    <Pressable
+                      key={option.label}
+                      onPress={() => (option.offset === null ? applyWeekendDate() : applyQuickDate(option.offset))}
+                      style={[styles.segment, active && styles.segmentActive]}
+                    >
+                      <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>
+                        {option.label}
+                      </Text>
+                    </Pressable>
+                  )
+                })}
+              </View>
+              <View style={styles.splitRow}>
+                <Pressable
+                  onPress={() => {
+                    setShowTimePicker(false)
+                    setShowDatePicker(true)
+                  }}
+                  style={[styles.input, styles.flexInput, styles.pickerField]}
+                >
+                  <Text style={form.tee_time_date ? styles.pickerValue : styles.pickerPlaceholder}>
+                    {form.tee_time_date || 'Pick date'}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    setShowDatePicker(false)
+                    setShowTimePicker(true)
+                  }}
+                  style={[styles.input, styles.flexInput, styles.pickerField]}
+                >
+                  <Text style={form.tee_time_time ? styles.pickerValue : styles.pickerPlaceholder}>
+                    {form.tee_time_time || 'Pick time'}
+                  </Text>
+                </Pressable>
+              </View>
+              <View style={styles.segmentRow}>
+                {quickTimeOptions.map((option) => {
+                  const currentTime = selectedTime ? toApiTime(selectedTime) : ''
+                  const optionTime = `${option.hour.toString().padStart(2, '0')}:${option.minute
+                    .toString()
+                    .padStart(2, '0')}`
+                  const active = currentTime === optionTime
 
-                return (
-                  <Pressable
-                    key={option.label}
-                    onPress={() => (option.offset === null ? applyWeekendDate() : applyQuickDate(option.offset))}
-                    style={[styles.segment, active && styles.segmentActive]}
-                  >
-                    <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>
-                      {option.label}
-                    </Text>
-                  </Pressable>
-                )
-              })}
-            </View>
-            <View style={styles.splitRow}>
-              <Pressable
-                onPress={() => {
-                  setShowTimePicker(false)
-                  setShowDatePicker(true)
-                }}
-                style={[styles.input, styles.flexInput, styles.pickerField]}
-              >
-                <Text style={form.tee_time_date ? styles.pickerValue : styles.pickerPlaceholder}>
-                  {form.tee_time_date || 'Pick date'}
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  setShowDatePicker(false)
-                  setShowTimePicker(true)
-                }}
-                style={[styles.input, styles.flexInput, styles.pickerField]}
-              >
-                <Text style={form.tee_time_time ? styles.pickerValue : styles.pickerPlaceholder}>
-                  {form.tee_time_time || 'Pick time'}
-                </Text>
-              </Pressable>
-            </View>
-            <View style={styles.segmentRow}>
-              {quickTimeOptions.map((option) => {
-                const currentTime = selectedTime ? toApiTime(selectedTime) : ''
-                const optionTime = `${option.hour.toString().padStart(2, '0')}:${option.minute
-                  .toString()
-                  .padStart(2, '0')}`
-                const active = currentTime === optionTime
-
-                return (
-                  <Pressable
-                    key={option.label}
-                    onPress={() => applyQuickTime(option.hour, option.minute)}
-                    style={[styles.segment, active && styles.segmentActive]}
-                  >
-                    <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>
-                      {option.label}
-                    </Text>
-                  </Pressable>
-                )
-              })}
+                  return (
+                    <Pressable
+                      key={option.label}
+                      onPress={() => applyQuickTime(option.hour, option.minute)}
+                      style={[styles.segment, active && styles.segmentActive]}
+                    >
+                      <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>
+                        {option.label}
+                      </Text>
+                    </Pressable>
+                  )
+                })}
+              </View>
             </View>
             {showDatePicker ? (
               <View style={styles.inlinePicker}>
@@ -634,60 +648,77 @@ export default function HomeTab() {
                 />
               </View>
             ) : null}
-            <View style={styles.splitRow}>
-              <TextInput
-                keyboardType="number-pad"
-                onChangeText={(value) => setForm((current) => ({ ...current, max_players: value }))}
-                placeholder="Players"
-                placeholderTextColor={palette.textMuted}
-                style={[styles.input, styles.flexInput]}
-                value={form.max_players}
-              />
-              <View style={styles.categoryPill}>
-                <Text style={styles.categoryLabel}>{form.handicap_requirement}</Text>
+            <View style={styles.composerSection}>
+              <View style={styles.formSectionHeader}>
+                <Text style={styles.formSectionLabel}>Who fits this round</Text>
+                <Text style={styles.formSectionHint}>Keep it flexible, but set the tone</Text>
+              </View>
+              <View style={styles.splitRow}>
+                <View style={[styles.input, styles.flexInput, styles.inlineInfoField]}>
+                  <Text style={styles.inlineFieldLabel}>Spots</Text>
+                  <TextInput
+                    keyboardType="number-pad"
+                    onChangeText={(value) => setForm((current) => ({ ...current, max_players: value }))}
+                    placeholder="4"
+                    placeholderTextColor={palette.textMuted}
+                    style={styles.inlineFieldInput}
+                    value={form.max_players}
+                  />
+                </View>
+                <View style={[styles.categoryPill, styles.flexInput]}>
+                  <Text style={styles.inlineFieldLabel}>Category</Text>
+                  <Text style={styles.categoryLabel}>{form.handicap_requirement}</Text>
+                </View>
+              </View>
+              <View style={styles.skillGrid}>
+                {teeTimeSkillOptions.map((option) => {
+                  const active = form.handicap_requirement === option
+
+                  return (
+                    <Pressable
+                      key={option}
+                      onPress={() => setForm((current) => ({ ...current, handicap_requirement: option }))}
+                      style={[styles.skillChip, active && styles.skillChipActive]}
+                    >
+                      <Text style={[styles.skillChipText, active && styles.skillChipTextActive]}>{option}</Text>
+                    </Pressable>
+                  )
+                })}
               </View>
             </View>
-            <View style={styles.skillGrid}>
-              {teeTimeSkillOptions.map((option) => {
-                const active = form.handicap_requirement === option
 
-                return (
-                  <Pressable
-                    key={option}
-                    onPress={() => setForm((current) => ({ ...current, handicap_requirement: option }))}
-                    style={[styles.skillChip, active && styles.skillChipActive]}
-                  >
-                    <Text style={[styles.skillChipText, active && styles.skillChipTextActive]}>{option}</Text>
-                  </Pressable>
-                )
-              })}
-            </View>
-            <TextInput
-              editable={false}
-              placeholder="Visibility"
-              placeholderTextColor={palette.textMuted}
-              style={styles.hiddenInput}
-              value={form.visibility_scope}
-            />
-            <View style={styles.segmentRow}>
-              {[
-                { label: 'Public', value: 'public' },
-                { label: 'Connections', value: 'connections' }
-              ].map((option) => {
-                const active = form.visibility_scope === option.value
+            <View style={styles.composerSection}>
+              <View style={styles.formSectionHeader}>
+                <Text style={styles.formSectionLabel}>Visibility</Text>
+                <Text style={styles.formSectionHint}>Choose who sees the invite first</Text>
+              </View>
+              <TextInput
+                editable={false}
+                placeholder="Visibility"
+                placeholderTextColor={palette.textMuted}
+                style={styles.hiddenInput}
+                value={form.visibility_scope}
+              />
+              <View style={styles.segmentRow}>
+                {[
+                  { label: 'Public', value: 'public' },
+                  { label: 'Connections', value: 'connections' }
+                ].map((option) => {
+                  const active = form.visibility_scope === option.value
 
-                return (
-                  <Pressable
-                    key={option.value}
-                    onPress={() => setForm((current) => ({ ...current, visibility_scope: option.value }))}
-                    style={[styles.segment, active && styles.segmentActive]}
-                  >
-                    <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>
-                      {option.label}
-                    </Text>
-                  </Pressable>
-                )
-              })}
+                  return (
+                    <Pressable
+                      key={option.value}
+                      onPress={() => setForm((current) => ({ ...current, visibility_scope: option.value }))}
+                      style={[styles.segment, active && styles.segmentActive]}
+                    >
+                      <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>
+                        {option.label}
+                      </Text>
+                    </Pressable>
+                  )
+                })}
+              </View>
             </View>
             <PrimaryButton
               label={editingTeeTimeId ? 'Save Tee Time' : 'Publish Tee Time'}
@@ -982,8 +1013,37 @@ const styles = StyleSheet.create({
     borderColor: palette.border,
     borderRadius: 28,
     borderWidth: 1,
-    gap: 12,
+    gap: 18,
     padding: 20
+  },
+  composerHeader: {
+    gap: 8
+  },
+  composerTitleWrap: {
+    gap: 4
+  },
+  composerHint: {
+    color: palette.textMuted,
+    fontSize: 14,
+    lineHeight: 20
+  },
+  composerSection: {
+    gap: 10
+  },
+  formSectionHeader: {
+    gap: 3
+  },
+  formSectionLabel: {
+    color: palette.text,
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 1,
+    textTransform: 'uppercase'
+  },
+  formSectionHint: {
+    color: palette.textMuted,
+    fontSize: 13,
+    lineHeight: 18
   },
   row: {
     gap: 12
@@ -1079,21 +1139,39 @@ const styles = StyleSheet.create({
     gap: 10
   },
   categoryPill: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
     backgroundColor: palette.cardSoft,
     borderColor: palette.border,
     borderRadius: 18,
     borderWidth: 1,
-    flex: 1,
+    gap: 5,
     justifyContent: 'center',
     minHeight: 52,
     paddingHorizontal: 14
   },
   categoryLabel: {
     color: palette.text,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
-    textAlign: 'center'
+    textAlign: 'left'
+  },
+  inlineInfoField: {
+    gap: 5,
+    justifyContent: 'center',
+    paddingVertical: 8
+  },
+  inlineFieldLabel: {
+    color: palette.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase'
+  },
+  inlineFieldInput: {
+    color: palette.text,
+    fontSize: 16,
+    fontWeight: '700',
+    paddingVertical: 0
   },
   segmentRow: {
     flexDirection: 'row',
