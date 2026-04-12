@@ -278,6 +278,11 @@ export default function PublicUserScreen() {
               </View>
             )}
             <View style={styles.coverOverlay} />
+            {status === 'connected' ? (
+              <Pressable onPress={() => router.push(`/messages/${id}`)} style={styles.messageIconButton}>
+                <Ionicons color={palette.text} name="mail-outline" size={20} />
+              </Pressable>
+            ) : null}
           </View>
 
           <View style={styles.avatarWrap}>
@@ -311,22 +316,16 @@ export default function PublicUserScreen() {
             {profile?.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
           </View>
 
-          <View style={styles.actionRow}>
-            <PrimaryButton
-              disabled={status === 'connected' || status === 'pending' || status === 'incoming_pending'}
-              label={actionLabel}
-              loading={connecting}
-              onPress={handleConnect}
-            />
-            <PrimaryButton
-              label="Connections"
-              variant="ghost"
-              onPress={() => router.push(`/users/${id}/connections`)}
-            />
-            {status === 'connected' ? (
-              <PrimaryButton label="Message" variant="ghost" onPress={() => router.push(`/messages/${id}`)} />
-            ) : null}
-          </View>
+          {status !== 'connected' ? (
+            <View style={styles.actionRow}>
+              <PrimaryButton
+                disabled={status === 'pending' || status === 'incoming_pending'}
+                label={actionLabel}
+                loading={connecting}
+                onPress={handleConnect}
+              />
+            </View>
+          ) : null}
 
           <View style={styles.starRow}>
             {[1, 2, 3, 4, 5].map((stars) => (
@@ -423,6 +422,20 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0
   },
+  messageIconButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(3,10,8,0.42)',
+    borderColor: 'rgba(255,255,255,0.14)',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 42,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 14,
+    top: 14,
+    width: 42,
+    zIndex: 2
+  },
   avatarWrap: {
     alignSelf: 'center',
     borderColor: palette.card,
@@ -505,7 +518,6 @@ const styles = StyleSheet.create({
     textAlign: 'center'
   },
   actionRow: {
-    gap: 10,
     marginTop: 16
   },
   starRow: {
