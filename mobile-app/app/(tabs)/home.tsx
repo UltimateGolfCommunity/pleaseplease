@@ -310,24 +310,6 @@ export default function HomeTab() {
     setShowTimePicker(false)
   }
 
-  const openComposerForEdit = (teeTime: TeeTime) => {
-    const parsedDate = fromApiDate(teeTime.tee_time_date)
-    const parsedTime = fromApiTime(teeTime.tee_time_time)
-    setEditingTeeTimeId(teeTime.id)
-    setSelectedDate(parsedDate)
-    setSelectedTime(parsedTime)
-    setForm({
-      course_name: teeTime.course_name || '',
-      location: teeTime.location || '',
-      tee_time_date: parsedDate ? formatFormDate(parsedDate) : '',
-      tee_time_time: parsedTime ? formatFormTime(parsedTime) : teeTime.tee_time_time || '',
-      max_players: teeTime.max_players ? String(teeTime.max_players) : '4',
-      handicap_requirement: (teeTime as TeeTime & { handicap_requirement?: string }).handicap_requirement || 'Weekend Hack',
-      visibility_scope: teeTime.visibility_scope || 'public'
-    })
-    setShowCreateForm(true)
-  }
-
   const applyQuickDate = (offsetDays: number) => {
     const next = new Date()
     next.setDate(next.getDate() + offsetDays)
@@ -750,13 +732,6 @@ export default function HomeTab() {
             }
             onPress={() => router.push('/tee-times')}
           />
-          {nextTeeTime ? (
-            <PrimaryButton
-              label="Edit Tee Time"
-              variant="ghost"
-              onPress={() => openComposerForEdit(nextTeeTime)}
-            />
-          ) : null}
         </View>
 
         <View style={styles.panelSwitcher}>
