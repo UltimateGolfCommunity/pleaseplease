@@ -1516,6 +1516,33 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'join') {
+      let teeTimeDetails: any = null
+      let joiningUserDetails: any = null
+
+      try {
+        const { data: teeTime } = await supabase
+          .from('tee_times')
+          .select('id, creator_id, tee_time_date, tee_time_time, course_name, current_players, max_players')
+          .eq('id', data.tee_time_id)
+          .single()
+
+        teeTimeDetails = teeTime
+      } catch (fetchError) {
+        console.log('⚠️ Could not fetch tee time details before join:', fetchError)
+      }
+
+      try {
+        const { data: joiningUser } = await supabase
+          .from('user_profiles')
+          .select('id, first_name, last_name, username')
+          .eq('id', data.user_id)
+          .single()
+
+        joiningUserDetails = joiningUser
+      } catch (fetchError) {
+        console.log('⚠️ Could not fetch joining user details before join:', fetchError)
+      }
+
       const { error } = await supabase
         .from('tee_time_players')
         .insert({
@@ -1523,13 +1550,54 @@ export async function POST(request: NextRequest) {
           user_id: data.user_id
         })
 
-      if (error) throw error
+      if (error) {
+        const normalized = `${error.message || ''} ${error.details || ''}`.toLowerCase()
+
+        if (normalized.includes('duplicate key') || normalized.includes('already')) {
+          return NextResponse.json({
+            success: true,
+            already_joined: true,
+            message: 'You already joined this tee time'
+          })
+        }
+
+        throw error
+      }
       
       // Update current players count
       await supabase
         .from('tee_times')
         .update({ current_players: supabase.rpc('increment', { row_id: data.tee_time_id, x: 1 }) })
         .eq('id', data.tee_time_id)
+
+      const joiningUserName =
+        joiningUserDetails?.first_name && joiningUserDetails?.last_name
+          ? `${joiningUserDetails.first_name} ${joiningUserDetails.last_name}`
+          : joiningUserDetails?.username || 'A golfer'
+
+      await createNotification(supabase, {
+        userId: teeTimeDetails?.creator_id,
+        type: 'tee_time_joined',
+        title: 'Someone joined your tee time',
+        message: `${joiningUserName} joined your tee time on ${teeTimeDetails?.tee_time_date || 'the selected date'} at ${teeTimeDetails?.tee_time_time || 'the selected time'}.`,
+        relatedId: data.tee_time_id
+      })
+
+      await createUserActivity(supabase, {
+        userId: data.user_id,
+        activityType: 'tee_time_joined',
+        title: 'Joined a tee time',
+        description: teeTimeDetails?.course_name
+          ? `Joined a tee time at ${teeTimeDetails.course_name}`
+          : 'Joined a tee time',
+        relatedId: data.tee_time_id,
+        metadata: {
+          creator_id: teeTimeDetails?.creator_id || null,
+          course_name: teeTimeDetails?.course_name || null,
+          tee_time_date: teeTimeDetails?.tee_time_date || null,
+          tee_time_time: teeTimeDetails?.tee_time_time || null
+        }
+      })
 
       return NextResponse.json({ success: true, message: 'Successfully joined tee time' })
     }
