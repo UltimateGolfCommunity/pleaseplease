@@ -105,20 +105,6 @@ function toApiTime(date: Date) {
   return `${hours}:${minutes}`
 }
 
-function fromApiDate(value?: string) {
-  if (!value) return null
-  const parsed = new Date(`${value}T12:00:00`)
-  return Number.isNaN(parsed.getTime()) ? null : parsed
-}
-
-function fromApiTime(value?: string) {
-  if (!value) return null
-  const [hours = '0', minutes = '0'] = value.split(':')
-  const next = new Date()
-  next.setHours(Number(hours), Number(minutes), 0, 0)
-  return next
-}
-
 function estimatePrecipitationRisk(weather: WeatherData) {
   const description = weather.description.toLowerCase()
   const humidityBump = Math.max(0, Math.round((weather.humidity - 55) * 0.6))
