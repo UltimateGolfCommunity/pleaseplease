@@ -149,39 +149,8 @@ export default function GroupsTab() {
   }, [user?.id])
 
   useEffect(() => {
-    let mounted = true
-
-    const loadLeaderboardLocation = async () => {
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const Location = require('expo-location')
-        const permission = await Location.requestForegroundPermissionsAsync()
-
-        if (!mounted || permission.status !== 'granted') {
-          return
-        }
-
-        const currentPosition = await Location.getCurrentPositionAsync({})
-        const places = await Location.reverseGeocodeAsync(currentPosition.coords)
-        const place = places?.[0]
-        const nextArea = [place?.city, place?.region].filter(Boolean).join(', ')
-
-        if (mounted && nextArea) {
-          setLeaderboardArea(nextArea)
-        }
-      } catch {
-        if (mounted) {
-          setLeaderboardArea('')
-        }
-      }
-    }
-
-    void loadLeaderboardLocation()
-
-    return () => {
-      mounted = false
-    }
-  }, [])
+    setLeaderboardArea(profile?.location || '')
+  }, [profile?.location])
 
   useEffect(() => {
     if (user?.id) {

@@ -26,11 +26,38 @@ type ConnectionStatusResponse = {
   status: 'none' | 'pending' | 'incoming_pending' | 'connected'
 }
 
+type UserCard = {
+  id: string
+  first_name?: string | null
+  last_name?: string | null
+  username?: string | null
+  avatar_url?: string | null
+  location?: string | null
+  handicap?: number | null
+}
+
+type ConnectionRecord = {
+  id: string
+  requester_id?: string
+  recipient_id?: string
+  requester?: UserCard | null
+  recipient?: UserCard | null
+}
+
+type ConnectionsPayload = {
+  success: boolean
+  connections: ConnectionRecord[]
+}
+
 type RatingSummary = {
   success?: boolean
   average: number | null
   count: number
   viewerRating: number | null
+}
+
+function formatName(user?: UserCard | PublicUser | null) {
+  return [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.username || 'UGC Golfer'
 }
 
 export default function PublicUserScreen() {
@@ -42,6 +69,7 @@ export default function PublicUserScreen() {
   const [ratingBusy, setRatingBusy] = useState(false)
   const [profile, setProfile] = useState<PublicUser | null>(null)
   const [status, setStatus] = useState<ConnectionStatusResponse['status']>('none')
+  const [connections, setConnections] = useState<ConnectionRecord[]>([])
   const [ratingSummary, setRatingSummary] = useState<RatingSummary>({
     average: null,
     count: 0,
@@ -56,11 +84,19 @@ export default function PublicUserScreen() {
     )
   }, [profile])
 
+  const connectedGolfers = useMemo(() => {
+    if (!id) return []
+
+    return connections
+      .map((connection) => (connection.requester_id === id ? connection.recipient : connection.requester))
+      .filter(Boolean) as UserCard[]
+  }, [connections, id])
+
   const loadUser = useCallback(async () => {
     if (!id) return
 
     try {
-      const [profileResponse, statusResponse, ratingResponse] = await Promise.all([
+      const [profileResponse, statusResponse, ratingResponse, connectionsResponse] = await Promise.all([
         apiGet<PublicUser>(`/api/users?id=${encodeURIComponent(id)}`),
         user?.id
           ? apiGet<ConnectionStatusResponse>(
@@ -73,12 +109,17 @@ export default function PublicUserScreen() {
           average: null,
           count: 0,
           viewerRating: null
+        })),
+        apiGet<ConnectionsPayload>(`/api/users?action=connections&id=${encodeURIComponent(id)}`).catch(() => ({
+          success: true,
+          connections: []
         }))
       ])
 
       setProfile(profileResponse)
       setStatus(statusResponse.status)
       setRatingSummary(ratingResponse)
+      setConnections(connectionsResponse.connections || [])
     } finally {
       setBusy(false)
       setRefreshing(false)
@@ -222,6 +263,30 @@ export default function PublicUserScreen() {
           ) : null}
         </View>
 
+        <Pressable onPress={() => router.push(`/users/${id}/connections`)} style={styles.card}>
+          <Text style={styles.sectionEyebrow}>Connections</Text>
+          <View style={styles.connectionsHeader}>
+            <Text style={styles.sectionTitle}>{connectedGolfers.length} golfers</Text>
+            <Ionicons color={palette.aqua} name="chevron-forward" size={18} />
+          </View>
+          <Text style={styles.bio}>Tap in to see everyone this golfer is connected with.</Text>
+          <View style={styles.connectionPreviewRow}>
+            {connectedGolfers.slice(0, 3).map((connection) => (
+              <Avatar
+                key={connection.id}
+                label={formatName(connection)}
+                size={42}
+                uri={connection.avatar_url}
+              />
+            ))}
+            {connectedGolfers.length > 3 ? (
+              <View style={styles.connectionOverflow}>
+                <Text style={styles.connectionOverflowText}>+{connectedGolfers.length - 3}</Text>
+              </View>
+            ) : null}
+          </View>
+        </Pressable>
+
         <View style={styles.card}>
           <Text style={styles.sectionEyebrow}>Connection</Text>
           <Text style={styles.sectionTitle}>What happens next</Text>
@@ -311,6 +376,31 @@ const styles = StyleSheet.create({
   },
   ratingBadgeText: {
     color: palette.text,
+    fontSize: 13,
+    fontWeight: '700'
+  },
+  connectionsHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between'
+  },
+  connectionPreviewRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8
+  },
+  connectionOverflow: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(103,232,249,0.12)',
+    borderColor: 'rgba(103,232,249,0.25)',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 42,
+    justifyContent: 'center',
+    width: 42
+  },
+  connectionOverflowText: {
+    color: palette.aqua,
     fontSize: 13,
     fontWeight: '700'
   },
