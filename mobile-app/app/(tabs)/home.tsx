@@ -388,6 +388,17 @@ export default function HomeTab() {
         setNextTeeTime(response.tee_time)
       }
 
+      await apiPost('/api/notifications', {
+        action: 'create',
+        user_id: user.id,
+        type: editingTeeTimeId ? 'tee_time_updated' : 'tee_time_posted',
+        title: editingTeeTimeId ? 'Tee time updated successfully' : 'Tee time posted successfully',
+        message: editingTeeTimeId
+          ? `${form.course_name.trim()} was updated and is ready to go.`
+          : `${form.course_name.trim()} is live and golfers can now find it.`,
+        related_id: response.tee_time?.id || editingTeeTimeId || null
+      }).catch(() => null)
+
       Alert.alert(
         editingTeeTimeId ? 'Tee time updated' : 'Tee time posted',
         editingTeeTimeId
@@ -730,13 +741,14 @@ export default function HomeTab() {
 
         <View style={styles.row}>
           <StatCard
-            label={`${displayName}'s Next Tee Time`}
+            label={`${displayName}'s Next Tee Times`}
             value={nextTeeTime ? nextTeeTime.course_name || 'Upcoming round' : 'No round yet'}
             detail={
               nextTeeTime
                 ? formatDisplayDate(nextTeeTime.tee_time_date, nextTeeTime.tee_time_time)
                 : 'Post one from the web app or the next mobile screen.'
             }
+            onPress={() => router.push('/tee-times')}
           />
           {nextTeeTime ? (
             <PrimaryButton
