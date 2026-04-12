@@ -24,6 +24,7 @@ type MessageProfile = {
   id: string
   first_name?: string | null
   last_name?: string | null
+  avatar_url?: string | null
 }
 
 type MessageRecord = {
@@ -143,14 +144,13 @@ export default function ConversationScreen() {
             />
           }
         >
-          <BrandHeader
-            title={formatName(otherUser)}
-            subtitle="Direct messages stay simple here so golfers can actually make plans."
-            showBack
-          />
+        <BrandHeader
+          title={formatName(otherUser)}
+          showBack
+        />
 
-          <View style={styles.headerCard}>
-            <Avatar label={formatName(otherUser)} size={68} />
+        <View style={styles.headerCard}>
+          <Avatar label={formatName(otherUser)} size={68} uri={otherUser?.avatar_url} />
             <View style={styles.headerCopy}>
               <Text style={styles.headerName}>{formatName(otherUser)}</Text>
               <Text style={styles.headerMeta}>Conversation</Text>

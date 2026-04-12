@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Redirect, router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
@@ -20,6 +20,7 @@ type MessageProfile = {
   id: string
   first_name?: string | null
   last_name?: string | null
+  avatar_url?: string | null
 }
 
 type MessageRecord = {
@@ -114,11 +115,6 @@ export default function MessagesScreen() {
     }
   }, [loadInbox, user?.id])
 
-  const unreadCount = useMemo(
-    () => conversations.reduce((sum, conversation) => sum + conversation.unreadCount, 0),
-    [conversations]
-  )
-
   if (!loading && !user) {
     return <Redirect href="/welcome" />
   }
@@ -140,7 +136,6 @@ export default function MessagesScreen() {
       >
         <BrandHeader
           title="Inbox"
-          subtitle={`Your active conversations, unread replies, and golf plans all stay in one clean mobile inbox.${unreadCount ? ` ${unreadCount} unread.` : ''}`}
           showBack
         />
 
@@ -161,15 +156,13 @@ export default function MessagesScreen() {
             style={styles.card}
           >
             <View style={styles.row}>
-              <Avatar label={formatName(conversation.user)} size={58} />
+              <Avatar label={formatName(conversation.user)} size={58} uri={conversation.user.avatar_url} />
               <View style={styles.copy}>
                 <View style={styles.nameRow}>
                   <Text style={styles.name}>{formatName(conversation.user)}</Text>
                   <Text style={styles.time}>{formatTimeAgo(conversation.lastMessage.created_at)}</Text>
                 </View>
-                <Text numberOfLines={2} style={styles.preview}>
-                  {conversation.lastMessage.message_content || 'New message'}
-                </Text>
+                <Text style={styles.preview}>Conversation</Text>
               </View>
               {conversation.unreadCount ? (
                 <View style={styles.unreadPill}>
@@ -226,8 +219,8 @@ const styles = StyleSheet.create({
   },
   preview: {
     color: palette.textMuted,
-    fontSize: 14,
-    lineHeight: 20
+    fontSize: 13,
+    fontWeight: '600'
   },
   unreadPill: {
     alignItems: 'center',

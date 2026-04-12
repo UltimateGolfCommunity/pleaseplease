@@ -90,8 +90,8 @@ export async function GET(request: NextRequest) {
         .from('direct_messages')
         .select(`
           *,
-          sender:user_profiles!direct_messages_sender_id_fkey(id, first_name, last_name),
-          recipient:user_profiles!direct_messages_recipient_id_fkey(id, first_name, last_name)
+          sender:user_profiles!direct_messages_sender_id_fkey(id, first_name, last_name, avatar_url),
+          recipient:user_profiles!direct_messages_recipient_id_fkey(id, first_name, last_name, avatar_url)
         `)
         .eq('recipient_id', userId)
         .order('created_at', { ascending: false })
@@ -108,8 +108,8 @@ export async function GET(request: NextRequest) {
         .from('direct_messages')
         .select(`
           *,
-          sender:user_profiles!direct_messages_sender_id_fkey(id, first_name, last_name),
-          recipient:user_profiles!direct_messages_recipient_id_fkey(id, first_name, last_name)
+          sender:user_profiles!direct_messages_sender_id_fkey(id, first_name, last_name, avatar_url),
+          recipient:user_profiles!direct_messages_recipient_id_fkey(id, first_name, last_name, avatar_url)
         `)
         .eq('sender_id', userId)
         .order('created_at', { ascending: false })
@@ -126,8 +126,8 @@ export async function GET(request: NextRequest) {
         .from('direct_messages')
         .select(`
           *,
-          sender:user_profiles!direct_messages_sender_id_fkey(id, first_name, last_name),
-          recipient:user_profiles!direct_messages_recipient_id_fkey(id, first_name, last_name)
+          sender:user_profiles!direct_messages_sender_id_fkey(id, first_name, last_name, avatar_url),
+          recipient:user_profiles!direct_messages_recipient_id_fkey(id, first_name, last_name, avatar_url)
         `)
         .or(`sender_id.eq.${conversationId},recipient_id.eq.${conversationId}`)
         .order('created_at', { ascending: true })
@@ -144,8 +144,8 @@ export async function GET(request: NextRequest) {
       .from('direct_messages')
       .select(`
         *,
-        sender:user_profiles!direct_messages_sender_id_fkey(id, first_name, last_name),
-        recipient:user_profiles!direct_messages_recipient_id_fkey(id, first_name, last_name)
+        sender:user_profiles!direct_messages_sender_id_fkey(id, first_name, last_name, avatar_url),
+        recipient:user_profiles!direct_messages_recipient_id_fkey(id, first_name, last_name, avatar_url)
       `)
       .order('created_at', { ascending: false })
 
@@ -273,5 +273,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
-
 
