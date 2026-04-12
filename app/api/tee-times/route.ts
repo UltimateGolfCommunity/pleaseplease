@@ -190,6 +190,45 @@ async function createUserActivity(
   }
 }
 
+async function updateTeeTimeApplicationStatus(
+  supabase: any,
+  applicationId: string,
+  actionType: 'accept' | 'reject'
+) {
+  const statusAttempts =
+    actionType === 'accept'
+      ? ['approved', 'accepted']
+      : ['denied', 'rejected', 'declined']
+
+  const payloads = statusAttempts.flatMap((status) => [
+    { status, updated_at: new Date().toISOString() },
+    { status }
+  ])
+
+  let lastError: any = null
+
+  for (const payload of payloads) {
+    const { error } = await supabase
+      .from('tee_time_applications')
+      .update(payload)
+      .eq('id', applicationId)
+
+    if (!error) {
+      return {
+        success: true,
+        status: payload.status
+      }
+    }
+
+    lastError = error
+  }
+
+  return {
+    success: false,
+    error: lastError
+  }
+}
+
 // Mock tee time data for development with in-memory storage
 let mockTeeTimes = [
   {
@@ -1398,7 +1437,7 @@ export async function POST(request: NextRequest) {
           .from('tee_time_applications')
           .select(`
             *,
-            tee_times(id, creator_id, tee_time_date, tee_time_time, course_name),
+            tee_times(id, creator_id, tee_time_date, tee_time_time, course_name, current_players),
             applicant:user_profiles!tee_time_applications_applicant_id_fkey(first_name, last_name, username)
           `)
           .eq('id', application_id)
@@ -1419,21 +1458,14 @@ export async function POST(request: NextRequest) {
         }, { status: 403 })
       }
       
-      // Update application status
-      const newStatus = action_type === 'accept' ? 'approved' : 'denied'
-      const { error: updateError } = await supabase
-        .from('tee_time_applications')
-        .update({ 
-          status: newStatus,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', application_id)
+      // Update application status across older/newer schema variants
+      const updateResult = await updateTeeTimeApplicationStatus(supabase, application_id, action_type)
 
-      if (updateError) {
-        console.error('❌ Error updating application:', updateError)
+      if (!updateResult.success) {
+        console.error('❌ Error updating application:', updateResult.error)
         
         // Fallback to mock success if database fails
-        if (updateError.message.includes('Invalid API key')) {
+        if (updateResult.error?.message?.includes('Invalid API key')) {
           console.log('🔧 MANAGE_APPLICATION: Database failed, using fallback success')
           return NextResponse.json({ 
             success: true, 
@@ -1443,7 +1475,7 @@ export async function POST(request: NextRequest) {
         
         return NextResponse.json({ 
           error: 'Failed to update application', 
-          details: updateError.message
+          details: updateResult.error?.message || 'Unable to update tee time application status.'
         }, { status: 400 })
       }
       
@@ -1458,12 +1490,10 @@ export async function POST(request: NextRequest) {
               user_id: applicationDetails.applicant_id
             })
           
-          // Update current players count
+          const nextPlayerCount = Math.max((applicationDetails.tee_times?.current_players || 1) + 1, 1)
           await supabase
             .from('tee_times')
-            .update({ 
-              current_players: supabase.rpc('increment', { x: 1 })
-            })
+            .update({ current_players: nextPlayerCount })
             .eq('id', applicationDetails.tee_time_id)
             
         } catch (playerError) {
