@@ -58,13 +58,6 @@ type WeatherData = MobileWeatherData
 
 const teeTimeSkillOptions = ['Beginner', 'Weekend Hack', 'Weekend Grinder', 'Low Handicap', 'Pro']
 
-const quickTimeOptions = [
-  { label: 'Morning', hour: 8, minute: 0 },
-  { label: 'Midday', hour: 12, minute: 0 },
-  { label: 'Afternoon', hour: 15, minute: 30 },
-  { label: 'Sunset', hour: 18, minute: 0 }
-]
-
 function formatDisplayDate(date?: string, time?: string) {
   if (!date) return 'No round on the books'
 
@@ -296,34 +289,6 @@ export default function HomeTab() {
     setShowTimePicker(false)
   }
 
-  const applyQuickDate = (offsetDays: number) => {
-    const next = new Date()
-    next.setDate(next.getDate() + offsetDays)
-    next.setHours(12, 0, 0, 0)
-    setSelectedDate(next)
-    setForm((current) => ({ ...current, tee_time_date: formatFormDate(next) }))
-    setShowDatePicker(false)
-  }
-
-  const applyWeekendDate = () => {
-    const next = new Date()
-    const day = next.getDay()
-    const daysUntilSaturday = (6 - day + 7) % 7 || 7
-    next.setDate(next.getDate() + daysUntilSaturday)
-    next.setHours(12, 0, 0, 0)
-    setSelectedDate(next)
-    setForm((current) => ({ ...current, tee_time_date: formatFormDate(next) }))
-    setShowDatePicker(false)
-  }
-
-  const applyQuickTime = (hour: number, minute: number) => {
-    const next = new Date()
-    next.setHours(hour, minute, 0, 0)
-    setSelectedTime(next)
-    setForm((current) => ({ ...current, tee_time_time: formatFormTime(next) }))
-    setShowTimePicker(false)
-  }
-
   const handleSaveTeeTime = async () => {
     if (!user?.id) return
 
@@ -543,44 +508,7 @@ export default function HomeTab() {
             <View style={styles.composerSection}>
               <View style={styles.formSectionHeader}>
                 <Text style={styles.formSectionLabel}>When</Text>
-                <Text style={styles.formSectionHint}>Pick a day, then fine-tune the time</Text>
-              </View>
-              <View style={styles.segmentRow}>
-                {[
-                  { label: 'Today', offset: 0 },
-                  { label: 'Tomorrow', offset: 1 },
-                  { label: 'Weekend', offset: null }
-                ].map((option) => {
-                  const comparisonDate = (() => {
-                    if (option.offset === null) {
-                      const next = new Date()
-                      const day = next.getDay()
-                      const daysUntilSaturday = (6 - day + 7) % 7 || 7
-                      next.setDate(next.getDate() + daysUntilSaturday)
-                      next.setHours(12, 0, 0, 0)
-                      return next
-                    }
-
-                    const next = new Date()
-                    next.setDate(next.getDate() + option.offset)
-                    next.setHours(12, 0, 0, 0)
-                    return next
-                  })()
-
-                  const active = selectedDate && toApiDate(selectedDate) === toApiDate(comparisonDate)
-
-                  return (
-                    <Pressable
-                      key={option.label}
-                      onPress={() => (option.offset === null ? applyWeekendDate() : applyQuickDate(option.offset))}
-                      style={[styles.segment, active && styles.segmentActive]}
-                    >
-                      <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>
-                        {option.label}
-                      </Text>
-                    </Pressable>
-                  )
-                })}
+                <Text style={styles.formSectionHint}>Choose the date and tee time directly</Text>
               </View>
               <View style={styles.splitRow}>
                 <Pressable
@@ -605,27 +533,6 @@ export default function HomeTab() {
                     {form.tee_time_time || 'Pick time'}
                   </Text>
                 </Pressable>
-              </View>
-              <View style={styles.segmentRow}>
-                {quickTimeOptions.map((option) => {
-                  const currentTime = selectedTime ? toApiTime(selectedTime) : ''
-                  const optionTime = `${option.hour.toString().padStart(2, '0')}:${option.minute
-                    .toString()
-                    .padStart(2, '0')}`
-                  const active = currentTime === optionTime
-
-                  return (
-                    <Pressable
-                      key={option.label}
-                      onPress={() => applyQuickTime(option.hour, option.minute)}
-                      style={[styles.segment, active && styles.segmentActive]}
-                    >
-                      <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>
-                        {option.label}
-                      </Text>
-                    </Pressable>
-                  )
-                })}
               </View>
             </View>
             {showDatePicker ? (
