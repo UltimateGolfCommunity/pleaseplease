@@ -2,6 +2,41 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { createAdminClient } from '@/lib/supabase-admin'
 
+async function logGroupActivity(
+  supabase: any,
+  {
+    userId,
+    groupId,
+    activityType,
+    title,
+    description,
+    metadata
+  }: {
+    userId?: string | null
+    groupId?: string | null
+    activityType: string
+    title: string
+    description?: string | null
+    metadata?: Record<string, unknown>
+  }
+) {
+  if (!userId || !groupId) return
+
+  try {
+    await supabase.from('user_activities').insert({
+      user_id: userId,
+      activity_type: activityType,
+      title,
+      description: description || null,
+      related_id: groupId,
+      related_type: 'group',
+      metadata: metadata || {}
+    })
+  } catch (error) {
+    console.warn('⚠️ Unable to log group activity:', error)
+  }
+}
+
 async function createGroupWithFallback(
   supabase: any,
   {
@@ -377,6 +412,25 @@ export async function POST(request: NextRequest) {
       }
 
       console.log('✅ User joined group successfully:', member.id)
+
+      const { data: joinedGroup } = await supabase
+        .from('golf_groups')
+        .select('id, name')
+        .eq('id', group_id)
+        .maybeSingle()
+
+      await logGroupActivity(supabase, {
+        userId: user_id,
+        groupId: group_id,
+        activityType: 'group_joined',
+        title: 'Joined a group',
+        description: `Joined ${joinedGroup?.name || 'a golf group'}`,
+        metadata: {
+          group_id,
+          group_name: joinedGroup?.name || null
+        }
+      })
+
       return NextResponse.json({
         success: true,
         message: 'Successfully joined the group',
@@ -491,6 +545,18 @@ export async function POST(request: NextRequest) {
         )
       }
 
+      await logGroupActivity(supabase, {
+        userId: user_id,
+        groupId: group_id,
+        activityType: 'group_details_updated',
+        title: 'Updated group details',
+        description: `Refreshed ${group?.name || 'group'} information`,
+        metadata: {
+          group_id,
+          group_name: group?.name || null
+        }
+      })
+
       return NextResponse.json({
         success: true,
         message: 'Group updated successfully',
@@ -531,6 +597,18 @@ export async function POST(request: NextRequest) {
       }
 
       console.log('✅ Group created successfully:', group.id)
+
+      await logGroupActivity(supabase, {
+        userId: user_id,
+        groupId: group.id,
+        activityType: 'group_created',
+        title: 'Created a group',
+        description: `Started ${group.name}`,
+        metadata: {
+          group_id: group.id,
+          group_name: group.name
+        }
+      })
 
       // Add creator as first member
       console.log('👤 GROUPS POST: Adding creator as group member...')

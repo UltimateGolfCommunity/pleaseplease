@@ -58,6 +58,42 @@ async function updateGroupMedia(
   return { group: null, error: lastError }
 }
 
+async function logGroupMediaActivity(
+  supabase: any,
+  {
+    userId,
+    groupId,
+    groupName,
+    target
+  }: {
+    userId: string
+    groupId: string
+    groupName?: string | null
+    target: 'logo' | 'cover'
+  }
+) {
+  try {
+    await supabase.from('user_activities').insert({
+      user_id: userId,
+      activity_type: target === 'logo' ? 'group_logo_updated' : 'group_cover_updated',
+      title: target === 'logo' ? 'Updated group logo' : 'Updated group cover',
+      description:
+        target === 'logo'
+          ? `Updated the logo for ${groupName || 'a golf group'}`
+          : `Updated the cover photo for ${groupName || 'a golf group'}`,
+      related_id: groupId,
+      related_type: 'group',
+      metadata: {
+        group_id: groupId,
+        group_name: groupName || null,
+        target
+      }
+    })
+  } catch (error) {
+    console.warn('⚠️ Unable to log group media activity:', error)
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { group_id, user_id, target, url } = await request.json()
@@ -89,6 +125,13 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    await logGroupMediaActivity(supabase, {
+      userId: user_id,
+      groupId: group_id,
+      groupName: group?.name || null,
+      target
+    })
 
     return NextResponse.json({
       success: true,

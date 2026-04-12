@@ -110,6 +110,69 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    if (action === 'groups') {
+      const { data: memberships, error: membershipsError } = await supabase
+        .from('group_members')
+        .select('group_id')
+        .eq('user_id', user_id)
+        .eq('status', 'active')
+
+      if (membershipsError) {
+        return NextResponse.json({ success: true, activities: [] })
+      }
+
+      const groupIds = Array.from(new Set((memberships || []).map((membership: any) => membership.group_id).filter(Boolean)))
+
+      if (!groupIds.length) {
+        return NextResponse.json({ success: true, activities: [] })
+      }
+
+      const { data: activities, error: activitiesError } = await supabase
+        .from('user_activities')
+        .select('*')
+        .eq('related_type', 'group')
+        .in('related_id', groupIds)
+        .in('activity_type', [
+          'group_created',
+          'group_joined',
+          'group_logo_updated',
+          'group_cover_updated',
+          'group_details_updated'
+        ])
+        .order('created_at', { ascending: false })
+        .limit(limit)
+
+      if (activitiesError) {
+        return NextResponse.json({ success: true, activities: [] })
+      }
+
+      const actorIds = Array.from(
+        new Set((activities || []).map((activity: any) => activity.user_id).filter(Boolean))
+      )
+
+      const { data: actorProfiles } = await supabase
+        .from('user_profiles')
+        .select('id, first_name, last_name, username, avatar_url')
+        .in('id', actorIds)
+
+      const { data: groups } = await supabase
+        .from('golf_groups')
+        .select('id, name, location, logo_url, image_url')
+        .in('id', groupIds)
+
+      const actorMap = new Map((actorProfiles || []).map((profile: any) => [profile.id, profile]))
+      const groupMap = new Map((groups || []).map((group: any) => [group.id, group]))
+
+      return NextResponse.json({
+        success: true,
+        activities: (activities || []).map((activity: any) => ({
+          ...activity,
+          actor: actorMap.get(activity.user_id) || null,
+          group: groupMap.get(activity.related_id) || null
+        }))
+      })
+    }
+
     // Get recent activities for the user
     const { data, error } = await supabase
       .from('user_activities')

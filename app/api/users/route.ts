@@ -9,6 +9,36 @@ const connectionSelect = `
   recipient:user_profiles!user_connections_recipient_id_fkey(${connectionProfileFields})
 `
 
+async function getRatingSummary(supabase: any, ratedUserId: string, viewerId?: string | null) {
+  const { data: ratings, error } = await supabase
+    .from('user_ratings')
+    .select('stars, rater_user_id')
+    .eq('rated_user_id', ratedUserId)
+
+  if (error) {
+    console.error('❌ Ratings fetch error:', error)
+    return {
+      average: null,
+      count: 0,
+      viewerRating: null
+    }
+  }
+
+  const count = ratings?.length || 0
+  const total = (ratings || []).reduce((sum: number, rating: any) => sum + (rating.stars || 0), 0)
+  const average = count ? Number((total / count).toFixed(1)) : null
+  const viewerRating =
+    viewerId && ratings
+      ? (ratings.find((rating: any) => rating.rater_user_id === viewerId)?.stars ?? null)
+      : null
+
+  return {
+    average,
+    count,
+    viewerRating
+  }
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const search = searchParams.get('search')
@@ -110,6 +140,16 @@ export async function GET(request: NextRequest) {
         success: true,
         status,
         connection: connection || null
+      })
+    }
+
+    if (action === 'rating' && userId) {
+      const viewerId = searchParams.get('viewer_id')
+      const summary = await getRatingSummary(supabase, userId, viewerId)
+
+      return NextResponse.json({
+        success: true,
+        ...summary
       })
     }
     
@@ -356,6 +396,59 @@ export async function POST(request: NextRequest) {
 
         if (error) throw error
         return NextResponse.json({ success: true, message: 'Profile updated successfully' })
+      }
+
+      if (action === 'rate') {
+        const { rated_user_id, rater_user_id, stars } = data
+
+        if (!rated_user_id || !rater_user_id || !stars) {
+          return NextResponse.json({
+            error: 'rated_user_id, rater_user_id, and stars are required'
+          }, { status: 400 })
+        }
+
+        if (rated_user_id === rater_user_id) {
+          return NextResponse.json({
+            error: 'You cannot rate your own golfer profile'
+          }, { status: 400 })
+        }
+
+        const normalizedStars = Number(stars)
+
+        if (!Number.isFinite(normalizedStars) || normalizedStars < 1 || normalizedStars > 5) {
+          return NextResponse.json({
+            error: 'Stars must be between 1 and 5'
+          }, { status: 400 })
+        }
+
+        const { error: upsertError } = await supabase
+          .from('user_ratings')
+          .upsert(
+            {
+              rated_user_id,
+              rater_user_id,
+              stars: normalizedStars,
+              updated_at: new Date().toISOString()
+            },
+            {
+              onConflict: 'rated_user_id,rater_user_id'
+            }
+          )
+
+        if (upsertError) {
+          return NextResponse.json({
+            error: 'Failed to save golfer rating',
+            details: upsertError.message
+          }, { status: 500 })
+        }
+
+        const summary = await getRatingSummary(supabase, rated_user_id, rater_user_id)
+
+        return NextResponse.json({
+          success: true,
+          message: 'Rating saved successfully',
+          ...summary
+        })
       }
 
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 })

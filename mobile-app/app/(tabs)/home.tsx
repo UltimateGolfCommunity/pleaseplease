@@ -28,6 +28,7 @@ type TeeTime = {
   location?: string
   tee_time_date?: string
   tee_time_time?: string
+  handicap_requirement?: string
   current_players?: number
   max_players?: number
   available_spots?: number
@@ -54,6 +55,15 @@ type Activity = {
 }
 
 type WeatherData = MobileWeatherData
+
+const teeTimeSkillOptions = ['Beginner', 'Weekend Hack', 'Weekend Grinder', 'Low Handicap', 'Pro']
+
+const quickTimeOptions = [
+  { label: 'Morning', hour: 8, minute: 0 },
+  { label: 'Midday', hour: 12, minute: 0 },
+  { label: 'Afternoon', hour: 15, minute: 30 },
+  { label: 'Sunset', hour: 18, minute: 0 }
+]
 
 function formatDisplayDate(date?: string, time?: string) {
   if (!date) return 'No round on the books'
@@ -93,6 +103,20 @@ function toApiTime(date: Date) {
   const hours = date.getHours().toString().padStart(2, '0')
   const minutes = date.getMinutes().toString().padStart(2, '0')
   return `${hours}:${minutes}`
+}
+
+function fromApiDate(value?: string) {
+  if (!value) return null
+  const parsed = new Date(`${value}T12:00:00`)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function fromApiTime(value?: string) {
+  if (!value) return null
+  const [hours = '0', minutes = '0'] = value.split(':')
+  const next = new Date()
+  next.setHours(Number(hours), Number(minutes), 0, 0)
+  return next
 }
 
 function estimatePrecipitationRisk(weather: WeatherData) {
@@ -144,6 +168,7 @@ export default function HomeTab() {
   const [creating, setCreating] = useState(false)
   const [joiningId, setJoiningId] = useState<string | null>(null)
   const [showCreateForm, setShowCreateForm] = useState(false)
+  const [editingTeeTimeId, setEditingTeeTimeId] = useState<string | null>(null)
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [showTimePicker, setShowTimePicker] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
@@ -160,7 +185,7 @@ export default function HomeTab() {
     tee_time_date: '',
     tee_time_time: '',
     max_players: '4',
-    handicap_requirement: 'any',
+    handicap_requirement: 'Weekend Hack',
     visibility_scope: 'public'
   })
 
@@ -268,7 +293,70 @@ export default function HomeTab() {
     return <Redirect href="/welcome" />
   }
 
-  const handleCreateTeeTime = async () => {
+  const resetComposer = () => {
+    setEditingTeeTimeId(null)
+    setForm({
+      course_name: '',
+      location: '',
+      tee_time_date: '',
+      tee_time_time: '',
+      max_players: '4',
+      handicap_requirement: 'Weekend Hack',
+      visibility_scope: 'public'
+    })
+    setSelectedDate(null)
+    setSelectedTime(null)
+    setShowDatePicker(false)
+    setShowTimePicker(false)
+  }
+
+  const openComposerForEdit = (teeTime: TeeTime) => {
+    const parsedDate = fromApiDate(teeTime.tee_time_date)
+    const parsedTime = fromApiTime(teeTime.tee_time_time)
+    setEditingTeeTimeId(teeTime.id)
+    setSelectedDate(parsedDate)
+    setSelectedTime(parsedTime)
+    setForm({
+      course_name: teeTime.course_name || '',
+      location: teeTime.location || '',
+      tee_time_date: parsedDate ? formatFormDate(parsedDate) : '',
+      tee_time_time: parsedTime ? formatFormTime(parsedTime) : teeTime.tee_time_time || '',
+      max_players: teeTime.max_players ? String(teeTime.max_players) : '4',
+      handicap_requirement: (teeTime as TeeTime & { handicap_requirement?: string }).handicap_requirement || 'Weekend Hack',
+      visibility_scope: teeTime.visibility_scope || 'public'
+    })
+    setShowCreateForm(true)
+  }
+
+  const applyQuickDate = (offsetDays: number) => {
+    const next = new Date()
+    next.setDate(next.getDate() + offsetDays)
+    next.setHours(12, 0, 0, 0)
+    setSelectedDate(next)
+    setForm((current) => ({ ...current, tee_time_date: formatFormDate(next) }))
+    setShowDatePicker(false)
+  }
+
+  const applyWeekendDate = () => {
+    const next = new Date()
+    const day = next.getDay()
+    const daysUntilSaturday = (6 - day + 7) % 7 || 7
+    next.setDate(next.getDate() + daysUntilSaturday)
+    next.setHours(12, 0, 0, 0)
+    setSelectedDate(next)
+    setForm((current) => ({ ...current, tee_time_date: formatFormDate(next) }))
+    setShowDatePicker(false)
+  }
+
+  const applyQuickTime = (hour: number, minute: number) => {
+    const next = new Date()
+    next.setHours(hour, minute, 0, 0)
+    setSelectedTime(next)
+    setForm((current) => ({ ...current, tee_time_time: formatFormTime(next) }))
+    setShowTimePicker(false)
+  }
+
+  const handleSaveTeeTime = async () => {
     if (!user?.id) return
 
     const hasDate = !!selectedDate || !!form.tee_time_date.trim()
@@ -283,7 +371,8 @@ export default function HomeTab() {
 
     try {
       const response = await apiPost<CreateTeeTimeResponse>('/api/tee-times', {
-        action: 'create',
+        action: editingTeeTimeId ? 'update' : 'create',
+        tee_time_id: editingTeeTimeId,
         creator_id: user.id,
         user_id: user.id,
         course_name: form.course_name.trim(),
@@ -299,23 +388,21 @@ export default function HomeTab() {
         setNextTeeTime(response.tee_time)
       }
 
-      Alert.alert('Tee time posted', 'Your round is now live in the community.')
-      setForm({
-        course_name: '',
-        location: '',
-        tee_time_date: '',
-        tee_time_time: '',
-        max_players: '4',
-        handicap_requirement: 'any',
-        visibility_scope: 'public'
-      })
-      setSelectedDate(null)
-      setSelectedTime(null)
+      Alert.alert(
+        editingTeeTimeId ? 'Tee time updated' : 'Tee time posted',
+        editingTeeTimeId
+          ? 'Your round details are refreshed.'
+          : 'Your round is now live in the community.'
+      )
+      resetComposer()
       setShowCreateForm(false)
       setBusy(true)
-      await loadHome()
+      await Promise.all([loadHome(), loadHeaderCounts()])
     } catch (error) {
-      Alert.alert('Unable to post tee time', error instanceof Error ? error.message : 'Please try again.')
+      Alert.alert(
+        editingTeeTimeId ? 'Unable to update tee time' : 'Unable to post tee time',
+        error instanceof Error ? error.message : 'Please try again.'
+      )
     } finally {
       setCreating(false)
     }
@@ -448,7 +535,10 @@ export default function HomeTab() {
 
         {showCreateForm ? (
           <View style={styles.formCard}>
-            <Text style={styles.sectionTitle}>Post a tee time</Text>
+            <Text style={styles.sectionTitle}>{editingTeeTimeId ? 'Edit tee time' : 'Post a tee time'}</Text>
+            <Text style={styles.body}>
+              Keep this quick: set the course, choose a vibe, and use the fast date and time presets if they fit.
+            </Text>
             <TextInput
               onChangeText={(value) => setForm((current) => ({ ...current, course_name: value }))}
               placeholder="Course name"
@@ -463,6 +553,43 @@ export default function HomeTab() {
               style={styles.input}
               value={form.location}
             />
+            <View style={styles.segmentRow}>
+              {[
+                { label: 'Today', offset: 0 },
+                { label: 'Tomorrow', offset: 1 },
+                { label: 'Weekend', offset: null }
+              ].map((option) => {
+                const comparisonDate = (() => {
+                  if (option.offset === null) {
+                    const next = new Date()
+                    const day = next.getDay()
+                    const daysUntilSaturday = (6 - day + 7) % 7 || 7
+                    next.setDate(next.getDate() + daysUntilSaturday)
+                    next.setHours(12, 0, 0, 0)
+                    return next
+                  }
+
+                  const next = new Date()
+                  next.setDate(next.getDate() + option.offset)
+                  next.setHours(12, 0, 0, 0)
+                  return next
+                })()
+
+                const active = selectedDate && toApiDate(selectedDate) === toApiDate(comparisonDate)
+
+                return (
+                  <Pressable
+                    key={option.label}
+                    onPress={() => (option.offset === null ? applyWeekendDate() : applyQuickDate(option.offset))}
+                    style={[styles.segment, active && styles.segmentActive]}
+                  >
+                    <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                )
+              })}
+            </View>
             <View style={styles.splitRow}>
               <Pressable
                 onPress={() => {
@@ -486,6 +613,27 @@ export default function HomeTab() {
                   {form.tee_time_time || 'Pick time'}
                 </Text>
               </Pressable>
+            </View>
+            <View style={styles.segmentRow}>
+              {quickTimeOptions.map((option) => {
+                const currentTime = selectedTime ? toApiTime(selectedTime) : ''
+                const optionTime = `${option.hour.toString().padStart(2, '0')}:${option.minute
+                  .toString()
+                  .padStart(2, '0')}`
+                const active = currentTime === optionTime
+
+                return (
+                  <Pressable
+                    key={option.label}
+                    onPress={() => applyQuickTime(option.hour, option.minute)}
+                    style={[styles.segment, active && styles.segmentActive]}
+                  >
+                    <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                )
+              })}
             </View>
             {showDatePicker ? (
               <View style={styles.inlinePicker}>
@@ -516,15 +664,24 @@ export default function HomeTab() {
                 style={[styles.input, styles.flexInput]}
                 value={form.max_players}
               />
-              <TextInput
-                onChangeText={(value) =>
-                  setForm((current) => ({ ...current, handicap_requirement: value }))
-                }
-                placeholder="Handicap"
-                placeholderTextColor={palette.textMuted}
-                style={[styles.input, styles.flexInput]}
-                value={form.handicap_requirement}
-              />
+              <View style={styles.categoryPill}>
+                <Text style={styles.categoryLabel}>{form.handicap_requirement}</Text>
+              </View>
+            </View>
+            <View style={styles.skillGrid}>
+              {teeTimeSkillOptions.map((option) => {
+                const active = form.handicap_requirement === option
+
+                return (
+                  <Pressable
+                    key={option}
+                    onPress={() => setForm((current) => ({ ...current, handicap_requirement: option }))}
+                    style={[styles.skillChip, active && styles.skillChipActive]}
+                  >
+                    <Text style={[styles.skillChipText, active && styles.skillChipTextActive]}>{option}</Text>
+                  </Pressable>
+                )
+              })}
             </View>
             <TextInput
               editable={false}
@@ -554,10 +711,20 @@ export default function HomeTab() {
               })}
             </View>
             <PrimaryButton
-              label="Publish Tee Time"
+              label={editingTeeTimeId ? 'Save Tee Time' : 'Publish Tee Time'}
               loading={creating}
-              onPress={handleCreateTeeTime}
+              onPress={handleSaveTeeTime}
             />
+            {editingTeeTimeId ? (
+              <PrimaryButton
+                label="Cancel Edit"
+                variant="ghost"
+                onPress={() => {
+                  resetComposer()
+                  setShowCreateForm(false)
+                }}
+              />
+            ) : null}
           </View>
         ) : null}
 
@@ -571,6 +738,13 @@ export default function HomeTab() {
                 : 'Post one from the web app or the next mobile screen.'
             }
           />
+          {nextTeeTime ? (
+            <PrimaryButton
+              label="Edit Tee Time"
+              variant="ghost"
+              onPress={() => openComposerForEdit(nextTeeTime)}
+            />
+          ) : null}
         </View>
 
         <View style={styles.panelSwitcher}>
@@ -655,7 +829,12 @@ export default function HomeTab() {
         </ScrollView>
 
         <Pressable
-          onPress={() => setShowCreateForm((value) => !value)}
+          onPress={() => {
+            if (showCreateForm) {
+              resetComposer()
+            }
+            setShowCreateForm((value) => !value)
+          }}
           style={styles.floatingComposeButton}
         >
           <Text style={styles.floatingComposeIcon}>{showCreateForm ? '×' : '+'}</Text>
@@ -926,9 +1105,51 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10
   },
+  categoryPill: {
+    alignItems: 'center',
+    backgroundColor: palette.cardSoft,
+    borderColor: palette.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 52,
+    paddingHorizontal: 14
+  },
+  categoryLabel: {
+    color: palette.text,
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center'
+  },
   segmentRow: {
     flexDirection: 'row',
     gap: 10
+  },
+  skillGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10
+  },
+  skillChip: {
+    backgroundColor: palette.cardSoft,
+    borderColor: palette.border,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 11
+  },
+  skillChipActive: {
+    backgroundColor: 'rgba(103,232,249,0.14)',
+    borderColor: 'rgba(103,232,249,0.26)'
+  },
+  skillChipText: {
+    color: palette.textMuted,
+    fontSize: 13,
+    fontWeight: '700'
+  },
+  skillChipTextActive: {
+    color: palette.aqua
   },
   segment: {
     alignItems: 'center',

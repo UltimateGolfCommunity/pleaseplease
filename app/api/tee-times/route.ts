@@ -123,6 +123,73 @@ async function attachGroupDetails(supabase: any, teeTimes: any[]) {
   }))
 }
 
+async function createNotification(
+  supabase: any,
+  {
+    userId,
+    type,
+    title,
+    message,
+    relatedId
+  }: {
+    userId?: string | null
+    type: string
+    title: string
+    message: string
+    relatedId?: string | null
+  }
+) {
+  if (!userId) return
+
+  try {
+    await supabase.from('notifications').insert({
+      user_id: userId,
+      type,
+      title,
+      message,
+      related_id: relatedId || null,
+      is_read: false
+    })
+  } catch (error) {
+    console.warn('⚠️ Unable to create tee time notification:', error)
+  }
+}
+
+async function createUserActivity(
+  supabase: any,
+  {
+    userId,
+    activityType,
+    title,
+    description,
+    relatedId,
+    metadata
+  }: {
+    userId?: string | null
+    activityType: string
+    title: string
+    description?: string | null
+    relatedId?: string | null
+    metadata?: Record<string, unknown>
+  }
+) {
+  if (!userId) return
+
+  try {
+    await supabase.from('user_activities').insert({
+      user_id: userId,
+      activity_type: activityType,
+      title,
+      description: description || null,
+      related_id: relatedId || null,
+      related_type: 'tee_time',
+      metadata: metadata || {}
+    })
+  } catch (error) {
+    console.warn('⚠️ Unable to create tee time activity:', error)
+  }
+}
+
 // Mock tee time data for development with in-memory storage
 let mockTeeTimes = [
   {
@@ -605,9 +672,20 @@ export async function POST(request: NextRequest) {
       
       if (action === 'apply') {
         // Mock application
-        return NextResponse.json({ 
-          success: true, 
-          message: 'Application submitted successfully'
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Application submitted successfully'
+      })
+    }
+
+      if (action === 'update') {
+        return NextResponse.json({
+          success: true,
+          message: 'Tee time updated successfully',
+          tee_time: {
+            id: data.tee_time_id,
+            ...data
+          }
         })
       }
       
@@ -949,10 +1027,170 @@ export async function POST(request: NextRequest) {
       }
       
       console.log('✅ Tee time created successfully:', newTeeTime)
+
+      await Promise.allSettled([
+        createNotification(supabase, {
+          userId: creatorId,
+          type: 'tee_time_posted',
+          title: 'Tee time posted',
+          message: `${courseName || 'Your tee time'} is now live for golfers to join.`,
+          relatedId: newTeeTime.id
+        }),
+        createUserActivity(supabase, {
+          userId: creatorId,
+          activityType: 'tee_time_created',
+          title: 'Posted a tee time',
+          description: `Booked ${courseName || 'a new round'} for ${data.tee_time_date}`,
+          relatedId: newTeeTime.id,
+          metadata: {
+            course_name: courseName || data.course_name || 'Unnamed Course',
+            location: data.location || '',
+            tee_time_date: data.tee_time_date,
+            tee_time_time: formattedTime,
+            visibility_scope: visibilityScope
+          }
+        })
+      ])
+
       return NextResponse.json({ 
         success: true, 
         message: 'Tee time created successfully', 
         tee_time: newTeeTime 
+      })
+    }
+
+    if (action === 'update') {
+      if (!data.tee_time_id || !data.user_id) {
+        return NextResponse.json(
+          {
+            error: 'Tee time ID and user ID are required'
+          },
+          { status: 400 }
+        )
+      }
+
+      const { data: existingTeeTime, error: existingError } = await supabase
+        .from('tee_times')
+        .select('id, creator_id, course_name')
+        .eq('id', data.tee_time_id)
+        .single()
+
+      if (existingError || !existingTeeTime) {
+        return NextResponse.json({ error: 'Tee time not found' }, { status: 404 })
+      }
+
+      if (existingTeeTime.creator_id !== data.user_id) {
+        return NextResponse.json({ error: 'Only the tee time creator can edit this round' }, { status: 403 })
+      }
+
+      const nextTime =
+        typeof data.tee_time_time === 'string' && data.tee_time_time.length === 5
+          ? `${data.tee_time_time}:00`
+          : data.tee_time_time
+
+      const updatePayload: Record<string, unknown> = {
+        course_name: data.course_name?.trim() || existingTeeTime.course_name || 'Unnamed Course',
+        course_location: data.location?.trim() || '',
+        tee_time_date: data.tee_time_date,
+        tee_time_time: nextTime,
+        max_players: Number(data.max_players) || 4,
+        handicap_requirement: data.handicap_requirement || 'Weekend Hack',
+        visibility_scope: data.visibility_scope || 'public'
+      }
+
+      const { data: updatedTeeTime, error: updateError } = await supabase
+        .from('tee_times')
+        .update(updatePayload)
+        .eq('id', data.tee_time_id)
+        .select()
+        .single()
+
+      if (updateError && isMissingColumnError(updateError, 'visibility_scope')) {
+        delete updatePayload.visibility_scope
+        const legacyResult = await supabase
+          .from('tee_times')
+          .update(updatePayload)
+          .eq('id', data.tee_time_id)
+          .select()
+          .single()
+
+        if (legacyResult.error) {
+          return NextResponse.json(
+            {
+              error: 'Failed to update tee time',
+              details: legacyResult.error.message
+            },
+            { status: 500 }
+          )
+        }
+
+        await Promise.allSettled([
+          createNotification(supabase, {
+            userId: data.user_id,
+            type: 'tee_time_updated',
+            title: 'Tee time updated',
+            message: `${updatePayload.course_name || 'Your tee time'} was updated successfully.`,
+            relatedId: data.tee_time_id
+          }),
+          createUserActivity(supabase, {
+            userId: data.user_id,
+            activityType: 'tee_time_updated',
+            title: 'Updated a tee time',
+            description: `Updated ${updatePayload.course_name || 'a round'} for ${data.tee_time_date}`,
+            relatedId: data.tee_time_id,
+            metadata: {
+              course_name: updatePayload.course_name,
+              tee_time_date: data.tee_time_date,
+              tee_time_time: nextTime,
+              visibility_scope: data.visibility_scope || 'public'
+            }
+          })
+        ])
+
+        return NextResponse.json({
+          success: true,
+          message: 'Tee time updated successfully',
+          tee_time: legacyResult.data
+        })
+      }
+
+      if (updateError) {
+        return NextResponse.json(
+          {
+            error: 'Failed to update tee time',
+            details: updateError.message
+          },
+          { status: 500 }
+        )
+      }
+
+      await Promise.allSettled([
+        createNotification(supabase, {
+          userId: data.user_id,
+          type: 'tee_time_updated',
+          title: 'Tee time updated',
+          message: `${updatePayload.course_name || 'Your tee time'} was updated successfully.`,
+          relatedId: data.tee_time_id
+        }),
+        createUserActivity(supabase, {
+          userId: data.user_id,
+          activityType: 'tee_time_updated',
+          title: 'Updated a tee time',
+          description: `Updated ${updatePayload.course_name || 'a round'} for ${data.tee_time_date}`,
+          relatedId: data.tee_time_id,
+          metadata: {
+            course_name: updatePayload.course_name,
+            tee_time_date: data.tee_time_date,
+            tee_time_time: nextTime,
+            visibility_scope: data.visibility_scope || 'public'
+          }
+        })
+      ])
+
+      return NextResponse.json({
+        success: true,
+        message: 'Tee time updated successfully',
+        tee_time: updatedTeeTime
       })
     }
 

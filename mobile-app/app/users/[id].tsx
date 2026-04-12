@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Redirect, router, useLocalSearchParams } from 'expo-router'
+import Ionicons from '@expo/vector-icons/Ionicons'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { Avatar } from '@/components/Avatar'
 import { BrandHeader } from '@/components/BrandHeader'
 import { PrimaryButton } from '@/components/PrimaryButton'
@@ -25,14 +26,27 @@ type ConnectionStatusResponse = {
   status: 'none' | 'pending' | 'incoming_pending' | 'connected'
 }
 
+type RatingSummary = {
+  success?: boolean
+  average: number | null
+  count: number
+  viewerRating: number | null
+}
+
 export default function PublicUserScreen() {
   const { loading, user } = useAuth()
   const { id } = useLocalSearchParams<{ id: string }>()
   const [busy, setBusy] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [connecting, setConnecting] = useState(false)
+  const [ratingBusy, setRatingBusy] = useState(false)
   const [profile, setProfile] = useState<PublicUser | null>(null)
   const [status, setStatus] = useState<ConnectionStatusResponse['status']>('none')
+  const [ratingSummary, setRatingSummary] = useState<RatingSummary>({
+    average: null,
+    count: 0,
+    viewerRating: null
+  })
 
   const displayName = useMemo(() => {
     return (
@@ -46,17 +60,25 @@ export default function PublicUserScreen() {
     if (!id) return
 
     try {
-      const [profileResponse, statusResponse] = await Promise.all([
+      const [profileResponse, statusResponse, ratingResponse] = await Promise.all([
         apiGet<PublicUser>(`/api/users?id=${encodeURIComponent(id)}`),
         user?.id
           ? apiGet<ConnectionStatusResponse>(
               `/api/users?action=status&id=${encodeURIComponent(id)}&viewer_id=${encodeURIComponent(user.id)}`
             )
-          : Promise.resolve({ success: true, status: 'none' as const })
+          : Promise.resolve({ success: true, status: 'none' as const }),
+        apiGet<RatingSummary>(
+          `/api/users?action=rating&id=${encodeURIComponent(id)}${user?.id ? `&viewer_id=${encodeURIComponent(user.id)}` : ''}`
+        ).catch(() => ({
+          average: null,
+          count: 0,
+          viewerRating: null
+        }))
       ])
 
       setProfile(profileResponse)
       setStatus(statusResponse.status)
+      setRatingSummary(ratingResponse)
     } finally {
       setBusy(false)
       setRefreshing(false)
@@ -90,6 +112,26 @@ export default function PublicUserScreen() {
       Alert.alert('Unable to connect', error instanceof Error ? error.message : 'Please try again.')
     } finally {
       setConnecting(false)
+    }
+  }
+
+  const handleRate = async (stars: number) => {
+    if (!user?.id || !id) return
+
+    setRatingBusy(true)
+    try {
+      const response = await apiPost<RatingSummary>('/api/users', {
+        action: 'rate',
+        rated_user_id: id,
+        rater_user_id: user.id,
+        stars
+      })
+      setRatingSummary(response)
+      Alert.alert('Rating saved', `You gave ${displayName} ${stars} star${stars === 1 ? '' : 's'}.`)
+    } catch (error) {
+      Alert.alert('Unable to rate golfer', error instanceof Error ? error.message : 'Please try again.')
+    } finally {
+      setRatingBusy(false)
     }
   }
 
@@ -140,8 +182,35 @@ export default function PublicUserScreen() {
             <Text style={styles.statusLabel}>{statusLabel}</Text>
           </View>
           {profile?.location ? <Text style={styles.meta}>{profile.location}</Text> : null}
-          <Text style={styles.meta}>Handicap: {profile?.handicap ?? 'Not set yet'}</Text>
+          <View style={styles.ratingRow}>
+            <Text style={styles.meta}>Handicap: {profile?.handicap ?? 'Not set yet'}</Text>
+            <View style={styles.ratingBadge}>
+              <Ionicons color={palette.gold} name="star" size={16} />
+              <Text style={styles.ratingBadgeText}>
+                {ratingSummary.average ? ratingSummary.average.toFixed(1) : 'New'}
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.meta}>
+            {ratingSummary.count ? `${ratingSummary.count} golfer ratings` : 'No golfer ratings yet'}
+          </Text>
           {profile?.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
+          <View style={styles.starRow}>
+            {[1, 2, 3, 4, 5].map((stars) => (
+              <Pressable
+                key={stars}
+                disabled={ratingBusy}
+                onPress={() => void handleRate(stars)}
+                style={styles.starButton}
+              >
+                <Ionicons
+                  color={stars <= (ratingSummary.viewerRating || 0) ? palette.gold : palette.textMuted}
+                  name={stars <= (ratingSummary.viewerRating || 0) ? 'star' : 'star-outline'}
+                  size={24}
+                />
+              </Pressable>
+            ))}
+          </View>
           <PrimaryButton
             disabled={status === 'connected' || status === 'pending' || status === 'incoming_pending'}
             label={actionLabel}
@@ -222,5 +291,35 @@ const styles = StyleSheet.create({
     color: palette.textMuted,
     fontSize: 15,
     lineHeight: 22
+  },
+  ratingRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10
+  },
+  ratingBadge: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderColor: 'rgba(245, 158, 11, 0.28)',
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6
+  },
+  ratingBadgeText: {
+    color: palette.text,
+    fontSize: 13,
+    fontWeight: '700'
+  },
+  starRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6
+  },
+  starButton: {
+    padding: 2
   }
 })

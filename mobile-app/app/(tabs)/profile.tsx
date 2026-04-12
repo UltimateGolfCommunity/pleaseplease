@@ -60,6 +60,12 @@ type ConnectionRecord = {
   recipient?: UserCard | null
 }
 
+type RatingSummary = {
+  average: number | null
+  count: number
+  viewerRating: number | null
+}
+
 function formatActivityTime(value: string) {
   const date = new Date(value)
   const diff = Date.now() - date.getTime()
@@ -107,6 +113,11 @@ export default function ProfileTab() {
   const [badges, setBadges] = useState<BadgeRecord[]>([])
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [connections, setConnections] = useState<ConnectionRecord[]>([])
+  const [ratingSummary, setRatingSummary] = useState<RatingSummary>({
+    average: null,
+    count: 0,
+    viewerRating: null
+  })
   const [form, setForm] = useState({
     first_name: '',
     last_name: '',
@@ -138,11 +149,12 @@ export default function ProfileTab() {
       profile?.location || null,
       profile?.handicap !== null && profile?.handicap !== undefined
         ? `Handicap ${profile.handicap}`
-        : null
+        : null,
+      ratingSummary.average ? `${ratingSummary.average.toFixed(1)}★` : null
     ].filter(Boolean)
 
     return bits.length ? bits.join(' • ') : 'Complete your golfer profile'
-  }, [profile?.handicap, profile?.home_club, profile?.home_course, profile?.location])
+  }, [profile?.handicap, profile?.home_club, profile?.home_course, profile?.location, ratingSummary.average])
   const acceptedConnections = useMemo(() => {
     return connections
       .map((connection) =>
@@ -156,19 +168,22 @@ export default function ProfileTab() {
 
     try {
       await refreshProfile(user.id)
-      const [userBadges, activityResponse, connectionResponse] = await Promise.all([
+      const [userBadges, activityResponse, connectionResponse, ratingResponse] = await Promise.all([
         apiGet<BadgeRecord[]>(`/api/badges?action=user_badges&user_id=${encodeURIComponent(user.id)}`),
         apiGet<{ success: boolean; activities: ActivityItem[] }>(
           `/api/activities?user_id=${encodeURIComponent(user.id)}&limit=6`
         ).catch(() => ({ success: true, activities: [] })),
         apiGet<{ success: boolean; connections: ConnectionRecord[] }>(
           `/api/users?action=connections&id=${encodeURIComponent(user.id)}`
-        ).catch(() => ({ success: true, connections: [] }))
+        ).catch(() => ({ success: true, connections: [] })),
+        apiGet<RatingSummary>(`/api/users?action=rating&id=${encodeURIComponent(user.id)}&viewer_id=${encodeURIComponent(user.id)}`)
+          .catch(() => ({ average: null, count: 0, viewerRating: null }))
       ])
 
       setBadges(userBadges || [])
       setActivities(activityResponse?.activities || [])
       setConnections(connectionResponse?.connections || [])
+      setRatingSummary(ratingResponse)
     } finally {
       setBusy(false)
       setRefreshing(false)

@@ -33,25 +33,25 @@ type Group = {
   image_url?: string | null
 }
 
-type GroupMessage = {
+type GroupActivity = {
   id: string
-  message_content?: string
+  activity_type?: string
+  title?: string
+  description?: string | null
   created_at?: string
-  replies?: GroupMessage[]
-  user_profiles?: {
+  actor?: {
     first_name?: string | null
     last_name?: string | null
     username?: string | null
+    avatar_url?: string | null
   } | null
-}
-
-type GroupActivity = {
-  id: string
-  groupId: string
-  groupName: string
-  message: string
-  createdAt: string
-  author: string
+  group?: {
+    id: string
+    name?: string | null
+    location?: string | null
+    logo_url?: string | null
+    image_url?: string | null
+  } | null
 }
 
 function formatRelativeTime(value?: string) {
@@ -72,6 +72,26 @@ function formatRelativeTime(value?: string) {
   return `${Math.round(diff / day)}d ago`
 }
 
+function getGroupActivityTitle(item: GroupActivity) {
+  const actorName = item.actor?.first_name || item.actor?.username || 'A member'
+  const groupName = item.group?.name || 'group'
+
+  switch (item.activity_type) {
+    case 'group_joined':
+      return `${actorName} joined ${groupName}`
+    case 'group_logo_updated':
+      return `${actorName} refreshed the logo`
+    case 'group_cover_updated':
+      return `${actorName} updated the cover photo`
+    case 'group_details_updated':
+      return `${actorName} updated ${groupName}`
+    case 'group_created':
+      return `${actorName} started ${groupName}`
+    default:
+      return item.title || `${groupName} activity`
+  }
+}
+
 export default function GroupsTab() {
   const { loading, user, profile } = useAuth()
   const [refreshing, setRefreshing] = useState(false)
@@ -83,6 +103,7 @@ export default function GroupsTab() {
   const [myGroups, setMyGroups] = useState<Group[]>([])
   const [discoverGroups, setDiscoverGroups] = useState<Group[]>([])
   const [groupActivity, setGroupActivity] = useState<GroupActivity[]>([])
+  const [leaderboardArea, setLeaderboardArea] = useState('')
   const [form, setForm] = useState({
     name: '',
     description: '',
@@ -93,23 +114,26 @@ export default function GroupsTab() {
   })
 
   const localLeaderboard = useMemo(() => {
-    const localText = profile?.location?.split(',')[0]?.trim().toLowerCase()
+    const localText = (leaderboardArea || profile?.location || '').split(',')[0]?.trim().toLowerCase()
     const pool = localText
       ? discoverGroups.filter((group) => (group.location || '').toLowerCase().includes(localText))
       : discoverGroups
 
     return [...pool].sort((a, b) => (b.member_count || 0) - (a.member_count || 0)).slice(0, 8)
-  }, [discoverGroups, profile?.location])
+  }, [discoverGroups, leaderboardArea, profile?.location])
 
   const loadGroups = useCallback(async () => {
     if (!user?.id) return
 
     try {
-      const [mine, discover] = await Promise.all([
+      const [mine, discover, activityResponse] = await Promise.all([
         apiGet<{ success: boolean; groups: Group[] }>(`/api/groups?user_id=${encodeURIComponent(user.id)}`),
         apiGet<{ success: boolean; groups: Group[] }>(
           `/api/groups?action=search&user_id=${encodeURIComponent(user.id)}&query=`
-        )
+        ),
+        apiGet<{ success: boolean; activities: GroupActivity[] }>(
+          `/api/activities?action=groups&user_id=${encodeURIComponent(user.id)}&limit=10`
+        ).catch(() => ({ success: true, activities: [] }))
       ])
 
       const myGroupList = mine.groups || []
@@ -117,44 +141,47 @@ export default function GroupsTab() {
 
       setMyGroups(myGroupList)
       setDiscoverGroups(discoverList)
-
-      const boardResponses = await Promise.all(
-        myGroupList.slice(0, 8).map(async (group) => {
-          try {
-            const board = await apiGet<{ success: boolean; messages: GroupMessage[] }>(
-              `/api/groups/message?group_id=${encodeURIComponent(group.id)}&user_id=${encodeURIComponent(user.id)}`
-            )
-
-            const flattened = (board.messages || []).flatMap((message) => [message, ...(message.replies || [])])
-
-            return flattened.map((message) => ({
-              id: `${group.id}-${message.id}`,
-              groupId: group.id,
-              groupName: group.name,
-              message: message.message_content || 'New group activity',
-              createdAt: message.created_at || new Date().toISOString(),
-              author:
-                message.user_profiles?.first_name ||
-                message.user_profiles?.username ||
-                'Member'
-            }))
-          } catch {
-            return []
-          }
-        })
-      )
-
-      setGroupActivity(
-        boardResponses
-          .flat()
-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-          .slice(0, 8)
-      )
+      setGroupActivity(activityResponse.activities || [])
     } finally {
       setBusy(false)
       setRefreshing(false)
     }
   }, [user?.id])
+
+  useEffect(() => {
+    let mounted = true
+
+    const loadLeaderboardLocation = async () => {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const Location = require('expo-location')
+        const permission = await Location.requestForegroundPermissionsAsync()
+
+        if (!mounted || permission.status !== 'granted') {
+          return
+        }
+
+        const currentPosition = await Location.getCurrentPositionAsync({})
+        const places = await Location.reverseGeocodeAsync(currentPosition.coords)
+        const place = places?.[0]
+        const nextArea = [place?.city, place?.region].filter(Boolean).join(', ')
+
+        if (mounted && nextArea) {
+          setLeaderboardArea(nextArea)
+        }
+      } catch {
+        if (mounted) {
+          setLeaderboardArea('')
+        }
+      }
+    }
+
+    void loadLeaderboardLocation()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   useEffect(() => {
     if (user?.id) {
@@ -384,15 +411,20 @@ export default function GroupsTab() {
           {!busy && groupActivity.length === 0 ? (
             <View style={styles.emptyCard}>
               <Text style={styles.emptyTitle}>No recent group activity</Text>
-              <Text style={styles.empty}>When members post in your groups, the latest movement will show up here.</Text>
+              <Text style={styles.empty}>Joins, refreshed logos, cover updates, and club changes will show up here.</Text>
             </View>
           ) : null}
           {groupActivity.map((item) => (
-            <Pressable key={item.id} onPress={() => router.push(`/group/${item.groupId}`)} style={styles.card}>
-              <Text style={styles.cardTitle}>{item.groupName}</Text>
-              <Text style={styles.cardBody}>{item.message}</Text>
+            <Pressable
+              key={item.id}
+              onPress={() => item.group?.id && router.push(`/group/${item.group.id}`)}
+              style={styles.card}
+            >
+              <Text style={styles.cardTitle}>{item.group?.name || 'Group activity'}</Text>
+              <Text style={styles.cardBody}>{getGroupActivityTitle(item)}</Text>
               <Text style={styles.cardMeta}>
-                {item.author} • {formatRelativeTime(item.createdAt)}
+                {item.description || 'Fresh movement inside your golf communities.'} •{' '}
+                {formatRelativeTime(item.created_at)}
               </Text>
             </Pressable>
           ))}
@@ -431,6 +463,11 @@ export default function GroupsTab() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Groups leaderboard</Text>
+          {leaderboardArea || profile?.location ? (
+            <Text style={styles.helper}>
+              Ranked by member count near {(leaderboardArea || profile?.location || 'your area').split(',')[0]}.
+            </Text>
+          ) : null}
           {!busy && localLeaderboard.length === 0 ? (
             <View style={styles.emptyCard}>
               <Text style={styles.emptyTitle}>No local groups yet</Text>
