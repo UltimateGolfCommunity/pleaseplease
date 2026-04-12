@@ -117,6 +117,7 @@ export default function ProfileTab() {
   const [uploadingCover, setUploadingCover] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
+  const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [badges, setBadges] = useState<BadgeRecord[]>([])
   const [activities, setActivities] = useState<ActivityItem[]>([])
@@ -404,7 +405,7 @@ export default function ProfileTab() {
           />
         }
       >
-        <BrandHeader />
+        <BrandHeader rightIconName="settings-outline" onRightPress={() => setShowSettingsModal(true)} />
 
         <View style={styles.headerCard}>
           <View style={styles.coverShell}>
@@ -496,47 +497,89 @@ export default function ProfileTab() {
               </View>
             ))}
           </View>
-        <View style={styles.actions}>
-            <PrimaryButton label="Help & Support" variant="ghost" onPress={() => router.push('/help')} />
-            <PrimaryButton
-              label="Privacy Policy"
-              variant="ghost"
-              onPress={() => void Linking.openURL('https://www.ultimategolfcommunity.com/privacy')}
-            />
-            <PrimaryButton label="Scores" variant="ghost" onPress={() => router.push('/scores')} />
-            <PrimaryButton label="Sign Out" variant="ghost" onPress={signOut} />
-            <PrimaryButton
-              label="Delete Account"
-              variant="ghost"
-              onPress={() => {
-                if (!user?.id) return
+        </View>
 
-                Alert.alert(
-                  'Delete account?',
-                  'This permanently removes your account access from Ultimate Golf Community.',
-                  [
-                    { style: 'cancel', text: 'Cancel' },
-                    {
-                      style: 'destructive',
-                      text: 'Delete',
-                      onPress: async () => {
-                        try {
-                          await apiDelete('/api/account/delete', { user_id: user.id })
-                          await signOut()
-                        } catch (error) {
-                          Alert.alert(
-                            'Unable to delete account',
-                            error instanceof Error ? error.message : 'Please try again.'
-                          )
+        <Modal
+          animationType="fade"
+          transparent
+          visible={showSettingsModal}
+          onRequestClose={() => setShowSettingsModal(false)}
+        >
+          <Pressable style={styles.modalBackdrop} onPress={() => setShowSettingsModal(false)}>
+            <Pressable style={styles.modalCard} onPress={() => {}}>
+              <Text style={styles.sectionEyebrow}>Settings</Text>
+              <Text style={styles.infoTitle}>Manage your account</Text>
+              <Text style={styles.infoLine}>
+                The profile page stays focused on your golfer identity here, and the rest of the account actions live in one clean place.
+              </Text>
+              <PrimaryButton
+                label="Help & Support"
+                variant="ghost"
+                onPress={() => {
+                  setShowSettingsModal(false)
+                  router.push('/help')
+                }}
+              />
+              <PrimaryButton
+                label="Privacy Policy"
+                variant="ghost"
+                onPress={() => {
+                  setShowSettingsModal(false)
+                  void Linking.openURL('https://www.ultimategolfcommunity.com/privacy')
+                }}
+              />
+              <PrimaryButton
+                label="Scores"
+                variant="ghost"
+                onPress={() => {
+                  setShowSettingsModal(false)
+                  router.push('/scores')
+                }}
+              />
+              <PrimaryButton
+                label="Sign Out"
+                variant="ghost"
+                onPress={() => {
+                  setShowSettingsModal(false)
+                  void signOut()
+                }}
+              />
+              <PrimaryButton
+                label="Delete Account"
+                variant="ghost"
+                onPress={() => {
+                  setShowSettingsModal(false)
+
+                  if (!user?.id) return
+
+                  Alert.alert(
+                    'Delete account?',
+                    'This permanently removes your account access from Ultimate Golf Community.',
+                    [
+                      { style: 'cancel', text: 'Cancel' },
+                      {
+                        style: 'destructive',
+                        text: 'Delete',
+                        onPress: async () => {
+                          try {
+                            await apiDelete('/api/account/delete', { user_id: user.id })
+                            await signOut()
+                          } catch (error) {
+                            Alert.alert(
+                              'Unable to delete account',
+                              error instanceof Error ? error.message : 'Please try again.'
+                            )
+                          }
                         }
                       }
-                    }
-                  ]
-                )
-              }}
-            />
-          </View>
-        </View>
+                    ]
+                  )
+                }}
+              />
+              <PrimaryButton label="Close" variant="ghost" onPress={() => setShowSettingsModal(false)} />
+            </Pressable>
+          </Pressable>
+        </Modal>
 
         <Modal
           animationType="fade"
@@ -925,10 +968,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     marginLeft: 'auto'
-  },
-  actions: {
-    gap: 10,
-    marginTop: 8
   },
   qrImage: {
     alignSelf: 'center',
