@@ -32,30 +32,6 @@ type TeeTime = {
   visibility_scope?: string
 }
 
-type PendingApplication = {
-  id: string
-  tee_time_id?: string
-  applicant_id?: string
-  status?: string
-  tee_times?: {
-    id?: string
-    course_name?: string
-    tee_time_date?: string
-    tee_time_time?: string
-  } | null
-  applicant?: {
-    first_name?: string | null
-    last_name?: string | null
-    username?: string | null
-    handicap?: number | null
-    avatar_url?: string | null
-  } | null
-}
-
-type PendingApplicationsPayload = {
-  applications: PendingApplication[]
-}
-
 const skillOptions = ['Beginner', 'Weekend Hack', 'Weekend Grinder', 'Low Handicap', 'Pro']
 
 function formatDisplayDate(date?: string, time?: string) {
@@ -130,8 +106,6 @@ export default function TeeTimesScreen() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedTime, setSelectedTime] = useState<Date | null>(null)
   const [teeTimes, setTeeTimes] = useState<TeeTime[]>([])
-  const [pendingApplications, setPendingApplications] = useState<PendingApplication[]>([])
-  const [reviewingApplicationId, setReviewingApplicationId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState({
     course_name: '',
@@ -154,15 +128,8 @@ export default function TeeTimesScreen() {
     if (!user?.id) return
 
     try {
-      const [teeTimesResponse, pendingResponse] = await Promise.all([
-        apiGet<TeeTime[]>(`/api/tee-times?action=user&user_id=${encodeURIComponent(user.id)}`),
-        apiGet<PendingApplicationsPayload>(
-          `/api/tee-times?action=get-pending-applications&user_id=${encodeURIComponent(user.id)}`
-        ).catch(() => ({ applications: [] }))
-      ])
-
+      const teeTimesResponse = await apiGet<TeeTime[]>(`/api/tee-times?action=user&user_id=${encodeURIComponent(user.id)}`)
       setTeeTimes(teeTimesResponse || [])
-      setPendingApplications(pendingResponse.applications || [])
     } finally {
       setBusy(false)
       setRefreshing(false)
@@ -266,47 +233,6 @@ export default function TeeTimesScreen() {
       setSaving(false)
     }
   }
-
-  const handleReviewApplication = async (
-    applicationId: string,
-    teeTimeCreatorId: string,
-    actionType: 'accept' | 'reject'
-  ) => {
-    setReviewingApplicationId(applicationId)
-
-    try {
-      await apiPost('/api/tee-times', {
-        action: 'manage_application',
-        application_id: applicationId,
-        action_type: actionType,
-        tee_time_creator_id: teeTimeCreatorId
-      })
-
-      Alert.alert(
-        actionType === 'accept' ? 'Request accepted' : 'Request declined',
-        actionType === 'accept'
-          ? 'That golfer has been added to the tee time.'
-          : 'That join request was declined.'
-      )
-      setBusy(true)
-      await loadTeeTimes()
-    } catch (error) {
-      Alert.alert(
-        'Unable to review request',
-        error instanceof Error ? error.message : 'Please try again.'
-      )
-    } finally {
-      setReviewingApplicationId(null)
-    }
-  }
-
-  const getPendingCount = (teeTimeId: string) =>
-    pendingApplications.filter((application) => application.tee_time_id === teeTimeId).length
-
-  const formatApplicantName = (application: PendingApplication) =>
-    [application.applicant?.first_name, application.applicant?.last_name].filter(Boolean).join(' ') ||
-    application.applicant?.username ||
-    'UGC Golfer'
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -426,40 +352,6 @@ export default function TeeTimesScreen() {
         ) : null}
 
         <View style={styles.listCard}>
-          <Text style={styles.sectionTitle}>Pending join requests</Text>
-          {!busy && pendingApplications.length === 0 ? (
-            <Text style={styles.empty}>When golfers request to join your tee times, review them here.</Text>
-          ) : null}
-          {pendingApplications.map((application) => (
-            <View key={application.id} style={styles.requestCard}>
-              <View style={styles.requestHeader}>
-                <Text style={styles.requestTitle}>{formatApplicantName(application)}</Text>
-                <Text style={styles.requestMeta}>
-                  Handicap {application.applicant?.handicap ?? 'N/A'}
-                </Text>
-              </View>
-              <Text style={styles.requestBody}>
-                Wants to join {application.tee_times?.course_name || 'your tee time'} on{' '}
-                {formatDisplayDate(application.tee_times?.tee_time_date, application.tee_times?.tee_time_time)}.
-              </Text>
-              <View style={styles.requestActions}>
-                <PrimaryButton
-                  label="Accept"
-                  loading={reviewingApplicationId === application.id}
-                  onPress={() => user?.id && handleReviewApplication(application.id, user.id, 'accept')}
-                />
-                <PrimaryButton
-                  label="Decline"
-                  variant="ghost"
-                  loading={reviewingApplicationId === application.id}
-                  onPress={() => user?.id && handleReviewApplication(application.id, user.id, 'reject')}
-                />
-              </View>
-            </View>
-          ))}
-        </View>
-
-        <View style={styles.listCard}>
           <Text style={styles.sectionTitle}>Your posted tee times</Text>
           {busy ? <ActivityIndicator color={palette.aqua} /> : null}
           {!busy && teeTimes.length === 0 ? (
@@ -474,11 +366,6 @@ export default function TeeTimesScreen() {
                 <Text style={styles.teeTimeMeta}>
                   {getJoinedCount(teeTime)} joined • {getRemainingSpots(teeTime)} spots left
                 </Text>
-                {getPendingCount(teeTime.id) ? (
-                  <Text style={styles.pendingMeta}>
-                    {getPendingCount(teeTime.id)} pending review
-                  </Text>
-                ) : null}
               </View>
               <PrimaryButton label="Edit" variant="ghost" onPress={() => startEditing(teeTime)} />
             </View>
@@ -513,39 +400,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 14,
     padding: 20
-  },
-  requestCard: {
-    backgroundColor: palette.cardSoft,
-    borderColor: palette.border,
-    borderRadius: 18,
-    borderWidth: 1,
-    gap: 10,
-    padding: 14
-  },
-  requestHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 12,
-    justifyContent: 'space-between'
-  },
-  requestTitle: {
-    color: palette.text,
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '700'
-  },
-  requestMeta: {
-    color: palette.textMuted,
-    fontSize: 13,
-    fontWeight: '600'
-  },
-  requestBody: {
-    color: palette.textMuted,
-    fontSize: 14,
-    lineHeight: 20
-  },
-  requestActions: {
-    gap: 10
   },
   sectionTitle: {
     color: palette.text,
@@ -685,11 +539,5 @@ const styles = StyleSheet.create({
     color: palette.textMuted,
     fontSize: 14,
     lineHeight: 20
-  },
-  pendingMeta: {
-    color: palette.aqua,
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 18
   }
 })
