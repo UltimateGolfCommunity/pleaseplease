@@ -125,7 +125,6 @@ export default function PublicUserScreen() {
   const [busy, setBusy] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [connecting, setConnecting] = useState(false)
-  const [ratingBusy, setRatingBusy] = useState(false)
   const [profile, setProfile] = useState<PublicUser | null>(null)
   const [status, setStatus] = useState<ConnectionStatusResponse['status']>('none')
   const [connections, setConnections] = useState<ConnectionRecord[]>([])
@@ -222,26 +221,6 @@ export default function PublicUserScreen() {
     }
   }
 
-  const handleRate = async (stars: number) => {
-    if (!user?.id || !id) return
-
-    setRatingBusy(true)
-    try {
-      const response = await apiPost<RatingSummary>('/api/users', {
-        action: 'rate',
-        rated_user_id: id,
-        rater_user_id: user.id,
-        stars
-      })
-      setRatingSummary(response)
-      Alert.alert('Rating saved', `You gave ${displayName} ${stars} star${stars === 1 ? '' : 's'}.`)
-    } catch (error) {
-      Alert.alert('Unable to rate golfer', error instanceof Error ? error.message : 'Please try again.')
-    } finally {
-      setRatingBusy(false)
-    }
-  }
-
   const actionLabel =
     status === 'connected'
       ? 'Connected'
@@ -327,22 +306,6 @@ export default function PublicUserScreen() {
             </View>
           ) : null}
 
-          <View style={styles.starRow}>
-            {[1, 2, 3, 4, 5].map((stars) => (
-              <Pressable
-                key={stars}
-                disabled={ratingBusy}
-                onPress={() => void handleRate(stars)}
-                style={styles.starButton}
-              >
-                <Ionicons
-                  color={stars <= (ratingSummary.viewerRating || 0) ? palette.gold : palette.textMuted}
-                  name={stars <= (ratingSummary.viewerRating || 0) ? 'star' : 'star-outline'}
-                  size={24}
-                />
-              </Pressable>
-            ))}
-          </View>
         </View>
 
         <View style={styles.card}>
@@ -519,16 +482,6 @@ const styles = StyleSheet.create({
   },
   actionRow: {
     marginTop: 16
-  },
-  starRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 6,
-    justifyContent: 'center',
-    marginTop: 14
-  },
-  starButton: {
-    padding: 2
   },
   card: {
     backgroundColor: palette.card,
