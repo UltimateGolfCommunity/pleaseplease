@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Redirect, router } from 'expo-router'
+import { Redirect, router, useLocalSearchParams } from 'expo-router'
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -140,6 +140,7 @@ function getGolfRecommendation(weather: WeatherData) {
 
 export default function HomeTab() {
   const { loading, profile, user } = useAuth()
+  const params = useLocalSearchParams<{ compose?: string }>()
   const [activeHomePanel, setActiveHomePanel] = useState<'tee-times' | 'network'>('tee-times')
   const [refreshing, setRefreshing] = useState(false)
   const [busy, setBusy] = useState(true)
@@ -268,6 +269,13 @@ export default function HomeTab() {
   useEffect(() => {
     void loadHeaderCounts()
   }, [loadHeaderCounts])
+
+  useEffect(() => {
+    if (params.compose === 'tee-time') {
+      setShowCreateForm(true)
+      router.setParams({ compose: undefined })
+    }
+  }, [params.compose])
 
   if (!loading && !user) {
     return <Redirect href="/welcome" />
@@ -759,17 +767,6 @@ export default function HomeTab() {
         )}
         </ScrollView>
 
-        <Pressable
-          onPress={() => {
-            if (showCreateForm) {
-              resetComposer()
-            }
-            setShowCreateForm((value) => !value)
-          }}
-          style={styles.floatingComposeButton}
-        >
-          <Text style={styles.floatingComposeIcon}>{showCreateForm ? '×' : '+'}</Text>
-        </Pressable>
       </View>
     </SafeAreaView>
   )
@@ -1213,26 +1210,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20
   },
-  floatingComposeButton: {
-    alignItems: 'center',
-    backgroundColor: palette.white,
-    borderRadius: 999,
-    bottom: 22,
-    elevation: 8,
-    height: 62,
-    justifyContent: 'center',
-    position: 'absolute',
-    right: 20,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    width: 62
-  },
-  floatingComposeIcon: {
-    color: palette.bg,
-    fontSize: 30,
-    fontWeight: '500',
-    lineHeight: 30
-  }
 })
