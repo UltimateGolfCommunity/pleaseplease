@@ -771,14 +771,15 @@ const styles = StyleSheet.create({
   },
   profileTopCopy: {
     alignItems: 'center',
-    gap: 8,
-    marginTop: 6,
+    gap: 4,
+    marginTop: 2,
     width: '100%'
   },
   nameRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    justifyContent: 'center'
+    justifyContent: 'center',
+    marginBottom: -2
   },
   badgeRow: {
     flexDirection: 'row',
@@ -791,7 +792,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     letterSpacing: -0.4,
-    lineHeight: 30,
+    lineHeight: 28,
     textAlign: 'center'
   },
   crownIcon: {
@@ -803,8 +804,9 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.1)',
     borderRadius: 999,
     borderWidth: 1,
+    marginTop: -2,
     paddingHorizontal: 16,
-    paddingVertical: 10
+    paddingVertical: 8
   },
   headlineMeta: {
     color: palette.text,
@@ -818,7 +820,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
-    justifyContent: 'center'
+    justifyContent: 'center',
+    marginTop: -1
   },
   ratingBadge: {
     alignItems: 'center',
