@@ -172,12 +172,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [supabase, processProfileData])
 
-  // Optimized auth state change handler
+  // Load the current session on startup, then subscribe to auth changes.
   useEffect(() => {
     if (!supabase) return
+
+    let isMounted = true
+
+    const initializeSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession()
+
+        if (!isMounted) return
+
+        if (error) {
+          console.error('Error getting initial session:', error)
+          setProfile(null)
+          return
+        }
+
+        setSession(session)
+        setUser(session?.user ?? null)
+
+        if (session?.user) {
+          await fetchProfile(session.user.id, session.user)
+        } else {
+          setProfile(null)
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('Unexpected error loading initial session:', error)
+          setProfile(null)
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    initializeSession()
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: string, session: Session | null) => {
+        if (!isMounted) return
+
         setSession(session)
         setUser(session?.user ?? null)
         
@@ -191,9 +229,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     )
 
-    setLoading(false)
-
-    return () => subscription.unsubscribe()
+    return () => {
+      isMounted = false
+      subscription.unsubscribe()
+    }
   }, [supabase, fetchProfile])
 
   // Memoized auth functions to prevent unnecessary re-renders

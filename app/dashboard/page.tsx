@@ -33,7 +33,7 @@ import ScoreLoggingCard from '@/app/components/ScoreLoggingCard'
 type ActiveTab = 'tee-times' | 'groups' | 'messages' | 'profile'
 
 export default function Dashboard() {
-  const { user, profile, signOut } = useAuth()
+  const { user, profile, signOut, loading: authLoading } = useAuth()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<ActiveTab>('tee-times')
   const [showProfileMenu, setShowProfileMenu] = useState(false)
@@ -140,6 +140,12 @@ export default function Dashboard() {
       loadInitialData()
     }
   }, [user?.id])
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace('/auth/login')
+    }
+  }, [authLoading, user, router])
 
   // Auto-refresh tee times and notifications every 60 seconds
   useEffect(() => {
@@ -1017,6 +1023,21 @@ export default function Dashboard() {
       nextHostedOrJoined,
     }
   }, [teeTimes, user?.id, userApplications])
+
+  if (authLoading || (!user && initialLoading)) {
+    return (
+      <div className="min-h-screen bg-[#07140f] text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-emerald-300 border-t-transparent" />
+          <p className="text-sm text-white/65">Loading your golf community…</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return null
+  }
 
   // Show welcome animation while loading and after
   if (initialLoading || showWelcome) {
