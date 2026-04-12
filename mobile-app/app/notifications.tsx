@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Redirect } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
@@ -97,11 +97,6 @@ export default function NotificationsScreen() {
   const [pendingApplications, setPendingApplications] = useState<PendingApplication[]>([])
   const [reviewingApplicationId, setReviewingApplicationId] = useState<string | null>(null)
 
-  const unreadCount = useMemo(
-    () => notifications.filter((notification) => !(notification.is_read ?? notification.read)).length,
-    [notifications]
-  )
-
   const loadNotifications = useCallback(async () => {
     if (!user?.id) return
 
@@ -197,7 +192,6 @@ export default function NotificationsScreen() {
       >
         <BrandHeader
           title="Notifications"
-          subtitle={`Updates from tee times, groups, and your network all land here.${unreadCount ? ` ${unreadCount} unread.` : ''}`}
           showBack
         />
 
