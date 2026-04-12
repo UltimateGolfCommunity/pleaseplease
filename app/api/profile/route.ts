@@ -119,7 +119,6 @@ export async function PUT(request: NextRequest) {
     
     console.log('🔍 PROFILE: Using database for profile operations')
     
-    // Simplified approach: try to update first, if it fails, create
     const updateData: any = {}
     
     if (first_name !== undefined) updateData.first_name = first_name
@@ -142,23 +141,31 @@ export async function PUT(request: NextRequest) {
     
     console.log('🔍 Update data:', updateData)
     
-    // Try to update first
-    const { data: updatedProfile, error: updateError } = await supabase
+    const { data: existingProfile, error: existingProfileError } = await supabase
       .from('user_profiles')
-      .update(updateData)
+      .select('id, email')
       .eq('id', id)
-      .select()
-      .single()
+      .maybeSingle()
 
-    if (updateError) {
-      console.log('❌ Update failed, trying to create profile:', updateError.message)
-      
-      // If update fails, try to create the profile
+    if (existingProfileError) {
+      console.error('❌ Error checking existing profile:', existingProfileError)
+      return NextResponse.json(
+        {
+          error: 'Failed to load profile before saving',
+          details: existingProfileError.message
+        },
+        { status: 500 }
+      )
+    }
+
+    if (!existingProfile) {
+      console.log('ℹ️ No existing profile found, creating one now')
+
       const { data: createdProfile, error: createError } = await supabase
         .from('user_profiles')
         .insert({
           id: id,
-          email: body.email || 'user@example.com',
+          email: body.email || '',
           first_name: first_name || '',
           last_name: last_name || '',
           username: username || '',
@@ -185,6 +192,24 @@ export async function PUT(request: NextRequest) {
       
       console.log('✅ Profile created successfully:', createdProfile)
       return NextResponse.json(createdProfile)
+    }
+
+    const { data: updatedProfile, error: updateError } = await supabase
+      .from('user_profiles')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (updateError) {
+      console.error('❌ Error updating profile:', updateError)
+      return NextResponse.json(
+        {
+          error: 'Failed to update profile',
+          details: updateError.message
+        },
+        { status: 500 }
+      )
     }
 
     console.log('✅ Profile updated successfully:', updatedProfile)
