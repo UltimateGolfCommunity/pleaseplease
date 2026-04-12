@@ -26,7 +26,9 @@ type TeeTime = {
   tee_time_date?: string
   tee_time_time?: string
   handicap_requirement?: string
+  current_players?: number
   max_players?: number
+  available_spots?: number
   visibility_scope?: string
 }
 
@@ -79,6 +81,19 @@ function fromApiTime(value?: string) {
   const next = new Date()
   next.setHours(Number(hours), Number(minutes), 0, 0)
   return next
+}
+
+function getJoinedCount(teeTime: TeeTime) {
+  const currentPlayers = teeTime.current_players ?? 1
+  return Math.max(currentPlayers - 1, 0)
+}
+
+function getRemainingSpots(teeTime: TeeTime) {
+  if (teeTime.available_spots !== undefined && teeTime.available_spots !== null) {
+    return teeTime.available_spots
+  }
+
+  return Math.max((teeTime.max_players || 0) - (teeTime.current_players || 0), 0)
 }
 
 export default function TeeTimesScreen() {
@@ -348,6 +363,9 @@ export default function TeeTimesScreen() {
                 <Text style={styles.teeTimeTitle}>{teeTime.course_name || 'Tee time'}</Text>
                 <Text style={styles.teeTimeMeta}>{formatDisplayDate(teeTime.tee_time_date, teeTime.tee_time_time)}</Text>
                 {teeTime.location ? <Text style={styles.teeTimeMeta}>{teeTime.location}</Text> : null}
+                <Text style={styles.teeTimeMeta}>
+                  {getJoinedCount(teeTime)} joined • {getRemainingSpots(teeTime)} spots left
+                </Text>
               </View>
               <PrimaryButton label="Edit" variant="ghost" onPress={() => startEditing(teeTime)} />
             </View>
