@@ -2,7 +2,18 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Redirect, router, useLocalSearchParams } from 'expo-router'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Linking,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
+} from 'react-native'
 import { Avatar } from '@/components/Avatar'
 import { BrandHeader } from '@/components/BrandHeader'
 import { PrimaryButton } from '@/components/PrimaryButton'
@@ -16,9 +27,22 @@ type PublicUser = {
   last_name?: string | null
   username?: string | null
   avatar_url?: string | null
+  header_image_url?: string | null
   location?: string | null
   handicap?: number | null
   bio?: string | null
+  home_course?: string | null
+  home_club?: string | null
+  linkedin?: string | null
+  linkedin_url?: string | null
+}
+
+type ActivityItem = {
+  id: string
+  activity_type: string
+  title: string
+  description?: string | null
+  created_at: string
 }
 
 type ConnectionStatusResponse = {
@@ -60,6 +84,41 @@ function formatName(user?: UserCard | PublicUser | null) {
   return [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.username || 'UGC Golfer'
 }
 
+function formatActivityLabel(activity: ActivityItem) {
+  switch (activity.activity_type) {
+    case 'tee_time_created':
+      return 'Posted a tee time'
+    case 'tee_time_updated':
+      return 'Updated a tee time'
+    case 'round_logged':
+      return 'Logged a round'
+    case 'profile_updated':
+      return 'Updated profile details'
+    case 'group_joined':
+      return 'Joined a group'
+    default:
+      return activity.title || 'Recent activity'
+  }
+}
+
+function formatRelativeTime(value?: string) {
+  if (!value) return 'Just now'
+  const date = new Date(value)
+  const diff = Date.now() - date.getTime()
+  const hour = 60 * 60 * 1000
+  const day = 24 * hour
+
+  if (diff < hour) {
+    return `${Math.max(1, Math.round(diff / (60 * 1000)))}m ago`
+  }
+
+  if (diff < day) {
+    return `${Math.round(diff / hour)}h ago`
+  }
+
+  return `${Math.round(diff / day)}d ago`
+}
+
 export default function PublicUserScreen() {
   const { loading, user } = useAuth()
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -70,19 +129,16 @@ export default function PublicUserScreen() {
   const [profile, setProfile] = useState<PublicUser | null>(null)
   const [status, setStatus] = useState<ConnectionStatusResponse['status']>('none')
   const [connections, setConnections] = useState<ConnectionRecord[]>([])
+  const [activities, setActivities] = useState<ActivityItem[]>([])
   const [ratingSummary, setRatingSummary] = useState<RatingSummary>({
     average: null,
     count: 0,
     viewerRating: null
   })
 
-  const displayName = useMemo(() => {
-    return (
-      [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') ||
-      profile?.username ||
-      'UGC Golfer'
-    )
-  }, [profile])
+  const displayName = useMemo(() => formatName(profile), [profile])
+  const homeCourse = profile?.home_course || profile?.home_club || 'Home course not added'
+  const linkedinUrl = profile?.linkedin_url || profile?.linkedin || ''
 
   const connectedGolfers = useMemo(() => {
     if (!id) return []
@@ -120,6 +176,16 @@ export default function PublicUserScreen() {
       setStatus(statusResponse.status)
       setRatingSummary(ratingResponse)
       setConnections(connectionsResponse.connections || [])
+
+      if (statusResponse.status === 'connected') {
+        const activityResponse = await apiGet<{ success: boolean; activities: ActivityItem[] }>(
+          `/api/activities?user_id=${encodeURIComponent(id)}&limit=6`
+        ).catch(() => ({ success: true, activities: [] }))
+
+        setActivities(activityResponse.activities || [])
+      } else {
+        setActivities([])
+      }
     } finally {
       setBusy(false)
       setRefreshing(false)
@@ -182,16 +248,8 @@ export default function PublicUserScreen() {
       : status === 'pending'
         ? 'Request Sent'
       : status === 'incoming_pending'
-          ? 'Accept on web for now'
-          : 'Add Connection'
-  const statusLabel =
-    status === 'connected'
-      ? 'Already connected'
-      : status === 'pending'
-        ? 'Request pending'
-        : status === 'incoming_pending'
-          ? 'Incoming request'
-          : 'Open to connect'
+        ? 'Accept on web for now'
+        : 'Add Connection'
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -208,34 +266,68 @@ export default function PublicUserScreen() {
           />
         }
       >
-        <BrandHeader
-          title="Golfer"
-          subtitle="Public golfer cards can become clean native profile moments for invites, connections, and future badges."
-          showBack
-        />
+        <BrandHeader showBack />
 
-        <View style={styles.card}>
-          {busy ? <ActivityIndicator color={palette.aqua} /> : null}
-          <Text style={styles.sectionEyebrow}>Golfer</Text>
-          <Avatar label={displayName} size={104} uri={profile?.avatar_url} />
-          <Text style={styles.name}>{displayName}</Text>
-          <View style={styles.statusPill}>
-            <Text style={styles.statusLabel}>{statusLabel}</Text>
+        <View style={styles.heroCard}>
+          <View style={styles.coverShell}>
+            {profile?.header_image_url ? (
+              <Image source={{ uri: profile.header_image_url }} style={styles.coverImage} />
+            ) : (
+              <View style={styles.coverFallback}>
+                <Text style={styles.coverFallbackText}>Golfer profile</Text>
+              </View>
+            )}
+            <View style={styles.coverOverlay} />
           </View>
-          {profile?.location ? <Text style={styles.meta}>{profile.location}</Text> : null}
-          <View style={styles.ratingRow}>
-            <Text style={styles.meta}>Handicap: {profile?.handicap ?? 'Not set yet'}</Text>
-            <View style={styles.ratingBadge}>
-              <Ionicons color={palette.gold} name="star" size={16} />
-              <Text style={styles.ratingBadgeText}>
-                {ratingSummary.average ? ratingSummary.average.toFixed(1) : 'New'}
+
+          <View style={styles.avatarWrap}>
+            <Avatar label={displayName} size={108} uri={profile?.avatar_url} />
+          </View>
+
+          <View style={styles.identityStack}>
+            <Text style={styles.name}>{displayName}</Text>
+            <Text style={styles.homeCourse}>{homeCourse}</Text>
+            <Text style={styles.metaLine}>
+              {profile?.location || 'Location not added'} • Handicap {profile?.handicap ?? 'N/A'} •{' '}
+              {connectedGolfers.length} Connections
+            </Text>
+            <View style={styles.ratingRow}>
+              <View style={styles.ratingBadge}>
+                <Ionicons color={palette.gold} name="star" size={16} />
+                <Text style={styles.ratingBadgeText}>
+                  {ratingSummary.average ? ratingSummary.average.toFixed(1) : 'New'}
+                </Text>
+              </View>
+              <Text style={styles.ratingText}>
+                {ratingSummary.count ? `${ratingSummary.count} golfer ratings` : 'Waiting on first rating'}
               </Text>
             </View>
+            {linkedinUrl ? (
+              <Pressable onPress={() => void Linking.openURL(linkedinUrl)} style={styles.linkedinChip}>
+                <Ionicons color={palette.aqua} name="logo-linkedin" size={16} />
+                <Text style={styles.linkedinText}>LinkedIn</Text>
+              </Pressable>
+            ) : null}
+            {profile?.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
           </View>
-          <Text style={styles.meta}>
-            {ratingSummary.count ? `${ratingSummary.count} golfer ratings` : 'No golfer ratings yet'}
-          </Text>
-          {profile?.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
+
+          <View style={styles.actionRow}>
+            <PrimaryButton
+              disabled={status === 'connected' || status === 'pending' || status === 'incoming_pending'}
+              label={actionLabel}
+              loading={connecting}
+              onPress={handleConnect}
+            />
+            <PrimaryButton
+              label="Connections"
+              variant="ghost"
+              onPress={() => router.push(`/users/${id}/connections`)}
+            />
+            {status === 'connected' ? (
+              <PrimaryButton label="Message" variant="ghost" onPress={() => router.push(`/messages/${id}`)} />
+            ) : null}
+          </View>
+
           <View style={styles.starRow}>
             {[1, 2, 3, 4, 5].map((stars) => (
               <Pressable
@@ -252,47 +344,32 @@ export default function PublicUserScreen() {
               </Pressable>
             ))}
           </View>
-          <PrimaryButton
-            disabled={status === 'connected' || status === 'pending' || status === 'incoming_pending'}
-            label={actionLabel}
-            loading={connecting}
-            onPress={handleConnect}
-          />
-          {status === 'connected' ? (
-            <PrimaryButton label="Message" variant="ghost" onPress={() => router.push(`/messages/${id}`)} />
-          ) : null}
         </View>
 
-        <Pressable onPress={() => router.push(`/users/${id}/connections`)} style={styles.card}>
-          <Text style={styles.sectionEyebrow}>Connections</Text>
-          <View style={styles.connectionsHeader}>
-            <Text style={styles.sectionTitle}>{connectedGolfers.length} golfers</Text>
-            <Ionicons color={palette.aqua} name="chevron-forward" size={18} />
-          </View>
-          <Text style={styles.bio}>Tap in to see everyone this golfer is connected with.</Text>
-          <View style={styles.connectionPreviewRow}>
-            {connectedGolfers.slice(0, 3).map((connection) => (
-              <Avatar
-                key={connection.id}
-                label={formatName(connection)}
-                size={42}
-                uri={connection.avatar_url}
-              />
-            ))}
-            {connectedGolfers.length > 3 ? (
-              <View style={styles.connectionOverflow}>
-                <Text style={styles.connectionOverflowText}>+{connectedGolfers.length - 3}</Text>
-              </View>
-            ) : null}
-          </View>
-        </Pressable>
-
         <View style={styles.card}>
-          <Text style={styles.sectionEyebrow}>Connection</Text>
-          <Text style={styles.sectionTitle}>What happens next</Text>
-          <Text style={styles.bio}>
-            Add this golfer to start building your network. Once connected, tee times, groups, and future score activity can flow between both players.
-          </Text>
+          <Text style={styles.sectionEyebrow}>Activity</Text>
+          <Text style={styles.sectionTitle}>Recent golfer movement</Text>
+          {status !== 'connected' ? (
+            <Text style={styles.helper}>
+              Connect with {displayName.split(' ')[0]} to unlock their activity feed. Their public profile details stay visible either way.
+            </Text>
+          ) : null}
+          {status === 'connected' && busy ? <ActivityIndicator color={palette.aqua} /> : null}
+          {status === 'connected' && !busy && activities.length === 0 ? (
+            <Text style={styles.helper}>No recent activity yet. Tee times, rounds, and profile updates will show here.</Text>
+          ) : null}
+          {status === 'connected'
+            ? activities.map((activity) => (
+                <View key={activity.id} style={styles.activityRow}>
+                  <View style={styles.activityDot} />
+                  <View style={styles.activityCopy}>
+                    <Text style={styles.activityTitle}>{formatActivityLabel(activity)}</Text>
+                    {activity.description ? <Text style={styles.activityDescription}>{activity.description}</Text> : null}
+                  </View>
+                  <Text style={styles.activityTime}>{formatRelativeTime(activity.created_at)}</Text>
+                </View>
+              ))
+            : null}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -308,60 +385,81 @@ const styles = StyleSheet.create({
     gap: 20,
     padding: 20
   },
-  card: {
+  heroCard: {
     backgroundColor: palette.card,
     borderColor: palette.border,
     borderRadius: 28,
     borderWidth: 1,
-    gap: 12,
-    padding: 20
+    overflow: 'hidden',
+    padding: 18
   },
-  statusPill: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(103,232,249,0.12)',
-    borderColor: 'rgba(103,232,249,0.25)',
+  coverShell: {
+    borderRadius: 22,
+    height: 188,
+    overflow: 'hidden',
+    position: 'relative'
+  },
+  coverImage: {
+    height: '100%',
+    width: '100%'
+  },
+  coverFallback: {
+    alignItems: 'center',
+    backgroundColor: palette.cardSoft,
+    height: '100%',
+    justifyContent: 'center',
+    width: '100%'
+  },
+  coverFallbackText: {
+    color: palette.textMuted,
+    fontSize: 15,
+    fontWeight: '600'
+  },
+  coverOverlay: {
+    backgroundColor: 'rgba(3,10,8,0.18)',
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0
+  },
+  avatarWrap: {
+    alignSelf: 'center',
+    borderColor: palette.card,
     borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8
+    borderWidth: 6,
+    marginTop: -58,
+    zIndex: 2
   },
-  statusLabel: {
-    color: palette.aqua,
-    fontSize: 12,
-    fontWeight: '700'
+  identityStack: {
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 8
   },
   name: {
     color: palette.text,
-    fontSize: 28,
-    fontWeight: '700'
-  },
-  sectionEyebrow: {
-    color: palette.aqua,
-    fontSize: 12,
+    fontSize: 30,
     fontWeight: '700',
-    letterSpacing: 1.4,
-    textTransform: 'uppercase'
+    textAlign: 'center'
   },
-  sectionTitle: {
+  homeCourse: {
     color: palette.text,
-    fontSize: 22,
-    fontWeight: '700'
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center'
   },
-  meta: {
+  metaLine: {
     color: palette.textMuted,
-    fontSize: 15,
-    lineHeight: 22
-  },
-  bio: {
-    color: palette.textMuted,
-    fontSize: 15,
-    lineHeight: 22
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center'
   },
   ratingRow: {
     alignItems: 'center',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10
+    gap: 10,
+    justifyContent: 'center'
   },
   ratingBadge: {
     alignItems: 'center',
@@ -379,37 +477,108 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700'
   },
-  connectionsHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between'
+  ratingText: {
+    color: palette.textMuted,
+    fontSize: 13,
+    fontWeight: '600'
   },
-  connectionPreviewRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8
-  },
-  connectionOverflow: {
+  linkedinChip: {
     alignItems: 'center',
     backgroundColor: 'rgba(103,232,249,0.12)',
-    borderColor: 'rgba(103,232,249,0.25)',
+    borderColor: 'rgba(103,232,249,0.28)',
     borderRadius: 999,
     borderWidth: 1,
-    height: 42,
-    justifyContent: 'center',
-    width: 42
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8
   },
-  connectionOverflowText: {
+  linkedinText: {
     color: palette.aqua,
     fontSize: 13,
     fontWeight: '700'
   },
+  bio: {
+    color: palette.textMuted,
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: 'center'
+  },
+  actionRow: {
+    gap: 10,
+    marginTop: 16
+  },
   starRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 6
+    gap: 6,
+    justifyContent: 'center',
+    marginTop: 14
   },
   starButton: {
     padding: 2
+  },
+  card: {
+    backgroundColor: palette.card,
+    borderColor: palette.border,
+    borderRadius: 28,
+    borderWidth: 1,
+    gap: 12,
+    padding: 20
+  },
+  sectionEyebrow: {
+    color: palette.aqua,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1.4,
+    textTransform: 'uppercase'
+  },
+  sectionTitle: {
+    color: palette.text,
+    fontSize: 22,
+    fontWeight: '700'
+  },
+  helper: {
+    color: palette.textMuted,
+    fontSize: 15,
+    lineHeight: 22
+  },
+  activityRow: {
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    padding: 12
+  },
+  activityDot: {
+    backgroundColor: palette.aqua,
+    borderRadius: 999,
+    height: 8,
+    marginTop: 7,
+    width: 8
+  },
+  activityCopy: {
+    flex: 1,
+    gap: 2
+  },
+  activityTitle: {
+    color: palette.text,
+    fontSize: 15,
+    fontWeight: '600',
+    lineHeight: 20
+  },
+  activityDescription: {
+    color: palette.textMuted,
+    fontSize: 13,
+    lineHeight: 18
+  },
+  activityTime: {
+    color: palette.textMuted,
+    fontSize: 12,
+    lineHeight: 18,
+    marginLeft: 'auto'
   }
 })
