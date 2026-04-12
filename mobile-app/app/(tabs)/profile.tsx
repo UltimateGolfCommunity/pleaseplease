@@ -88,6 +88,8 @@ function getActivityLabel(activity: ActivityItem) {
   switch (activity.activity_type) {
     case 'tee_time_created':
       return 'Posted a tee time'
+    case 'tee_time_updated':
+      return 'Updated a tee time'
     case 'round_logged':
       return 'Logged a score'
     case 'profile_updated':
@@ -96,6 +98,12 @@ function getActivityLabel(activity: ActivityItem) {
       return 'Joined a group'
     case 'group_created':
       return 'Created a group'
+    case 'group_logo_updated':
+      return 'Updated a group logo'
+    case 'group_cover_updated':
+      return 'Updated a group cover'
+    case 'group_details_updated':
+      return 'Updated group details'
     default:
       return activity.title || 'Recent activity'
   }
@@ -439,6 +447,17 @@ export default function ProfileTab() {
               ) : null}
               <View style={styles.infoRibbon}>
                 <Text style={styles.headlineMeta}>{profileSummary}</Text>
+              </View>
+              <View style={styles.ratingSummaryRow}>
+                <View style={styles.ratingBadge}>
+                  <Ionicons color={palette.gold} name="star" size={16} />
+                  <Text style={styles.ratingBadgeText}>
+                    {ratingSummary.average ? ratingSummary.average.toFixed(1) : 'New golfer'}
+                  </Text>
+                </View>
+                <Text style={styles.ratingSummaryText}>
+                  {ratingSummary.count ? `${ratingSummary.count} ratings` : 'Waiting on first rating'}
+                </Text>
               </View>
               {profile?.bio ? (
                 <View style={styles.bioCard}>
@@ -793,6 +812,34 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     lineHeight: 18,
     textAlign: 'center'
+  },
+  ratingSummaryRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    justifyContent: 'center'
+  },
+  ratingBadge: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderColor: 'rgba(245, 158, 11, 0.28)',
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6
+  },
+  ratingBadgeText: {
+    color: palette.text,
+    fontSize: 13,
+    fontWeight: '700'
+  },
+  ratingSummaryText: {
+    color: palette.textMuted,
+    fontSize: 13,
+    fontWeight: '600'
   },
   verified: {
     backgroundColor: 'rgba(103,232,249,0.12)',
