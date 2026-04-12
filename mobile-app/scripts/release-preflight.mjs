@@ -53,8 +53,8 @@ const checks = [
     ok: Boolean(appJson?.expo?.ios?.bundleIdentifier)
   },
   {
-    label: 'iOS build number is set',
-    ok: Boolean(appJson?.expo?.ios?.buildNumber)
+    label: 'iOS app version source is configured',
+    ok: easJson?.cli?.appVersionSource === 'remote' || Boolean(appJson?.expo?.ios?.buildNumber)
   },
   {
     label: 'Apple Sign In is enabled in app config',
