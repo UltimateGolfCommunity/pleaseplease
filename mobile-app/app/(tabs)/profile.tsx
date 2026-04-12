@@ -66,6 +66,44 @@ type RatingSummary = {
   viewerRating: number | null
 }
 
+type BagItems = {
+  driver?: string | null
+  fairway_woods?: string | null
+  hybrids?: string | null
+  irons?: string | null
+  wedges?: string | null
+  putter?: string | null
+  ball?: string | null
+}
+
+const bagFields: { key: keyof BagItems; label: string; placeholder: string }[] = [
+  { key: 'driver', label: 'Driver', placeholder: 'Qi10 LS 9.0' },
+  { key: 'fairway_woods', label: 'Fairway Woods', placeholder: '3 wood / 5 wood setup' },
+  { key: 'hybrids', label: 'Hybrids', placeholder: '3H / 4H' },
+  { key: 'irons', label: 'Irons', placeholder: 'T100 4-PW' },
+  { key: 'wedges', label: 'Wedges', placeholder: '50 / 54 / 58' },
+  { key: 'putter', label: 'Putter', placeholder: 'Scotty Cameron Newport 2' },
+  { key: 'ball', label: 'Golf Ball', placeholder: 'Pro V1x' }
+]
+
+function normalizeBagItems(input: unknown): BagItems {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    return {}
+  }
+
+  const source = input as Record<string, unknown>
+
+  return {
+    driver: typeof source.driver === 'string' ? source.driver : '',
+    fairway_woods: typeof source.fairway_woods === 'string' ? source.fairway_woods : '',
+    hybrids: typeof source.hybrids === 'string' ? source.hybrids : '',
+    irons: typeof source.irons === 'string' ? source.irons : '',
+    wedges: typeof source.wedges === 'string' ? source.wedges : '',
+    putter: typeof source.putter === 'string' ? source.putter : '',
+    ball: typeof source.ball === 'string' ? source.ball : ''
+  }
+}
+
 function formatActivityTime(value: string) {
   const date = new Date(value)
   const diff = Date.now() - date.getTime()
@@ -94,6 +132,16 @@ function getActivityLabel(activity: ActivityItem) {
       return 'Logged a score'
     case 'profile_updated':
       return 'Updated profile'
+    case 'profile_photo_updated':
+      return 'Updated profile photo'
+    case 'profile_cover_updated':
+      return 'Updated cover photo'
+    case 'tee_time_joined':
+      return 'Joined a tee time'
+    case 'connection_added':
+      return 'Added a new connection'
+    case 'bag_updated':
+      return 'Updated what is in the bag'
     case 'group_joined':
       return 'Joined a group'
     case 'group_created':
@@ -118,6 +166,9 @@ export default function ProfileTab() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [showBagModal, setShowBagModal] = useState(false)
+  const [savingBag, setSavingBag] = useState(false)
+  const [activeProfileTab, setActiveProfileTab] = useState<'activity' | 'bag'>('activity')
   const [refreshing, setRefreshing] = useState(false)
   const [badges, setBadges] = useState<BadgeRecord[]>([])
   const [activities, setActivities] = useState<ActivityItem[]>([])
@@ -127,6 +178,7 @@ export default function ProfileTab() {
     count: 0,
     viewerRating: null
   })
+  const [bagItems, setBagItems] = useState<BagItems>({})
   const [form, setForm] = useState({
     first_name: '',
     last_name: '',
@@ -226,6 +278,10 @@ export default function ProfileTab() {
     })
   }, [profile])
 
+  useEffect(() => {
+    setBagItems(normalizeBagItems(profile?.bag_items))
+  }, [profile?.bag_items])
+
   if (!loading && !user) {
     return <Redirect href="/welcome" />
   }
@@ -321,6 +377,18 @@ export default function ProfileTab() {
             ? 'Your golfer profile now has a new photo.'
             : 'Your profile header now has a new cover photo.'
         )
+        await apiPost('/api/activities', {
+          user_id: user.id,
+          activity_type: target === 'avatar' ? 'profile_photo_updated' : 'profile_cover_updated',
+          title: target === 'avatar' ? 'Updated profile photo' : 'Updated cover photo',
+          description:
+            target === 'avatar'
+              ? 'Changed golfer profile photo'
+              : 'Changed golfer profile cover photo',
+          metadata: {
+            target
+          }
+        }).catch(() => null)
         await loadProfile()
       } catch (error) {
         Alert.alert('Unable to update photo', error instanceof Error ? error.message : 'Please try again.')
@@ -390,6 +458,32 @@ export default function ProfileTab() {
     )
   }
 
+  const handleSaveBag = async () => {
+    setSavingBag(true)
+
+    try {
+      await updateProfile({ bag_items: bagItems })
+      await apiPost('/api/activities', {
+        user_id: user?.id,
+        activity_type: 'bag_updated',
+        title: 'Updated what is in the bag',
+        description: 'Refreshed bag setup on the golfer profile',
+        metadata: {
+          bag_categories: Object.entries(bagItems)
+            .filter(([, value]) => value?.trim())
+            .map(([key]) => key)
+        }
+      }).catch(() => null)
+      setShowBagModal(false)
+      Alert.alert('Bag updated', 'Your bag setup is now on your profile.')
+      await loadProfile()
+    } catch (error) {
+      Alert.alert('Unable to save bag', error instanceof Error ? error.message : 'Please try again.')
+    } finally {
+      setSavingBag(false)
+    }
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -410,6 +504,16 @@ export default function ProfileTab() {
         <View style={styles.headerCard}>
           <View style={styles.coverShell}>
             <View style={styles.coverGlow} />
+            <Pressable
+              onPress={() => {
+                setShowEditModal(false)
+                setShowShareModal(false)
+                setShowBagModal(true)
+              }}
+              style={styles.bagButton}
+            >
+              <Ionicons color={palette.text} name="briefcase-outline" size={18} />
+            </Pressable>
             <View style={styles.coverActions}>
               <Pressable
                 onPress={() => {
@@ -481,28 +585,63 @@ export default function ProfileTab() {
               ) : null}
             </View>
           </View>
-          <View style={styles.activityCard}>
-            <View style={styles.activityHeader}>
-              <Text style={styles.infoTitle}>Activity</Text>
-              <View style={styles.activityCountPill}>
-                <Text style={styles.activityCountText}>{activities.length}</Text>
-              </View>
-            </View>
-            {busy ? <ActivityIndicator color={palette.aqua} /> : null}
-            {!busy && activities.length === 0 ? (
-              <Text style={styles.infoLine}>No profile activity yet. Posting tee times, logging scores, and updating your home course will show up here.</Text>
-            ) : null}
-            {activities.map((activity) => (
-              <View key={activity.id} style={styles.activityRow}>
-                <View style={styles.activityDot} />
-                <View style={styles.activityCopy}>
-                  <Text style={styles.activityTitle}>{getActivityLabel(activity)}</Text>
-                  {activity.description ? <Text style={styles.activityDescription}>{activity.description}</Text> : null}
-                </View>
-                <Text style={styles.activityTime}>{formatActivityTime(activity.created_at)}</Text>
-              </View>
-            ))}
+          <View style={styles.profileTabRow}>
+            <Pressable
+              onPress={() => setActiveProfileTab('activity')}
+              style={[styles.profileTab, activeProfileTab === 'activity' && styles.profileTabActive]}
+            >
+              <Text style={[styles.profileTabText, activeProfileTab === 'activity' && styles.profileTabTextActive]}>
+                Activity
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setActiveProfileTab('bag')}
+              style={[styles.profileTab, activeProfileTab === 'bag' && styles.profileTabActive]}
+            >
+              <Text style={[styles.profileTabText, activeProfileTab === 'bag' && styles.profileTabTextActive]}>
+                In The Bag
+              </Text>
+            </Pressable>
           </View>
+          {activeProfileTab === 'activity' ? (
+            <View style={styles.activityCard}>
+              <View style={styles.activityHeader}>
+                <Text style={styles.infoTitle}>Activity</Text>
+                <View style={styles.activityCountPill}>
+                  <Text style={styles.activityCountText}>{activities.length}</Text>
+                </View>
+              </View>
+              {busy ? <ActivityIndicator color={palette.aqua} /> : null}
+              {!busy && activities.length === 0 ? (
+                <Text style={styles.infoLine}>No profile activity yet. Tee times, rounds, photo changes, connections, and bag updates will show up here.</Text>
+              ) : null}
+              {activities.map((activity) => (
+                <View key={activity.id} style={styles.activityRow}>
+                  <View style={styles.activityDot} />
+                  <View style={styles.activityCopy}>
+                    <Text style={styles.activityTitle}>{getActivityLabel(activity)}</Text>
+                    {activity.description ? <Text style={styles.activityDescription}>{activity.description}</Text> : null}
+                  </View>
+                  <Text style={styles.activityTime}>{formatActivityTime(activity.created_at)}</Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.activityCard}>
+              <View style={styles.activityHeader}>
+                <Text style={styles.infoTitle}>What is in the bag</Text>
+              </View>
+              {bagFields.map((field) => {
+                const value = bagItems[field.key]?.trim()
+                return (
+                  <View key={field.key} style={styles.bagRow}>
+                    <Text style={styles.bagLabel}>{field.label}</Text>
+                    <Text style={styles.bagValue}>{value || 'Not added yet'}</Text>
+                  </View>
+                )
+              })}
+            </View>
+          )}
         </View>
 
         <Modal
@@ -583,6 +722,39 @@ export default function ProfileTab() {
                 }}
               />
               <PrimaryButton label="Close" variant="ghost" onPress={() => setShowSettingsModal(false)} />
+            </Pressable>
+          </Pressable>
+        </Modal>
+
+        <Modal
+          animationType="fade"
+          transparent
+          visible={showBagModal}
+          onRequestClose={() => setShowBagModal(false)}
+        >
+          <Pressable style={styles.modalBackdrop} onPress={() => setShowBagModal(false)}>
+            <Pressable style={styles.modalCard} onPress={() => {}}>
+              <Text style={styles.infoTitle}>What is in the bag</Text>
+              <Text style={styles.infoLine}>
+                Add the clubs and ball you actually game so your profile feels more like a real golfer card.
+              </Text>
+              {bagFields.map((field) => (
+                <TextInput
+                  key={field.key}
+                  onChangeText={(value) =>
+                    setBagItems((current) => ({
+                      ...current,
+                      [field.key]: value
+                    }))
+                  }
+                  placeholder={field.placeholder}
+                  placeholderTextColor={palette.textMuted}
+                  style={styles.input}
+                  value={bagItems[field.key] || ''}
+                />
+              ))}
+              <PrimaryButton label="Save Bag" loading={savingBag} onPress={handleSaveBag} />
+              <PrimaryButton label="Close" variant="ghost" onPress={() => setShowBagModal(false)} />
             </Pressable>
           </Pressable>
         </Modal>
@@ -738,10 +910,25 @@ const styles = StyleSheet.create({
     width: 180,
     zIndex: 1
   },
+  bagButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(7,15,12,0.46)',
+    borderColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 42,
+    justifyContent: 'center',
+    left: 14,
+    position: 'absolute',
+    top: 14,
+    width: 42,
+    zIndex: 2
+  },
   coverActions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    left: 14,
+    gap: 10,
+    justifyContent: 'flex-end',
+    left: 66,
     position: 'absolute',
     right: 14,
     top: 14,
@@ -913,6 +1100,36 @@ const styles = StyleSheet.create({
     marginTop: 2,
     padding: 16
   },
+  profileTabRow: {
+    backgroundColor: palette.bgElevated,
+    borderColor: palette.border,
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    padding: 6
+  },
+  profileTab: {
+    alignItems: 'center',
+    borderRadius: 999,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 42,
+    paddingHorizontal: 12
+  },
+  profileTabActive: {
+    backgroundColor: palette.card
+  },
+  profileTabText: {
+    color: palette.textMuted,
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase'
+  },
+  profileTabTextActive: {
+    color: palette.text
+  },
   activityHeader: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -988,6 +1205,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     marginLeft: 'auto'
+  },
+  bagRow: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 4,
+    padding: 14
+  },
+  bagLabel: {
+    color: palette.aqua,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase'
+  },
+  bagValue: {
+    color: palette.text,
+    fontSize: 15,
+    fontWeight: '600',
+    lineHeight: 20
   },
   qrImage: {
     alignSelf: 'center',

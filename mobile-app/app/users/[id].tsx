@@ -35,6 +35,7 @@ type PublicUser = {
   home_club?: string | null
   linkedin?: string | null
   linkedin_url?: string | null
+  bag_items?: Record<string, string | null> | null
 }
 
 type ActivityItem = {
@@ -80,6 +81,44 @@ type RatingSummary = {
   viewerRating: number | null
 }
 
+type BagItems = {
+  driver?: string | null
+  fairway_woods?: string | null
+  hybrids?: string | null
+  irons?: string | null
+  wedges?: string | null
+  putter?: string | null
+  ball?: string | null
+}
+
+const bagFields: { key: keyof BagItems; label: string }[] = [
+  { key: 'driver', label: 'Driver' },
+  { key: 'fairway_woods', label: 'Fairway Woods' },
+  { key: 'hybrids', label: 'Hybrids' },
+  { key: 'irons', label: 'Irons' },
+  { key: 'wedges', label: 'Wedges' },
+  { key: 'putter', label: 'Putter' },
+  { key: 'ball', label: 'Golf Ball' }
+]
+
+function normalizeBagItems(input: unknown): BagItems {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    return {}
+  }
+
+  const source = input as Record<string, unknown>
+
+  return {
+    driver: typeof source.driver === 'string' ? source.driver : '',
+    fairway_woods: typeof source.fairway_woods === 'string' ? source.fairway_woods : '',
+    hybrids: typeof source.hybrids === 'string' ? source.hybrids : '',
+    irons: typeof source.irons === 'string' ? source.irons : '',
+    wedges: typeof source.wedges === 'string' ? source.wedges : '',
+    putter: typeof source.putter === 'string' ? source.putter : '',
+    ball: typeof source.ball === 'string' ? source.ball : ''
+  }
+}
+
 function formatName(user?: UserCard | PublicUser | null) {
   return [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.username || 'UGC Golfer'
 }
@@ -94,8 +133,18 @@ function formatActivityLabel(activity: ActivityItem) {
       return 'Logged a round'
     case 'profile_updated':
       return 'Updated profile details'
+    case 'profile_photo_updated':
+      return 'Updated profile photo'
+    case 'profile_cover_updated':
+      return 'Updated cover photo'
     case 'group_joined':
       return 'Joined a group'
+    case 'tee_time_joined':
+      return 'Joined a tee time'
+    case 'connection_added':
+      return 'Added a new connection'
+    case 'bag_updated':
+      return 'Updated what is in the bag'
     default:
       return activity.title || 'Recent activity'
   }
@@ -129,6 +178,7 @@ export default function PublicUserScreen() {
   const [status, setStatus] = useState<ConnectionStatusResponse['status']>('none')
   const [connections, setConnections] = useState<ConnectionRecord[]>([])
   const [activities, setActivities] = useState<ActivityItem[]>([])
+  const [activeTab, setActiveTab] = useState<'activity' | 'bag'>('activity')
   const [ratingSummary, setRatingSummary] = useState<RatingSummary>({
     average: null,
     count: 0,
@@ -138,6 +188,7 @@ export default function PublicUserScreen() {
   const displayName = useMemo(() => formatName(profile), [profile])
   const homeCourse = profile?.home_course || profile?.home_club || 'Home course not added'
   const linkedinUrl = profile?.linkedin_url || profile?.linkedin || ''
+  const bagItems = useMemo(() => normalizeBagItems(profile?.bag_items), [profile?.bag_items])
 
   const connectedGolfers = useMemo(() => {
     if (!id) return []
@@ -257,6 +308,9 @@ export default function PublicUserScreen() {
               </View>
             )}
             <View style={styles.coverOverlay} />
+            <Pressable onPress={() => setActiveTab('bag')} style={styles.bagIconButton}>
+              <Ionicons color={palette.text} name="briefcase-outline" size={20} />
+            </Pressable>
             {status === 'connected' ? (
               <Pressable onPress={() => router.push(`/messages/${id}`)} style={styles.messageIconButton}>
                 <Ionicons color={palette.text} name="mail-outline" size={20} />
@@ -308,31 +362,66 @@ export default function PublicUserScreen() {
 
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.sectionEyebrow}>Activity</Text>
-          <Text style={styles.sectionTitle}>Recent golfer movement</Text>
-          {status !== 'connected' ? (
-            <Text style={styles.helper}>
-              Connect with {displayName.split(' ')[0]} to unlock their activity feed. Their public profile details stay visible either way.
+        <View style={styles.tabRow}>
+          <Pressable
+            onPress={() => setActiveTab('activity')}
+            style={[styles.tabButton, activeTab === 'activity' && styles.tabButtonActive]}
+          >
+            <Text style={[styles.tabButtonText, activeTab === 'activity' && styles.tabButtonTextActive]}>
+              Activity
             </Text>
-          ) : null}
-          {status === 'connected' && busy ? <ActivityIndicator color={palette.aqua} /> : null}
-          {status === 'connected' && !busy && activities.length === 0 ? (
-            <Text style={styles.helper}>No recent activity yet. Tee times, rounds, and profile updates will show here.</Text>
-          ) : null}
-          {status === 'connected'
-            ? activities.map((activity) => (
-                <View key={activity.id} style={styles.activityRow}>
-                  <View style={styles.activityDot} />
-                  <View style={styles.activityCopy}>
-                    <Text style={styles.activityTitle}>{formatActivityLabel(activity)}</Text>
-                    {activity.description ? <Text style={styles.activityDescription}>{activity.description}</Text> : null}
-                  </View>
-                  <Text style={styles.activityTime}>{formatRelativeTime(activity.created_at)}</Text>
-                </View>
-              ))
-            : null}
+          </Pressable>
+          <Pressable
+            onPress={() => setActiveTab('bag')}
+            style={[styles.tabButton, activeTab === 'bag' && styles.tabButtonActive]}
+          >
+            <Text style={[styles.tabButtonText, activeTab === 'bag' && styles.tabButtonTextActive]}>
+              In The Bag
+            </Text>
+          </Pressable>
         </View>
+
+        {activeTab === 'activity' ? (
+          <View style={styles.card}>
+            <Text style={styles.sectionEyebrow}>Activity</Text>
+            <Text style={styles.sectionTitle}>Recent golfer movement</Text>
+            {status !== 'connected' ? (
+              <Text style={styles.helper}>
+                Connect with {displayName.split(' ')[0]} to unlock their activity feed. Their public profile details and bag setup stay visible either way.
+              </Text>
+            ) : null}
+            {status === 'connected' && busy ? <ActivityIndicator color={palette.aqua} /> : null}
+            {status === 'connected' && !busy && activities.length === 0 ? (
+              <Text style={styles.helper}>No recent activity yet. Tee times, joins, rounds, photos, connections, and group updates will show here.</Text>
+            ) : null}
+            {status === 'connected'
+              ? activities.map((activity) => (
+                  <View key={activity.id} style={styles.activityRow}>
+                    <View style={styles.activityDot} />
+                    <View style={styles.activityCopy}>
+                      <Text style={styles.activityTitle}>{formatActivityLabel(activity)}</Text>
+                      {activity.description ? <Text style={styles.activityDescription}>{activity.description}</Text> : null}
+                    </View>
+                    <Text style={styles.activityTime}>{formatRelativeTime(activity.created_at)}</Text>
+                  </View>
+                ))
+              : null}
+          </View>
+        ) : (
+          <View style={styles.card}>
+            <Text style={styles.sectionEyebrow}>In The Bag</Text>
+            <Text style={styles.sectionTitle}>What {displayName.split(' ')[0]} is gaming</Text>
+            {bagFields.map((field) => {
+              const value = bagItems[field.key]?.trim()
+              return (
+                <View key={field.key} style={styles.bagRow}>
+                  <Text style={styles.bagLabel}>{field.label}</Text>
+                  <Text style={styles.bagValue}>{value || 'Not added yet'}</Text>
+                </View>
+              )
+            })}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   )
@@ -384,6 +473,20 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 0,
     top: 0
+  },
+  bagIconButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(3,10,8,0.42)',
+    borderColor: 'rgba(255,255,255,0.14)',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 42,
+    justifyContent: 'center',
+    left: 14,
+    position: 'absolute',
+    top: 14,
+    width: 42,
+    zIndex: 2
   },
   messageIconButton: {
     alignItems: 'center',
@@ -483,6 +586,36 @@ const styles = StyleSheet.create({
   actionRow: {
     marginTop: 16
   },
+  tabRow: {
+    backgroundColor: palette.bgElevated,
+    borderColor: palette.border,
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    padding: 6
+  },
+  tabButton: {
+    alignItems: 'center',
+    borderRadius: 999,
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 42,
+    paddingHorizontal: 12
+  },
+  tabButtonActive: {
+    backgroundColor: palette.card
+  },
+  tabButtonText: {
+    color: palette.textMuted,
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase'
+  },
+  tabButtonTextActive: {
+    color: palette.text
+  },
   card: {
     backgroundColor: palette.card,
     borderColor: palette.border,
@@ -545,5 +678,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     marginLeft: 'auto'
+  },
+  bagRow: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 4,
+    padding: 14
+  },
+  bagLabel: {
+    color: palette.aqua,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase'
+  },
+  bagValue: {
+    color: palette.text,
+    fontSize: 15,
+    fontWeight: '600',
+    lineHeight: 20
   }
 })

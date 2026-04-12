@@ -23,6 +23,7 @@ type MobileProfile = {
   playing_style?: string | null
   goals?: string | null
   experience_level?: string | null
+  bag_items?: Record<string, string | null> | null
 }
 
 type AuthContextValue = {

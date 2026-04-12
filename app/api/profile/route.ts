@@ -48,7 +48,8 @@ export async function PUT(request: NextRequest) {
       handicap,
       location,
       home_course,
-      home_club
+      home_club,
+      bag_items
     } = body
     
     if (!id) {
@@ -131,6 +132,7 @@ export async function PUT(request: NextRequest) {
     if (location !== undefined) updateData.location = location
     if (home_course !== undefined) updateData.home_course = home_course
     if (home_club !== undefined) updateData.home_club = home_club
+    if (bag_items !== undefined) updateData.bag_items = bag_items
     
     // Only set full_name if both first_name and last_name are provided
     if (first_name && last_name) {
@@ -177,6 +179,7 @@ export async function PUT(request: NextRequest) {
           location: location || '',
           home_course: home_course || '',
           home_club: home_club || home_course || '',
+          bag_items: bag_items || {},
           updated_at: new Date().toISOString()
         })
         .select()

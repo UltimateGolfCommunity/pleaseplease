@@ -9,6 +9,41 @@ const connectionSelect = `
   recipient:user_profiles!user_connections_recipient_id_fkey(${connectionProfileFields})
 `
 
+async function logUserActivity(
+  supabase: any,
+  {
+    userId,
+    activityType,
+    title,
+    description,
+    relatedId,
+    metadata
+  }: {
+    userId?: string | null
+    activityType: string
+    title: string
+    description?: string | null
+    relatedId?: string | null
+    metadata?: Record<string, unknown>
+  }
+) {
+  if (!userId) return
+
+  try {
+    await supabase.from('user_activities').insert({
+      user_id: userId,
+      activity_type: activityType,
+      title,
+      description: description || null,
+      related_id: relatedId || null,
+      related_type: 'user',
+      metadata: metadata || {}
+    })
+  } catch (error) {
+    console.warn('⚠️ Unable to log user activity:', error)
+  }
+}
+
 async function getRatingSummary(supabase: any, ratedUserId: string, viewerId?: string | null) {
   const { data: ratings, error } = await supabase
     .from('user_ratings')
@@ -302,6 +337,31 @@ export async function POST(request: NextRequest) {
               }, { status: 400 })
             }
 
+            await Promise.all([
+              logUserActivity(supabase, {
+                userId: data.user_id,
+                activityType: 'connection_added',
+                title: 'Added a new connection',
+                description: 'Accepted a golfer connection',
+                relatedId: data.connected_user_id,
+                metadata: {
+                  connection_id: acceptedConnection.id,
+                  connected_user_id: data.connected_user_id
+                }
+              }),
+              logUserActivity(supabase, {
+                userId: data.connected_user_id,
+                activityType: 'connection_added',
+                title: 'Added a new connection',
+                description: 'Connected with another golfer',
+                relatedId: data.user_id,
+                metadata: {
+                  connection_id: acceptedConnection.id,
+                  connected_user_id: data.user_id
+                }
+              })
+            ])
+
             return NextResponse.json({
               success: true,
               autoAccepted: true,
@@ -379,6 +439,33 @@ export async function POST(request: NextRequest) {
             error: 'Failed to update connection request',
             details: updateError.message
           }, { status: 400 })
+        }
+
+        if (response === 'accept') {
+          await Promise.all([
+            logUserActivity(supabase, {
+              userId: user_id,
+              activityType: 'connection_added',
+              title: 'Added a new connection',
+              description: 'Accepted a golfer connection',
+              relatedId: connection.requester_id,
+              metadata: {
+                connection_id,
+                connected_user_id: connection.requester_id
+              }
+            }),
+            logUserActivity(supabase, {
+              userId: connection.requester_id,
+              activityType: 'connection_added',
+              title: 'Added a new connection',
+              description: 'Connected with another golfer',
+              relatedId: user_id,
+              metadata: {
+                connection_id,
+                connected_user_id: user_id
+              }
+            })
+          ])
         }
 
         return NextResponse.json({
