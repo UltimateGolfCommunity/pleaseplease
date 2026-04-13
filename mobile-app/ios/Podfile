@@ -67,6 +67,23 @@ target 'UltimateGolfCommunity' do
         end
       end
     end
+
+    # Xcode 26.4 miscompiles fmt's consteval path in RN's transitive pod graph.
+    fmt_base = File.join(installer.sandbox.root, 'fmt', 'include', 'fmt', 'base.h')
+    if File.exist?(fmt_base)
+      content = File.read(fmt_base)
+      unless content.include?('Xcode 26.4 workaround')
+        File.chmod(0644, fmt_base)
+        patched = content.gsub(
+          /^#\s*define FMT_USE_CONSTEVAL 1$/,
+          "#define FMT_USE_CONSTEVAL 0 // Xcode 26.4 workaround"
+        )
+        if patched != content
+          File.write(fmt_base, patched)
+          Pod::UI.puts 'Patched fmt/base.h to disable consteval for Xcode 26.4'.yellow
+        end
+      end
+    end
   end
 
   post_integrate do |installer|
