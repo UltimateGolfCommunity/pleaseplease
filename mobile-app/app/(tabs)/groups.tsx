@@ -17,7 +17,8 @@ import {
 import { Avatar } from '@/components/Avatar'
 import { BrandHeader } from '@/components/BrandHeader'
 import { PrimaryButton } from '@/components/PrimaryButton'
-import { apiGet, apiPost, apiUploadImage } from '@/lib/api'
+import { apiGet, apiPost } from '@/lib/api'
+import { uploadImageToStorage } from '@/lib/supabase'
 import { palette } from '@/lib/theme'
 import { useAuth } from '@/providers/AuthProvider'
 
@@ -189,16 +190,14 @@ export default function GroupsTab() {
     setUploadingImage(true)
 
     try {
-      const formData = new FormData()
-      formData.append('folder', 'group-logos')
-      formData.append('file', {
+      const upload = await uploadImageToStorage({
         uri: asset.uri,
-        name: fileName,
-        type: mimeType
-      } as unknown as Blob)
+        fileName,
+        mimeType,
+        folder: 'group-logos'
+      })
 
-      const upload = await apiUploadImage<{ success: boolean; url: string }>('/api/upload', formData)
-      setForm((current) => ({ ...current, logo_url: upload.url }))
+      setForm((current) => ({ ...current, logo_url: upload.publicUrl }))
     } catch (error) {
       Alert.alert('Unable to upload image', error instanceof Error ? error.message : 'Please try again.')
     } finally {
