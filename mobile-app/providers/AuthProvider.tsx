@@ -88,20 +88,26 @@ export function AuthProvider({ children }: PropsWithChildren) {
     let mounted = true
 
     const bootstrap = async () => {
-      const {
-        data: { session: existingSession }
-      } = await mobileSupabase.auth.getSession()
+      try {
+        const {
+          data: { session: existingSession }
+        } = await mobileSupabase.auth.getSession()
 
-      if (!mounted) return
+        if (!mounted) return
 
-      setSession(existingSession)
-      setUser(existingSession?.user ?? null)
+        setSession(existingSession)
+        setUser(existingSession?.user ?? null)
+        setLoading(false)
 
-      if (existingSession?.user?.id) {
-        await refreshProfile(existingSession.user.id)
-      }
-
-      if (mounted) {
+        if (existingSession?.user?.id) {
+          void refreshProfile(existingSession.user.id)
+        }
+      } catch (error) {
+        console.warn('Unable to restore mobile auth session:', error)
+        if (!mounted) return
+        setSession(null)
+        setUser(null)
+        setProfile(null)
         setLoading(false)
       }
     }
@@ -115,15 +121,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       setSession(nextSession)
       setUser(nextSession?.user ?? null)
+      setLoading(false)
 
       if (nextSession?.user?.id) {
-        await refreshProfile(nextSession.user.id)
+        void refreshProfile(nextSession.user.id)
       } else {
         setProfile(null)
-      }
-
-      if (mounted) {
-        setLoading(false)
       }
     })
 

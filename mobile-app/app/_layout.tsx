@@ -9,13 +9,19 @@ import { AuthProvider, useAuth } from '@/providers/AuthProvider'
 function RootNavigator() {
   const { loading } = useAuth()
   const [holdLaunch, setHoldLaunch] = useState(true)
+  const [forceHideLaunch, setForceHideLaunch] = useState(false)
 
   useEffect(() => {
     const timer = setTimeout(() => setHoldLaunch(false), 1800)
     return () => clearTimeout(timer)
   }, [])
 
-  const showLaunch = loading || holdLaunch
+  useEffect(() => {
+    const failsafeTimer = setTimeout(() => setForceHideLaunch(true), 4500)
+    return () => clearTimeout(failsafeTimer)
+  }, [])
+
+  const showLaunch = !forceHideLaunch && (loading || holdLaunch)
 
   return (
     <View style={{ flex: 1 }}>
