@@ -17,6 +17,22 @@ export const mobileSupabase = createClient(supabaseUrl, supabaseAnonKey, {
   }
 })
 
+export async function clearMobileAuthStorage() {
+  const keys = await AsyncStorage.getAllKeys()
+  const authKeys = keys.filter((key) => {
+    const normalizedKey = key.toLowerCase()
+    return (
+      normalizedKey.includes('supabase') ||
+      normalizedKey.includes('sb-') ||
+      normalizedKey.includes('auth-token')
+    )
+  })
+
+  if (authKeys.length) {
+    await AsyncStorage.multiRemove(authKeys)
+  }
+}
+
 export async function uploadImageToStorage({
   uri,
   fileName,

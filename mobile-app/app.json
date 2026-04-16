@@ -17,6 +17,7 @@
     ],
     "ios": {
       "supportsTablet": true,
+      "deploymentTarget": "15.1",
       "bundleIdentifier": "com.ultimategolfcommunity.app",
       "usesAppleSignIn": true,
       "infoPlist": {
@@ -60,6 +61,7 @@
     },
     "plugins": [
       "expo-router",
+      "expo-splash-screen",
       "expo-apple-authentication",
       "expo-image-picker",
       "expo-location"

@@ -21,5 +21,7 @@ export default function Index() {
     )
   }
 
-  return <Redirect href={user ? '/home' : '/welcome'} />
+  return (
+    <Redirect href={user ? '/home' : '/welcome'} />
+  )
 }

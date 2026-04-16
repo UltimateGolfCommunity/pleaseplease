@@ -1,3 +1,5 @@
+import { Redirect } from 'expo-router'
+
 export default function ComposeTabPlaceholder() {
-  return null
+  return <Redirect href="/home?compose=tee-time" />
 }

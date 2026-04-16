@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar'
 import { View } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { AppLaunchScreen } from '@/components/AppLaunchScreen'
+import { RootErrorBoundary } from '@/components/RootErrorBoundary'
 import { AuthProvider, useAuth } from '@/providers/AuthProvider'
 
 function RootNavigator() {
@@ -35,9 +36,11 @@ function RootNavigator() {
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <RootNavigator />
-      </AuthProvider>
+      <RootErrorBoundary>
+        <AuthProvider>
+          <RootNavigator />
+        </AuthProvider>
+      </RootErrorBoundary>
     </SafeAreaProvider>
   )
 }

@@ -3,6 +3,7 @@ import type { PropsWithChildren } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { apiGet } from '@/lib/api'
 import { mobileSupabase } from '@/lib/supabase'
+import { markMobileBootHealthy, prepareMobileBoot } from '@/lib/startupRecovery'
 
 type MobileProfile = {
   id: string
@@ -69,7 +70,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<MobileProfile | null>(null)
-  const [loading, setLoading] = useState(true)
+  const loading = false
   const [authBusy, setAuthBusy] = useState(false)
 
   const refreshProfile = useCallback(async (explicitUserId?: string) => {
@@ -86,9 +87,25 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     let mounted = true
+    let allowAuthEvents = false
 
     const bootstrap = async () => {
       try {
+        const { recoveredFromPreviousCrash } = await prepareMobileBoot()
+        if (!mounted) return
+
+        if (recoveredFromPreviousCrash) {
+          setSession(null)
+          setUser(null)
+          setProfile(null)
+          return
+        }
+
+        // Let the first React frame render before touching persisted auth state.
+        await new Promise((resolve) => setTimeout(resolve, 900))
+        if (!mounted) return
+        allowAuthEvents = true
+
         const {
           data: { session: existingSession }
         } = await mobileSupabase.auth.getSession()
@@ -97,7 +114,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
         setSession(existingSession)
         setUser(existingSession?.user ?? null)
-        setLoading(false)
 
         if (existingSession?.user?.id) {
           void refreshProfile(existingSession.user.id)
@@ -108,7 +124,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setSession(null)
         setUser(null)
         setProfile(null)
-        setLoading(false)
       }
     }
 
@@ -118,10 +133,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
       data: { subscription }
     } = mobileSupabase.auth.onAuthStateChange(async (_event, nextSession) => {
       if (!mounted) return
+      if (!allowAuthEvents) return
 
       setSession(nextSession)
       setUser(nextSession?.user ?? null)
-      setLoading(false)
 
       if (nextSession?.user?.id) {
         void refreshProfile(nextSession.user.id)
@@ -135,6 +150,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
       subscription.unsubscribe()
     }
   }, [refreshProfile])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void markMobileBootHealthy()
+    }, 6000)
+
+    return () => clearTimeout(timer)
+  }, [])
 
   const signIn = useCallback(async (email: string, password: string) => {
     setAuthBusy(true)
