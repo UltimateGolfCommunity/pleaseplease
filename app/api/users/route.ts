@@ -74,6 +74,21 @@ async function getRatingSummary(supabase: any, ratedUserId: string, viewerId?: s
   }
 }
 
+async function getFounderVerifiedIds(supabase: any) {
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .select('id')
+    .order('created_at', { ascending: true })
+    .limit(50)
+
+  if (error) {
+    console.warn('⚠️ Unable to determine first 50 users:', error.message)
+    return new Set<string>()
+  }
+
+  return new Set((data || []).map((profile: any) => profile.id))
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const search = searchParams.get('search')
@@ -208,10 +223,15 @@ export async function GET(request: NextRequest) {
         }, { status: 500 })
       }
 
+      const founderVerifiedIds = await getFounderVerifiedIds(supabase)
+
       console.log('👥 Found users:', data?.length || 0)
       return NextResponse.json({
         success: true,
-        users: data || []
+        users: (data || []).map((profile: any) => ({
+          ...profile,
+          is_founder_verified: founderVerifiedIds.has(profile.id)
+        }))
       })
     }
 
@@ -230,7 +250,12 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
       }
 
-      return NextResponse.json(data)
+      const founderVerifiedIds = await getFounderVerifiedIds(supabase)
+
+      return NextResponse.json({
+        ...data,
+        is_founder_verified: founderVerifiedIds.has(data.id)
+      })
     }
 
     // Default: return all users (for testing)
@@ -249,9 +274,14 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
+    const founderVerifiedIds = await getFounderVerifiedIds(supabase)
+
     return NextResponse.json({
       success: true,
-      users: data || []
+      users: (data || []).map((profile: any) => ({
+        ...profile,
+        is_founder_verified: founderVerifiedIds.has(profile.id)
+      }))
     })
 
   } catch (error) {

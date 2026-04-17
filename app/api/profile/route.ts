@@ -2,6 +2,50 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { createServerClient } from '@/lib/supabase-server'
 
+const optionalProfileColumns = ['home_course', 'home_club', 'bag_items', 'header_image_url', 'avatar_url', 'handicap', 'location']
+
+function getMissingProfileColumn(error: any) {
+  const message = `${error?.message || ''} ${error?.details || ''}`.toLowerCase()
+
+  return optionalProfileColumns.find((column) =>
+    message.includes(column.toLowerCase()) &&
+    (message.includes('column') || message.includes('schema cache') || message.includes('could not find'))
+  )
+}
+
+async function saveProfileWithFallback(
+  supabase: any,
+  mode: 'insert' | 'update',
+  payload: Record<string, unknown>,
+  userId: string
+) {
+  const workingPayload = { ...payload }
+  let lastError: any = null
+
+  for (let attempt = 0; attempt <= optionalProfileColumns.length; attempt += 1) {
+    const result =
+      mode === 'insert'
+        ? await supabase.from('user_profiles').insert(workingPayload).select().single()
+        : await supabase.from('user_profiles').update(workingPayload).eq('id', userId).select().single()
+
+    if (!result.error) {
+      return { data: result.data, error: null, omittedColumns: optionalProfileColumns.filter((column) => !(column in workingPayload)) }
+    }
+
+    lastError = result.error
+    const missingColumn = getMissingProfileColumn(result.error)
+
+    if (!missingColumn || !(missingColumn in workingPayload)) {
+      break
+    }
+
+    delete workingPayload[missingColumn]
+    console.warn(`⚠️ PROFILE: Omitting missing optional column "${missingColumn}" and retrying save`)
+  }
+
+  return { data: null, error: lastError, omittedColumns: [] }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -163,9 +207,10 @@ export async function PUT(request: NextRequest) {
     if (!existingProfile) {
       console.log('ℹ️ No existing profile found, creating one now')
 
-      const { data: createdProfile, error: createError } = await supabase
-        .from('user_profiles')
-        .insert({
+      const { data: createdProfile, error: createError } = await saveProfileWithFallback(
+        supabase,
+        'insert',
+        {
           id: id,
           email: body.email || '',
           first_name: first_name || '',
@@ -181,9 +226,9 @@ export async function PUT(request: NextRequest) {
           home_club: home_club || home_course || '',
           bag_items: bag_items || {},
           updated_at: new Date().toISOString()
-        })
-        .select()
-        .single()
+        },
+        id
+      )
       
       if (createError) {
         console.error('❌ Error creating profile:', createError)
@@ -197,12 +242,12 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json(createdProfile)
     }
 
-    const { data: updatedProfile, error: updateError } = await supabase
-      .from('user_profiles')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single()
+    const { data: updatedProfile, error: updateError } = await saveProfileWithFallback(
+      supabase,
+      'update',
+      updateData,
+      id
+    )
 
     if (updateError) {
       console.error('❌ Error updating profile:', updateError)

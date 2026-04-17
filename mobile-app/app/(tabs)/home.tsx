@@ -26,6 +26,7 @@ type TeeTime = {
   id: string
   course_name?: string
   location?: string
+  course_location?: string
   tee_time_date?: string
   tee_time_time?: string
   handicap_requirement?: string
@@ -34,6 +35,13 @@ type TeeTime = {
   available_spots?: number
   visibility_scope?: string
   creator_id?: string
+  accepted_players?: {
+    id?: string
+    first_name?: string | null
+    last_name?: string | null
+    username?: string | null
+    avatar_url?: string | null
+  }[]
 }
 
 type CreateTeeTimeResponse = {
@@ -271,6 +279,16 @@ export default function HomeTab() {
   }, [loadHeaderCounts])
 
   useEffect(() => {
+    if (!user?.id) return
+
+    const interval = setInterval(() => {
+      void loadHeaderCounts()
+    }, 15000)
+
+    return () => clearInterval(interval)
+  }, [loadHeaderCounts, user?.id])
+
+  useEffect(() => {
     if (params.compose === 'tee-time') {
       setShowCreateForm(true)
       router.setParams({ compose: undefined })
@@ -413,7 +431,7 @@ export default function HomeTab() {
               refreshing={refreshing}
               onRefresh={() => {
                 setRefreshing(true)
-                loadHome()
+                void Promise.all([loadHome(), loadHeaderCounts()])
               }}
               tintColor={palette.aqua}
             />
@@ -686,6 +704,42 @@ export default function HomeTab() {
           />
         </View>
 
+        {nextTeeTime ? (
+          <Pressable onPress={() => router.push('/tee-times')} style={styles.myTeeTimeCard}>
+            <View style={styles.myTeeTimeHeader}>
+              <View style={styles.myTeeTimeCopy}>
+                <Text style={styles.cardAccent}>My tee time</Text>
+                <Text style={styles.myTeeTimeTitle}>{nextTeeTime.course_name || 'Upcoming round'}</Text>
+                <Text style={styles.teeTimeMeta}>
+                  {formatDisplayDate(nextTeeTime.tee_time_date, nextTeeTime.tee_time_time)}
+                </Text>
+                {nextTeeTime.location || nextTeeTime.course_location ? (
+                  <Text style={styles.teeTimeMeta}>{nextTeeTime.location || nextTeeTime.course_location}</Text>
+                ) : null}
+              </View>
+              <View style={styles.joinedAvatarStack}>
+                {(nextTeeTime.accepted_players || []).slice(0, 3).map((player, index) => (
+                  <View key={player.id || index} style={[styles.joinedAvatar, { marginLeft: index ? -10 : 0 }]}>
+                    <Text style={styles.joinedAvatarText}>
+                      {(player.first_name || player.username || 'G').slice(0, 1).toUpperCase()}
+                    </Text>
+                  </View>
+                ))}
+                {!(nextTeeTime.accepted_players || []).length ? (
+                  <View style={styles.joinedAvatar}>
+                    <Ionicons color={palette.textMuted} name="person-add-outline" size={16} />
+                  </View>
+                ) : null}
+              </View>
+            </View>
+            <Text style={styles.myTeeTimeFootnote}>
+              {(nextTeeTime.accepted_players || []).length
+                ? `${nextTeeTime.accepted_players?.length} golfer${nextTeeTime.accepted_players?.length === 1 ? '' : 's'} joined`
+                : 'Joined golfers will show here with their profile icon.'}
+            </Text>
+          </Pressable>
+        ) : null}
+
         <View style={styles.panelSwitcher}>
           <Pressable
             onPress={() => setActiveHomePanel('tee-times')}
@@ -850,6 +904,53 @@ const styles = StyleSheet.create({
     marginTop: -8,
     paddingHorizontal: 16,
     paddingVertical: 14
+  },
+  myTeeTimeCard: {
+    backgroundColor: palette.card,
+    borderColor: 'rgba(103,232,249,0.22)',
+    borderRadius: 26,
+    borderWidth: 1,
+    gap: 12,
+    padding: 18
+  },
+  myTeeTimeHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between'
+  },
+  myTeeTimeCopy: {
+    flex: 1,
+    gap: 5
+  },
+  myTeeTimeTitle: {
+    color: palette.text,
+    fontSize: 20,
+    fontWeight: '800'
+  },
+  joinedAvatarStack: {
+    alignItems: 'center',
+    flexDirection: 'row'
+  },
+  joinedAvatar: {
+    alignItems: 'center',
+    backgroundColor: palette.cardSoft,
+    borderColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 34,
+    justifyContent: 'center',
+    width: 34
+  },
+  joinedAvatarText: {
+    color: palette.text,
+    fontSize: 12,
+    fontWeight: '800'
+  },
+  myTeeTimeFootnote: {
+    color: palette.textMuted,
+    fontSize: 13,
+    lineHeight: 18
   },
   weatherHeader: {
     alignItems: 'center',

@@ -47,6 +47,40 @@ function buildThread(messages: any[]) {
   }))
 }
 
+async function verifyGroupMember(groupId: string, userId: string) {
+  const { data: group, error: groupError } = await supabase
+    .from('golf_groups')
+    .select('id, creator_id')
+    .eq('id', groupId)
+    .maybeSingle()
+
+  if (groupError || !group) {
+    return { allowed: false, reason: 'Group not found', status: 404 }
+  }
+
+  if (group.creator_id === userId) {
+    return { allowed: true, reason: null, status: 200 }
+  }
+
+  const { data: membership, error: membershipError } = await supabase
+    .from('group_members')
+    .select('id, status')
+    .eq('group_id', groupId)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (membershipError || !membership) {
+    return { allowed: false, reason: 'User is not a member of this group', status: 403 }
+  }
+
+  const status = (membership.status || 'active').toLowerCase()
+  if (['blocked', 'removed', 'declined'].includes(status)) {
+    return { allowed: false, reason: 'User is not an active member of this group', status: 403 }
+  }
+
+  return { allowed: true, reason: null, status: 200 }
+}
+
 async function fetchGroupMessages(groupId: string, userId: string) {
   let messages: any[] | null = null
   let error: any = null
@@ -140,18 +174,12 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Verify user is a member of the group
-    const { data: membership, error: membershipError } = await supabase
-      .from('group_members')
-      .select('*')
-      .eq('group_id', group_id)
-      .eq('user_id', user_id)
-      .single()
+    const membership = await verifyGroupMember(group_id, user_id)
 
-    if (membershipError || !membership) {
+    if (!membership.allowed) {
       return NextResponse.json(
-        { error: 'User is not a member of this group' },
-        { status: 403 }
+        { error: membership.reason },
+        { status: membership.status }
       )
     }
 
@@ -182,18 +210,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify user is a member of the group
-    const { data: membership, error: membershipError } = await supabase
-      .from('group_members')
-      .select('*')
-      .eq('group_id', group_id)
-      .eq('user_id', user_id)
-      .single()
+    const membership = await verifyGroupMember(group_id, user_id)
 
-    if (membershipError || !membership) {
+    if (!membership.allowed) {
       return NextResponse.json(
-        { error: 'User is not a member of this group' },
-        { status: 403 }
+        { error: membership.reason },
+        { status: membership.status }
       )
     }
 

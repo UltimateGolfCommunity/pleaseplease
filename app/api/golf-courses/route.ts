@@ -35,11 +35,12 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const query = searchParams.get('query')
+    const id = searchParams.get('id')
     const zipCode = searchParams.get('zipCode')
     const radius = parseInt(searchParams.get('radius') || '250')
     const limit = parseInt(searchParams.get('limit') || '20')
 
-    console.log('🔍 GOLF-COURSES GET:', { query, zipCode, radius, limit })
+    console.log('🔍 GOLF-COURSES GET:', { id, query, zipCode, radius, limit })
 
     // Use real Supabase with fallback pattern
     let supabase: any = null
@@ -103,6 +104,10 @@ export async function GET(request: NextRequest) {
       .order('name', { ascending: true })
       .limit(limit)
 
+    if (id) {
+      queryBuilder = queryBuilder.eq('id', id)
+    }
+
     if (query) {
       queryBuilder = queryBuilder.or(`name.ilike.%${query}%,location.ilike.%${query}%`)
     }
@@ -163,6 +168,10 @@ export async function GET(request: NextRequest) {
       } catch (error) {
         console.error('❌ Error filtering by location:', error)
       }
+    }
+
+    if (id) {
+      return NextResponse.json({ course: coursesWithStats?.[0] || null })
     }
 
     return NextResponse.json({ courses: coursesWithStats })

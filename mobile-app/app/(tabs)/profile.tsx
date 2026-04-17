@@ -42,6 +42,16 @@ type ActivityItem = {
   metadata?: Record<string, unknown>
 }
 
+type RoundRecord = {
+  id: string
+  course_name: string
+  holes_played: number
+  hole_scores: number[]
+  total_score: number
+  average_score_per_hole: number
+  played_at: string
+}
+
 type UserCard = {
   id: string
   first_name?: string | null
@@ -74,6 +84,15 @@ type BagItems = {
   wedges?: string | null
   putter?: string | null
   ball?: string | null
+}
+
+type CourseHoleAverage = {
+  courseName: string
+  rounds: number
+  holes: {
+    hole: number
+    average: number
+  }[]
 }
 
 const bagFields: { key: keyof BagItems; label: string; placeholder: string }[] = [
@@ -172,6 +191,7 @@ export default function ProfileTab() {
   const [refreshing, setRefreshing] = useState(false)
   const [badges, setBadges] = useState<BadgeRecord[]>([])
   const [activities, setActivities] = useState<ActivityItem[]>([])
+  const [rounds, setRounds] = useState<RoundRecord[]>([])
   const [connections, setConnections] = useState<ConnectionRecord[]>([])
   const [ratingSummary, setRatingSummary] = useState<RatingSummary>({
     average: null,
@@ -232,12 +252,68 @@ export default function ProfileTab() {
     ratingSummary.average
   ])
 
+  const scoreSummary = useMemo(() => {
+    if (!rounds.length) {
+      return {
+        averageRound: null as number | null,
+        bestRound: null as RoundRecord | null,
+        totalRounds: 0
+      }
+    }
+
+    const averageRound =
+      rounds.reduce((sum, round) => sum + round.total_score, 0) / rounds.length
+    const bestRound = [...rounds].sort((a, b) => a.total_score - b.total_score)[0]
+
+    return {
+      averageRound,
+      bestRound,
+      totalRounds: rounds.length
+    }
+  }, [rounds])
+
+  const courseHoleAverages = useMemo<CourseHoleAverage[]>(() => {
+    const byCourse = new Map<string, RoundRecord[]>()
+
+    rounds.forEach((round) => {
+      const courseName = round.course_name || 'Unknown course'
+      const courseRounds = byCourse.get(courseName) || []
+      courseRounds.push(round)
+      byCourse.set(courseName, courseRounds)
+    })
+
+    return Array.from(byCourse.entries())
+      .map(([courseName, courseRounds]) => {
+        const maxHoles = Math.max(...courseRounds.map((round) => round.holes_played || round.hole_scores.length || 0))
+        const holes = Array.from({ length: maxHoles }).map((_, index) => {
+          const scores = courseRounds
+            .map((round) => round.hole_scores?.[index])
+            .filter((score): score is number => Number.isFinite(score))
+          const average = scores.length
+            ? scores.reduce((sum, score) => sum + score, 0) / scores.length
+            : 0
+
+          return {
+            hole: index + 1,
+            average
+          }
+        })
+
+        return {
+          courseName,
+          rounds: courseRounds.length,
+          holes
+        }
+      })
+      .sort((a, b) => b.rounds - a.rounds)
+  }, [rounds])
+
   const loadProfile = useCallback(async () => {
     if (!user?.id) return
 
     try {
       await refreshProfile(user.id)
-      const [userBadges, activityResponse, connectionResponse, ratingResponse] = await Promise.all([
+      const [userBadges, activityResponse, connectionResponse, ratingResponse, scoreResponse] = await Promise.all([
         apiGet<BadgeRecord[]>(`/api/badges?action=user_badges&user_id=${encodeURIComponent(user.id)}`),
         apiGet<{ success: boolean; activities: ActivityItem[] }>(
           `/api/activities?user_id=${encodeURIComponent(user.id)}&limit=6`
@@ -246,13 +322,16 @@ export default function ProfileTab() {
           `/api/users?action=connections&id=${encodeURIComponent(user.id)}`
         ).catch(() => ({ success: true, connections: [] })),
         apiGet<RatingSummary>(`/api/users?action=rating&id=${encodeURIComponent(user.id)}&viewer_id=${encodeURIComponent(user.id)}`)
-          .catch(() => ({ average: null, count: 0, viewerRating: null }))
+          .catch(() => ({ average: null, count: 0, viewerRating: null })),
+        apiGet<{ success: boolean; rounds: RoundRecord[] }>(`/api/scores?user_id=${encodeURIComponent(user.id)}`)
+          .catch(() => ({ success: true, rounds: [] }))
       ])
 
       setBadges(userBadges || [])
       setActivities(activityResponse?.activities || [])
       setConnections(connectionResponse?.connections || [])
       setRatingSummary(ratingResponse)
+      setRounds(scoreResponse.rounds || [])
     } finally {
       setBusy(false)
       setRefreshing(false)
@@ -504,16 +583,6 @@ export default function ProfileTab() {
         <View style={styles.headerCard}>
           <View style={styles.coverShell}>
             <View style={styles.coverGlow} />
-            <Pressable
-              onPress={() => {
-                setShowEditModal(false)
-                setShowShareModal(false)
-                setShowBagModal(true)
-              }}
-              style={styles.bagButton}
-            >
-              <Ionicons color={palette.text} name="briefcase-outline" size={18} />
-            </Pressable>
             <View style={styles.coverActions}>
               <Pressable
                 onPress={() => {
@@ -564,9 +633,10 @@ export default function ProfileTab() {
                   <Text style={styles.verified}>Verified</Text>
                 </View>
               ) : null}
-              <View style={styles.infoRibbon}>
+              <Pressable onPress={() => router.push('/connections')} style={styles.infoRibbon}>
                 <Text style={styles.headlineMeta}>{profileSummary}</Text>
-              </View>
+                <Text style={styles.infoRibbonHint}>Tap to view connections</Text>
+              </Pressable>
               <View style={styles.ratingSummaryRow}>
                 <View style={styles.ratingBadge}>
                   <Ionicons color={palette.gold} name="star" size={16} />
@@ -611,6 +681,38 @@ export default function ProfileTab() {
                   <Text style={styles.activityCountText}>{activities.length}</Text>
                 </View>
               </View>
+              <View style={styles.scorePanel}>
+                <View style={styles.scoreStat}>
+                  <Text style={styles.scoreLabel}>Rounds</Text>
+                  <Text style={styles.scoreValue}>{scoreSummary.totalRounds || '--'}</Text>
+                </View>
+                <View style={styles.scoreStat}>
+                  <Text style={styles.scoreLabel}>Avg Score</Text>
+                  <Text style={styles.scoreValue}>
+                    {scoreSummary.averageRound ? scoreSummary.averageRound.toFixed(1) : '--'}
+                  </Text>
+                </View>
+                <View style={styles.scoreStat}>
+                  <Text style={styles.scoreLabel}>Best</Text>
+                  <Text style={styles.scoreValue}>{scoreSummary.bestRound?.total_score || '--'}</Text>
+                </View>
+              </View>
+              {courseHoleAverages.slice(0, 2).map((course) => (
+                <View key={course.courseName} style={styles.courseAverageCard}>
+                  <View style={styles.courseAverageHeader}>
+                    <Text style={styles.courseAverageTitle}>{course.courseName}</Text>
+                    <Text style={styles.courseAverageMeta}>{course.rounds} logged rounds</Text>
+                  </View>
+                  <View style={styles.holeAverageGrid}>
+                    {course.holes.slice(0, 18).map((hole) => (
+                      <View key={hole.hole} style={styles.holeAveragePill}>
+                        <Text style={styles.holeAverageLabel}>H{hole.hole}</Text>
+                        <Text style={styles.holeAverageValue}>{hole.average ? hole.average.toFixed(1) : '--'}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ))}
               {busy ? <ActivityIndicator color={palette.aqua} /> : null}
               {!busy && activities.length === 0 ? (
                 <Text style={styles.infoLine}>No profile activity yet. Tee times, rounds, photo changes, connections, and bag updates will show up here.</Text>
@@ -630,6 +732,10 @@ export default function ProfileTab() {
             <View style={styles.activityCard}>
               <View style={styles.activityHeader}>
                 <Text style={styles.infoTitle}>What is in the bag</Text>
+                <Pressable onPress={() => setShowBagModal(true)} style={styles.bagEditButton}>
+                  <Ionicons color={palette.aqua} name="create-outline" size={16} />
+                  <Text style={styles.bagEditText}>Edit</Text>
+                </Pressable>
               </View>
               {bagFields.map((field) => {
                 const value = bagItems[field.key]?.trim()
@@ -1035,6 +1141,15 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     textAlign: 'center'
   },
+  infoRibbonHint: {
+    color: palette.aqua,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    marginTop: 2,
+    textAlign: 'center',
+    textTransform: 'uppercase'
+  },
   ratingSummaryRow: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -1150,6 +1265,94 @@ const styles = StyleSheet.create({
     color: palette.aqua,
     fontSize: 12,
     fontWeight: '800'
+  },
+  scorePanel: {
+    flexDirection: 'row',
+    gap: 10
+  },
+  scoreStat: {
+    backgroundColor: 'rgba(103,232,249,0.08)',
+    borderColor: 'rgba(103,232,249,0.16)',
+    borderRadius: 18,
+    borderWidth: 1,
+    flex: 1,
+    gap: 4,
+    padding: 12
+  },
+  scoreLabel: {
+    color: palette.textMuted,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase'
+  },
+  scoreValue: {
+    color: palette.text,
+    fontSize: 20,
+    fontWeight: '800'
+  },
+  courseAverageCard: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 10,
+    padding: 12
+  },
+  courseAverageHeader: {
+    gap: 3
+  },
+  courseAverageTitle: {
+    color: palette.text,
+    fontSize: 15,
+    fontWeight: '800'
+  },
+  courseAverageMeta: {
+    color: palette.textMuted,
+    fontSize: 12,
+    fontWeight: '600'
+  },
+  holeAverageGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6
+  },
+  holeAveragePill: {
+    alignItems: 'center',
+    backgroundColor: palette.cardSoft,
+    borderColor: palette.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    minWidth: 44,
+    paddingHorizontal: 8,
+    paddingVertical: 7
+  },
+  holeAverageLabel: {
+    color: palette.textMuted,
+    fontSize: 9,
+    fontWeight: '800'
+  },
+  holeAverageValue: {
+    color: palette.text,
+    fontSize: 13,
+    fontWeight: '800'
+  },
+  bagEditButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(103,232,249,0.1)',
+    borderColor: 'rgba(103,232,249,0.2)',
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8
+  },
+  bagEditText: {
+    color: palette.aqua,
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'uppercase'
   },
   modalBackdrop: {
     alignItems: 'center',

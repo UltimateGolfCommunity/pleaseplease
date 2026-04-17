@@ -123,6 +123,20 @@ export default function GroupsTab() {
     return [...pool].sort((a, b) => (b.member_count || 0) - (a.member_count || 0)).slice(0, 8)
   }, [discoverGroups, leaderboardArea, profile?.location])
 
+  const suggestedGroups = useMemo(() => {
+    const myGroupIds = new Set(myGroups.map((group) => group.id))
+    const locationText = (profile?.location || '').split(',')[0]?.trim().toLowerCase()
+
+    return discoverGroups
+      .filter((group) => !group.is_member && !myGroupIds.has(group.id))
+      .sort((a, b) => {
+        const aLocal = locationText && (a.location || '').toLowerCase().includes(locationText) ? 1 : 0
+        const bLocal = locationText && (b.location || '').toLowerCase().includes(locationText) ? 1 : 0
+        return bLocal - aLocal || (b.member_count || 0) - (a.member_count || 0)
+      })
+      .slice(0, 4)
+  }, [discoverGroups, myGroups, profile?.location])
+
   const loadGroups = useCallback(async () => {
     if (!user?.id) return
 
@@ -373,6 +387,79 @@ export default function GroupsTab() {
           </View>
         ) : null}
 
+        <View style={styles.discoveryHero}>
+          <Text style={styles.sectionEyebrow}>Discovery</Text>
+          <Text style={styles.discoveryTitle}>Find a crew before your next round</Text>
+          <Text style={styles.helper}>
+            Join course clubs, local weekend games, and city groups so your feed has people worth playing with.
+          </Text>
+          <View style={styles.discoveryStatsRow}>
+            <View style={styles.discoveryStat}>
+              <Text style={styles.discoveryStatValue}>{discoverGroups.length}</Text>
+              <Text style={styles.discoveryStatLabel}>Open groups</Text>
+            </View>
+            <View style={styles.discoveryStat}>
+              <Text style={styles.discoveryStatValue}>{localLeaderboard[0]?.member_count || 0}</Text>
+              <Text style={styles.discoveryStatLabel}>Top local members</Text>
+            </View>
+          </View>
+        </View>
+
+        {suggestedGroups.length ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Suggested groups</Text>
+            {suggestedGroups.map((group) => (
+              <View key={group.id} style={styles.card}>
+                <Pressable onPress={() => router.push(`/group/${group.id}`)} style={styles.linkArea}>
+                  <View style={styles.groupRow}>
+                    <Avatar
+                      label={group.name}
+                      shape="rounded"
+                      size={56}
+                      uri={group.logo_url || group.image_url}
+                    />
+                    <View style={styles.groupCopy}>
+                      <Text style={styles.cardTitle}>{group.name}</Text>
+                      <Text style={styles.cardMeta}>
+                        {(group.group_type || 'community').replace(/^./, (char) => char.toUpperCase())} •{' '}
+                        {group.member_count || 0} members
+                      </Text>
+                      <Text style={styles.cardBody}>
+                        {group.location || 'Location not set'} • {group.description || 'A new place to find golf people.'}
+                      </Text>
+                    </View>
+                  </View>
+                </Pressable>
+                <PrimaryButton
+                  label="Join Group"
+                  loading={joiningId === group.id}
+                  onPress={() => handleJoin(group.id)}
+                />
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {localLeaderboard.length ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Top groups near you</Text>
+            <Text style={styles.helper}>
+              Ranked by member count near {(leaderboardArea || profile?.location || 'your area').split(',')[0]}.
+            </Text>
+            {localLeaderboard.slice(0, 3).map((group, index) => (
+              <Pressable key={group.id} onPress={() => router.push(`/group/${group.id}`)} style={styles.leaderboardPodiumCard}>
+                <Text style={styles.leaderboardRank}>#{index + 1}</Text>
+                <View style={styles.groupCopy}>
+                  <Text style={styles.cardTitle}>{group.name}</Text>
+                  <Text style={styles.cardMeta}>
+                    {group.location || 'Location not set'} • {group.member_count || 0} members
+                  </Text>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Activity feed</Text>
           {busy ? <ActivityIndicator color={palette.aqua} /> : null}
@@ -498,6 +585,61 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 12,
     padding: 14
+  },
+  discoveryHero: {
+    backgroundColor: 'rgba(103,232,249,0.08)',
+    borderColor: 'rgba(103,232,249,0.2)',
+    borderRadius: 28,
+    borderWidth: 1,
+    gap: 12,
+    padding: 20
+  },
+  discoveryTitle: {
+    color: palette.text,
+    fontSize: 26,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    lineHeight: 30
+  },
+  discoveryStatsRow: {
+    flexDirection: 'row',
+    gap: 10
+  },
+  discoveryStat: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 18,
+    borderWidth: 1,
+    flex: 1,
+    padding: 12
+  },
+  discoveryStatValue: {
+    color: palette.text,
+    fontSize: 24,
+    fontWeight: '800'
+  },
+  discoveryStatLabel: {
+    color: palette.textMuted,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase'
+  },
+  leaderboardPodiumCard: {
+    alignItems: 'center',
+    backgroundColor: palette.card,
+    borderColor: palette.border,
+    borderRadius: 24,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 14,
+    padding: 16
+  },
+  leaderboardRank: {
+    color: palette.aqua,
+    fontSize: 26,
+    fontWeight: '900',
+    minWidth: 44
   },
   imagePickerRow: {
     alignItems: 'center',

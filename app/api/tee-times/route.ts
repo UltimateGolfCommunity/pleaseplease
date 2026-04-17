@@ -123,6 +123,49 @@ async function attachGroupDetails(supabase: any, teeTimes: any[]) {
   }))
 }
 
+async function attachAcceptedPlayers(supabase: any, teeTimes: any[]) {
+  const teeTimeIds = (teeTimes || []).map((teeTime: any) => teeTime.id).filter(Boolean)
+
+  if (teeTimeIds.length === 0) {
+    return teeTimes
+  }
+
+  const { data: applications, error } = await supabase
+    .from('tee_time_applications')
+    .select(`
+      tee_time_id,
+      status,
+      applicant:user_profiles!tee_time_applications_applicant_id_fkey(
+        id,
+        first_name,
+        last_name,
+        username,
+        avatar_url
+      )
+    `)
+    .in('tee_time_id', teeTimeIds)
+    .in('status', ['approved', 'accepted'])
+
+  if (error) {
+    console.log('⚠️ Could not attach accepted tee time players:', error.message)
+    return teeTimes
+  }
+
+  const playersByTeeTime = new Map<string, any[]>()
+
+  ;(applications || []).forEach((application: any) => {
+    if (!application.tee_time_id || !application.applicant) return
+    const players = playersByTeeTime.get(application.tee_time_id) || []
+    players.push(application.applicant)
+    playersByTeeTime.set(application.tee_time_id, players)
+  })
+
+  return (teeTimes || []).map((teeTime: any) => ({
+    ...teeTime,
+    accepted_players: playersByTeeTime.get(teeTime.id) || []
+  }))
+}
+
 async function createNotification(
   supabase: any,
   {
@@ -375,7 +418,8 @@ export async function GET(request: NextRequest) {
 
       if (error) throw error
       
-      const response = NextResponse.json(data || [])
+      const enrichedTeeTimes = await attachAcceptedPlayers(supabase, data || [])
+      const response = NextResponse.json(enrichedTeeTimes || [])
       // Add cache-busting headers to prevent stale data
       response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
       response.headers.set('Pragma', 'no-cache')

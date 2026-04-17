@@ -46,6 +46,62 @@ type AuthContextValue = {
   updateProfile: (updates: Record<string, unknown>) => Promise<void>
 }
 
+const optionalProfileColumns = [
+  'home_course',
+  'home_club',
+  'bag_items',
+  'header_image_url',
+  'avatar_url',
+  'handicap',
+  'location'
+]
+
+function getMissingProfileColumn(error: unknown) {
+  const source = error as { message?: string; details?: string }
+  const message = `${source?.message || ''} ${source?.details || ''}`.toLowerCase()
+
+  return optionalProfileColumns.find((column) =>
+    message.includes(column.toLowerCase()) &&
+    (message.includes('column') || message.includes('schema cache') || message.includes('could not find'))
+  )
+}
+
+function buildProfileUpdateAttempts(updates: Record<string, unknown>) {
+  const attempts: Record<string, unknown>[] = [updates]
+  const hasHomeCourse = Object.prototype.hasOwnProperty.call(updates, 'home_course')
+  const hasHomeClub = Object.prototype.hasOwnProperty.call(updates, 'home_club')
+
+  if (hasHomeCourse || hasHomeClub) {
+    const withoutHomeCourse = { ...updates }
+    delete withoutHomeCourse.home_course
+    attempts.push(withoutHomeCourse)
+
+    const withoutHomeClub = { ...updates }
+    delete withoutHomeClub.home_club
+    attempts.push(withoutHomeClub)
+
+    const withoutEitherHomeField = { ...updates }
+    delete withoutEitherHomeField.home_course
+    delete withoutEitherHomeField.home_club
+    attempts.push(withoutEitherHomeField)
+  }
+
+  attempts.push(
+    Object.fromEntries(
+      Object.entries(updates).filter(([key]) => !optionalProfileColumns.includes(key))
+    )
+  )
+
+  const seen = new Set<string>()
+
+  return attempts.filter((attempt) => {
+    const key = JSON.stringify(Object.keys(attempt).sort())
+    if (seen.has(key)) return false
+    seen.add(key)
+    return Object.keys(attempt).some((field) => field !== 'updated_at')
+  })
+}
+
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
 async function fetchProfile(userId: string) {
@@ -292,16 +348,37 @@ export function AuthProvider({ children }: PropsWithChildren) {
         throw new Error(payload?.error || payload?.details || 'Unable to update profile.')
       }
     } catch (apiError) {
-      const { error } = await mobileSupabase
-        .from('user_profiles')
-        .update({
-          ...normalizedUpdates,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id)
+      let lastDirectError: unknown = null
+      let savedDirectly = false
+      const baseDirectUpdate = {
+        ...normalizedUpdates,
+        updated_at: new Date().toISOString()
+      }
 
-      if (error) {
-        throw apiError instanceof Error ? apiError : error
+      for (const attempt of buildProfileUpdateAttempts(baseDirectUpdate)) {
+        const { error } = await mobileSupabase
+          .from('user_profiles')
+          .update(attempt)
+          .eq('id', user.id)
+
+        if (!error) {
+          savedDirectly = true
+          break
+        }
+
+        lastDirectError = error
+
+        if (!getMissingProfileColumn(error)) {
+          break
+        }
+      }
+
+      if (!savedDirectly) {
+        if (lastDirectError instanceof Error) {
+          throw lastDirectError
+        }
+
+        throw apiError instanceof Error ? apiError : new Error('Unable to update profile.')
       }
     }
 

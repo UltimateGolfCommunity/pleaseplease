@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Redirect, router } from 'expo-router'
+import Ionicons from '@expo/vector-icons/Ionicons'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   ActivityIndicator,
@@ -25,6 +26,7 @@ type SearchUser = {
   avatar_url?: string | null
   location?: string | null
   handicap?: number | null
+  is_founder_verified?: boolean
 }
 
 type SearchGroup = {
@@ -51,6 +53,17 @@ type SearchTeeTime = {
   creator_id?: string
 }
 
+type SearchCourse = {
+  id: string
+  name: string
+  location?: string | null
+  description?: string | null
+  logo_url?: string | null
+  course_image_url?: string | null
+  average_rating?: number
+  review_count?: number
+}
+
 function formatUserName(user: SearchUser) {
   return [user.first_name, user.last_name].filter(Boolean).join(' ') || user.username || 'UGC Golfer'
 }
@@ -71,10 +84,11 @@ export default function SearchTab() {
   const [users, setUsers] = useState<SearchUser[]>([])
   const [groups, setGroups] = useState<SearchGroup[]>([])
   const [teeTimes, setTeeTimes] = useState<SearchTeeTime[]>([])
+  const [courses, setCourses] = useState<SearchCourse[]>([])
 
   const hasResults = useMemo(
-    () => users.length > 0 || groups.length > 0 || teeTimes.length > 0,
-    [groups.length, teeTimes.length, users.length]
+    () => users.length > 0 || groups.length > 0 || teeTimes.length > 0 || courses.length > 0,
+    [courses.length, groups.length, teeTimes.length, users.length]
   )
 
   if (!loading && !user) {
@@ -86,23 +100,28 @@ export default function SearchTab() {
       setUsers([])
       setGroups([])
       setTeeTimes([])
+      setCourses([])
       return
     }
 
     setSearching(true)
 
     try {
-      const [userResponse, groupResponse, teeTimeResponse] = await Promise.all([
+      const [userResponse, groupResponse, teeTimeResponse, courseResponse] = await Promise.all([
         apiGet<{ success: boolean; users: SearchUser[] }>(`/api/users?search=${encodeURIComponent(query.trim())}`),
         apiGet<{ success: boolean; groups: SearchGroup[] }>(
           `/api/groups?action=search&user_id=${encodeURIComponent(user.id)}&query=${encodeURIComponent(query.trim())}`
         ),
-        apiGet<SearchTeeTime[]>(`/api/tee-times?action=available&user_id=${encodeURIComponent(user.id)}`)
+        apiGet<SearchTeeTime[]>(`/api/tee-times?action=available&user_id=${encodeURIComponent(user.id)}`),
+        apiGet<{ courses: SearchCourse[] }>(
+          `/api/golf-courses?query=${encodeURIComponent(query.trim())}&limit=12`
+        ).catch(() => ({ courses: [] }))
       ])
 
       const loweredQuery = query.trim().toLowerCase()
       setUsers((userResponse.users || []).filter((candidate) => candidate.id !== user.id))
       setGroups(groupResponse.groups || [])
+      setCourses(courseResponse.courses || [])
       setTeeTimes(
         (teeTimeResponse || []).filter((teeTime) =>
           [teeTime.course_name, teeTime.location, teeTime.tee_time_date, teeTime.tee_time_time]
@@ -124,7 +143,7 @@ export default function SearchTab() {
           <TextInput
             onChangeText={setQuery}
             onSubmitEditing={() => void handleSearch()}
-            placeholder="Search people, groups, or tee times"
+            placeholder="Search golfers, groups, courses, or tee times"
             placeholderTextColor={palette.textMuted}
             style={styles.input}
             value={query}
@@ -153,7 +172,12 @@ export default function SearchTab() {
                 <View style={styles.row}>
                   <Avatar label={formatUserName(result)} size={56} uri={result.avatar_url} />
                   <View style={styles.copy}>
-                    <Text style={styles.name}>{formatUserName(result)}</Text>
+                    <View style={styles.nameRow}>
+                      <Text style={styles.name}>{formatUserName(result)}</Text>
+                      {result.is_founder_verified ? (
+                        <Ionicons color={palette.emerald} name="checkmark-circle" size={17} />
+                      ) : null}
+                    </View>
                     <Text style={styles.meta}>
                       {result.location || 'Location not set'} • Handicap {result.handicap ?? 'N/A'}
                     </Text>
@@ -183,6 +207,32 @@ export default function SearchTab() {
                       {result.member_count || 0} members
                     </Text>
                     {result.location ? <Text style={styles.meta}>{result.location}</Text> : null}
+                  </View>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+
+        {courses.length ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Golf Clubs</Text>
+            {courses.map((result) => (
+              <Pressable key={result.id} onPress={() => router.push(`/courses/${result.id}`)} style={styles.card}>
+                <View style={styles.row}>
+                  <Avatar
+                    label={result.name}
+                    shape="rounded"
+                    size={56}
+                    uri={result.logo_url || result.course_image_url}
+                  />
+                  <View style={styles.copy}>
+                    <Text style={styles.name}>{result.name}</Text>
+                    <Text style={styles.meta}>
+                      {result.location || 'Location not set'} •{' '}
+                      {result.average_rating ? `${result.average_rating.toFixed(1)} stars` : 'No reviews yet'}
+                    </Text>
+                    {result.description ? <Text style={styles.meta}>{result.description}</Text> : null}
                   </View>
                 </View>
               </Pressable>
@@ -267,6 +317,11 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 17,
     fontWeight: '700'
+  },
+  nameRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6
   },
   meta: {
     color: palette.textMuted,

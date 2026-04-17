@@ -36,6 +36,7 @@ type PublicUser = {
   linkedin?: string | null
   linkedin_url?: string | null
   bag_items?: Record<string, string | null> | null
+  is_founder_verified?: boolean
 }
 
 type ActivityItem = {
@@ -323,12 +324,20 @@ export default function PublicUserScreen() {
           </View>
 
           <View style={styles.identityStack}>
-            <Text style={styles.name}>{displayName}</Text>
+            <View style={styles.nameRow}>
+              <Text style={styles.name}>{displayName}</Text>
+              {profile?.is_founder_verified ? (
+                <Ionicons color={palette.emerald} name="checkmark-circle" size={22} />
+              ) : null}
+            </View>
             <Text style={styles.homeCourse}>{homeCourse}</Text>
-            <Text style={styles.metaLine}>
+            <Pressable onPress={() => id && router.push(`/users/${id}/connections`)} style={styles.connectionsHeaderLink}>
+              <Text style={styles.metaLine}>
               {profile?.location || 'Location not added'} • Handicap {profile?.handicap ?? 'N/A'} •{' '}
               {connectedGolfers.length} Connections
-            </Text>
+              </Text>
+              <Text style={styles.connectionsHeaderHint}>Tap to view connections</Text>
+            </Pressable>
             <View style={styles.ratingRow}>
               <View style={styles.ratingBadge}>
                 <Ionicons color={palette.gold} name="star" size={16} />
@@ -349,16 +358,24 @@ export default function PublicUserScreen() {
             {profile?.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
           </View>
 
-          {status !== 'connected' ? (
-            <View style={styles.actionRow}>
-              <PrimaryButton
-                disabled={status === 'pending' || status === 'incoming_pending'}
-                label={actionLabel}
-                loading={connecting}
-                onPress={handleConnect}
-              />
-            </View>
-          ) : null}
+          <View style={styles.actionGrid}>
+            <PrimaryButton
+              disabled={status === 'connected' || status === 'pending' || status === 'incoming_pending'}
+              label={actionLabel}
+              loading={connecting}
+              onPress={handleConnect}
+            />
+            <PrimaryButton
+              label="Send DM"
+              variant="ghost"
+              onPress={() => id && router.push(`/messages/${id}`)}
+            />
+            <PrimaryButton
+              label="Add to Group"
+              variant="ghost"
+              onPress={() => router.push('/groups')}
+            />
+          </View>
 
         </View>
 
@@ -403,6 +420,10 @@ export default function PublicUserScreen() {
                       {activity.description ? <Text style={styles.activityDescription}>{activity.description}</Text> : null}
                     </View>
                     <Text style={styles.activityTime}>{formatRelativeTime(activity.created_at)}</Text>
+                    <View style={styles.activityActions}>
+                      <Text style={styles.activityActionText}>Like</Text>
+                      <Text style={styles.activityActionText}>Comment</Text>
+                    </View>
                   </View>
                 ))
               : null}
@@ -521,6 +542,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center'
   },
+  nameRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center'
+  },
   homeCourse: {
     color: palette.text,
     fontSize: 18,
@@ -532,6 +559,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     textAlign: 'center'
+  },
+  connectionsHeaderLink: {
+    alignItems: 'center',
+    gap: 2
+  },
+  connectionsHeaderHint: {
+    color: palette.aqua,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase'
   },
   ratingRow: {
     alignItems: 'center',
@@ -584,6 +622,10 @@ const styles = StyleSheet.create({
     textAlign: 'center'
   },
   actionRow: {
+    marginTop: 16
+  },
+  actionGrid: {
+    gap: 10,
     marginTop: 16
   },
   tabRow: {
@@ -649,7 +691,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flexDirection: 'row',
     gap: 10,
-    padding: 12
+    padding: 12,
+    paddingBottom: 34,
+    position: 'relative'
   },
   activityDot: {
     backgroundColor: palette.aqua,
@@ -678,6 +722,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     marginLeft: 'auto'
+  },
+  activityActions: {
+    bottom: 10,
+    flexDirection: 'row',
+    gap: 12,
+    position: 'absolute',
+    right: 12
+  },
+  activityActionText: {
+    color: palette.aqua,
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase'
   },
   bagRow: {
     backgroundColor: 'rgba(255,255,255,0.03)',
