@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { PropsWithChildren } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { apiGet } from '@/lib/api'
@@ -41,6 +41,7 @@ type AuthContextValue = {
     password: string
   }) => Promise<void>
   signOut: () => Promise<void>
+  syncAuthSession: () => Promise<void>
   refreshProfile: (userId?: string) => Promise<void>
   updateProfile: (updates: Record<string, unknown>) => Promise<void>
 }
@@ -72,9 +73,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [profile, setProfile] = useState<MobileProfile | null>(null)
   const loading = false
   const [authBusy, setAuthBusy] = useState(false)
+  const userRef = useRef<User | null>(null)
+
+  useEffect(() => {
+    userRef.current = user
+  }, [user])
 
   const refreshProfile = useCallback(async (explicitUserId?: string) => {
-    const userId = explicitUserId || user?.id
+    const userId = explicitUserId || userRef.current?.id
     if (!userId) return
 
     try {
@@ -83,7 +89,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
     } catch (error) {
       console.warn('Unable to refresh profile in mobile app:', error)
     }
-  }, [user?.id])
+  }, [])
+
+  const applySession = useCallback((nextSession: Session | null) => {
+    setSession(nextSession)
+    setUser(nextSession?.user ?? null)
+
+    if (nextSession?.user?.id) {
+      void refreshProfile(nextSession.user.id)
+    } else {
+      setProfile(null)
+    }
+  }, [refreshProfile])
 
   useEffect(() => {
     let mounted = true
@@ -112,12 +129,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
         if (!mounted) return
 
-        setSession(existingSession)
-        setUser(existingSession?.user ?? null)
-
-        if (existingSession?.user?.id) {
-          void refreshProfile(existingSession.user.id)
-        }
+        applySession(existingSession)
       } catch (error) {
         console.warn('Unable to restore mobile auth session:', error)
         if (!mounted) return
@@ -135,21 +147,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (!mounted) return
       if (!allowAuthEvents) return
 
-      setSession(nextSession)
-      setUser(nextSession?.user ?? null)
-
-      if (nextSession?.user?.id) {
-        void refreshProfile(nextSession.user.id)
-      } else {
-        setProfile(null)
-      }
+      applySession(nextSession)
     })
 
     return () => {
       mounted = false
       subscription.unsubscribe()
     }
-  }, [refreshProfile])
+  }, [applySession])
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -162,7 +167,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const signIn = useCallback(async (email: string, password: string) => {
     setAuthBusy(true)
     try {
-      const { error } = await mobileSupabase.auth.signInWithPassword({
+      const { data, error } = await mobileSupabase.auth.signInWithPassword({
         email: email.trim(),
         password
       })
@@ -170,10 +175,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (error) {
         throw error
       }
+
+      applySession(data.session)
     } finally {
       setAuthBusy(false)
     }
-  }, [])
+  }, [applySession])
 
   const signUp = useCallback(async ({
     firstName,
@@ -205,6 +212,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
         throw error
       }
 
+      applySession(data.session)
+
       if (data.user?.id) {
         const fallbackUsername =
           email.split('@')[0]?.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 18) || `ugc_${Date.now()}`
@@ -221,7 +230,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     } finally {
       setAuthBusy(false)
     }
-  }, [])
+  }, [applySession])
 
   const signOut = useCallback(async () => {
     setAuthBusy(true)
@@ -230,10 +239,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (error) {
         throw error
       }
+
+      applySession(null)
     } finally {
       setAuthBusy(false)
     }
-  }, [])
+  }, [applySession])
+
+  const syncAuthSession = useCallback(async () => {
+    const {
+      data: { session: nextSession }
+    } = await mobileSupabase.auth.getSession()
+
+    applySession(nextSession)
+  }, [applySession])
 
   const updateProfile = useCallback(async (updates: Record<string, unknown>) => {
     if (!user?.id) {
@@ -299,10 +318,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
       signIn,
       signUp,
       signOut,
+      syncAuthSession,
       refreshProfile,
       updateProfile
     }),
-    [user, session, profile, loading, authBusy, signIn, signUp, signOut, refreshProfile, updateProfile]
+    [user, session, profile, loading, authBusy, signIn, signUp, signOut, syncAuthSession, refreshProfile, updateProfile]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

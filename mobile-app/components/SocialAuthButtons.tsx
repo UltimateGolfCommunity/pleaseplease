@@ -5,6 +5,7 @@ import * as Google from 'expo-auth-session/providers/google'
 import * as WebBrowser from 'expo-web-browser'
 import { PrimaryButton } from '@/components/PrimaryButton'
 import { mobileSupabase } from '@/lib/supabase'
+import { useAuth } from '@/providers/AuthProvider'
 
 WebBrowser.maybeCompleteAuthSession()
 
@@ -27,6 +28,7 @@ export function SocialAuthButtons({ onSuccess }: { onSuccess?: () => void }) {
 }
 
 function SocialAuthButtonsWithoutGoogle({ onSuccess }: { onSuccess?: () => void }) {
+  const { syncAuthSession } = useAuth()
   const [appleBusy, setAppleBusy] = useState(false)
   const [appleAvailable, setAppleAvailable] = useState(false)
 
@@ -67,6 +69,7 @@ function SocialAuthButtonsWithoutGoogle({ onSuccess }: { onSuccess?: () => void 
         throw error
       }
 
+      await syncAuthSession()
       onSuccess?.()
     } catch (error) {
       if (typeof error === 'object' && error && 'code' in error && error.code === 'ERR_REQUEST_CANCELED') {
@@ -101,6 +104,7 @@ function SocialAuthButtonsWithoutGoogle({ onSuccess }: { onSuccess?: () => void 
 }
 
 function SocialAuthButtonsWithGoogle({ onSuccess }: { onSuccess?: () => void }) {
+  const { syncAuthSession } = useAuth()
   const [googleBusy, setGoogleBusy] = useState(false)
   const [appleBusy, setAppleBusy] = useState(false)
   const [appleAvailable, setAppleAvailable] = useState(false)
@@ -143,6 +147,7 @@ function SocialAuthButtonsWithGoogle({ onSuccess }: { onSuccess?: () => void }) 
           throw error
         }
 
+        await syncAuthSession()
         onSuccess?.()
       } catch (error) {
         Alert.alert('Google sign in failed', error instanceof Error ? error.message : 'Please try again.')
@@ -152,7 +157,7 @@ function SocialAuthButtonsWithGoogle({ onSuccess }: { onSuccess?: () => void }) 
     }
 
     finishGoogleSignIn()
-  }, [response, onSuccess])
+  }, [response, onSuccess, syncAuthSession])
 
   const handleGoogle = async () => {
     if (!request) {
@@ -195,6 +200,7 @@ function SocialAuthButtonsWithGoogle({ onSuccess }: { onSuccess?: () => void }) 
         throw error
       }
 
+      await syncAuthSession()
       onSuccess?.()
     } catch (error) {
       if (
