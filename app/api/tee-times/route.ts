@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { createAdminClient } from '@/lib/supabase-admin'
+import { createNotificationAndDeliverPush } from '@/lib/notifications'
 
 // Function to calculate distance between two coordinates using Haversine formula
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -166,6 +167,86 @@ async function attachAcceptedPlayers(supabase: any, teeTimes: any[]) {
   }))
 }
 
+async function attachTeeTimeEngagement(supabase: any, teeTimes: any[], viewerId?: string | null) {
+  const teeTimeIds = (teeTimes || []).map((teeTime: any) => teeTime.id).filter(Boolean)
+
+  if (!teeTimeIds.length) {
+    return teeTimes
+  }
+
+  const { data: activities, error: activityError } = await supabase
+    .from('user_activities')
+    .select('id, related_id, activity_type, created_at')
+    .eq('related_type', 'tee_time')
+    .in('related_id', teeTimeIds)
+    .in('activity_type', ['tee_time_created', 'tee_time_updated'])
+    .order('created_at', { ascending: false })
+
+  if (activityError) {
+    console.log('⚠️ Could not attach tee time engagement:', activityError.message)
+    return teeTimes
+  }
+
+  const preferredActivityByTeeTime = new Map<string, any>()
+
+  ;(activities || []).forEach((activity: any) => {
+    if (!activity.related_id || preferredActivityByTeeTime.has(activity.related_id)) return
+    preferredActivityByTeeTime.set(activity.related_id, activity)
+  })
+
+  const activityIds = Array.from(new Set((activities || []).map((activity: any) => activity.id).filter(Boolean)))
+
+  if (!activityIds.length) {
+    return teeTimes.map((teeTime: any) => ({
+      ...teeTime,
+      activity_id: null,
+      like_count: 0,
+      liked_by_user: false,
+      comment_count: 0
+    }))
+  }
+
+  const [likesResult, commentsResult] = await Promise.all([
+    supabase
+      .from('activity_likes')
+      .select('activity_id, user_id')
+      .in('activity_id', activityIds),
+    supabase
+      .from('activity_comments')
+      .select('activity_id, id')
+      .in('activity_id', activityIds)
+  ])
+
+  const likeSummary = new Map<string, { count: number; liked: boolean }>()
+  const commentCounts = new Map<string, number>()
+
+  if (!likesResult.error) {
+    ;(likesResult.data || []).forEach((like: any) => {
+      const summary = likeSummary.get(like.activity_id) || { count: 0, liked: false }
+      summary.count += 1
+      summary.liked = summary.liked || like.user_id === viewerId
+      likeSummary.set(like.activity_id, summary)
+    })
+  }
+
+  if (!commentsResult.error) {
+    ;(commentsResult.data || []).forEach((comment: any) => {
+      commentCounts.set(comment.activity_id, (commentCounts.get(comment.activity_id) || 0) + 1)
+    })
+  }
+
+  return teeTimes.map((teeTime: any) => {
+    const activity = preferredActivityByTeeTime.get(teeTime.id)
+    return {
+      ...teeTime,
+      activity_id: activity?.id || null,
+      like_count: activity?.id ? likeSummary.get(activity.id)?.count || 0 : 0,
+      liked_by_user: activity?.id ? likeSummary.get(activity.id)?.liked || false : false,
+      comment_count: activity?.id ? commentCounts.get(activity.id) || 0 : 0
+    }
+  })
+}
+
 async function createNotification(
   supabase: any,
   {
@@ -173,25 +254,27 @@ async function createNotification(
     type,
     title,
     message,
-    relatedId
+    relatedId,
+    notificationData
   }: {
     userId?: string | null
     type: string
     title: string
     message: string
     relatedId?: string | null
+    notificationData?: Record<string, unknown>
   }
 ) {
   if (!userId) return
 
   try {
-    await supabase.from('notifications').insert({
-      user_id: userId,
+    await createNotificationAndDeliverPush(supabase, {
+      userId,
       type,
       title,
       message,
-      related_id: relatedId || null,
-      is_read: false
+      relatedId: relatedId || null,
+      notificationData: notificationData || null
     })
   } catch (error) {
     console.warn('⚠️ Unable to create tee time notification:', error)
@@ -418,7 +501,8 @@ export async function GET(request: NextRequest) {
 
       if (error) throw error
       
-      const enrichedTeeTimes = await attachAcceptedPlayers(supabase, data || [])
+      const withPlayers = await attachAcceptedPlayers(supabase, data || [])
+      const enrichedTeeTimes = await attachTeeTimeEngagement(supabase, withPlayers, userId)
       const response = NextResponse.json(enrichedTeeTimes || [])
       // Add cache-busting headers to prevent stale data
       response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
@@ -452,7 +536,8 @@ export async function GET(request: NextRequest) {
         : [new Set<string>(), new Set<string>()]
 
       const visibleTeeTimes = filterVisibleTeeTimes(data || [], userId, connectionIds, joinedGroupIds)
-      const enrichedTeeTimes = await attachGroupDetails(supabase, visibleTeeTimes)
+      const withGroups = await attachGroupDetails(supabase, visibleTeeTimes)
+      const enrichedTeeTimes = await attachTeeTimeEngagement(supabase, withGroups, userId)
       
       const response = NextResponse.json(enrichedTeeTimes || [])
       // Add cache-busting headers to prevent stale data
@@ -1405,14 +1490,13 @@ export async function POST(request: NextRequest) {
             : applicantDetails.username || 'Someone'
           
           // Insert notification directly into database with detailed data
-          const notificationData = {
-            user_id: teeTimeDetails.creator_id,
+          await createNotificationAndDeliverPush(supabase, {
+            userId: teeTimeDetails.creator_id,
             type: 'tee_time_application',
             title: 'New Tee Time Application',
             message: `${applicantName} applied to join your tee time on ${teeTimeDetails.tee_time_date} at ${teeTimeDetails.tee_time_time}`,
-            related_id: application.id,
-            is_read: false,
-            notification_data: {
+            relatedId: application.id,
+            notificationData: {
               tee_time_id: data.tee_time_id,
               application_id: application.id,
               applicant_id: data.applicant_id,
@@ -1421,17 +1505,8 @@ export async function POST(request: NextRequest) {
               tee_time_time: teeTimeDetails.tee_time_time,
               course_name: teeTimeDetails.course_name
             }
-          }
-          
-          const { error: notifError } = await supabase
-            .from('notifications')
-            .insert(notificationData)
-          
-          if (notifError) {
-            console.error('❌ Error creating notification:', notifError)
-          } else {
-            console.log('✅ Notification created successfully for user:', teeTimeDetails.creator_id)
-          }
+          })
+          console.log('✅ Notification created successfully for user:', teeTimeDetails.creator_id)
         } catch (notifError) {
           console.log('⚠️ Failed to create notification, but application was successful:', notifError)
         }
@@ -1556,24 +1631,20 @@ export async function POST(request: NextRequest) {
             ? `Your application to join the tee time on ${applicationDetails.tee_times.tee_time_date} at ${applicationDetails.tee_times.tee_time_time} was accepted!`
             : `Your application to join the tee time on ${applicationDetails.tee_times.tee_time_date} at ${applicationDetails.tee_times.tee_time_time} was declined.`
           
-          await fetch('/api/notifications', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'create',
-              user_id: applicationDetails.applicant_id,
-              type: 'tee_time_application_response',
-              title: `Application ${action_type === 'accept' ? 'Accepted' : 'Declined'}`,
-              message: message,
-              notification_data: {
-                tee_time_id: applicationDetails.tee_time_id,
-                application_id: application_id,
-                action_type: action_type,
-                tee_time_date: applicationDetails.tee_times.tee_time_date,
-                tee_time_time: applicationDetails.tee_times.tee_time_time,
-                course_name: applicationDetails.tee_times.course_name
-              }
-            })
+          await createNotificationAndDeliverPush(supabase, {
+            userId: applicationDetails.applicant_id,
+            type: 'tee_time_application_response',
+            title: `Application ${action_type === 'accept' ? 'Accepted' : 'Declined'}`,
+            message,
+            relatedId: application_id,
+            notificationData: {
+              tee_time_id: applicationDetails.tee_time_id,
+              application_id,
+              action_type,
+              tee_time_date: applicationDetails.tee_times.tee_time_date,
+              tee_time_time: applicationDetails.tee_times.tee_time_time,
+              course_name: applicationDetails.tee_times.course_name
+            }
           })
           
           console.log('✅ Notification sent to applicant')

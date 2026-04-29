@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { createServerClient } from '@/lib/supabase-server'
+import { clearPushTokenForUser, createNotificationAndDeliverPush, savePushTokenForUser } from '@/lib/notifications'
 
 // Mock notifications for when database is not available
 const mockNotifications = [
@@ -142,21 +143,23 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      // Create real notification
-      const { data: notification, error } = await supabase
-        .from('notifications')
-        .insert({
-          user_id: data.user_id,
+      try {
+        const notification = await createNotificationAndDeliverPush(supabase, {
+          userId: data.user_id,
           type: data.type,
           title: data.title,
           message: data.message,
-          related_id: data.related_id || null,
-          is_read: false
+          relatedId: data.related_id || null,
+          notificationData: data.notification_data || null
         })
-        .select()
-        .single()
 
-      if (error) {
+        console.log('✅ Notification created:', notification?.id)
+        return NextResponse.json({ 
+          success: true, 
+          message: 'Notification created successfully',
+          notification_id: notification?.id || null
+        })
+      } catch (error: any) {
         console.error('Error creating notification:', error)
         return NextResponse.json({ 
           success: true, 
@@ -164,13 +167,59 @@ export async function POST(request: NextRequest) {
           notification_id: 'fallback-' + Date.now()
         })
       }
+    }
 
-      console.log('✅ Notification created:', notification.id)
-      return NextResponse.json({ 
-        success: true, 
-        message: 'Notification created successfully',
-        notification_id: notification.id
-      })
+    if (action === 'register_push_token') {
+      if (usingMockMode || !supabase) {
+        return NextResponse.json({
+          success: true,
+          message: 'Push token registered (backup system)'
+        })
+      }
+
+      try {
+        await savePushTokenForUser(supabase, {
+          userId: data.user_id,
+          expoPushToken: data.expo_push_token
+        })
+
+        return NextResponse.json({
+          success: true,
+          message: 'Push token registered successfully'
+        })
+      } catch (error: any) {
+        console.error('Error registering push token:', error)
+        return NextResponse.json({
+          error: 'Failed to register push token',
+          details: error?.message || 'Unknown error'
+        }, { status: 500 })
+      }
+    }
+
+    if (action === 'clear_push_token') {
+      if (usingMockMode || !supabase) {
+        return NextResponse.json({
+          success: true,
+          message: 'Push token cleared (backup system)'
+        })
+      }
+
+      try {
+        await clearPushTokenForUser(supabase, {
+          userId: data.user_id
+        })
+
+        return NextResponse.json({
+          success: true,
+          message: 'Push token cleared successfully'
+        })
+      } catch (error: any) {
+        console.error('Error clearing push token:', error)
+        return NextResponse.json({
+          error: 'Failed to clear push token',
+          details: error?.message || 'Unknown error'
+        }, { status: 500 })
+      }
     }
 
     if (action === 'mark_read') {

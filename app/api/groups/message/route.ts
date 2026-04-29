@@ -64,7 +64,7 @@ async function verifyGroupMember(groupId: string, userId: string) {
 
   const { data: membership, error: membershipError } = await supabase
     .from('group_members')
-    .select('id, status')
+    .select('id, status, role')
     .eq('group_id', groupId)
     .eq('user_id', userId)
     .maybeSingle()
@@ -278,20 +278,26 @@ export async function POST(request: NextRequest) {
         message_content: message,
         parent_message_id: parent_message_id || null
       })
-      .select(`
-        *,
-        user_profiles (
-          id,
-          first_name,
-          last_name,
-          username,
-          avatar_url
-        )
-      `)
+      .select('*')
       .single()
 
     data = primaryInsert.data
     error = primaryInsert.error
+
+    if (error) {
+      const noParentInsert = await supabase
+        .from('group_messages')
+        .insert({
+          group_id,
+          sender_id: user_id,
+          message_content: message
+        })
+        .select('*')
+        .single()
+
+      data = noParentInsert.data
+      error = noParentInsert.error
+    }
 
     if (error) {
       const fallbackInsert = await supabase
@@ -301,16 +307,7 @@ export async function POST(request: NextRequest) {
           sender_id: user_id,
           message
         })
-        .select(`
-          *,
-          user_profiles!group_messages_sender_id_fkey (
-            id,
-            first_name,
-            last_name,
-            username,
-            avatar_url
-          )
-        `)
+        .select('*')
         .single()
 
       data = fallbackInsert.data
@@ -324,6 +321,21 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    await supabase.from('user_activities').insert({
+      user_id,
+      activity_type: parent_message_id ? 'group_thread_reply' : 'group_board_post',
+      title: parent_message_id ? 'Replied in a group thread' : 'Posted in a group',
+      description: message.substring(0, 140),
+      related_id: group_id,
+      related_type: 'group',
+      metadata: {
+        group_id,
+        message_id: data?.id || null
+      }
+    }).catch((activityError: unknown) => {
+      console.warn('Group message saved, but activity log failed:', activityError)
+    })
 
     // Create notifications for other group members
     const { data: members, error: membersError } = await supabase

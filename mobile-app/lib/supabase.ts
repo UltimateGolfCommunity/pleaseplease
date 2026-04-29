@@ -81,3 +81,8 @@ export function getShareableProfileLink(userId: string) {
   const siteUrl = process.env.EXPO_PUBLIC_SITE_URL || 'https://www.ultimategolfcommunity.com'
   return `${siteUrl}/users/${userId}?connect=1`
 }
+
+export function getShareableGroupLink(groupId: string) {
+  const siteUrl = process.env.EXPO_PUBLIC_SITE_URL || 'https://www.ultimategolfcommunity.com'
+  return `${siteUrl}/groups/${groupId}?join=1`
+}

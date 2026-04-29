@@ -74,6 +74,53 @@ async function getRatingSummary(supabase: any, ratedUserId: string, viewerId?: s
   }
 }
 
+async function getUserReviews(supabase: any, ratedUserId: string, viewerId?: string | null) {
+  const { data, error } = await supabase
+    .from('user_ratings')
+    .select(
+      `
+        id,
+        stars,
+        review_text,
+        created_at,
+        updated_at,
+        rater_user_id,
+        user_profiles:rater_user_id (
+          id,
+          first_name,
+          last_name,
+          username,
+          avatar_url
+        )
+      `
+    )
+    .eq('rated_user_id', ratedUserId)
+    .order('updated_at', { ascending: false })
+
+  if (error) {
+    console.error('❌ User reviews fetch error:', error)
+    return {
+      reviews: [],
+      viewerReview: null
+    }
+  }
+
+  const reviews = (data || []).map((review: any) => ({
+    id: review.id,
+    stars: review.stars,
+    review_text: review.review_text || '',
+    created_at: review.created_at,
+    updated_at: review.updated_at,
+    rater_user_id: review.rater_user_id,
+    user_profiles: review.user_profiles
+  }))
+
+  return {
+    reviews,
+    viewerReview: viewerId ? reviews.find((review: any) => review.rater_user_id === viewerId) || null : null
+  }
+}
+
 async function getFounderVerifiedIds(supabase: any) {
   const { data, error } = await supabase
     .from('user_profiles')
@@ -87,6 +134,189 @@ async function getFounderVerifiedIds(supabase: any) {
   }
 
   return new Set((data || []).map((profile: any) => profile.id))
+}
+
+function normalizeLocationParts(location?: string | null) {
+  const raw = (location || '').trim()
+  if (!raw) return []
+
+  return Array.from(
+    new Set(
+      raw
+        .split(',')
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .flatMap((part) => [part, ...part.split(/\s+/).filter(Boolean)])
+        .map((part) => part.toLowerCase())
+        .filter((part) => part.length >= 3)
+    )
+  ).slice(0, 6)
+}
+
+async function getRecommendedConnections(supabase: any, userId: string) {
+  const { data: existingEdges, error: existingEdgesError } = await supabase
+    .from('user_connections')
+    .select('requester_id, recipient_id, status')
+    .or(`requester_id.eq.${userId},recipient_id.eq.${userId}`)
+
+  if (existingEdgesError) {
+    console.error('❌ Recommended connections base fetch error:', existingEdgesError)
+    return []
+  }
+
+  const excludedIds = new Set<string>([userId])
+  const acceptedConnectionIds = new Set<string>()
+
+  for (const edge of existingEdges || []) {
+    const counterpart = edge.requester_id === userId ? edge.recipient_id : edge.requester_id
+    if (!counterpart) continue
+    excludedIds.add(counterpart)
+    if (edge.status === 'accepted') {
+      acceptedConnectionIds.add(counterpart)
+    }
+  }
+
+  if (!acceptedConnectionIds.size) {
+    return []
+  }
+
+  const acceptedIds = Array.from(acceptedConnectionIds)
+  const orFilters = acceptedIds.flatMap((id) => [`requester_id.eq.${id}`, `recipient_id.eq.${id}`]).join(',')
+
+  const { data: mutualEdges, error: mutualEdgesError } = await supabase
+    .from('user_connections')
+    .select('requester_id, recipient_id, status')
+    .eq('status', 'accepted')
+    .or(orFilters)
+
+  if (mutualEdgesError) {
+    console.error('❌ Recommended connections mutual fetch error:', mutualEdgesError)
+    return []
+  }
+
+  const mutualMap = new Map<string, Set<string>>()
+
+  for (const edge of mutualEdges || []) {
+    const left = edge.requester_id
+    const right = edge.recipient_id
+    if (!left || !right) continue
+
+    if (acceptedConnectionIds.has(left) && !excludedIds.has(right)) {
+      const set = mutualMap.get(right) || new Set<string>()
+      set.add(left)
+      mutualMap.set(right, set)
+    }
+
+    if (acceptedConnectionIds.has(right) && !excludedIds.has(left)) {
+      const set = mutualMap.get(left) || new Set<string>()
+      set.add(right)
+      mutualMap.set(left, set)
+    }
+  }
+
+  const candidateIds = Array.from(mutualMap.keys())
+  const founderVerifiedIds = await getFounderVerifiedIds(supabase)
+  const baseProfileSelect =
+    'id, first_name, last_name, username, avatar_url, location, handicap, bio, total_points, connections_count, tee_times_count'
+
+  if (candidateIds.length) {
+    const { data: profiles, error: profilesError } = await supabase
+      .from('user_profiles')
+      .select(baseProfileSelect)
+      .in('id', candidateIds)
+      .limit(12)
+
+    if (profilesError) {
+      console.error('❌ Recommended connections profile fetch error:', profilesError)
+      return []
+    }
+
+    return (profiles || [])
+      .map((profile: any) => {
+        const mutualIds = Array.from(mutualMap.get(profile.id) || [])
+        return {
+          ...profile,
+          mutual_connection_count: mutualIds.length,
+          mutual_connection_ids: mutualIds,
+          is_founder_verified: founderVerifiedIds.has(profile.id)
+        }
+      })
+      .sort((left: any, right: any) => {
+        if ((right.mutual_connection_count || 0) !== (left.mutual_connection_count || 0)) {
+          return (right.mutual_connection_count || 0) - (left.mutual_connection_count || 0)
+        }
+
+        return (right.connections_count || 0) - (left.connections_count || 0)
+      })
+      .slice(0, 8)
+  }
+
+  const { data: viewerProfile } = await supabase
+    .from('user_profiles')
+    .select('location')
+    .eq('id', userId)
+    .maybeSingle()
+
+  const locationParts = normalizeLocationParts(viewerProfile?.location)
+
+  let fallbackProfiles: any[] = []
+
+  if (locationParts.length) {
+    const orFilters = locationParts.map((part) => `location.ilike.%${part}%`).join(',')
+    const { data: locationMatches, error: locationError } = await supabase
+      .from('user_profiles')
+      .select(baseProfileSelect)
+      .or(orFilters)
+      .limit(20)
+
+    if (!locationError) {
+      fallbackProfiles = locationMatches || []
+    }
+  }
+
+  if (!fallbackProfiles.length) {
+    const { data: broadMatches, error: broadError } = await supabase
+      .from('user_profiles')
+      .select(baseProfileSelect)
+      .order('connections_count', { ascending: false })
+      .limit(20)
+
+    if (broadError) {
+      console.error('❌ Recommended connections fallback fetch error:', broadError)
+      return []
+    }
+
+    fallbackProfiles = broadMatches || []
+  }
+
+  return fallbackProfiles
+    .filter((profile: any) => profile?.id && !excludedIds.has(profile.id))
+    .map((profile: any) => {
+      const profileLocation = (profile.location || '').toLowerCase()
+      const locationScore = locationParts.reduce((score, part) => {
+        if (!profileLocation) return score
+        if (profileLocation === part) return score + 6
+        if (profileLocation.startsWith(part)) return score + 5
+        if (profileLocation.includes(part)) return score + 3
+        return score
+      }, 0)
+
+      return {
+        ...profile,
+        mutual_connection_count: 0,
+        mutual_connection_ids: [],
+        location_match_score: locationScore,
+        is_founder_verified: founderVerifiedIds.has(profile.id)
+      }
+    })
+    .sort((left: any, right: any) => {
+      if ((right.location_match_score || 0) !== (left.location_match_score || 0)) {
+        return (right.location_match_score || 0) - (left.location_match_score || 0)
+      }
+
+      return (right.connections_count || 0) - (left.connections_count || 0)
+    })
+    .slice(0, 8)
 }
 
 export async function GET(request: NextRequest) {
@@ -202,17 +432,55 @@ export async function GET(request: NextRequest) {
         ...summary
       })
     }
+
+    if (action === 'reviews' && userId) {
+      const viewerId = searchParams.get('viewer_id')
+      const [summary, reviewsPayload] = await Promise.all([
+        getRatingSummary(supabase, userId, viewerId),
+        getUserReviews(supabase, userId, viewerId)
+      ])
+
+      return NextResponse.json({
+        success: true,
+        ...summary,
+        reviews: reviewsPayload.reviews,
+        viewerReview: reviewsPayload.viewerReview
+      })
+    }
+
+    if (action === 'recommended' && userId) {
+      const users = await getRecommendedConnections(supabase, userId)
+
+      return NextResponse.json({
+        success: true,
+        users
+      })
+    }
     
     // Handle user search (both 'search' and 'q' parameters)
     if (search || searchQuery) {
-      const query = search || searchQuery
+      const query = (search || searchQuery || '').trim()
       console.log('🔍 Searching for users with query:', query)
-      
+
+      const tokens = query
+        .split(/\s+/)
+        .map((token) => token.trim())
+        .filter(Boolean)
+        .slice(0, 4)
+
+      const searchTerms = Array.from(new Set([query, ...tokens])).filter(Boolean)
+      const orFilters = searchTerms.flatMap((term) => [
+        `first_name.ilike.%${term}%`,
+        `last_name.ilike.%${term}%`,
+        `username.ilike.%${term}%`,
+        `location.ilike.%${term}%`
+      ])
+
       const { data, error } = await supabase
         .from('user_profiles')
         .select('id, first_name, last_name, username, avatar_url, location, handicap, bio, total_points, connections_count, tee_times_count')
-        .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,username.ilike.%${query}%,location.ilike.%${query}%`)
-        .limit(20)
+        .or(orFilters.join(','))
+        .limit(40)
 
       if (error) {
         console.error('❌ Search error:', error)
@@ -224,12 +492,47 @@ export async function GET(request: NextRequest) {
       }
 
       const founderVerifiedIds = await getFounderVerifiedIds(supabase)
+      const normalizedQuery = query.toLowerCase()
+
+      const rankedUsers = (data || [])
+        .map((profile: any) => {
+          const firstName = (profile.first_name || '').toLowerCase()
+          const lastName = (profile.last_name || '').toLowerCase()
+          const username = (profile.username || '').toLowerCase()
+          const location = (profile.location || '').toLowerCase()
+          const fullName = `${firstName} ${lastName}`.trim()
+
+          let score = 0
+
+          if (fullName.startsWith(normalizedQuery)) score += 10
+          if (username.startsWith(normalizedQuery)) score += 9
+          if (firstName.startsWith(normalizedQuery)) score += 8
+          if (lastName.startsWith(normalizedQuery)) score += 8
+          if (fullName.includes(normalizedQuery)) score += 6
+          if (username.includes(normalizedQuery)) score += 5
+          if (location.includes(normalizedQuery)) score += 2
+
+          for (const token of tokens) {
+            const lowered = token.toLowerCase()
+            if (firstName.startsWith(lowered) || lastName.startsWith(lowered)) score += 4
+            if (username.startsWith(lowered)) score += 3
+            if (fullName.includes(lowered)) score += 2
+          }
+
+          return {
+            ...profile,
+            score
+          }
+        })
+        .sort((left: any, right: any) => right.score - left.score || (left.first_name || '').localeCompare(right.first_name || ''))
+        .slice(0, 20)
 
       console.log('👥 Found users:', data?.length || 0)
       return NextResponse.json({
         success: true,
-        users: (data || []).map((profile: any) => ({
+        users: rankedUsers.map((profile: any) => ({
           ...profile,
+          score: undefined,
           is_founder_verified: founderVerifiedIds.has(profile.id)
         }))
       })
@@ -516,7 +819,7 @@ export async function POST(request: NextRequest) {
       }
 
       if (action === 'rate') {
-        const { rated_user_id, rater_user_id, stars } = data
+        const { rated_user_id, rater_user_id, stars, review_text } = data
 
         if (!rated_user_id || !rater_user_id || !stars) {
           return NextResponse.json({
@@ -538,6 +841,9 @@ export async function POST(request: NextRequest) {
           }, { status: 400 })
         }
 
+        const normalizedReviewText =
+          typeof review_text === 'string' ? review_text.trim().slice(0, 600) : ''
+
         const { error: upsertError } = await supabase
           .from('user_ratings')
           .upsert(
@@ -545,6 +851,7 @@ export async function POST(request: NextRequest) {
               rated_user_id,
               rater_user_id,
               stars: normalizedStars,
+              review_text: normalizedReviewText || null,
               updated_at: new Date().toISOString()
             },
             {
@@ -559,12 +866,31 @@ export async function POST(request: NextRequest) {
           }, { status: 500 })
         }
 
-        const summary = await getRatingSummary(supabase, rated_user_id, rater_user_id)
+        await logUserActivity(supabase, {
+          userId: rater_user_id,
+          activityType: 'golfer_review_left',
+          title: 'Left a golfer review',
+          description: normalizedReviewText
+            ? `Shared a ${normalizedStars}-star review`
+            : `Left a ${normalizedStars}-star rating`,
+          relatedId: rated_user_id,
+          metadata: {
+            rated_user_id,
+            stars: normalizedStars
+          }
+        })
+
+        const [summary, reviewsPayload] = await Promise.all([
+          getRatingSummary(supabase, rated_user_id, rater_user_id),
+          getUserReviews(supabase, rated_user_id, rater_user_id)
+        ])
 
         return NextResponse.json({
           success: true,
           message: 'Rating saved successfully',
-          ...summary
+          ...summary,
+          reviews: reviewsPayload.reviews,
+          viewerReview: reviewsPayload.viewerReview
         })
       }
 

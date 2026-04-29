@@ -28,8 +28,8 @@ export default function SignupScreen() {
     try {
       await signUp({ firstName, lastName, email, password })
       Alert.alert(
-        'Account created',
-        'Your account is set up. If email confirmation is enabled, confirm your email before signing in.'
+        'Check your email',
+        'We sent a confirmation link if email verification is enabled for this app. Confirm your email, then sign in.'
       )
       router.replace('/login')
     } catch (error) {
@@ -45,8 +45,8 @@ export default function SignupScreen() {
       >
         <ScrollView contentContainerStyle={styles.content}>
           <BrandHeader
-            title="Create Account"
-            subtitle="Start your golf identity with UGC and bring your tee times, groups, and future badges into one place."
+            largeLogo
+            logoScale={1.18}
           />
 
           <View style={styles.formCard}>

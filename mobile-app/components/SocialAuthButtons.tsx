@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Alert, Platform, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import Ionicons from '@expo/vector-icons/Ionicons'
 import * as AppleAuthentication from 'expo-apple-authentication'
 import * as Google from 'expo-auth-session/providers/google'
 import * as WebBrowser from 'expo-web-browser'
-import { PrimaryButton } from '@/components/PrimaryButton'
+import { palette } from '@/lib/theme'
 import { mobileSupabase } from '@/lib/supabase'
 import { useAuth } from '@/providers/AuthProvider'
 
@@ -18,6 +19,36 @@ const googleConfigured =
     : Platform.OS === 'android'
       ? Boolean(googleAndroidClientId)
       : Boolean(googleExpoClientId)
+
+type AuthIconButtonProps = {
+  label: string
+  icon: keyof typeof Ionicons.glyphMap
+  onPress?: () => void
+  disabled?: boolean
+  loading?: boolean
+}
+
+function AuthIconButton({ label, icon, onPress, disabled = false, loading = false }: AuthIconButtonProps) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      disabled={disabled || loading}
+      onPress={onPress}
+      style={[styles.authButton, (disabled || loading) && styles.authButtonDisabled]}
+    >
+      {loading ? (
+        <ActivityIndicator color={palette.text} />
+      ) : (
+        <>
+          <View style={styles.authIconWrap}>
+            <Ionicons color={palette.text} name={icon} size={18} />
+          </View>
+          <Text style={styles.authButtonLabel}>{label}</Text>
+        </>
+      )}
+    </Pressable>
+  )
+}
 
 export function SocialAuthButtons({ onSuccess }: { onSuccess?: () => void }) {
   if (!googleConfigured) {
@@ -39,10 +70,7 @@ function SocialAuthButtonsWithoutGoogle({ onSuccess }: { onSuccess?: () => void 
   }, [])
 
   const handleGoogleUnavailable = () => {
-    Alert.alert(
-      'Google sign in unavailable',
-      'This build is not configured for native Google sign in yet.'
-    )
+    Alert.alert('Google sign in unavailable', 'This build is not configured for native Google sign in yet.')
   }
 
   const handleApple = async () => {
@@ -83,19 +111,18 @@ function SocialAuthButtonsWithoutGoogle({ onSuccess }: { onSuccess?: () => void 
   }
 
   return (
-    <View style={styles.stack}>
-      <PrimaryButton
+    <View style={styles.row}>
+      <AuthIconButton
         disabled
-        label="Continue with Google"
-        loading={false}
-        variant="ghost"
+        icon="logo-google"
+        label="Google"
         onPress={handleGoogleUnavailable}
       />
       {appleAvailable ? (
-        <PrimaryButton
-          label="Continue with Apple"
+        <AuthIconButton
+          icon="logo-apple"
+          label="Apple"
           loading={appleBusy}
-          variant="ghost"
           onPress={handleApple}
         />
       ) : null}
@@ -161,10 +188,7 @@ function SocialAuthButtonsWithGoogle({ onSuccess }: { onSuccess?: () => void }) 
 
   const handleGoogle = async () => {
     if (!request) {
-      Alert.alert(
-        'Google sign in unavailable',
-        'This build is not configured for native Google sign in yet.'
-      )
+      Alert.alert('Google sign in unavailable', 'This build is not configured for native Google sign in yet.')
       return
     }
 
@@ -203,12 +227,7 @@ function SocialAuthButtonsWithGoogle({ onSuccess }: { onSuccess?: () => void }) 
       await syncAuthSession()
       onSuccess?.()
     } catch (error) {
-      if (
-        typeof error === 'object' &&
-        error &&
-        'code' in error &&
-        error.code === 'ERR_REQUEST_CANCELED'
-      ) {
+      if (typeof error === 'object' && error && 'code' in error && error.code === 'ERR_REQUEST_CANCELED') {
         return
       }
 
@@ -219,19 +238,19 @@ function SocialAuthButtonsWithGoogle({ onSuccess }: { onSuccess?: () => void }) 
   }
 
   return (
-    <View style={styles.stack}>
-      <PrimaryButton
+    <View style={styles.row}>
+      <AuthIconButton
         disabled={!googleConfigured || !request}
-        label="Continue with Google"
+        icon="logo-google"
+        label="Google"
         loading={googleBusy}
-        variant="ghost"
         onPress={handleGoogle}
       />
       {appleAvailable ? (
-        <PrimaryButton
-          label="Continue with Apple"
+        <AuthIconButton
+          icon="logo-apple"
+          label="Apple"
           loading={appleBusy}
-          variant="ghost"
           onPress={handleApple}
         />
       ) : null}
@@ -240,7 +259,37 @@ function SocialAuthButtonsWithGoogle({ onSuccess }: { onSuccess?: () => void }) 
 }
 
 const styles = StyleSheet.create({
-  stack: {
+  row: {
+    flexDirection: 'row',
     gap: 12
+  },
+  authButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 22,
+    borderWidth: 1,
+    flex: 1,
+    gap: 10,
+    justifyContent: 'center',
+    minHeight: 72,
+    paddingHorizontal: 12,
+    paddingVertical: 14
+  },
+  authButtonDisabled: {
+    opacity: 0.5
+  },
+  authIconWrap: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 999,
+    height: 32,
+    justifyContent: 'center',
+    width: 32
+  },
+  authButtonLabel: {
+    color: palette.text,
+    fontSize: 13,
+    fontWeight: '700'
   }
 })

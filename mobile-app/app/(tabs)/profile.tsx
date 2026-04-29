@@ -5,6 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   ActivityIndicator,
+  Clipboard,
   Alert,
   Image,
   Linking,
@@ -39,6 +40,7 @@ type ActivityItem = {
   title: string
   description?: string | null
   created_at: string
+  related_id?: string | null
   metadata?: Record<string, unknown>
 }
 
@@ -84,6 +86,7 @@ type BagItems = {
   wedges?: string | null
   putter?: string | null
   ball?: string | null
+  shoes?: string | null
 }
 
 type CourseHoleAverage = {
@@ -95,6 +98,12 @@ type CourseHoleAverage = {
   }[]
 }
 
+type AceDetails = {
+  course?: string | null
+  date?: string | null
+  hole?: string | null
+}
+
 const bagFields: { key: keyof BagItems; label: string; placeholder: string }[] = [
   { key: 'driver', label: 'Driver', placeholder: 'Qi10 LS 9.0' },
   { key: 'fairway_woods', label: 'Fairway Woods', placeholder: '3 wood / 5 wood setup' },
@@ -102,7 +111,8 @@ const bagFields: { key: keyof BagItems; label: string; placeholder: string }[] =
   { key: 'irons', label: 'Irons', placeholder: 'T100 4-PW' },
   { key: 'wedges', label: 'Wedges', placeholder: '50 / 54 / 58' },
   { key: 'putter', label: 'Putter', placeholder: 'Scotty Cameron Newport 2' },
-  { key: 'ball', label: 'Golf Ball', placeholder: 'Pro V1x' }
+  { key: 'ball', label: 'Golf Ball', placeholder: 'Pro V1x' },
+  { key: 'shoes', label: 'Golf Shoes', placeholder: 'FootJoy Premiere / Nike Victory Tour' }
 ]
 
 function normalizeBagItems(input: unknown): BagItems {
@@ -119,7 +129,81 @@ function normalizeBagItems(input: unknown): BagItems {
     irons: typeof source.irons === 'string' ? source.irons : '',
     wedges: typeof source.wedges === 'string' ? source.wedges : '',
     putter: typeof source.putter === 'string' ? source.putter : '',
-    ball: typeof source.ball === 'string' ? source.ball : ''
+    ball: typeof source.ball === 'string' ? source.ball : '',
+    shoes: typeof source.shoes === 'string' ? source.shoes : ''
+  }
+}
+
+function normalizeAceDetails(input: unknown): AceDetails | null {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    return null
+  }
+
+  const source = input as Record<string, unknown>
+  const ace = {
+    course: typeof source.course === 'string' ? source.course : '',
+    date: typeof source.date === 'string' ? source.date : '',
+    hole: typeof source.hole === 'string' ? source.hole : ''
+  }
+
+  return ace.course || ace.date || ace.hole ? ace : null
+}
+
+function formatBagFieldLabel(key: keyof BagItems | string) {
+  switch (key) {
+    case 'driver':
+      return 'driver'
+    case 'fairway_woods':
+      return 'fairway woods'
+    case 'hybrids':
+      return 'hybrids'
+    case 'irons':
+      return 'irons'
+    case 'wedges':
+      return 'wedges'
+    case 'putter':
+      return 'putter'
+    case 'ball':
+      return 'golf ball'
+    case 'shoes':
+      return 'golf shoes'
+    default:
+      return String(key).replace(/_/g, ' ').toLowerCase()
+  }
+}
+
+function buildBagUpdateSummary(previousBag: BagItems, nextBag: BagItems) {
+  const allKeys = Array.from(
+    new Set([...Object.keys(previousBag || {}), ...Object.keys(nextBag || {})])
+  ) as (keyof BagItems)[]
+
+  const changes = allKeys
+    .map((key) => {
+      const previousValue = (previousBag?.[key] || '').trim()
+      const nextValue = (nextBag?.[key] || '').trim()
+
+      if (previousValue === nextValue) return null
+
+      return {
+        key,
+        label: formatBagFieldLabel(key),
+        previous_value: previousValue,
+        next_value: nextValue
+      }
+    })
+    .filter(Boolean) as {
+      key: keyof BagItems
+      label: string
+      previous_value: string
+      next_value: string
+    }[]
+
+  return {
+    changes,
+    labels: changes.map((change) => change.label),
+    description: changes.length
+      ? `Updated ${changes.map((change) => change.label).join(', ')}`
+      : 'Refreshed bag setup on the golfer profile'
   }
 }
 
@@ -176,6 +260,42 @@ function getActivityLabel(activity: ActivityItem) {
   }
 }
 
+function getActivityRoundId(activity: ActivityItem) {
+  const metadataRoundId = typeof activity.metadata?.round_id === 'string' ? activity.metadata.round_id : null
+  return metadataRoundId || activity.related_id || null
+}
+
+function getActivityRoundScore(activity: ActivityItem) {
+  return typeof activity.metadata?.score === 'number' ? activity.metadata.score : null
+}
+
+function getActivityRoundCourse(activity: ActivityItem) {
+  return typeof activity.metadata?.course_name === 'string' ? activity.metadata.course_name : null
+}
+
+function findRoundForActivity(activity: ActivityItem, rounds: RoundRecord[]) {
+  const roundId = getActivityRoundId(activity)
+  if (roundId) {
+    const byId = rounds.find((round) => round.id === roundId)
+    if (byId) return byId
+  }
+
+  const courseName = getActivityRoundCourse(activity)
+  const score = getActivityRoundScore(activity)
+
+  return rounds.find((round) => {
+    const sameCourse = courseName ? round.course_name === courseName : true
+    const sameScore = Number.isFinite(score as number) ? round.total_score === score : true
+    return sameCourse && sameScore
+  }) || null
+}
+
+function getAverageScoreAtCourse(round: RoundRecord, rounds: RoundRecord[]) {
+  const sameCourseRounds = rounds.filter((item) => item.course_name === round.course_name)
+  if (!sameCourseRounds.length) return round.total_score
+  return sameCourseRounds.reduce((sum, item) => sum + item.total_score, 0) / sameCourseRounds.length
+}
+
 export default function ProfileTab() {
   const { loading, profile, refreshProfile, session, signOut, updateProfile, user } = useAuth()
   const [busy, setBusy] = useState(true)
@@ -183,11 +303,12 @@ export default function ProfileTab() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [uploadingCover, setUploadingCover] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showBagModal, setShowBagModal] = useState(false)
   const [savingBag, setSavingBag] = useState(false)
-  const [activeProfileTab, setActiveProfileTab] = useState<'activity' | 'bag'>('activity')
+  const [activeProfileTab, setActiveProfileTab] = useState<'activity' | 'about'>('activity')
   const [refreshing, setRefreshing] = useState(false)
   const [badges, setBadges] = useState<BadgeRecord[]>([])
   const [activities, setActivities] = useState<ActivityItem[]>([])
@@ -206,7 +327,10 @@ export default function ProfileTab() {
     bio: '',
     location: '',
     handicap: '',
-    home_course: ''
+    home_course: '',
+    ace_course: '',
+    ace_date: '',
+    ace_hole: ''
   })
 
   const shareLink = user?.id ? getShareableProfileLink(user.id) : ''
@@ -224,6 +348,7 @@ export default function ProfileTab() {
 
   const isVerified = !!session?.user?.email_confirmed_at
   const founderBadge = badges.find((badge) => badge.badge?.name === 'Founding Member')
+  const aceDetails = useMemo(() => normalizeAceDetails(profile?.ace_details), [profile?.ace_details])
   const acceptedConnections = useMemo(() => {
     return connections
       .map((connection) =>
@@ -346,6 +471,7 @@ export default function ProfileTab() {
   }, [loadProfile, user?.id])
 
   useEffect(() => {
+    const nextAce = normalizeAceDetails(profile?.ace_details)
     setForm({
       first_name: profile?.first_name || '',
       last_name: profile?.last_name || '',
@@ -353,7 +479,10 @@ export default function ProfileTab() {
       bio: profile?.bio || '',
       location: profile?.location || '',
       handicap: profile?.handicap?.toString() || '',
-      home_course: profile?.home_course || profile?.home_club || ''
+      home_course: profile?.home_course || profile?.home_club || '',
+      ace_course: nextAce?.course || '',
+      ace_date: nextAce?.date || '',
+      ace_hole: nextAce?.hole || ''
     })
   }, [profile])
 
@@ -371,6 +500,17 @@ export default function ProfileTab() {
       const nextHomeCourse = form.home_course.trim()
       const nextLocation = form.location.trim()
       const nextHandicap = form.handicap ? Number(form.handicap) : null
+      const nextAceCourse = form.ace_course.trim()
+      const nextAceDate = form.ace_date.trim()
+      const nextAceHole = form.ace_hole.trim()
+      const nextAceDetails =
+        nextAceCourse || nextAceDate || nextAceHole
+          ? {
+              course: nextAceCourse,
+              date: nextAceDate,
+              hole: nextAceHole
+            }
+          : null
       const updatedFields: string[] = []
 
       if ((profile?.home_course || profile?.home_club || '') !== nextHomeCourse) {
@@ -385,6 +525,14 @@ export default function ProfileTab() {
         updatedFields.push('handicap')
       }
 
+      if (
+        (aceDetails?.course || '') !== nextAceCourse ||
+        (aceDetails?.date || '') !== nextAceDate ||
+        (aceDetails?.hole || '') !== nextAceHole
+      ) {
+        updatedFields.push('hole in one')
+      }
+
       await updateProfile({
         first_name: form.first_name.trim(),
         last_name: form.last_name.trim(),
@@ -392,7 +540,8 @@ export default function ProfileTab() {
         bio: form.bio.trim(),
         location: nextLocation,
         handicap: nextHandicap,
-        home_course: nextHomeCourse
+        home_course: nextHomeCourse,
+        ace_details: nextAceDetails
       })
 
       if (user?.id) {
@@ -541,16 +690,19 @@ export default function ProfileTab() {
     setSavingBag(true)
 
     try {
+      const bagSummary = buildBagUpdateSummary(normalizeBagItems(profile?.bag_items), bagItems)
+
       await updateProfile({ bag_items: bagItems })
       await apiPost('/api/activities', {
         user_id: user?.id,
         activity_type: 'bag_updated',
-        title: 'Updated what is in the bag',
-        description: 'Refreshed bag setup on the golfer profile',
+        title: bagSummary.labels.length ? `Updated ${bagSummary.labels.join(', ')}` : 'Updated what is in the bag',
+        description: bagSummary.description,
         metadata: {
           bag_categories: Object.entries(bagItems)
             .filter(([, value]) => value?.trim())
-            .map(([key]) => key)
+            .map(([key]) => key),
+          bag_changes: bagSummary.changes
         }
       }).catch(() => null)
       setShowBagModal(false)
@@ -578,37 +730,26 @@ export default function ProfileTab() {
           />
         }
       >
-        <BrandHeader />
+        <BrandHeader
+          largeLogo
+          leftIconName="qr-code-outline"
+          onLeftPress={() => {
+            setShowEditModal(false)
+            setShowSettingsModal(false)
+            setShowProfileMenu(false)
+            setShowShareModal(true)
+          }}
+          rightIconName="ellipsis-horizontal"
+          onRightPress={() => {
+            setShowShareModal(false)
+            setShowSettingsModal(false)
+            setShowProfileMenu(true)
+          }}
+        />
 
         <View style={styles.headerCard}>
           <View style={styles.coverShell}>
             <View style={styles.coverGlow} />
-            <View style={styles.coverActions}>
-              <Pressable
-                onPress={() => {
-                  setShowShareModal(false)
-                  setShowEditModal(true)
-                }}
-                style={styles.coverActionButton}
-              >
-                <Ionicons color={palette.text} name="create-outline" size={18} />
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  setShowEditModal(false)
-                  setShowShareModal(true)
-                }}
-                style={styles.coverActionButton}
-              >
-                <Ionicons color={palette.text} name="share-social-outline" size={18} />
-              </Pressable>
-            </View>
-            <Pressable
-              onPress={() => setShowSettingsModal(true)}
-              style={styles.settingsButton}
-            >
-              <Ionicons color={palette.text} name="settings-outline" size={18} />
-            </Pressable>
             {profile?.header_image_url ? (
               <Image source={{ uri: profile.header_image_url }} style={styles.coverImage} />
             ) : (
@@ -635,7 +776,6 @@ export default function ProfileTab() {
               ) : null}
               <Pressable onPress={() => router.push('/connections')} style={styles.infoRibbon}>
                 <Text style={styles.headlineMeta}>{profileSummary}</Text>
-                <Text style={styles.infoRibbonHint}>Tap to view connections</Text>
               </Pressable>
               <View style={styles.ratingSummaryRow}>
                 <View style={styles.ratingBadge}>
@@ -665,11 +805,11 @@ export default function ProfileTab() {
               </Text>
             </Pressable>
             <Pressable
-              onPress={() => setActiveProfileTab('bag')}
-              style={[styles.profileTab, activeProfileTab === 'bag' && styles.profileTabActive]}
+              onPress={() => setActiveProfileTab('about')}
+              style={[styles.profileTab, activeProfileTab === 'about' && styles.profileTabActive]}
             >
-              <Text style={[styles.profileTabText, activeProfileTab === 'bag' && styles.profileTabTextActive]}>
-                In The Bag
+              <Text style={[styles.profileTabText, activeProfileTab === 'about' && styles.profileTabTextActive]}>
+                About
               </Text>
             </Pressable>
           </View>
@@ -717,26 +857,105 @@ export default function ProfileTab() {
               {!busy && activities.length === 0 ? (
                 <Text style={styles.infoLine}>No profile activity yet. Tee times, rounds, photo changes, connections, and bag updates will show up here.</Text>
               ) : null}
-              {activities.map((activity) => (
-                <View key={activity.id} style={styles.activityRow}>
-                  <View style={styles.activityDot} />
-                  <View style={styles.activityCopy}>
-                    <Text style={styles.activityTitle}>{getActivityLabel(activity)}</Text>
-                    {activity.description ? <Text style={styles.activityDescription}>{activity.description}</Text> : null}
+              {activities.map((activity) => {
+                const linkedRound = activity.activity_type === 'round_logged' ? findRoundForActivity(activity, rounds) : null
+                const courseAverage = linkedRound ? getAverageScoreAtCourse(linkedRound, rounds) : null
+
+                if (linkedRound) {
+                  return (
+                    <Pressable
+                      key={activity.id}
+                      onPress={() => router.push(`/rounds/${linkedRound.id}`)}
+                      style={styles.roundActivityCard}
+                    >
+                      <View style={styles.roundActivityHeader}>
+                        <View style={styles.roundActivityCopy}>
+                          <Text style={styles.roundActivityCourse}>{linkedRound.course_name}</Text>
+                          <Text style={styles.roundActivityMeta}>
+                            {formatActivityTime(activity.created_at)} • {linkedRound.holes_played} holes
+                          </Text>
+                        </View>
+                        <Text style={styles.roundActivityScore}>{linkedRound.total_score}</Text>
+                      </View>
+                      <View style={styles.roundActivityStats}>
+                        <View style={styles.roundActivityPill}>
+                          <Text style={styles.roundActivityPillLabel}>Handicap</Text>
+                          <Text style={styles.roundActivityPillValue}>{profile?.handicap ?? '--'}</Text>
+                        </View>
+                        <View style={styles.roundActivityPill}>
+                          <Text style={styles.roundActivityPillLabel}>Course Avg</Text>
+                          <Text style={styles.roundActivityPillValue}>{courseAverage ? courseAverage.toFixed(1) : '--'}</Text>
+                        </View>
+                        <View style={styles.roundActivityPill}>
+                          <Text style={styles.roundActivityPillLabel}>Avg / Hole</Text>
+                          <Text style={styles.roundActivityPillValue}>{linkedRound.average_score_per_hole.toFixed(2)}</Text>
+                        </View>
+                      </View>
+                    </Pressable>
+                  )
+                }
+
+                return (
+                  <View key={activity.id} style={styles.activityRow}>
+                    <View style={styles.activityDot} />
+                    <View style={styles.activityCopy}>
+                      <Text style={styles.activityTitle}>{getActivityLabel(activity)}</Text>
+                      {activity.description ? <Text style={styles.activityDescription}>{activity.description}</Text> : null}
+                    </View>
+                    <Text style={styles.activityTime}>{formatActivityTime(activity.created_at)}</Text>
                   </View>
-                  <Text style={styles.activityTime}>{formatActivityTime(activity.created_at)}</Text>
-                </View>
-              ))}
+                )
+              })}
             </View>
           ) : (
             <View style={styles.activityCard}>
               <View style={styles.activityHeader}>
-                <Text style={styles.infoTitle}>What is in the bag</Text>
+                <Text style={styles.infoTitle}>About</Text>
                 <Pressable onPress={() => setShowBagModal(true)} style={styles.bagEditButton}>
                   <Ionicons color={palette.aqua} name="create-outline" size={16} />
                   <Text style={styles.bagEditText}>Edit</Text>
                 </Pressable>
               </View>
+              <View style={styles.aboutInfoGrid}>
+                <View style={styles.aboutInfoCard}>
+                  <Text style={styles.aboutInfoLabel}>Home Course</Text>
+                  <Text style={styles.aboutInfoValue}>{profile?.home_course || profile?.home_club || 'Not added yet'}</Text>
+                </View>
+                <View style={styles.aboutInfoCard}>
+                  <Text style={styles.aboutInfoLabel}>Location</Text>
+                  <Text style={styles.aboutInfoValue}>{profile?.location || 'Not added yet'}</Text>
+                </View>
+                <View style={styles.aboutInfoCard}>
+                  <Text style={styles.aboutInfoLabel}>Handicap</Text>
+                  <Text style={styles.aboutInfoValue}>{profile?.handicap ?? 'Not added yet'}</Text>
+                </View>
+                <View style={styles.aboutInfoCard}>
+                  <Text style={styles.aboutInfoLabel}>Rounds Logged</Text>
+                  <Text style={styles.aboutInfoValue}>{scoreSummary.totalRounds || '0'}</Text>
+                </View>
+              </View>
+              <View style={styles.aceCard}>
+                <Text style={styles.aboutSectionTitle}>Hole In One</Text>
+                {aceDetails ? (
+                  <View style={styles.aceDetailsRow}>
+                    <View style={styles.acePill}>
+                      <Text style={styles.acePillLabel}>Course</Text>
+                      <Text style={styles.acePillValue}>{aceDetails.course || '--'}</Text>
+                    </View>
+                    <View style={styles.acePill}>
+                      <Text style={styles.acePillLabel}>Hole</Text>
+                      <Text style={styles.acePillValue}>{aceDetails.hole || '--'}</Text>
+                    </View>
+                    <View style={styles.acePill}>
+                      <Text style={styles.acePillLabel}>When</Text>
+                      <Text style={styles.acePillValue}>{aceDetails.date || '--'}</Text>
+                    </View>
+                  </View>
+                ) : (
+                  <Text style={styles.infoLine}>No ace logged yet.</Text>
+                )}
+              </View>
+              <Text style={styles.aboutSectionTitle}>What&apos;s In The Bag</Text>
               {bagFields.map((field) => {
                 const value = bagItems[field.key]?.trim()
                 return (
@@ -749,6 +968,42 @@ export default function ProfileTab() {
             </View>
           )}
         </View>
+
+        <Modal
+          animationType="fade"
+          transparent
+          visible={showProfileMenu}
+          onRequestClose={() => setShowProfileMenu(false)}
+        >
+          <Pressable style={styles.modalBackdrop} onPress={() => setShowProfileMenu(false)}>
+            <Pressable style={styles.modalCard} onPress={() => {}}>
+              <Text style={styles.sectionEyebrow}>Profile</Text>
+              <Text style={styles.infoTitle}>Manage your page</Text>
+              <Text style={styles.infoLine}>
+                Keep the profile header clean up top, and open the tools you need from this quick menu.
+              </Text>
+              <PrimaryButton
+                label="Edit Profile"
+                variant="ghost"
+                onPress={() => {
+                  setShowProfileMenu(false)
+                  setShowShareModal(false)
+                  setShowEditModal(true)
+                }}
+              />
+              <PrimaryButton
+                label="Settings"
+                variant="ghost"
+                onPress={() => {
+                  setShowProfileMenu(false)
+                  setShowShareModal(false)
+                  setShowSettingsModal(true)
+                }}
+              />
+              <PrimaryButton label="Close" variant="ghost" onPress={() => setShowProfileMenu(false)} />
+            </Pressable>
+          </Pressable>
+        </Modal>
 
         <Modal
           animationType="fade"
@@ -872,22 +1127,45 @@ export default function ProfileTab() {
           onRequestClose={() => setShowShareModal(false)}
         >
           <Pressable style={styles.modalBackdrop} onPress={() => setShowShareModal(false)}>
-            <Pressable style={styles.modalCard} onPress={() => {}}>
+            <Pressable style={[styles.modalCard, styles.shareModalCard]} onPress={() => {}}>
               <Text style={styles.sectionEyebrow}>Share</Text>
               <Text style={styles.infoTitle}>Invite with link or QR</Text>
               <Text style={styles.infoLine}>
                 Share this link or let another golfer scan the code to jump straight into adding you.
               </Text>
-              {shareQrUrl ? <Image source={{ uri: shareQrUrl }} style={styles.qrImage} /> : null}
+              <View style={styles.qrCard}>
+                <View style={styles.qrBadge}>
+                  <Ionicons color={palette.aqua} name="qr-code-outline" size={16} />
+                  <Text style={styles.qrBadgeText}>Scan to connect</Text>
+                </View>
+                {shareQrUrl ? <Image source={{ uri: shareQrUrl }} style={styles.qrImage} /> : null}
+                <Text style={styles.qrHint}>Point your camera at the code or send the invite link below.</Text>
+              </View>
               <View style={styles.shareLinkBox}>
-                <Text selectable style={styles.shareLinkText}>
+                <Text style={styles.shareLinkLabel}>Invite link</Text>
+                <Text selectable numberOfLines={2} style={styles.shareLinkText}>
                   {shareLink}
                 </Text>
               </View>
-              <PrimaryButton
-                label="Share Invite Link"
-                onPress={() => Share.share({ message: shareLink, url: shareLink })}
-              />
+              <View style={styles.shareActionRow}>
+                <Pressable
+                  onPress={() => {
+                    Clipboard.setString(shareLink)
+                    Alert.alert('Copied', 'Invite link copied to your clipboard.')
+                  }}
+                  style={styles.shareActionButton}
+                >
+                  <Ionicons color={palette.text} name="copy-outline" size={18} />
+                  <Text style={styles.shareActionText}>Copy Link</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => Share.share({ message: shareLink, url: shareLink })}
+                  style={[styles.shareActionButton, styles.shareActionButtonPrimary]}
+                >
+                  <Ionicons color={palette.bg} name="share-social-outline" size={18} />
+                  <Text style={[styles.shareActionText, styles.shareActionTextPrimary]}>Share</Text>
+                </Pressable>
+              </View>
               <PrimaryButton label="Close" variant="ghost" onPress={() => setShowShareModal(false)} />
             </Pressable>
           </Pressable>
@@ -948,6 +1226,29 @@ export default function ProfileTab() {
               />
               <View style={styles.editRow}>
                 <TextInput
+                  onChangeText={(value) => setForm((current) => ({ ...current, ace_course: value }))}
+                  placeholder="Hole-in-one course"
+                  placeholderTextColor={palette.textMuted}
+                  style={[styles.input, styles.flexInput]}
+                  value={form.ace_course}
+                />
+                <TextInput
+                  onChangeText={(value) => setForm((current) => ({ ...current, ace_hole: value }))}
+                  placeholder="Ace hole"
+                  placeholderTextColor={palette.textMuted}
+                  style={[styles.input, styles.flexInput]}
+                  value={form.ace_hole}
+                />
+              </View>
+              <TextInput
+                onChangeText={(value) => setForm((current) => ({ ...current, ace_date: value }))}
+                placeholder="Hole-in-one date, ex. 2025-08-14"
+                placeholderTextColor={palette.textMuted}
+                style={styles.input}
+                value={form.ace_date}
+              />
+              <View style={styles.editRow}>
+                <TextInput
                   onChangeText={(value) => setForm((current) => ({ ...current, location: value }))}
                   placeholder="Location"
                   placeholderTextColor={palette.textMuted}
@@ -996,6 +1297,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     borderWidth: 1,
     gap: 16,
+    marginTop: -12,
     overflow: 'hidden',
     padding: 18
   },
@@ -1015,54 +1317,6 @@ const styles = StyleSheet.create({
     top: -80,
     width: 180,
     zIndex: 1
-  },
-  bagButton: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(7,15,12,0.46)',
-    borderColor: 'rgba(255,255,255,0.18)',
-    borderRadius: 999,
-    borderWidth: 1,
-    height: 42,
-    justifyContent: 'center',
-    left: 14,
-    position: 'absolute',
-    top: 14,
-    width: 42,
-    zIndex: 2
-  },
-  coverActions: {
-    flexDirection: 'row',
-    gap: 10,
-    justifyContent: 'flex-end',
-    left: 66,
-    position: 'absolute',
-    right: 14,
-    top: 14,
-    zIndex: 2
-  },
-  coverActionButton: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(7,15,12,0.46)',
-    borderColor: 'rgba(255,255,255,0.18)',
-    borderRadius: 999,
-    borderWidth: 1,
-    height: 42,
-    justifyContent: 'center',
-    width: 42
-  },
-  settingsButton: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(7,15,12,0.46)',
-    borderColor: 'rgba(255,255,255,0.18)',
-    borderRadius: 999,
-    borderWidth: 1,
-    height: 42,
-    justifyContent: 'center',
-    position: 'absolute',
-    right: 14,
-    top: 68,
-    width: 42,
-    zIndex: 2
   },
   coverImage: {
     height: '100%',
@@ -1097,15 +1351,15 @@ const styles = StyleSheet.create({
   },
   profileTopCopy: {
     alignItems: 'center',
-    gap: 4,
-    marginTop: 2,
+    gap: 1,
+    marginTop: 12,
     width: '100%'
   },
   nameRow: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: -2
+    marginBottom: 0
   },
   badgeRow: {
     flexDirection: 'row',
@@ -1130,7 +1384,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.1)',
     borderRadius: 999,
     borderWidth: 1,
-    marginTop: -2,
+    marginTop: -16,
     paddingHorizontal: 16,
     paddingVertical: 8
   },
@@ -1141,22 +1395,13 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     textAlign: 'center'
   },
-  infoRibbonHint: {
-    color: palette.aqua,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    marginTop: 2,
-    textAlign: 'center',
-    textTransform: 'uppercase'
-  },
   ratingSummaryRow: {
     alignItems: 'center',
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
     justifyContent: 'center',
-    marginTop: -1
+    marginTop: 6
   },
   ratingBadge: {
     alignItems: 'center',
@@ -1202,6 +1447,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.08)',
     borderRadius: 20,
     borderWidth: 1,
+    marginTop: 6,
     paddingHorizontal: 16,
     paddingVertical: 14,
     width: '100%'
@@ -1371,6 +1617,66 @@ const styles = StyleSheet.create({
     padding: 20,
     width: '100%'
   },
+  shareModalCard: {
+    gap: 14
+  },
+  roundActivityCard: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 10,
+    padding: 12
+  },
+  roundActivityHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12
+  },
+  roundActivityCopy: {
+    flex: 1,
+    gap: 2
+  },
+  roundActivityCourse: {
+    color: palette.text,
+    fontSize: 15,
+    fontWeight: '700'
+  },
+  roundActivityMeta: {
+    color: palette.textMuted,
+    fontSize: 12
+  },
+  roundActivityScore: {
+    color: palette.text,
+    fontSize: 28,
+    fontWeight: '800'
+  },
+  roundActivityStats: {
+    flexDirection: 'row',
+    gap: 8
+  },
+  roundActivityPill: {
+    backgroundColor: 'rgba(103,232,249,0.08)',
+    borderColor: 'rgba(103,232,249,0.15)',
+    borderRadius: 14,
+    borderWidth: 1,
+    flex: 1,
+    gap: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 8
+  },
+  roundActivityPillLabel: {
+    color: palette.textMuted,
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase'
+  },
+  roundActivityPillValue: {
+    color: palette.text,
+    fontSize: 14,
+    fontWeight: '700'
+  },
   activityRow: {
     alignItems: 'flex-start',
     backgroundColor: 'rgba(255,255,255,0.03)',
@@ -1430,23 +1736,166 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     lineHeight: 20
   },
-  qrImage: {
-    alignSelf: 'center',
-    borderRadius: 20,
-    height: 220,
-    width: 220
+  aboutInfoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10
   },
-  shareLinkBox: {
-    backgroundColor: palette.cardSoft,
-    borderColor: palette.border,
+  aboutInfoCard: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: 'rgba(255,255,255,0.06)',
     borderRadius: 18,
     borderWidth: 1,
+    gap: 4,
+    minWidth: '47%',
     padding: 14
+  },
+  aboutInfoLabel: {
+    color: palette.textMuted,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase'
+  },
+  aboutInfoValue: {
+    color: palette.text,
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 20
+  },
+  aceCard: {
+    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+    borderColor: 'rgba(245, 158, 11, 0.18)',
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 10,
+    padding: 16
+  },
+  aboutSectionTitle: {
+    color: palette.text,
+    fontSize: 16,
+    fontWeight: '800'
+  },
+  aceDetailsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8
+  },
+  acePill: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 2,
+    minWidth: '31%',
+    paddingHorizontal: 12,
+    paddingVertical: 10
+  },
+  acePillLabel: {
+    color: palette.textMuted,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.7,
+    textTransform: 'uppercase'
+  },
+  acePillValue: {
+    color: palette.text,
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 18
+  },
+  qrCard: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 22,
+    borderWidth: 1,
+    overflow: 'hidden',
+    paddingHorizontal: 18,
+    paddingVertical: 18
+  },
+  qrBadge: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(103,232,249,0.10)',
+    borderColor: 'rgba(103,232,249,0.22)',
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 7
+  },
+  qrBadgeText: {
+    color: palette.text,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase'
+  },
+  qrImage: {
+    alignSelf: 'center',
+    backgroundColor: palette.white,
+    borderRadius: 28,
+    height: 224,
+    marginBottom: 12,
+    padding: 14,
+    width: 224
+  },
+  qrHint: {
+    color: palette.textMuted,
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: 'center'
+  },
+  shareLinkBox: {
+    backgroundColor: palette.bgElevated,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 6,
+    padding: 14
+  },
+  shareLinkLabel: {
+    color: palette.aqua,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase'
   },
   shareLinkText: {
     color: palette.text,
     fontSize: 14,
     lineHeight: 20
+  },
+  shareActionRow: {
+    flexDirection: 'row',
+    gap: 10
+  },
+  shareActionButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderColor: palette.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    flex: 1,
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
+    minHeight: 54,
+    paddingHorizontal: 14
+  },
+  shareActionButtonPrimary: {
+    backgroundColor: palette.white,
+    borderColor: palette.white
+  },
+  shareActionText: {
+    color: palette.text,
+    fontSize: 14,
+    fontWeight: '700'
+  },
+  shareActionTextPrimary: {
+    color: palette.bg
   },
   sectionEyebrow: {
     color: palette.aqua,

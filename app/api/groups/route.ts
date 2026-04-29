@@ -37,12 +37,39 @@ async function logGroupActivity(
   }
 }
 
+async function ensureCourseForGroup(supabase: any, group: any) {
+  if ((group?.group_type || '').toLowerCase() !== 'course') return
+
+  try {
+    const { data: existingCourse } = await supabase
+      .from('golf_courses')
+      .select('id')
+      .eq('name', group.name)
+      .maybeSingle()
+
+    if (existingCourse) return
+
+    await supabase.from('golf_courses').insert({
+      name: group.name,
+      location: group.location || '',
+      description: group.description || '',
+      logo_url: group.logo_url || group.image_url || null,
+      course_image_url: group.header_image_url || group.image_url || null,
+      holes: 18,
+      par: 72
+    })
+  } catch (error) {
+    console.warn('⚠️ Unable to create course entity for course group:', error)
+  }
+}
+
 async function createGroupWithFallback(
   supabase: any,
   {
     name,
     description,
     location,
+    slogan,
     logo_url,
     group_type,
     maxMembers,
@@ -51,6 +78,7 @@ async function createGroupWithFallback(
     name: string
     description?: string
     location?: string
+    slogan?: string
     logo_url?: string | null
     group_type?: string
     maxMembers?: number
@@ -62,6 +90,7 @@ async function createGroupWithFallback(
       name,
       description: description || '',
       location: location || '',
+      slogan: slogan || '',
       logo_url: logo_url || null,
       group_type: group_type || 'community',
       max_members: maxMembers || 10,
@@ -128,6 +157,7 @@ async function updateGroupWithFallback(
     name,
     description,
     location,
+    slogan,
     group_type,
     logo_url,
     header_image_url,
@@ -136,6 +166,7 @@ async function updateGroupWithFallback(
     name?: string
     description?: string
     location?: string
+    slogan?: string
     group_type?: string
     logo_url?: string | null
     header_image_url?: string | null
@@ -147,6 +178,7 @@ async function updateGroupWithFallback(
       name,
       description,
       location,
+      slogan,
       group_type,
       logo_url,
       header_image_url,
@@ -156,6 +188,7 @@ async function updateGroupWithFallback(
       name,
       description,
       location,
+      slogan,
       group_type,
       header_image_url
     },
@@ -317,6 +350,7 @@ export async function POST(request: NextRequest) {
       name,
       description,
       location,
+      slogan,
       logo_url,
       header_image_url,
       image_url,
@@ -324,7 +358,9 @@ export async function POST(request: NextRequest) {
       group_type,
       user_id: bodyUserId,
       invitees,
-      group_id
+      group_id,
+      member_user_id,
+      role
     } = body
 
     console.log('🔍 GROUPS POST: Action requested:', action)
@@ -528,6 +564,7 @@ export async function POST(request: NextRequest) {
         name,
         description,
         location,
+        slogan,
         group_type,
         logo_url,
         header_image_url,
@@ -557,10 +594,70 @@ export async function POST(request: NextRequest) {
         }
       })
 
+      await ensureCourseForGroup(supabase, group)
+
       return NextResponse.json({
         success: true,
         message: 'Group updated successfully',
         group
+      })
+    }
+
+    if (action === 'set_member_role') {
+      if (!group_id || !member_user_id || !role) {
+        return NextResponse.json(
+          { error: 'Group ID, member user ID, and role are required' },
+          { status: 400 }
+        )
+      }
+
+      const permission = await canManageGroup(supabase, group_id, user_id)
+
+      if (permission.reason === 'not_found') {
+        return NextResponse.json({ error: 'Group not found' }, { status: 404 })
+      }
+
+      if (!permission.allowed || permission.group?.creator_id !== user_id) {
+        return NextResponse.json(
+          { error: 'Only the group creator can change admin roles' },
+          { status: 403 }
+        )
+      }
+
+      const nextRole = ['admin', 'member'].includes(String(role).toLowerCase())
+        ? String(role).toLowerCase()
+        : 'member'
+
+      const { data: member, error: roleError } = await supabase
+        .from('group_members')
+        .update({ role: nextRole })
+        .eq('group_id', group_id)
+        .eq('user_id', member_user_id)
+        .select()
+        .single()
+
+      if (roleError) {
+        return NextResponse.json(
+          { error: 'Failed to update member role', details: roleError.message },
+          { status: 500 }
+        )
+      }
+
+      await logGroupActivity(supabase, {
+        userId: user_id,
+        groupId: group_id,
+        activityType: 'group_member_role_updated',
+        title: 'Updated group admin access',
+        description: `Changed a member to ${nextRole}`,
+        metadata: {
+          member_user_id,
+          role: nextRole
+        }
+      })
+
+      return NextResponse.json({
+        success: true,
+        member
       })
     }
 
@@ -578,6 +675,7 @@ export async function POST(request: NextRequest) {
         name,
         description,
         location,
+        slogan,
         logo_url,
         group_type,
         maxMembers,
@@ -609,6 +707,8 @@ export async function POST(request: NextRequest) {
           group_name: group.name
         }
       })
+
+      await ensureCourseForGroup(supabase, group)
 
       // Add creator as first member
       console.log('👤 GROUPS POST: Adding creator as group member...')
@@ -839,6 +939,16 @@ export async function GET(request: NextRequest) {
           .eq('group_id', membership.group_id)
           .eq('status', 'active')
 
+        const { data: previewMembers } = await supabase
+          .from('group_members')
+          .select(`
+            user_id,
+            user_profiles(first_name, last_name, username, avatar_url)
+          `)
+          .eq('group_id', membership.group_id)
+          .eq('status', 'active')
+          .limit(5)
+
         return {
           ...group,
           membership_id: membership.id,
@@ -846,6 +956,14 @@ export async function GET(request: NextRequest) {
           membership_status: membership.status,
           joined_at: membership.joined_at,
           member_count: count || 0,
+          member_preview:
+            (previewMembers || []).map((member: any) => ({
+              id: member.user_id,
+              first_name: member.user_profiles?.first_name || null,
+              last_name: member.user_profiles?.last_name || null,
+              username: member.user_profiles?.username || null,
+              avatar_url: member.user_profiles?.avatar_url || null
+            })) || [],
           is_member: true
         }
       })

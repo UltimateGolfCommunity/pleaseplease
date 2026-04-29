@@ -9,6 +9,9 @@ type BrandHeaderProps = {
   showLogo?: boolean
   showBack?: boolean
   largeLogo?: boolean
+  logoScale?: number
+  leftIconName?: keyof typeof Ionicons.glyphMap
+  onLeftPress?: () => void
   rightIconName?: keyof typeof Ionicons.glyphMap
   onRightPress?: () => void
 }
@@ -19,6 +22,9 @@ export function BrandHeader({
   showLogo = true,
   showBack = false,
   largeLogo = false,
+  logoScale = 1,
+  leftIconName,
+  onLeftPress,
   rightIconName,
   onRightPress
 }: BrandHeaderProps) {
@@ -27,6 +33,10 @@ export function BrandHeader({
       {showBack ? (
         <Pressable onPress={() => router.back()} style={styles.backButton}>
           <Ionicons color={palette.text} name="chevron-back" size={22} />
+        </Pressable>
+      ) : leftIconName && onLeftPress ? (
+        <Pressable onPress={onLeftPress} style={styles.backButton}>
+          <Ionicons color={palette.text} name={leftIconName} size={20} />
         </Pressable>
       ) : null}
       {rightIconName && onRightPress ? (
@@ -37,7 +47,11 @@ export function BrandHeader({
       {showLogo ? (
         <Image
           source={require('@/assets/ugc-logo.png')}
-          style={[styles.logo, largeLogo && styles.logoLarge]}
+          style={[
+            styles.logo,
+            largeLogo && styles.logoLarge,
+            logoScale !== 1 && { transform: [{ scale: logoScale }] }
+          ]}
           resizeMode="contain"
         />
       ) : null}
@@ -51,6 +65,7 @@ const styles = StyleSheet.create({
   wrapper: {
     alignItems: 'center',
     gap: 0,
+    minHeight: 72,
     width: '100%'
   },
   backButton: {
@@ -63,7 +78,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     left: 0,
     position: 'absolute',
-    top: 10,
+    top: 2,
     width: 42,
     zIndex: 5
   },
@@ -77,23 +92,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'absolute',
     right: 0,
-    top: 10,
+    top: 2,
     width: 42,
     zIndex: 5
   },
   logo: {
     alignSelf: 'center',
-    height: 82,
-    marginBottom: -18,
-    marginTop: -20,
-    width: 320
+    height: 64,
+    marginBottom: -24,
+    marginTop: -12,
+    width: 264
   },
   logoLarge: {
-    height: 172,
-    marginBottom: -48,
-    marginLeft: 12,
-    marginTop: -50,
-    width: 520
+    height: 122,
+    marginBottom: -44,
+    marginLeft: 8,
+    marginTop: -36,
+    width: 360
   },
   title: {
     color: palette.text,

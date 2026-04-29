@@ -4,7 +4,17 @@ import { createAdminClient } from '@/lib/supabase-admin'
 
 export async function POST(request: NextRequest) {
   try {
-    const { course_id, user_id, rating, comment } = await request.json()
+    const {
+      course_id,
+      user_id,
+      rating,
+      comment,
+      course_condition_rating,
+      staff_rating,
+      price_rating,
+      difficulty_rating,
+      photo_url
+    } = await request.json()
     
     console.log('🔍 COURSE-REVIEW POST:', { course_id, user_id, rating, comment })
     
@@ -106,6 +116,11 @@ export async function POST(request: NextRequest) {
         .update({
           rating,
           comment: comment || null,
+          course_condition_rating: course_condition_rating || null,
+          staff_rating: staff_rating || null,
+          price_rating: price_rating || null,
+          difficulty_rating: difficulty_rating || null,
+          photo_url: photo_url || null,
           updated_at: new Date().toISOString()
         })
         .eq('id', existingReview.id)
@@ -143,7 +158,12 @@ export async function POST(request: NextRequest) {
           course_id,
           user_id,
           rating,
-          comment: comment || null
+          comment: comment || null,
+          course_condition_rating: course_condition_rating || null,
+          staff_rating: staff_rating || null,
+          price_rating: price_rating || null,
+          difficulty_rating: difficulty_rating || null,
+          photo_url: photo_url || null
         })
         .select()
         .single()

@@ -36,6 +36,11 @@ type PublicUser = {
   linkedin?: string | null
   linkedin_url?: string | null
   bag_items?: Record<string, string | null> | null
+  ace_details?: {
+    course?: string | null
+    date?: string | null
+    hole?: string | null
+  } | null
   is_founder_verified?: boolean
 }
 
@@ -45,6 +50,18 @@ type ActivityItem = {
   title: string
   description?: string | null
   created_at: string
+  related_id?: string | null
+  metadata?: Record<string, unknown>
+}
+
+type RoundRecord = {
+  id: string
+  course_name: string
+  holes_played: number
+  hole_scores: number[]
+  total_score: number
+  average_score_per_hole: number
+  played_at: string
 }
 
 type ConnectionStatusResponse = {
@@ -90,6 +107,13 @@ type BagItems = {
   wedges?: string | null
   putter?: string | null
   ball?: string | null
+  shoes?: string | null
+}
+
+type AceDetails = {
+  course?: string | null
+  date?: string | null
+  hole?: string | null
 }
 
 const bagFields: { key: keyof BagItems; label: string }[] = [
@@ -99,7 +123,8 @@ const bagFields: { key: keyof BagItems; label: string }[] = [
   { key: 'irons', label: 'Irons' },
   { key: 'wedges', label: 'Wedges' },
   { key: 'putter', label: 'Putter' },
-  { key: 'ball', label: 'Golf Ball' }
+  { key: 'ball', label: 'Golf Ball' },
+  { key: 'shoes', label: 'Golf Shoes' }
 ]
 
 function normalizeBagItems(input: unknown): BagItems {
@@ -116,8 +141,24 @@ function normalizeBagItems(input: unknown): BagItems {
     irons: typeof source.irons === 'string' ? source.irons : '',
     wedges: typeof source.wedges === 'string' ? source.wedges : '',
     putter: typeof source.putter === 'string' ? source.putter : '',
-    ball: typeof source.ball === 'string' ? source.ball : ''
+    ball: typeof source.ball === 'string' ? source.ball : '',
+    shoes: typeof source.shoes === 'string' ? source.shoes : ''
   }
+}
+
+function normalizeAceDetails(input: unknown): AceDetails | null {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    return null
+  }
+
+  const source = input as Record<string, unknown>
+  const ace = {
+    course: typeof source.course === 'string' ? source.course : '',
+    date: typeof source.date === 'string' ? source.date : '',
+    hole: typeof source.hole === 'string' ? source.hole : ''
+  }
+
+  return ace.course || ace.date || ace.hole ? ace : null
 }
 
 function formatName(user?: UserCard | PublicUser | null) {
@@ -140,6 +181,20 @@ function formatActivityLabel(activity: ActivityItem) {
       return 'Updated cover photo'
     case 'group_joined':
       return 'Joined a group'
+    case 'group_created':
+      return 'Created a group'
+    case 'group_logo_updated':
+      return 'Updated a group logo'
+    case 'group_cover_updated':
+      return 'Updated a group cover'
+    case 'group_details_updated':
+      return 'Updated group details'
+    case 'group_member_role_updated':
+      return 'Changed a group role'
+    case 'group_board_post':
+      return 'Posted in a group'
+    case 'group_thread_reply':
+      return 'Replied in a group thread'
     case 'tee_time_joined':
       return 'Joined a tee time'
     case 'connection_added':
@@ -169,6 +224,42 @@ function formatRelativeTime(value?: string) {
   return `${Math.round(diff / day)}d ago`
 }
 
+function getActivityRoundId(activity: ActivityItem) {
+  const metadataRoundId = typeof activity.metadata?.round_id === 'string' ? activity.metadata.round_id : null
+  return metadataRoundId || activity.related_id || null
+}
+
+function getActivityRoundScore(activity: ActivityItem) {
+  return typeof activity.metadata?.score === 'number' ? activity.metadata.score : null
+}
+
+function getActivityRoundCourse(activity: ActivityItem) {
+  return typeof activity.metadata?.course_name === 'string' ? activity.metadata.course_name : null
+}
+
+function findRoundForActivity(activity: ActivityItem, rounds: RoundRecord[]) {
+  const roundId = getActivityRoundId(activity)
+  if (roundId) {
+    const byId = rounds.find((round) => round.id === roundId)
+    if (byId) return byId
+  }
+
+  const courseName = getActivityRoundCourse(activity)
+  const score = getActivityRoundScore(activity)
+
+  return rounds.find((round) => {
+    const sameCourse = courseName ? round.course_name === courseName : true
+    const sameScore = Number.isFinite(score as number) ? round.total_score === score : true
+    return sameCourse && sameScore
+  }) || null
+}
+
+function getAverageScoreAtCourse(round: RoundRecord, rounds: RoundRecord[]) {
+  const sameCourseRounds = rounds.filter((item) => item.course_name === round.course_name)
+  if (!sameCourseRounds.length) return round.total_score
+  return sameCourseRounds.reduce((sum, item) => sum + item.total_score, 0) / sameCourseRounds.length
+}
+
 export default function PublicUserScreen() {
   const { loading, user } = useAuth()
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -179,7 +270,8 @@ export default function PublicUserScreen() {
   const [status, setStatus] = useState<ConnectionStatusResponse['status']>('none')
   const [connections, setConnections] = useState<ConnectionRecord[]>([])
   const [activities, setActivities] = useState<ActivityItem[]>([])
-  const [activeTab, setActiveTab] = useState<'activity' | 'bag'>('activity')
+  const [rounds, setRounds] = useState<RoundRecord[]>([])
+  const [activeTab, setActiveTab] = useState<'activity' | 'about'>('activity')
   const [ratingSummary, setRatingSummary] = useState<RatingSummary>({
     average: null,
     count: 0,
@@ -190,6 +282,7 @@ export default function PublicUserScreen() {
   const homeCourse = profile?.home_course || profile?.home_club || 'Home course not added'
   const linkedinUrl = profile?.linkedin_url || profile?.linkedin || ''
   const bagItems = useMemo(() => normalizeBagItems(profile?.bag_items), [profile?.bag_items])
+  const aceDetails = useMemo(() => normalizeAceDetails(profile?.ace_details), [profile?.ace_details])
 
   const connectedGolfers = useMemo(() => {
     if (!id) return []
@@ -203,7 +296,7 @@ export default function PublicUserScreen() {
     if (!id) return
 
     try {
-      const [profileResponse, statusResponse, ratingResponse, connectionsResponse] = await Promise.all([
+      const [profileResponse, statusResponse, ratingResponse, connectionsResponse, activityResponse, roundsResponse] = await Promise.all([
         apiGet<PublicUser>(`/api/users?id=${encodeURIComponent(id)}`),
         user?.id
           ? apiGet<ConnectionStatusResponse>(
@@ -220,6 +313,13 @@ export default function PublicUserScreen() {
         apiGet<ConnectionsPayload>(`/api/users?action=connections&id=${encodeURIComponent(id)}`).catch(() => ({
           success: true,
           connections: []
+        })),
+        apiGet<{ success: boolean; activities: ActivityItem[] }>(
+          `/api/activities?user_id=${encodeURIComponent(id)}&limit=12`
+        ).catch(() => ({ success: true, activities: [] })),
+        apiGet<{ success: boolean; rounds: RoundRecord[] }>(`/api/scores?user_id=${encodeURIComponent(id)}`).catch(() => ({
+          success: true,
+          rounds: []
         }))
       ])
 
@@ -227,16 +327,8 @@ export default function PublicUserScreen() {
       setStatus(statusResponse.status)
       setRatingSummary(ratingResponse)
       setConnections(connectionsResponse.connections || [])
-
-      if (statusResponse.status === 'connected') {
-        const activityResponse = await apiGet<{ success: boolean; activities: ActivityItem[] }>(
-          `/api/activities?user_id=${encodeURIComponent(id)}&limit=6`
-        ).catch(() => ({ success: true, activities: [] }))
-
-        setActivities(activityResponse.activities || [])
-      } else {
-        setActivities([])
-      }
+      setActivities(activityResponse.activities || [])
+      setRounds(roundsResponse.rounds || [])
     } finally {
       setBusy(false)
       setRefreshing(false)
@@ -297,7 +389,12 @@ export default function PublicUserScreen() {
           />
         }
       >
-        <BrandHeader showBack />
+        <BrandHeader
+          showBack
+          largeLogo
+          rightIconName="mail-outline"
+          onRightPress={() => id && router.push(`/messages/${id}`)}
+        />
 
         <View style={styles.heroCard}>
           <View style={styles.coverShell}>
@@ -309,14 +406,6 @@ export default function PublicUserScreen() {
               </View>
             )}
             <View style={styles.coverOverlay} />
-            <Pressable onPress={() => setActiveTab('bag')} style={styles.bagIconButton}>
-              <Ionicons color={palette.text} name="briefcase-outline" size={20} />
-            </Pressable>
-            {status === 'connected' ? (
-              <Pressable onPress={() => router.push(`/messages/${id}`)} style={styles.messageIconButton}>
-                <Ionicons color={palette.text} name="mail-outline" size={20} />
-              </Pressable>
-            ) : null}
           </View>
 
           <View style={styles.avatarWrap}>
@@ -327,7 +416,7 @@ export default function PublicUserScreen() {
             <View style={styles.nameRow}>
               <Text style={styles.name}>{displayName}</Text>
               {profile?.is_founder_verified ? (
-                <Ionicons color={palette.emerald} name="checkmark-circle" size={22} />
+                <Ionicons color={palette.emerald} name="checkmark-circle" size={22} style={styles.nameBadgeIcon} />
               ) : null}
             </View>
             <Text style={styles.homeCourse}>{homeCourse}</Text>
@@ -336,9 +425,8 @@ export default function PublicUserScreen() {
               {profile?.location || 'Location not added'} • Handicap {profile?.handicap ?? 'N/A'} •{' '}
               {connectedGolfers.length} Connections
               </Text>
-              <Text style={styles.connectionsHeaderHint}>Tap to view connections</Text>
             </Pressable>
-            <View style={styles.ratingRow}>
+            <Pressable onPress={() => id && router.push(`/users/${id}/reviews`)} style={styles.ratingRow}>
               <View style={styles.ratingBadge}>
                 <Ionicons color={palette.gold} name="star" size={16} />
                 <Text style={styles.ratingBadgeText}>
@@ -348,7 +436,8 @@ export default function PublicUserScreen() {
               <Text style={styles.ratingText}>
                 {ratingSummary.count ? `${ratingSummary.count} golfer ratings` : 'Waiting on first rating'}
               </Text>
-            </View>
+              <Ionicons color={palette.aqua} name="chevron-forward" size={16} />
+            </Pressable>
             {linkedinUrl ? (
               <Pressable onPress={() => void Linking.openURL(linkedinUrl)} style={styles.linkedinChip}>
                 <Ionicons color={palette.aqua} name="logo-linkedin" size={16} />
@@ -364,11 +453,6 @@ export default function PublicUserScreen() {
               label={actionLabel}
               loading={connecting}
               onPress={handleConnect}
-            />
-            <PrimaryButton
-              label="Send DM"
-              variant="ghost"
-              onPress={() => id && router.push(`/messages/${id}`)}
             />
             <PrimaryButton
               label="Add to Group"
@@ -389,11 +473,11 @@ export default function PublicUserScreen() {
             </Text>
           </Pressable>
           <Pressable
-            onPress={() => setActiveTab('bag')}
-            style={[styles.tabButton, activeTab === 'bag' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('about')}
+            style={[styles.tabButton, activeTab === 'about' && styles.tabButtonActive]}
           >
-            <Text style={[styles.tabButtonText, activeTab === 'bag' && styles.tabButtonTextActive]}>
-              In The Bag
+            <Text style={[styles.tabButtonText, activeTab === 'about' && styles.tabButtonTextActive]}>
+              About
             </Text>
           </Pressable>
         </View>
@@ -401,37 +485,111 @@ export default function PublicUserScreen() {
         {activeTab === 'activity' ? (
           <View style={styles.card}>
             <Text style={styles.sectionEyebrow}>Activity</Text>
-            <Text style={styles.sectionTitle}>Recent golfer movement</Text>
-            {status !== 'connected' ? (
+            <Text style={styles.sectionTitle}>{displayName.split(' ')[0]}&apos;s recent activity</Text>
+            {busy ? <ActivityIndicator color={palette.aqua} /> : null}
+            {!busy && activities.length === 0 ? (
               <Text style={styles.helper}>
-                Connect with {displayName.split(' ')[0]} to unlock their activity feed. Their public profile details and bag setup stay visible either way.
+                No recent activity yet. Profile edits, photo updates, rounds, groups, tee times, and connections will show here.
               </Text>
             ) : null}
-            {status === 'connected' && busy ? <ActivityIndicator color={palette.aqua} /> : null}
-            {status === 'connected' && !busy && activities.length === 0 ? (
-              <Text style={styles.helper}>No recent activity yet. Tee times, joins, rounds, photos, connections, and group updates will show here.</Text>
-            ) : null}
-            {status === 'connected'
-              ? activities.map((activity) => (
-                  <View key={activity.id} style={styles.activityRow}>
-                    <View style={styles.activityDot} />
-                    <View style={styles.activityCopy}>
-                      <Text style={styles.activityTitle}>{formatActivityLabel(activity)}</Text>
-                      {activity.description ? <Text style={styles.activityDescription}>{activity.description}</Text> : null}
+            {activities.map((activity) => {
+              const linkedRound = activity.activity_type === 'round_logged' ? findRoundForActivity(activity, rounds) : null
+              const courseAverage = linkedRound ? getAverageScoreAtCourse(linkedRound, rounds) : null
+
+              if (linkedRound) {
+                return (
+                  <Pressable
+                    key={activity.id}
+                    onPress={() => router.push(`/rounds/${linkedRound.id}`)}
+                    style={styles.roundActivityCard}
+                  >
+                    <View style={styles.roundActivityHeader}>
+                      <View style={styles.roundActivityCopy}>
+                        <Text style={styles.roundActivityCourse}>{linkedRound.course_name}</Text>
+                        <Text style={styles.roundActivityMeta}>
+                          {formatRelativeTime(activity.created_at)} • {linkedRound.holes_played} holes
+                        </Text>
+                      </View>
+                      <Text style={styles.roundActivityScore}>{linkedRound.total_score}</Text>
                     </View>
-                    <Text style={styles.activityTime}>{formatRelativeTime(activity.created_at)}</Text>
-                    <View style={styles.activityActions}>
-                      <Text style={styles.activityActionText}>Like</Text>
-                      <Text style={styles.activityActionText}>Comment</Text>
+                    <View style={styles.roundActivityStats}>
+                      <View style={styles.roundActivityPill}>
+                        <Text style={styles.roundActivityPillLabel}>Handicap</Text>
+                        <Text style={styles.roundActivityPillValue}>{profile?.handicap ?? '--'}</Text>
+                      </View>
+                      <View style={styles.roundActivityPill}>
+                        <Text style={styles.roundActivityPillLabel}>Course Avg</Text>
+                        <Text style={styles.roundActivityPillValue}>{courseAverage ? courseAverage.toFixed(1) : '--'}</Text>
+                      </View>
+                      <View style={styles.roundActivityPill}>
+                        <Text style={styles.roundActivityPillLabel}>Avg / Hole</Text>
+                        <Text style={styles.roundActivityPillValue}>{linkedRound.average_score_per_hole.toFixed(2)}</Text>
+                      </View>
                     </View>
+                  </Pressable>
+                )
+              }
+
+              return (
+                <View key={activity.id} style={styles.activityRow}>
+                  <View style={styles.activityDot} />
+                  <View style={styles.activityCopy}>
+                    <Text style={styles.activityTitle}>{formatActivityLabel(activity)}</Text>
+                    {activity.description ? <Text style={styles.activityDescription}>{activity.description}</Text> : null}
                   </View>
-                ))
-              : null}
+                  <Text style={styles.activityTime}>{formatRelativeTime(activity.created_at)}</Text>
+                  <View style={styles.activityActions}>
+                    <Text style={styles.activityActionText}>Like</Text>
+                    <Text style={styles.activityActionText}>Comment</Text>
+                  </View>
+                </View>
+              )
+            })}
           </View>
         ) : (
           <View style={styles.card}>
-            <Text style={styles.sectionEyebrow}>In The Bag</Text>
-            <Text style={styles.sectionTitle}>What {displayName.split(' ')[0]} is gaming</Text>
+            <Text style={styles.sectionEyebrow}>About</Text>
+            <Text style={styles.sectionTitle}>{displayName.split(' ')[0]}&apos;s golfer profile</Text>
+            <View style={styles.aboutInfoGrid}>
+              <View style={styles.aboutInfoCard}>
+                <Text style={styles.aboutInfoLabel}>Home Course</Text>
+                <Text style={styles.aboutInfoValue}>{homeCourse}</Text>
+              </View>
+              <View style={styles.aboutInfoCard}>
+                <Text style={styles.aboutInfoLabel}>Location</Text>
+                <Text style={styles.aboutInfoValue}>{profile?.location || 'Not added yet'}</Text>
+              </View>
+              <View style={styles.aboutInfoCard}>
+                <Text style={styles.aboutInfoLabel}>Handicap</Text>
+                <Text style={styles.aboutInfoValue}>{profile?.handicap ?? 'Not added yet'}</Text>
+              </View>
+              <View style={styles.aboutInfoCard}>
+                <Text style={styles.aboutInfoLabel}>Rounds Logged</Text>
+                <Text style={styles.aboutInfoValue}>{rounds.length || '0'}</Text>
+              </View>
+            </View>
+            <View style={styles.aceCard}>
+              <Text style={styles.aboutSectionTitle}>Hole In One</Text>
+              {aceDetails ? (
+                <View style={styles.aceDetailsRow}>
+                  <View style={styles.acePill}>
+                    <Text style={styles.acePillLabel}>Course</Text>
+                    <Text style={styles.acePillValue}>{aceDetails.course || '--'}</Text>
+                  </View>
+                  <View style={styles.acePill}>
+                    <Text style={styles.acePillLabel}>Hole</Text>
+                    <Text style={styles.acePillValue}>{aceDetails.hole || '--'}</Text>
+                  </View>
+                  <View style={styles.acePill}>
+                    <Text style={styles.acePillLabel}>When</Text>
+                    <Text style={styles.acePillValue}>{aceDetails.date || '--'}</Text>
+                  </View>
+                </View>
+              ) : (
+                <Text style={styles.helper}>No hole in one posted yet.</Text>
+              )}
+            </View>
+            <Text style={styles.aboutSectionTitle}>What&apos;s In The Bag</Text>
             {bagFields.map((field) => {
               const value = bagItems[field.key]?.trim()
               return (
@@ -495,34 +653,6 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0
   },
-  bagIconButton: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(3,10,8,0.42)',
-    borderColor: 'rgba(255,255,255,0.14)',
-    borderRadius: 999,
-    borderWidth: 1,
-    height: 42,
-    justifyContent: 'center',
-    left: 14,
-    position: 'absolute',
-    top: 14,
-    width: 42,
-    zIndex: 2
-  },
-  messageIconButton: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(3,10,8,0.42)',
-    borderColor: 'rgba(255,255,255,0.14)',
-    borderRadius: 999,
-    borderWidth: 1,
-    height: 42,
-    justifyContent: 'center',
-    position: 'absolute',
-    right: 14,
-    top: 14,
-    width: 42,
-    zIndex: 2
-  },
   avatarWrap: {
     alignSelf: 'center',
     borderColor: palette.card,
@@ -544,9 +674,14 @@ const styles = StyleSheet.create({
   },
   nameRow: {
     alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
-    justifyContent: 'center'
+    justifyContent: 'center',
+    minHeight: 36,
+    paddingHorizontal: 34,
+    position: 'relative'
+  },
+  nameBadgeIcon: {
+    position: 'absolute',
+    right: 0
   },
   homeCourse: {
     color: palette.text,
@@ -561,15 +696,7 @@ const styles = StyleSheet.create({
     textAlign: 'center'
   },
   connectionsHeaderLink: {
-    alignItems: 'center',
-    gap: 2
-  },
-  connectionsHeaderHint: {
-    color: palette.aqua,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase'
+    alignItems: 'center'
   },
   ratingRow: {
     alignItems: 'center',
@@ -683,6 +810,63 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22
   },
+  roundActivityCard: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 10,
+    padding: 12
+  },
+  roundActivityHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12
+  },
+  roundActivityCopy: {
+    flex: 1,
+    gap: 2
+  },
+  roundActivityCourse: {
+    color: palette.text,
+    fontSize: 15,
+    fontWeight: '700'
+  },
+  roundActivityMeta: {
+    color: palette.textMuted,
+    fontSize: 12
+  },
+  roundActivityScore: {
+    color: palette.text,
+    fontSize: 28,
+    fontWeight: '800'
+  },
+  roundActivityStats: {
+    flexDirection: 'row',
+    gap: 8
+  },
+  roundActivityPill: {
+    backgroundColor: 'rgba(103,232,249,0.08)',
+    borderColor: 'rgba(103,232,249,0.15)',
+    borderRadius: 14,
+    borderWidth: 1,
+    flex: 1,
+    gap: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 8
+  },
+  roundActivityPillLabel: {
+    color: palette.textMuted,
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase'
+  },
+  roundActivityPillValue: {
+    color: palette.text,
+    fontSize: 14,
+    fontWeight: '700'
+  },
   activityRow: {
     alignItems: 'flex-start',
     backgroundColor: 'rgba(255,255,255,0.03)',
@@ -756,5 +940,73 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     lineHeight: 20
+  },
+  aboutInfoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10
+  },
+  aboutInfoCard: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 4,
+    minWidth: '47%',
+    padding: 14
+  },
+  aboutInfoLabel: {
+    color: palette.textMuted,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase'
+  },
+  aboutInfoValue: {
+    color: palette.text,
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 20
+  },
+  aceCard: {
+    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+    borderColor: 'rgba(245, 158, 11, 0.18)',
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 10,
+    padding: 16
+  },
+  aboutSectionTitle: {
+    color: palette.text,
+    fontSize: 16,
+    fontWeight: '800'
+  },
+  aceDetailsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8
+  },
+  acePill: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 2,
+    minWidth: '31%',
+    paddingHorizontal: 12,
+    paddingVertical: 10
+  },
+  acePillLabel: {
+    color: palette.textMuted,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.7,
+    textTransform: 'uppercase'
+  },
+  acePillValue: {
+    color: palette.text,
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 18
   }
 })

@@ -6,6 +6,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -168,9 +169,17 @@ export default function ConversationScreen() {
 
           {messages.map((message) => {
             const mine = message.sender?.id === user?.id
+            const otherParticipant = mine ? message.recipient : message.sender
 
             return (
               <View key={message.id} style={[styles.messageRow, mine && styles.messageRowMine]}>
+                {!mine ? (
+                  <Avatar
+                    label={formatName(otherParticipant)}
+                    size={34}
+                    uri={otherParticipant?.avatar_url}
+                  />
+                ) : null}
                 <View style={[styles.messageBubble, mine ? styles.messageBubbleMine : styles.messageBubbleTheirs]}>
                   <Text style={[styles.messageText, mine && styles.messageTextMine]}>{message.message_content}</Text>
                   <Text style={[styles.messageTime, mine && styles.messageTimeMine]}>
@@ -183,15 +192,23 @@ export default function ConversationScreen() {
         </ScrollView>
 
         <View style={styles.composer}>
-          <TextInput
-            multiline
-            onChangeText={setDraft}
-            placeholder="Write a message"
-            placeholderTextColor={palette.textMuted}
-            style={styles.input}
-            value={draft}
-          />
-          <PrimaryButton label="Send" loading={sending} onPress={() => void handleSend()} />
+          <View style={styles.composerField}>
+            <TextInput
+              multiline
+              onChangeText={setDraft}
+              placeholder="Write a message"
+              placeholderTextColor={palette.textMuted}
+              style={styles.input}
+              value={draft}
+            />
+            <Pressable disabled={sending || !draft.trim()} onPress={() => void handleSend()} style={[styles.sendButton, (sending || !draft.trim()) && styles.sendButtonDisabled]}>
+              {sending ? (
+                <ActivityIndicator color={palette.bg} size="small" />
+              ) : (
+                <Text style={styles.sendButtonText}>Send</Text>
+              )}
+            </Pressable>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -250,10 +267,13 @@ const styles = StyleSheet.create({
     lineHeight: 22
   },
   messageRow: {
-    alignItems: 'flex-start'
+    alignItems: 'flex-end',
+    flexDirection: 'row',
+    gap: 10
   },
   messageRowMine: {
-    alignItems: 'flex-end'
+    alignItems: 'flex-end',
+    justifyContent: 'flex-end'
   },
   messageBubble: {
     borderRadius: 22,
@@ -289,19 +309,43 @@ const styles = StyleSheet.create({
     backgroundColor: palette.bg,
     borderTopColor: palette.border,
     borderTopWidth: 1,
-    gap: 12,
     padding: 16
   },
-  input: {
+  composerField: {
+    alignItems: 'flex-end',
     backgroundColor: palette.card,
     borderColor: palette.border,
-    borderRadius: 18,
+    borderRadius: 22,
     borderWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    padding: 10
+  },
+  input: {
     color: palette.text,
+    flex: 1,
     maxHeight: 120,
     minHeight: 56,
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingHorizontal: 8,
+    paddingTop: 10,
     textAlignVertical: 'top'
+  },
+  sendButton: {
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    backgroundColor: palette.white,
+    borderRadius: 999,
+    height: 42,
+    justifyContent: 'center',
+    minWidth: 72,
+    paddingHorizontal: 16
+  },
+  sendButtonDisabled: {
+    opacity: 0.5
+  },
+  sendButtonText: {
+    color: palette.bg,
+    fontSize: 14,
+    fontWeight: '800'
   }
 })

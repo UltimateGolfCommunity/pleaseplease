@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { createAdminClient } from '@/lib/supabase-admin'
+import { createNotificationAndDeliverPush } from '@/lib/notifications'
 
 // Mock message data for development
 const mockMessages = [
@@ -225,11 +226,11 @@ export async function POST(request: NextRequest) {
 
     console.log('🔍 MESSAGES POST: Using database for operations')
 
-    if (action === 'send') {
-      const { data: newMessage, error } = await supabase
-        .from('direct_messages')
-        .insert({
-          sender_id: data.sender_id,
+	    if (action === 'send') {
+	      const { data: newMessage, error } = await supabase
+	        .from('direct_messages')
+	        .insert({
+	          sender_id: data.sender_id,
           recipient_id: data.recipient_id,
           message_content: data.message_content
         })
@@ -242,11 +243,39 @@ export async function POST(request: NextRequest) {
           error: 'Failed to send message', 
           details: error.message 
         }, { status: 400 })
-      }
-      
-      console.log('✅ Message sent successfully:', newMessage.id)
-      return NextResponse.json({ success: true, message: 'Message sent successfully', data: newMessage })
-    }
+	      }
+	      
+	      try {
+	        const { data: senderProfile } = await supabase
+	          .from('user_profiles')
+	          .select('first_name, last_name, username')
+	          .eq('id', data.sender_id)
+	          .maybeSingle()
+
+	        const senderName =
+	          [senderProfile?.first_name, senderProfile?.last_name].filter(Boolean).join(' ').trim() ||
+	          senderProfile?.username ||
+	          'A golfer'
+
+	        await createNotificationAndDeliverPush(supabase, {
+	          userId: data.recipient_id,
+	          type: 'direct_message',
+	          title: 'New message',
+	          message: `${senderName} sent you a message.`,
+	          relatedId: newMessage.id,
+	          notificationData: {
+	            sender_id: data.sender_id,
+	            recipient_id: data.recipient_id,
+	            message_id: newMessage.id
+	          }
+	        })
+	      } catch (notificationError) {
+	        console.warn('⚠️ Unable to create message push notification:', notificationError)
+	      }
+
+	      console.log('✅ Message sent successfully:', newMessage.id)
+	      return NextResponse.json({ success: true, message: 'Message sent successfully', data: newMessage })
+	    }
 
     if (action === 'mark_read') {
       const { error } = await supabase
@@ -273,4 +302,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
-

@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Redirect, useLocalSearchParams } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
+import Ionicons from '@expo/vector-icons/Ionicons'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -18,7 +21,7 @@ import { Avatar } from '@/components/Avatar'
 import { BrandHeader } from '@/components/BrandHeader'
 import { PrimaryButton } from '@/components/PrimaryButton'
 import { apiGet, apiPost } from '@/lib/api'
-import { uploadImageToStorage } from '@/lib/supabase'
+import { getShareableGroupLink, uploadImageToStorage } from '@/lib/supabase'
 import { palette } from '@/lib/theme'
 import { useAuth } from '@/providers/AuthProvider'
 
@@ -26,6 +29,7 @@ type GroupDetail = {
   id: string
   name: string
   description?: string | null
+  slogan?: string | null
   location?: string | null
   group_type?: string | null
   logo_url?: string | null
@@ -42,6 +46,8 @@ type Member = {
     first_name?: string | null
     last_name?: string | null
     username?: string | null
+    avatar_url?: string | null
+    location?: string | null
   } | null
 }
 
@@ -59,6 +65,7 @@ type GroupMessage = {
     last_name?: string | null
     username?: string | null
     avatar_url?: string | null
+    location?: string | null
   } | null
 }
 
@@ -80,6 +87,18 @@ type ConnectionRecord = {
   recipient?: UserCard | null
 }
 
+type GroupActivity = {
+  id: string
+  title?: string
+  description?: string | null
+  created_at?: string
+  actor?: {
+    first_name?: string | null
+    username?: string | null
+    avatar_url?: string | null
+  } | null
+}
+
 export default function GroupScreen() {
   const { loading, user } = useAuth()
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -92,15 +111,18 @@ export default function GroupScreen() {
   const [savingEdit, setSavingEdit] = useState(false)
   const [invitingId, setInvitingId] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [group, setGroup] = useState<GroupDetail | null>(null)
   const [members, setMembers] = useState<Member[]>([])
   const [messages, setMessages] = useState<GroupMessage[]>([])
+  const [groupFeed, setGroupFeed] = useState<GroupActivity[]>([])
   const [connections, setConnections] = useState<ConnectionRecord[]>([])
   const [draft, setDraft] = useState('')
-  const [activeSection, setActiveSection] = useState<'info' | 'members' | 'board'>('info')
+  const [activeSection, setActiveSection] = useState<'board' | 'members' | 'info'>('board')
   const [editForm, setEditForm] = useState({
     name: '',
+    slogan: '',
     description: '',
     location: '',
     group_type: 'community'
@@ -130,8 +152,13 @@ export default function GroupScreen() {
             `/api/groups/message?group_id=${encodeURIComponent(id)}&user_id=${encodeURIComponent(user.id)}`
           )
           setMessages(board.messages || [])
+          const feed = await apiGet<{ success: boolean; activities: GroupActivity[] }>(
+            `/api/activities?action=group_detail&group_id=${encodeURIComponent(id)}&user_id=${encodeURIComponent(user.id)}&limit=8`
+          ).catch(() => ({ success: true, activities: [] }))
+          setGroupFeed(feed.activities || [])
         } catch {
           setMessages([])
+          setGroupFeed([])
         }
       }
     } finally {
@@ -152,6 +179,7 @@ export default function GroupScreen() {
 
     setEditForm({
       name: group.name || '',
+      slogan: group.slogan || '',
       description: group.description || '',
       location: group.location || '',
       group_type: group.group_type || 'community'
@@ -170,6 +198,10 @@ export default function GroupScreen() {
   const myMembership = members.find((member) => member.user_id === user?.id)
   const isMember = !!myMembership
   const groupTypeLabel = (group?.group_type || 'community').replace(/^./, (char) => char.toUpperCase())
+  const groupLink = group?.id ? getShareableGroupLink(group.id) : ''
+  const groupQrUrl = groupLink
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(groupLink)}`
+    : ''
   const isOwner =
     group?.creator_id === user?.id ||
     ['admin', 'owner', 'creator'].includes((myMembership?.role || '').toLowerCase())
@@ -337,6 +369,7 @@ export default function GroupScreen() {
         user_id: user.id,
         name: trimmedName,
         description: editForm.description.trim(),
+        slogan: editForm.slogan.trim(),
         location: editForm.location.trim(),
         group_type: editForm.group_type
       })
@@ -363,8 +396,35 @@ export default function GroupScreen() {
     }
   }
 
+  const handleSetMemberRole = async (member: Member, nextRole: 'admin' | 'member') => {
+    if (!user?.id || !group?.id || !member.user_id) return
+
+    try {
+      await apiPost('/api/groups', {
+        action: 'set_member_role',
+        group_id: group.id,
+        user_id: user.id,
+        member_user_id: member.user_id,
+        role: nextRole
+      })
+      await loadGroup()
+    } catch (error) {
+      Alert.alert('Unable to update member', error instanceof Error ? error.message : 'Please try again.')
+    }
+  }
+
   const handlePostMessage = async () => {
-    if (!user?.id || !group?.id || !draft.trim()) return
+    if (!user?.id || !group?.id) return
+
+    if (!isMember) {
+      Alert.alert('Join required', 'Join this group before posting on the board.')
+      return
+    }
+
+    if (!draft.trim()) {
+      Alert.alert('Write something first', 'Add a post, score note, photo caption, or update before posting.')
+      return
+    }
 
     setPosting(true)
     try {
@@ -446,8 +506,8 @@ export default function GroupScreen() {
       >
         <BrandHeader
           showBack
-          rightIconName={isOwner ? 'create-outline' : undefined}
-          onRightPress={isOwner ? () => setIsEditing((current) => !current) : undefined}
+          rightIconName="share-social-outline"
+          onRightPress={() => setShowShareModal(true)}
         />
 
         <View style={styles.hero}>
@@ -495,7 +555,13 @@ export default function GroupScreen() {
               ) : (
                 <>
                   <Text style={styles.name}>{group?.name || id?.replace(/-/g, ' ') || 'Group'}</Text>
-                  <Text style={styles.heroSubtitle}>{groupTypeLabel} group</Text>
+                  <Text style={styles.heroSubtitle}>{group?.slogan || `${groupTypeLabel} group`}</Text>
+                  <View style={styles.heroMetaInlineRow}>
+                    {group?.location ? <Text style={styles.heroMetaInlineText}>{group.location}</Text> : null}
+                    <Pressable onPress={() => setActiveSection('members')}>
+                      <Text style={styles.heroMetaInlineAccent}>{members.length} members</Text>
+                    </Pressable>
+                  </View>
                   <Text style={styles.heroStory}>
                     {group?.description ||
                       'Build the story of this group so local golfers know exactly who it is for.'}
@@ -513,20 +579,24 @@ export default function GroupScreen() {
                 style={styles.inlineMetaInput}
                 value={editForm.location}
               />
-            ) : group?.location ? (
-              <Text style={styles.metaPill}>{group.location}</Text>
             ) : null}
-            <Text style={styles.metaPill}>{members.length} members</Text>
             <Text style={styles.metaPill}>Founded by {founderName}</Text>
           </View>
           {!isMember ? <PrimaryButton label="Join Group" loading={joining} onPress={handleJoin} /> : null}
+          {isOwner ? (
+            <View style={styles.quickActions}>
+              <Pressable onPress={() => setIsEditing((current) => !current)} style={styles.quickAction}>
+                <Ionicons color={palette.aqua} name="shield-checkmark-outline" size={18} />
+                <Text style={styles.quickActionText}>Admin</Text>
+              </Pressable>
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.tabRow}>
           {[
-            { label: 'Info', value: 'info' as const },
-            { label: 'Members', value: 'members' as const },
-            { label: 'Board', value: 'board' as const }
+            { label: 'Board', value: 'board' as const },
+            { label: 'Info', value: 'info' as const }
           ].map((tab) => {
             const active = activeSection === tab.value
 
@@ -555,6 +625,13 @@ export default function GroupScreen() {
                   placeholderTextColor={palette.textMuted}
                   style={[styles.editInput, styles.editTextarea]}
                   value={editForm.description}
+                />
+                <TextInput
+                  onChangeText={(value) => setEditForm((current) => ({ ...current, slogan: value }))}
+                  placeholder="Group slogan"
+                  placeholderTextColor={palette.textMuted}
+                  style={styles.editInput}
+                  value={editForm.slogan}
                 />
                 <View style={styles.typeRow}>
                   {[
@@ -617,7 +694,7 @@ export default function GroupScreen() {
         ) : activeSection === 'members' ? (
           <View style={styles.card}>
             <Text style={styles.sectionEyebrow}>People</Text>
-            <Text style={styles.sectionTitle}>Member snapshot</Text>
+            <Text style={styles.sectionTitle}>{members.length} group members</Text>
             {isOwner ? (
               <View style={styles.inviteSection}>
                 <Text style={styles.inviteTitle}>Add members</Text>
@@ -667,16 +744,66 @@ export default function GroupScreen() {
             ) : null}
             {members.slice(0, 10).map((member) => (
               <View key={member.id} style={styles.memberRow}>
-                <Text style={styles.memberName}>
-                  {member.user_profiles?.first_name || member.user_profiles?.username || 'UGC Member'}
-                </Text>
+                <View style={styles.memberIdentity}>
+                  <Avatar
+                    label={member.user_profiles?.first_name || member.user_profiles?.username || 'UGC'}
+                    size={46}
+                    uri={member.user_profiles?.avatar_url}
+                  />
+                  <View style={styles.memberCopy}>
+                    <Text style={styles.memberName}>
+                      {member.user_profiles?.first_name || member.user_profiles?.username || 'UGC Member'}
+                    </Text>
+                    <Text style={styles.memberMeta}>
+                      {(member.role || 'member').replace(/^./, (char) => char.toUpperCase())}
+                      {member.user_profiles?.location ? ` • ${member.user_profiles.location}` : ''}
+                    </Text>
+                  </View>
+                </View>
+                {isOwner && group?.creator_id === user?.id && member.user_id !== user?.id ? (
+                  <Pressable
+                    onPress={() =>
+                      void handleSetMemberRole(
+                        member,
+                        (member.role || '').toLowerCase() === 'admin' ? 'member' : 'admin'
+                      )
+                    }
+                    style={styles.roleButton}
+                  >
+                    <Text style={styles.roleButtonText}>
+                      {(member.role || '').toLowerCase() === 'admin' ? 'Remove Admin' : 'Make Admin'}
+                    </Text>
+                  </Pressable>
+                ) : null}
               </View>
             ))}
           </View>
         ) : (
           <View style={styles.card}>
             <Text style={styles.sectionEyebrow}>Board</Text>
-            <Text style={styles.sectionTitle}>Group conversation</Text>
+            <Text style={styles.sectionTitle}>Community board</Text>
+            <Text style={styles.body}>
+              Post scores, photos, tee-time updates, or start a thread for the group.
+            </Text>
+            <View style={styles.groupFeedPanel}>
+              <Text style={styles.inviteTitle}>Group activity feed</Text>
+              {groupFeed.length === 0 ? (
+                <Text style={styles.body}>Member activity, tee times, posts, and score movement will show here.</Text>
+              ) : null}
+              {groupFeed.map((item) => (
+                <View key={item.id} style={styles.groupFeedItem}>
+                  <Avatar
+                    label={item.actor?.first_name || item.actor?.username || 'UGC'}
+                    size={34}
+                    uri={item.actor?.avatar_url}
+                  />
+                  <View style={styles.memberCopy}>
+                    <Text style={styles.memberName}>{item.title || 'Group activity'}</Text>
+                    {item.description ? <Text style={styles.memberMeta}>{item.description}</Text> : null}
+                  </View>
+                </View>
+              ))}
+            </View>
             {replyingTo ? (
               <View style={styles.replyBanner}>
                 <Text style={styles.replyBannerText}>Replying to a member post</Text>
@@ -688,7 +815,7 @@ export default function GroupScreen() {
             <TextInput
               multiline
               onChangeText={setDraft}
-              placeholder="Share a note with the group"
+              placeholder="Post to the board: score, photo caption, tee time, or group update"
               placeholderTextColor={palette.textMuted}
               style={styles.composeInput}
               value={draft}
@@ -702,7 +829,14 @@ export default function GroupScreen() {
             {messages.map((message) => (
               <View key={message.id} style={styles.messageCard}>
                 <View style={styles.messageTop}>
-                  <Text style={styles.memberName}>{formatAuthor(message)}</Text>
+                  <View style={styles.memberIdentity}>
+                    <Avatar
+                      label={formatAuthor(message)}
+                      size={38}
+                      uri={message.user_profiles?.avatar_url}
+                    />
+                    <Text style={styles.memberName}>{formatAuthor(message)}</Text>
+                  </View>
                   <Text style={styles.messageMeta}>
                     {message.created_at ? new Date(message.created_at).toLocaleDateString() : 'Now'}
                   </Text>
@@ -733,6 +867,29 @@ export default function GroupScreen() {
           </View>
         )}
       </ScrollView>
+      <Modal
+        animationType="slide"
+        transparent
+        visible={showShareModal}
+        onRequestClose={() => setShowShareModal(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setShowShareModal(false)}>
+          <Pressable style={styles.modalCard} onPress={() => {}}>
+            <Text style={styles.sectionEyebrow}>Instant invite</Text>
+            <Text style={styles.sectionTitle}>Scan to join {group?.name || 'this group'}</Text>
+            <Text style={styles.body}>
+              Pull this up on the first tee, at the clubhouse, or in a group chat.
+            </Text>
+            {groupQrUrl ? <Image source={{ uri: groupQrUrl }} style={styles.qrImage} /> : null}
+            <Text style={styles.shareLink}>{groupLink}</Text>
+            <PrimaryButton
+              label="Share Group"
+              onPress={() => void Share.share({ message: groupLink, url: groupLink })}
+            />
+            <PrimaryButton label="Close" variant="ghost" onPress={() => setShowShareModal(false)} />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   )
 }
@@ -866,6 +1023,22 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 6
   },
+  heroMetaInlineRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10
+  },
+  heroMetaInlineText: {
+    color: palette.textMuted,
+    fontSize: 13,
+    fontWeight: '600'
+  },
+  heroMetaInlineAccent: {
+    color: palette.aqua,
+    fontSize: 13,
+    fontWeight: '700'
+  },
   name: {
     color: palette.text,
     fontSize: 26,
@@ -897,7 +1070,8 @@ const styles = StyleSheet.create({
   metaRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10
+    gap: 10,
+    marginTop: 2
   },
   metaPill: {
     backgroundColor: 'rgba(255,255,255,0.06)',
@@ -909,6 +1083,28 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     paddingHorizontal: 12,
     paddingVertical: 8
+  },
+  quickActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 2
+  },
+  quickAction: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(103,232,249,0.08)',
+    borderColor: 'rgba(103,232,249,0.18)',
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10
+  },
+  quickActionText: {
+    color: palette.text,
+    fontSize: 13,
+    fontWeight: '800'
   },
   inlineMetaInput: {
     backgroundColor: 'rgba(255,255,255,0.06)',
@@ -1041,6 +1237,22 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700'
   },
+  groupFeedPanel: {
+    backgroundColor: 'rgba(103,232,249,0.06)',
+    borderColor: 'rgba(103,232,249,0.16)',
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 10,
+    padding: 14
+  },
+  groupFeedItem: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 16,
+    flexDirection: 'row',
+    gap: 10,
+    padding: 10
+  },
   inviteRow: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -1058,11 +1270,25 @@ const styles = StyleSheet.create({
     gap: 2
   },
   memberRow: {
+    alignItems: 'center',
     backgroundColor: palette.cardSoft,
     borderColor: palette.border,
     borderRadius: 16,
     borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between',
     padding: 14
+  },
+  memberIdentity: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: 12
+  },
+  memberCopy: {
+    flex: 1,
+    gap: 3
   },
   memberName: {
     color: palette.text,
@@ -1072,6 +1298,19 @@ const styles = StyleSheet.create({
   memberMeta: {
     color: palette.textMuted,
     fontSize: 13
+  },
+  roleButton: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderColor: palette.border,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8
+  },
+  roleButtonText: {
+    color: palette.aqua,
+    fontSize: 12,
+    fontWeight: '800'
   },
   composeInput: {
     backgroundColor: palette.cardSoft,
@@ -1145,5 +1384,32 @@ const styles = StyleSheet.create({
     color: palette.aqua,
     fontSize: 13,
     fontWeight: '700'
+  },
+  modalBackdrop: {
+    backgroundColor: 'rgba(3,10,8,0.72)',
+    flex: 1,
+    justifyContent: 'flex-end',
+    padding: 18
+  },
+  modalCard: {
+    backgroundColor: palette.card,
+    borderColor: palette.border,
+    borderRadius: 28,
+    borderWidth: 1,
+    gap: 14,
+    padding: 20
+  },
+  qrImage: {
+    alignSelf: 'center',
+    backgroundColor: palette.white,
+    borderRadius: 20,
+    height: 240,
+    width: 240
+  },
+  shareLink: {
+    color: palette.textMuted,
+    fontSize: 12,
+    lineHeight: 17,
+    textAlign: 'center'
   }
 })

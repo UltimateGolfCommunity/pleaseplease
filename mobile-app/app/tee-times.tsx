@@ -13,6 +13,7 @@ import {
   TextInput,
   View
 } from 'react-native'
+import { Avatar } from '@/components/Avatar'
 import { BrandHeader } from '@/components/BrandHeader'
 import { PrimaryButton } from '@/components/PrimaryButton'
 import { apiGet, apiPost } from '@/lib/api'
@@ -30,6 +31,17 @@ type TeeTime = {
   max_players?: number
   available_spots?: number
   visibility_scope?: string
+  activity_id?: string | null
+  like_count?: number
+  liked_by_user?: boolean
+  comment_count?: number
+  accepted_players?: {
+    id?: string
+    first_name?: string | null
+    last_name?: string | null
+    username?: string | null
+    avatar_url?: string | null
+  }[]
 }
 
 const skillOptions = ['Beginner', 'Weekend Hack', 'Weekend Grinder', 'Low Handicap', 'Pro']
@@ -234,6 +246,35 @@ export default function TeeTimesScreen() {
     }
   }
 
+  const handleToggleLike = async (teeTime: TeeTime) => {
+    if (!user?.id || !teeTime.activity_id) return
+
+    const liked = !!teeTime.liked_by_user
+
+    setTeeTimes((current) =>
+      current.map((item) =>
+        item.id === teeTime.id
+          ? {
+              ...item,
+              liked_by_user: !liked,
+              like_count: Math.max((item.like_count || 0) + (liked ? -1 : 1), 0)
+            }
+          : item
+      )
+    )
+
+    try {
+      await apiPost('/api/feed/interactions', {
+        action: liked ? 'unlike' : 'like',
+        activity_id: teeTime.activity_id,
+        user_id: user.id
+      })
+    } catch (error) {
+      Alert.alert('Unable to react', error instanceof Error ? error.message : 'Please try again.')
+      await loadTeeTimes()
+    }
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -249,7 +290,7 @@ export default function TeeTimesScreen() {
           />
         }
       >
-        <BrandHeader showBack title={`${displayName}'s Next Tee Times`} />
+        <BrandHeader showBack title="My Tee Times" />
 
         {editingId ? (
           <View style={styles.editorCard}>
@@ -366,6 +407,42 @@ export default function TeeTimesScreen() {
                 <Text style={styles.teeTimeMeta}>
                   {getJoinedCount(teeTime)} joined • {getRemainingSpots(teeTime)} spots left
                 </Text>
+                {(teeTime.accepted_players || []).length ? (
+                  <View style={styles.joinedPlayersRow}>
+                    {(teeTime.accepted_players || []).slice(0, 5).map((player, index) => {
+                      const label =
+                        [player.first_name, player.last_name].filter(Boolean).join(' ') ||
+                        player.username ||
+                        'Golfer'
+
+                      return (
+                        <View
+                          key={player.id || `${teeTime.id}-player-${index}`}
+                          style={[styles.joinedPlayerAvatar, index > 0 && styles.joinedPlayerAvatarOverlap]}
+                        >
+                          <Avatar label={label} size={28} uri={player.avatar_url} />
+                        </View>
+                      )
+                    })}
+                    {(teeTime.accepted_players || []).length > 5 ? (
+                      <View style={[styles.joinedPlayerOverflow, styles.joinedPlayerAvatarOverlap]}>
+                        <Text style={styles.joinedPlayerOverflowText}>
+                          +{(teeTime.accepted_players || []).length - 5}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                ) : null}
+                <View style={styles.reactionRow}>
+                  <Pressable
+                    onPress={() => void handleToggleLike(teeTime)}
+                    style={[styles.reactionButton, teeTime.liked_by_user && styles.reactionButtonActive]}
+                  >
+                    <Text style={[styles.reactionButtonText, teeTime.liked_by_user && styles.reactionButtonTextActive]}>
+                      {teeTime.liked_by_user ? 'Liked' : 'Like'}{teeTime.like_count ? ` • ${teeTime.like_count}` : ''}
+                    </Text>
+                  </Pressable>
+                </View>
               </View>
               <PrimaryButton label="Edit" variant="ghost" onPress={() => startEditing(teeTime)} />
             </View>
@@ -539,5 +616,60 @@ const styles = StyleSheet.create({
     color: palette.textMuted,
     fontSize: 14,
     lineHeight: 20
+  },
+  joinedPlayersRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    marginTop: 4,
+    paddingLeft: 2
+  },
+  joinedPlayerAvatar: {
+    borderColor: palette.cardSoft,
+    borderRadius: 999,
+    borderWidth: 2
+  },
+  joinedPlayerAvatarOverlap: {
+    marginLeft: -8
+  },
+  joinedPlayerOverflow: {
+    alignItems: 'center',
+    backgroundColor: palette.card,
+    borderColor: palette.border,
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 28,
+    justifyContent: 'center',
+    width: 28
+  },
+  joinedPlayerOverflowText: {
+    color: palette.text,
+    fontSize: 10,
+    fontWeight: '800'
+  },
+  reactionRow: {
+    marginTop: 8
+  },
+  reactionButton: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(103,232,249,0.08)',
+    borderColor: 'rgba(103,232,249,0.18)',
+    borderRadius: 999,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 34,
+    paddingHorizontal: 12
+  },
+  reactionButtonActive: {
+    backgroundColor: 'rgba(103,232,249,0.16)',
+    borderColor: 'rgba(103,232,249,0.3)'
+  },
+  reactionButtonText: {
+    color: palette.aqua,
+    fontSize: 12,
+    fontWeight: '800'
+  },
+  reactionButtonTextActive: {
+    color: palette.text
   }
 })

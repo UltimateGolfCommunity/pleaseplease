@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Redirect, router, useLocalSearchParams } from 'expo-router'
+import { Redirect, router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -14,10 +15,12 @@ import {
   TextInput,
   View
 } from 'react-native'
+import { Avatar } from '@/components/Avatar'
 import { BrandHeader } from '@/components/BrandHeader'
 import { PrimaryButton } from '@/components/PrimaryButton'
-import { StatCard } from '@/components/StatCard'
 import { apiGet, apiPost } from '@/lib/api'
+import { fetchNetworkFeed, type NetworkFeedActivity } from '@/lib/feed'
+import { mobileSupabase } from '@/lib/supabase'
 import { palette } from '@/lib/theme'
 import { getMobileWeather, type MobileWeatherData } from '@/lib/weather'
 import { useAuth } from '@/providers/AuthProvider'
@@ -50,36 +53,18 @@ type CreateTeeTimeResponse = {
   tee_time?: TeeTime | null
 }
 
-type Activity = {
+type Activity = NetworkFeedActivity
+
+type GroupOption = {
   id: string
-  title?: string
-  description?: string
-  created_at?: string
-  actor?: {
-    first_name?: string | null
-    last_name?: string | null
-    username?: string | null
-  } | null
+  name: string
+  logo_url?: string | null
+  image_url?: string | null
 }
 
 type WeatherData = MobileWeatherData
 
 const teeTimeSkillOptions = ['Beginner', 'Weekend Hack', 'Weekend Grinder', 'Low Handicap', 'Pro']
-
-function formatDisplayDate(date?: string, time?: string) {
-  if (!date) return 'No round on the books'
-
-  const dateLabel = new Date(`${date}T12:00:00`).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric'
-  })
-
-  if (!time) {
-    return dateLabel
-  }
-
-  return `${dateLabel} at ${time.slice(0, 5)}`
-}
 
 function formatFormDate(date: Date) {
   return date.toLocaleDateString(undefined, {
@@ -146,15 +131,100 @@ function getGolfRecommendation(weather: WeatherData) {
   return 'Great day to tee it up'
 }
 
+function formatUpcomingTeeTime(teeTime?: TeeTime | null) {
+  if (!teeTime?.tee_time_date) return 'No tee times yet'
+
+  const base = new Date(`${teeTime.tee_time_date}T${teeTime.tee_time_time || '12:00:00'}`)
+  const dateLabel = base.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric'
+  })
+  const timeLabel = teeTime.tee_time_time
+    ? base.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+    : null
+
+  return timeLabel ? `${dateLabel} • ${timeLabel}` : dateLabel
+}
+
+function formatFeedTimestamp(value?: string) {
+  if (!value) return ''
+
+  const date = new Date(value)
+  const now = Date.now()
+  const diffMs = now - date.getTime()
+  const diffHours = Math.floor(diffMs / 3600000)
+
+  if (diffHours < 1) {
+    const diffMinutes = Math.max(1, Math.floor(diffMs / 60000))
+    return `${diffMinutes}m ago`
+  }
+
+  if (diffHours < 24) {
+    return `${diffHours}h ago`
+  }
+
+  return date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric'
+  })
+}
+
+function describeBagUpdate(activity: Activity) {
+  const changes = Array.isArray(activity.metadata?.bag_changes)
+    ? (activity.metadata?.bag_changes as {
+        label?: string
+        previous_value?: string
+        next_value?: string
+      }[])
+    : []
+
+  if (!changes.length) {
+    return activity.description || 'Updated their bag setup'
+  }
+
+  const summary = changes
+    .slice(0, 3)
+    .map((change) => {
+      const label = change.label || 'equipment'
+      const nextValue = (change.next_value || '').trim()
+      return nextValue ? `${label}: ${nextValue}` : `${label} removed`
+    })
+    .join(' • ')
+
+  return summary
+}
+
+async function getDirectInteractionSummary(activityId: string, userId: string) {
+  const [likesResult, commentsResult] = await Promise.all([
+    mobileSupabase.from('activity_likes').select('user_id').eq('activity_id', activityId),
+    mobileSupabase.from('activity_comments').select('id').eq('activity_id', activityId)
+  ])
+
+  if (likesResult.error) {
+    throw new Error(likesResult.error.message || 'Unable to load likes.')
+  }
+
+  if (commentsResult.error) {
+    throw new Error(commentsResult.error.message || 'Unable to load comments.')
+  }
+
+  const likes = likesResult.data || []
+  const comments = commentsResult.data || []
+
+  return {
+    like_count: likes.length,
+    liked_by_user: likes.some((like: any) => like.user_id === userId),
+    comment_count: comments.length
+  }
+}
+
 export default function HomeTab() {
   const { loading, profile, user } = useAuth()
-  const params = useLocalSearchParams<{ compose?: string }>()
-  const [activeHomePanel, setActiveHomePanel] = useState<'tee-times' | 'network'>('tee-times')
+  const params = useLocalSearchParams<{ compose?: string; refresh?: string }>()
   const [refreshing, setRefreshing] = useState(false)
   const [busy, setBusy] = useState(true)
   const [weatherLoading, setWeatherLoading] = useState(true)
   const [creating, setCreating] = useState(false)
-  const [joiningId, setJoiningId] = useState<string | null>(null)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingTeeTimeId, setEditingTeeTimeId] = useState<string | null>(null)
   const [showDatePicker, setShowDatePicker] = useState(false)
@@ -163,8 +233,12 @@ export default function HomeTab() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedTime, setSelectedTime] = useState<Date | null>(null)
   const [nextTeeTime, setNextTeeTime] = useState<TeeTime | null>(null)
-  const [availableTeeTimes, setAvailableTeeTimes] = useState<TeeTime[]>([])
+  const [myTeeTimes, setMyTeeTimes] = useState<TeeTime[]>([])
   const [activityFeed, setActivityFeed] = useState<Activity[]>([])
+  const [commentingOn, setCommentingOn] = useState<string | null>(null)
+  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({})
+  const [joiningFeedTeeTimeId, setJoiningFeedTeeTimeId] = useState<string | null>(null)
+  const [myGroups, setMyGroups] = useState<GroupOption[]>([])
   const [unreadNotifications, setUnreadNotifications] = useState(0)
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [weather, setWeather] = useState<WeatherData | null>(null)
@@ -175,18 +249,9 @@ export default function HomeTab() {
     tee_time_time: '',
     max_players: '4',
     handicap_requirement: 'Weekend Hack',
-    visibility_scope: 'public'
+    visibility_scope: 'public',
+    group_id: ''
   })
-
-  const displayName = useMemo(() => {
-    return (
-      profile?.first_name ||
-      profile?.full_name?.split(' ')[0] ||
-      user?.user_metadata?.first_name ||
-      user?.email?.split('@')[0] ||
-      'Golfer'
-    )
-  }, [profile, user])
 
   const weatherQuery = useMemo(() => {
     const locationText = profile?.location || nextTeeTime?.location || ''
@@ -197,17 +262,17 @@ export default function HomeTab() {
     if (!user?.id) return
 
     try {
-      const [myRoundsResult, openingsResult, feedResult] = await Promise.allSettled([
+      const [myRoundsResult, feedResult, groupsResult] = await Promise.allSettled([
         apiGet<TeeTime[]>(`/api/tee-times?action=user&user_id=${encodeURIComponent(user.id)}`),
-        apiGet<TeeTime[]>(`/api/tee-times?action=available&user_id=${encodeURIComponent(user.id)}`),
-        apiGet<{ activities: Activity[] }>(
-          `/api/activities?action=feed&user_id=${encodeURIComponent(user.id)}&limit=6`
+        fetchNetworkFeed(user.id, 20),
+        apiGet<{ success: boolean; groups: GroupOption[] }>(
+          `/api/groups?user_id=${encodeURIComponent(user.id)}`
         )
       ])
 
       const myRounds = myRoundsResult.status === 'fulfilled' ? myRoundsResult.value : []
-      const openings = openingsResult.status === 'fulfilled' ? openingsResult.value : []
-      const feed = feedResult.status === 'fulfilled' ? feedResult.value : { activities: [] }
+      const feed = feedResult.status === 'fulfilled' ? feedResult.value : []
+      const groups = groupsResult.status === 'fulfilled' ? groupsResult.value : { groups: [] }
 
       const futureMyRounds = (myRounds || [])
         .filter((teeTime) => teeTime.tee_time_date)
@@ -217,10 +282,11 @@ export default function HomeTab() {
           return aValue.localeCompare(bValue)
         })
 
+      setMyTeeTimes(myRounds || [])
       const nextMine = futureMyRounds[0] || null
       setNextTeeTime(nextMine)
-      setAvailableTeeTimes((openings || []).filter((teeTime) => teeTime.creator_id !== user.id))
-      setActivityFeed(feed.activities || [])
+      setActivityFeed(feed || [])
+      setMyGroups(groups.groups || [])
     } finally {
       setBusy(false)
       setRefreshing(false)
@@ -270,6 +336,13 @@ export default function HomeTab() {
     }
   }, [loadHome, user?.id])
 
+  useFocusEffect(
+    useCallback(() => {
+      if (!user?.id) return
+      void Promise.all([loadHome(), loadHeaderCounts()])
+    }, [loadHeaderCounts, loadHome, user?.id])
+  )
+
   useEffect(() => {
     void loadWeather()
   }, [loadWeather])
@@ -295,6 +368,12 @@ export default function HomeTab() {
     }
   }, [params.compose])
 
+  useEffect(() => {
+    if (!params.refresh || !user?.id) return
+    void Promise.all([loadHome(), loadHeaderCounts()])
+    router.setParams({ refresh: undefined })
+  }, [loadHeaderCounts, loadHome, params.refresh, user?.id])
+
   if (!loading && !user) {
     return <Redirect href="/welcome" />
   }
@@ -308,7 +387,8 @@ export default function HomeTab() {
       tee_time_time: '',
       max_players: '4',
       handicap_requirement: 'Weekend Hack',
-      visibility_scope: 'public'
+      visibility_scope: 'public',
+      group_id: ''
     })
     setSelectedDate(null)
     setSelectedTime(null)
@@ -342,7 +422,8 @@ export default function HomeTab() {
         tee_time_time: selectedTime ? toApiTime(selectedTime) : form.tee_time_time.trim(),
         max_players: Number(form.max_players) || 4,
         handicap_requirement: form.handicap_requirement.trim() || 'any',
-        visibility_scope: form.visibility_scope
+        visibility_scope: form.visibility_scope,
+        group_id: form.visibility_scope === 'group' ? form.group_id : null
       })
 
       if (response.tee_time) {
@@ -402,23 +483,356 @@ export default function HomeTab() {
     setForm((current) => ({ ...current, tee_time_time: formatFormTime(value) }))
   }
 
-  const handleJoinTeeTime = async (teeTimeId: string) => {
+  const handleToggleFeedLike = async (activity: Activity) => {
     if (!user?.id) return
 
-    setJoiningId(teeTimeId)
+    const liked = !!activity.liked_by_user
+    const previousLikeCount = activity.like_count || 0
+    setActivityFeed((current) =>
+      current.map((item) =>
+        item.id === activity.id
+          ? {
+              ...item,
+              liked_by_user: !liked,
+              like_count: Math.max((item.like_count || 0) + (liked ? -1 : 1), 0)
+            }
+          : item
+      )
+    )
+
     try {
-      await apiPost('/api/tee-times', {
-        action: 'apply',
-        tee_time_id: teeTimeId,
-        applicant_id: user.id
+      if (liked) {
+        const { error } = await mobileSupabase
+          .from('activity_likes')
+          .delete()
+          .eq('activity_id', activity.id)
+          .eq('user_id', user.id)
+
+        if (error) {
+          throw new Error(error.message || 'Unable to unlike activity.')
+        }
+      } else {
+        const { error } = await mobileSupabase
+          .from('activity_likes')
+          .upsert({ activity_id: activity.id, user_id: user.id }, { onConflict: 'activity_id,user_id', ignoreDuplicates: true })
+
+        if (error) {
+          throw new Error(error.message || 'Unable to like activity.')
+        }
+      }
+
+      const response = await getDirectInteractionSummary(activity.id, user.id)
+
+      setActivityFeed((current) =>
+        current.map((item) =>
+          item.id === activity.id
+            ? {
+                ...item,
+                liked_by_user: response.liked_by_user ?? !liked,
+                like_count: response.like_count ?? previousLikeCount
+              }
+            : item
+        )
+      )
+    } catch {
+      setActivityFeed((current) =>
+        current.map((item) =>
+          item.id === activity.id
+            ? {
+                ...item,
+                liked_by_user: liked,
+                like_count: previousLikeCount
+              }
+            : item
+        )
+      )
+    }
+  }
+
+  const handlePostFeedComment = async (activityId: string) => {
+    if (!user?.id) return
+    const comment = commentDrafts[activityId]?.trim()
+    if (!comment) return
+
+    try {
+      const { error } = await mobileSupabase.from('activity_comments').insert({
+        activity_id: activityId,
+        user_id: user.id,
+        comment
       })
-      Alert.alert('Request sent', 'The tee time host has been notified.')
+
+      if (error) {
+        throw new Error(error.message || 'Unable to comment on this post.')
+      }
+
+      const summary = await getDirectInteractionSummary(activityId, user.id)
+
+      setCommentDrafts((current) => ({ ...current, [activityId]: '' }))
+      setCommentingOn(null)
+      setActivityFeed((current) =>
+        current.map((item) =>
+          item.id === activityId
+            ? {
+                ...item,
+                comment_count: summary.comment_count,
+                like_count: summary.like_count,
+                liked_by_user: summary.liked_by_user
+              }
+            : item
+        )
+      )
+    } catch (error) {
+      Alert.alert('Unable to comment', error instanceof Error ? error.message : 'Please try again.')
+    }
+  }
+
+  const handleEditFeedPost = (activity: Activity) => {
+    const imageUrl = typeof activity.metadata?.image_url === 'string' ? activity.metadata.image_url : ''
+    const caption = typeof activity.metadata?.caption === 'string' ? activity.metadata.caption : activity.description || ''
+
+    router.push({
+      pathname: '/post-photo',
+      params: {
+        activity_id: activity.id,
+        image_url: imageUrl,
+        caption
+      }
+    })
+  }
+
+  const handleOpenRoundFromFeed = (activity: Activity) => {
+    const roundId =
+      typeof activity.metadata?.round_id === 'string'
+        ? activity.metadata.round_id
+        : typeof activity.related_id === 'string' && activity.related_type === 'round'
+          ? activity.related_id
+          : ''
+
+    if (!roundId) {
+      return
+    }
+
+    router.push(`/rounds/${roundId}`)
+  }
+
+  const handleJoinTeeTimeFromFeed = async (activity: Activity) => {
+    if (!user?.id || typeof activity.related_id !== 'string') return
+
+    setJoiningFeedTeeTimeId(activity.id)
+
+    try {
+      const response = await apiPost<{ success?: boolean; already_joined?: boolean; message?: string }>(
+        '/api/tee-times',
+        {
+          action: 'join',
+          tee_time_id: activity.related_id,
+          user_id: user.id
+        }
+      )
+
+      Alert.alert(
+        response.already_joined ? 'Already joined' : 'Joined tee time',
+        response.message || (response.already_joined ? 'You are already in this round.' : 'You are in for this tee time.')
+      )
+      setBusy(true)
       await Promise.all([loadHome(), loadHeaderCounts()])
     } catch (error) {
       Alert.alert('Unable to join tee time', error instanceof Error ? error.message : 'Please try again.')
     } finally {
-      setJoiningId(null)
+      setJoiningFeedTeeTimeId(null)
     }
+  }
+
+  const renderFeedContent = (item: Activity) => {
+    const actorName =
+      item.user_id === user?.id ? 'You' : item.actor?.first_name || item.actor?.username || 'A golfer'
+    const actorLabel = item.actor?.first_name || item.actor?.username || 'A golfer'
+    const courseName =
+      typeof item.metadata?.course_name === 'string' ? item.metadata.course_name : ''
+    const location =
+      typeof item.metadata?.location === 'string' ? item.metadata.location : ''
+    const teeDate =
+      typeof item.metadata?.tee_time_date === 'string' ? item.metadata.tee_time_date : ''
+    const teeTime =
+      typeof item.metadata?.tee_time_time === 'string' ? item.metadata.tee_time_time : ''
+    const score =
+      typeof item.metadata?.score === 'number'
+        ? item.metadata.score
+        : typeof item.metadata?.score === 'string'
+          ? Number(item.metadata.score)
+          : null
+    const handicap =
+      typeof item.metadata?.handicap === 'number'
+        ? item.metadata.handicap
+        : typeof item.metadata?.handicap === 'string'
+          ? item.metadata.handicap
+          : null
+    const holesPlayed =
+      typeof item.metadata?.holes_played === 'number'
+        ? item.metadata.holes_played
+        : typeof item.metadata?.holes_played === 'string'
+          ? Number(item.metadata.holes_played)
+          : null
+    const avgPerHole =
+      typeof item.metadata?.average_score_per_hole === 'number'
+        ? item.metadata.average_score_per_hole
+        : typeof item.metadata?.average_score_per_hole === 'string'
+          ? Number(item.metadata.average_score_per_hole)
+          : null
+    const caption =
+      typeof item.metadata?.caption === 'string'
+        ? item.metadata.caption.trim()
+        : typeof item.description === 'string'
+          ? item.description.trim()
+          : ''
+    const imageUrl =
+      typeof item.metadata?.image_url === 'string' ? item.metadata.image_url : ''
+
+    if (item.activity_type === 'tee_time_created') {
+      const teeDateLabel = teeDate
+        ? new Date(`${teeDate}T${teeTime || '12:00:00'}`).toLocaleDateString(undefined, {
+            month: 'short',
+            day: 'numeric'
+          })
+        : 'Upcoming'
+      const teeTimeLabel =
+        teeDate && teeTime
+          ? new Date(`${teeDate}T${teeTime}`).toLocaleTimeString(undefined, {
+              hour: 'numeric',
+              minute: '2-digit'
+            })
+          : teeTime
+
+      return (
+        <View style={styles.feedSpecialCard}>
+          <View style={styles.feedProfileHeader}>
+            <Avatar
+              label={actorLabel}
+              size={40}
+              uri={item.actor?.avatar_url || undefined}
+            />
+            <View style={styles.feedProfileHeaderCopy}>
+              <Text style={styles.feedProfileName}>{actorName}</Text>
+              <Text style={styles.feedProfileMeta}>Posted a tee time</Text>
+            </View>
+            <Text style={styles.feedTimestamp}>{formatFeedTimestamp(item.created_at)}</Text>
+          </View>
+          <Text style={styles.feedSpecialTitle}>{courseName || 'Open tee time'}</Text>
+          <Text style={styles.feedSpecialMeta}>
+            {[teeDateLabel, teeTimeLabel, location].filter(Boolean).join(' • ')}
+          </Text>
+          <View style={styles.feedSpecialActions}>
+            <Pressable onPress={() => router.push('/tee-times')} style={styles.feedSecondaryButton}>
+              <Text style={styles.feedSecondaryButtonText}>View Tee Times</Text>
+            </Pressable>
+            {item.user_id !== user?.id ? (
+              <Pressable
+                onPress={() => void handleJoinTeeTimeFromFeed(item)}
+                style={styles.feedPrimaryButton}
+              >
+                <Text style={styles.feedPrimaryButtonText}>
+                  {joiningFeedTeeTimeId === item.id ? 'Joining...' : 'Join'}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
+      )
+    }
+
+    if (item.activity_type === 'photo_posted') {
+      return (
+        <>
+          <View style={styles.feedProfileHeader}>
+            <Avatar
+              label={actorLabel}
+              size={40}
+              uri={item.actor?.avatar_url || undefined}
+            />
+            <View style={styles.feedProfileHeaderCopy}>
+              <Text style={styles.feedProfileName}>{actorName}</Text>
+            </View>
+            <Text style={styles.feedTimestamp}>{formatFeedTimestamp(item.created_at)}</Text>
+            {item.user_id === user?.id ? (
+              <Pressable onPress={() => handleEditFeedPost(item)} style={styles.feedEditButton}>
+                <Ionicons color={palette.aqua} name="create-outline" size={16} />
+              </Pressable>
+            ) : null}
+          </View>
+          {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.feedImage} /> : null}
+          {caption ? <Text style={styles.feedPhotoCaption}>{caption}</Text> : null}
+        </>
+      )
+    }
+
+    if (item.activity_type === 'round_logged') {
+      return (
+        <Pressable onPress={() => handleOpenRoundFromFeed(item)} style={styles.feedSpecialCard}>
+          <View style={styles.feedSpecialHeader}>
+            <Text style={styles.feedSpecialEyebrow}>{actorName} logged a round</Text>
+            <Text style={styles.feedTimestamp}>{formatFeedTimestamp(item.created_at)}</Text>
+          </View>
+          <View style={styles.scoreHeroRow}>
+            <View>
+              <Text style={styles.feedSpecialTitle}>{courseName || 'Golf round'}</Text>
+              <Text style={styles.feedSpecialMeta}>
+                {[
+                  holesPlayed ? `${holesPlayed} holes` : '',
+                  handicap !== null && handicap !== '' ? `HCP ${handicap}` : '',
+                  avgPerHole ? `${avgPerHole.toFixed(1)}/hole` : ''
+                ]
+                  .filter(Boolean)
+                  .join(' • ')}
+              </Text>
+            </View>
+            <View style={styles.scoreBadge}>
+              <Text style={styles.scoreBadgeValue}>{score ?? '--'}</Text>
+            </View>
+          </View>
+        </Pressable>
+      )
+    }
+
+    if (item.activity_type === 'bag_updated') {
+      return (
+        <View style={styles.feedSpecialCard}>
+          <View style={styles.feedProfileHeader}>
+            <Avatar
+              label={actorLabel}
+              size={40}
+              uri={item.actor?.avatar_url || undefined}
+            />
+            <View style={styles.feedProfileHeaderCopy}>
+              <Text style={styles.feedProfileName}>{actorName}</Text>
+            </View>
+            <Text style={styles.feedTimestamp}>{formatFeedTimestamp(item.created_at)}</Text>
+          </View>
+          <Text style={styles.feedSpecialMeta}>{describeBagUpdate(item)}</Text>
+        </View>
+      )
+    }
+
+    return (
+      <>
+        <View style={styles.feedHeader}>
+          <Avatar
+            label={actorLabel}
+            size={40}
+            uri={item.actor?.avatar_url || undefined}
+          />
+          <View style={styles.feedHeaderCopy}>
+            <Text style={styles.feedTitle}>
+              {actorName} • {item.title || 'Activity'}
+            </Text>
+            {item.description ? <Text style={styles.feedBody}>{item.description}</Text> : null}
+          </View>
+          <Text style={styles.feedTimestamp}>{formatFeedTimestamp(item.created_at)}</Text>
+        </View>
+        {imageUrl ? (
+          <Image source={{ uri: imageUrl }} style={styles.feedImage} />
+        ) : null}
+      </>
+    )
   }
 
   return (
@@ -504,6 +918,33 @@ export default function HomeTab() {
             </Text>
           )}
         </View>
+
+        <Pressable onPress={() => router.push('/tee-times')} style={styles.myTeeTimesCard}>
+          <View style={styles.myTeeTimesHeader}>
+            <View style={styles.myTeeTimesTitleRow}>
+              <Ionicons color={palette.aqua} name="golf-outline" size={16} />
+              <Text style={styles.myTeeTimesTitle}>My Tee Times</Text>
+            </View>
+            <View style={styles.myTeeTimesCountPill}>
+              <Text style={styles.myTeeTimesCountText}>{myTeeTimes.length}</Text>
+            </View>
+          </View>
+          {nextTeeTime ? (
+            <View style={styles.myTeeTimesBody}>
+              <Text numberOfLines={1} style={styles.myTeeTimesCourse}>
+                {nextTeeTime.course_name || 'Open tee time'}
+              </Text>
+              <Text numberOfLines={1} style={styles.myTeeTimesMeta}>
+                {formatUpcomingTeeTime(nextTeeTime)}
+                {(nextTeeTime.location || nextTeeTime.course_location)
+                  ? ` • ${nextTeeTime.location || nextTeeTime.course_location}`
+                  : ''}
+              </Text>
+            </View>
+          ) : (
+            <Text style={styles.myTeeTimesEmpty}>Tap to see your tee times and post the next one.</Text>
+          )}
+        </Pressable>
 
         {showCreateForm ? (
           <View style={styles.formCard}>
@@ -653,9 +1094,10 @@ export default function HomeTab() {
                 value={form.visibility_scope}
               />
               <View style={styles.segmentRow}>
-                {[
-                  { label: 'Public', value: 'public' },
-                  { label: 'Connections', value: 'connections' }
+                  {[
+                    { label: 'Public', value: 'public' },
+                  { label: 'Connections', value: 'connections' },
+                  { label: 'Group', value: 'group' }
                 ].map((option) => {
                   const active = form.visibility_scope === option.value
 
@@ -672,6 +1114,28 @@ export default function HomeTab() {
                   )
                 })}
               </View>
+              {form.visibility_scope === 'group' ? (
+                <View style={styles.groupPicker}>
+                  {myGroups.length === 0 ? (
+                    <Text style={styles.body}>Join or create a group first, then you can post tee times directly to it.</Text>
+                  ) : null}
+                  {myGroups.map((group) => {
+                    const active = form.group_id === group.id
+
+                    return (
+                      <Pressable
+                        key={group.id}
+                        onPress={() => setForm((current) => ({ ...current, group_id: group.id }))}
+                        style={[styles.groupOption, active && styles.groupOptionActive]}
+                      >
+                        <Text style={[styles.groupOptionText, active && styles.groupOptionTextActive]}>
+                          {group.name}
+                        </Text>
+                      </Pressable>
+                    )
+                  })}
+                </View>
+              ) : null}
             </View>
             <PrimaryButton
               label={editingTeeTimeId ? 'Save Tee Time' : 'Publish Tee Time'}
@@ -691,134 +1155,55 @@ export default function HomeTab() {
           </View>
         ) : null}
 
-        <View style={styles.row}>
-          <StatCard
-            label={`${displayName}'s Next Tee Times`}
-            value={nextTeeTime ? nextTeeTime.course_name || 'Upcoming round' : 'No round yet'}
-            detail={
-              nextTeeTime
-                ? formatDisplayDate(nextTeeTime.tee_time_date, nextTeeTime.tee_time_time)
-                : 'Post one from the web app or the next mobile screen.'
-            }
-            onPress={() => router.push('/tee-times')}
-          />
-        </View>
-
-        {nextTeeTime ? (
-          <Pressable onPress={() => router.push('/tee-times')} style={styles.myTeeTimeCard}>
-            <View style={styles.myTeeTimeHeader}>
-              <View style={styles.myTeeTimeCopy}>
-                <Text style={styles.cardAccent}>My tee time</Text>
-                <Text style={styles.myTeeTimeTitle}>{nextTeeTime.course_name || 'Upcoming round'}</Text>
-                <Text style={styles.teeTimeMeta}>
-                  {formatDisplayDate(nextTeeTime.tee_time_date, nextTeeTime.tee_time_time)}
-                </Text>
-                {nextTeeTime.location || nextTeeTime.course_location ? (
-                  <Text style={styles.teeTimeMeta}>{nextTeeTime.location || nextTeeTime.course_location}</Text>
-                ) : null}
-              </View>
-              <View style={styles.joinedAvatarStack}>
-                {(nextTeeTime.accepted_players || []).slice(0, 3).map((player, index) => (
-                  <View key={player.id || index} style={[styles.joinedAvatar, { marginLeft: index ? -10 : 0 }]}>
-                    <Text style={styles.joinedAvatarText}>
-                      {(player.first_name || player.username || 'G').slice(0, 1).toUpperCase()}
-                    </Text>
-                  </View>
-                ))}
-                {!(nextTeeTime.accepted_players || []).length ? (
-                  <View style={styles.joinedAvatar}>
-                    <Ionicons color={palette.textMuted} name="person-add-outline" size={16} />
-                  </View>
-                ) : null}
-              </View>
+        <View style={styles.card}>
+          <Text style={styles.feedCardAccent}>Network feed</Text>
+          {busy ? <ActivityIndicator color={palette.aqua} /> : null}
+          {!busy && activityFeed.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyTitle}>No fresh movement yet</Text>
+              <Text style={styles.body}>
+                Tee times, rounds, joins, posts, and the rest of your connections&apos; activity will show up here.
+              </Text>
             </View>
-            <Text style={styles.myTeeTimeFootnote}>
-              {(nextTeeTime.accepted_players || []).length
-                ? `${nextTeeTime.accepted_players?.length} golfer${nextTeeTime.accepted_players?.length === 1 ? '' : 's'} joined`
-                : 'Joined golfers will show here with their profile icon.'}
-            </Text>
-          </Pressable>
-        ) : null}
-
-        <View style={styles.panelSwitcher}>
-          <Pressable
-            onPress={() => setActiveHomePanel('tee-times')}
-            style={[styles.panelTab, activeHomePanel === 'tee-times' && styles.panelTabActive]}
-          >
-            <Text style={[styles.panelTabLabel, activeHomePanel === 'tee-times' && styles.panelTabLabelActive]}>
-              Tee Times
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setActiveHomePanel('network')}
-            style={[styles.panelTab, activeHomePanel === 'network' && styles.panelTabActive]}
-          >
-            <Text style={[styles.panelTabLabel, activeHomePanel === 'network' && styles.panelTabLabelActive]}>
-              Network Feed
-            </Text>
-          </Pressable>
-        </View>
-
-        {activeHomePanel === 'tee-times' ? (
-          <View style={styles.card}>
-            <Text style={styles.cardAccent}>Available tee times</Text>
-            <Text style={styles.sectionTitle}>Join a round</Text>
-            {busy ? <ActivityIndicator color={palette.aqua} /> : null}
-            {!busy && availableTeeTimes.length === 0 ? (
-              <View style={styles.emptyCard}>
-                <Text style={styles.emptyTitle}>No open rounds right now</Text>
-                <Text style={styles.body}>When golfers post public tee times, they will show up here.</Text>
-              </View>
-            ) : null}
-            {!busy
-              ? availableTeeTimes.map((teeTime) => (
-                  <View key={teeTime.id} style={styles.teeTimeCard}>
-                    <View style={styles.teeTimeCopy}>
-                      <Text style={styles.teeTimeTitle}>{teeTime.course_name || 'Open tee time'}</Text>
-                      <Text style={styles.teeTimeMeta}>
-                        {formatDisplayDate(teeTime.tee_time_date, teeTime.tee_time_time)}
+          ) : null}
+          {!busy
+            ? activityFeed.map((item) => (
+                <View key={item.id} style={styles.feedItem}>
+                  {renderFeedContent(item)}
+                  <View style={styles.feedActions}>
+                    <Pressable onPress={() => void handleToggleFeedLike(item)} style={styles.feedActionButton}>
+                      <Ionicons
+                        color={palette.aqua}
+                        name={item.liked_by_user ? 'heart' : 'heart-outline'}
+                        size={16}
+                      />
+                      <Text style={styles.feedActionText}>
+                        {item.like_count || 0}
                       </Text>
-                      <Text style={styles.teeTimeMeta}>
-                        {teeTime.available_spots ??
-                          Math.max((teeTime.max_players || 0) - (teeTime.current_players || 0), 0)}{' '}
-                        spots open
-                      </Text>
+                    </Pressable>
+                    <Pressable onPress={() => setCommentingOn(commentingOn === item.id ? null : item.id)} style={styles.feedActionButton}>
+                      <Ionicons color={palette.aqua} name="chatbubble-outline" size={16} />
+                      <Text style={styles.feedActionText}>{item.comment_count || 0}</Text>
+                    </Pressable>
+                  </View>
+                  {commentingOn === item.id ? (
+                    <View style={styles.commentComposer}>
+                      <TextInput
+                        onChangeText={(value) =>
+                          setCommentDrafts((current) => ({ ...current, [item.id]: value }))
+                        }
+                        placeholder="Write a comment..."
+                        placeholderTextColor={palette.textMuted}
+                        style={styles.commentInput}
+                        value={commentDrafts[item.id] || ''}
+                      />
+                      <PrimaryButton label="Post" onPress={() => void handlePostFeedComment(item.id)} />
                     </View>
-                    <PrimaryButton
-                      label="Join"
-                      loading={joiningId === teeTime.id}
-                      onPress={() => void handleJoinTeeTime(teeTime.id)}
-                    />
-                  </View>
-                ))
-              : null}
-          </View>
-        ) : (
-          <View style={styles.card}>
-            <Text style={styles.cardAccent}>Network feed</Text>
-            <Text style={styles.sectionTitle}>What your network is doing</Text>
-            {busy ? <ActivityIndicator color={palette.aqua} /> : null}
-            {!busy && activityFeed.length === 0 ? (
-              <View style={styles.emptyCard}>
-                <Text style={styles.emptyTitle}>No fresh movement yet</Text>
-                <Text style={styles.body}>
-                  Once your connections post tee times or rounds, their movement will show up here.
-                </Text>
-              </View>
-            ) : null}
-            {!busy
-              ? activityFeed.slice(0, 4).map((item) => (
-                  <View key={item.id} style={styles.feedItem}>
-                    <Text style={styles.feedTitle}>
-                      {item.actor?.first_name || item.actor?.username || 'A golfer'} •{' '}
-                      {item.title || 'Activity'}
-                    </Text>
-                    {item.description ? <Text style={styles.feedBody}>{item.description}</Text> : null}
-                  </View>
-                ))
-              : null}
-          </View>
-        )}
+                  ) : null}
+                </View>
+              ))
+            : null}
+        </View>
         </ScrollView>
 
       </View>
@@ -835,13 +1220,13 @@ const styles = StyleSheet.create({
     flex: 1
   },
   content: {
-    gap: 18,
+    gap: 14,
     padding: 20,
     paddingBottom: 120
   },
   headerShell: {
     justifyContent: 'center',
-    minHeight: 128,
+    minHeight: 74,
     position: 'relative'
   },
   headerActions: {
@@ -862,7 +1247,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     left: 0,
     position: 'absolute',
-    top: 14,
+    top: 2,
     width: 42,
     zIndex: 10
   },
@@ -876,7 +1261,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'absolute',
     right: 0,
-    top: 14,
+    top: 2,
     width: 42,
     zIndex: 10
   },
@@ -898,59 +1283,12 @@ const styles = StyleSheet.create({
   weatherCard: {
     backgroundColor: palette.card,
     borderColor: palette.border,
-    borderRadius: 28,
+    borderRadius: 24,
     borderWidth: 1,
-    gap: 10,
+    gap: 8,
     marginTop: -8,
-    paddingHorizontal: 16,
-    paddingVertical: 14
-  },
-  myTeeTimeCard: {
-    backgroundColor: palette.card,
-    borderColor: 'rgba(103,232,249,0.22)',
-    borderRadius: 26,
-    borderWidth: 1,
-    gap: 12,
-    padding: 18
-  },
-  myTeeTimeHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 12,
-    justifyContent: 'space-between'
-  },
-  myTeeTimeCopy: {
-    flex: 1,
-    gap: 5
-  },
-  myTeeTimeTitle: {
-    color: palette.text,
-    fontSize: 20,
-    fontWeight: '800'
-  },
-  joinedAvatarStack: {
-    alignItems: 'center',
-    flexDirection: 'row'
-  },
-  joinedAvatar: {
-    alignItems: 'center',
-    backgroundColor: palette.cardSoft,
-    borderColor: 'rgba(255,255,255,0.18)',
-    borderRadius: 999,
-    borderWidth: 1,
-    height: 34,
-    justifyContent: 'center',
-    width: 34
-  },
-  joinedAvatarText: {
-    color: palette.text,
-    fontSize: 12,
-    fontWeight: '800'
-  },
-  myTeeTimeFootnote: {
-    color: palette.textMuted,
-    fontSize: 13,
-    lineHeight: 18
+    paddingHorizontal: 14,
+    paddingVertical: 12
   },
   weatherHeader: {
     alignItems: 'center',
@@ -959,7 +1297,7 @@ const styles = StyleSheet.create({
   },
   weatherHeaderCopy: {
     flex: 1,
-    gap: 4
+    gap: 2
   },
   weatherEyebrow: {
     color: palette.aqua,
@@ -970,68 +1308,110 @@ const styles = StyleSheet.create({
   },
   weatherLocation: {
     color: palette.text,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700'
   },
   weatherTemp: {
     color: palette.text,
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '800'
   },
   weatherDescription: {
     color: palette.textMuted,
-    fontSize: 14,
-    lineHeight: 19,
+    fontSize: 13,
+    lineHeight: 18,
     textTransform: 'capitalize'
   },
   weatherMetrics: {
     flexDirection: 'row',
-    gap: 8
+    gap: 6
   },
   weatherMetric: {
     backgroundColor: palette.cardSoft,
     borderColor: palette.border,
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
     flex: 1,
     gap: 2,
-    paddingHorizontal: 10,
-    paddingVertical: 9
+    paddingHorizontal: 8,
+    paddingVertical: 7
   },
   weatherMetricLabel: {
     color: palette.textMuted,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
     textTransform: 'uppercase'
   },
   weatherMetricValue: {
     color: palette.text,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700'
   },
   weatherFallback: {
     color: palette.textMuted,
-    fontSize: 15,
-    lineHeight: 22
+    fontSize: 13,
+    lineHeight: 18
   },
-  weatherLocationButton: {
+  myTeeTimesCard: {
+    backgroundColor: palette.card,
+    borderColor: palette.border,
+    borderRadius: 22,
+    borderWidth: 1,
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12
+  },
+  myTeeTimesHeader: {
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(103,232,249,0.08)',
+    flexDirection: 'row',
+    justifyContent: 'space-between'
+  },
+  myTeeTimesTitleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8
+  },
+  myTeeTimesTitle: {
+    color: palette.text,
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase'
+  },
+  myTeeTimesCountPill: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(103,232,249,0.10)',
     borderColor: 'rgba(103,232,249,0.18)',
     borderRadius: 999,
     borderWidth: 1,
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 8
+    justifyContent: 'center',
+    minWidth: 30,
+    paddingHorizontal: 9,
+    paddingVertical: 5
   },
-  weatherLocationButtonText: {
+  myTeeTimesCountText: {
     color: palette.aqua,
-    fontSize: 13,
+    fontSize: 12,
+    fontWeight: '800'
+  },
+  myTeeTimesBody: {
+    gap: 2
+  },
+  myTeeTimesCourse: {
+    color: palette.text,
+    fontSize: 15,
     fontWeight: '700'
+  },
+  myTeeTimesMeta: {
+    color: palette.textMuted,
+    fontSize: 13,
+    lineHeight: 18
+  },
+  myTeeTimesEmpty: {
+    color: palette.textMuted,
+    fontSize: 13,
+    lineHeight: 18
   },
   formCard: {
     backgroundColor: palette.card,
@@ -1070,39 +1450,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18
   },
-  row: {
-    gap: 12
-  },
-  panelSwitcher: {
-    backgroundColor: palette.bgElevated,
-    borderColor: palette.border,
-    borderRadius: 999,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 8,
-    padding: 6
-  },
-  panelTab: {
-    alignItems: 'center',
-    borderRadius: 999,
-    flex: 1,
-    justifyContent: 'center',
-    minHeight: 42,
-    paddingHorizontal: 14
-  },
-  panelTabActive: {
-    backgroundColor: palette.card
-  },
-  panelTabLabel: {
-    color: palette.textMuted,
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.6,
-    textTransform: 'uppercase'
-  },
-  panelTabLabelActive: {
-    color: palette.text
-  },
   card: {
     backgroundColor: palette.card,
     borderColor: palette.border,
@@ -1115,6 +1462,13 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 22,
     fontWeight: '700'
+  },
+  feedCardAccent: {
+    color: palette.aqua,
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textAlign: 'center'
   },
   body: {
     color: palette.textMuted,
@@ -1256,6 +1610,29 @@ const styles = StyleSheet.create({
   segmentLabelActive: {
     color: palette.aqua
   },
+  groupPicker: {
+    gap: 8
+  },
+  groupOption: {
+    backgroundColor: palette.cardSoft,
+    borderColor: palette.border,
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12
+  },
+  groupOptionActive: {
+    backgroundColor: 'rgba(103,232,249,0.14)',
+    borderColor: 'rgba(103,232,249,0.28)'
+  },
+  groupOptionText: {
+    color: palette.textMuted,
+    fontSize: 14,
+    fontWeight: '700'
+  },
+  groupOptionTextActive: {
+    color: palette.aqua
+  },
   flexInput: {
     flex: 1
   },
@@ -1266,6 +1643,110 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 6,
     padding: 14
+  },
+  feedSpecialCard: {
+    backgroundColor: 'rgba(6,20,16,0.28)',
+    borderColor: 'rgba(103,232,249,0.14)',
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 10,
+    padding: 14
+  },
+  feedSpecialHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between'
+  },
+  feedSpecialEyebrow: {
+    color: palette.aqua,
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase'
+  },
+  feedSpecialTitle: {
+    color: palette.text,
+    fontSize: 22,
+    fontWeight: '800'
+  },
+  feedSpecialMeta: {
+    color: palette.textMuted,
+    fontSize: 14,
+    lineHeight: 20
+  },
+  feedSpecialActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 2
+  },
+  feedProfileHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12
+  },
+  feedProfileHeaderCopy: {
+    flex: 1,
+    gap: 2,
+    minWidth: 0
+  },
+  feedProfileName: {
+    color: palette.text,
+    fontSize: 15,
+    fontWeight: '800'
+  },
+  feedProfileMeta: {
+    color: palette.textMuted,
+    fontSize: 13,
+    fontWeight: '600'
+  },
+  feedPrimaryButton: {
+    alignItems: 'center',
+    backgroundColor: palette.aqua,
+    borderRadius: 999,
+    justifyContent: 'center',
+    minHeight: 40,
+    paddingHorizontal: 16
+  },
+  feedPrimaryButtonText: {
+    color: palette.bg,
+    fontSize: 13,
+    fontWeight: '800'
+  },
+  feedSecondaryButton: {
+    alignItems: 'center',
+    backgroundColor: palette.card,
+    borderColor: palette.border,
+    borderRadius: 999,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 40,
+    paddingHorizontal: 16
+  },
+  feedSecondaryButtonText: {
+    color: palette.text,
+    fontSize: 13,
+    fontWeight: '700'
+  },
+  feedHeader: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 12
+  },
+  feedHeaderCopy: {
+    flex: 1,
+    gap: 4,
+    paddingTop: 2
+  },
+  feedEditButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(103,232,249,0.08)',
+    borderColor: 'rgba(103,232,249,0.18)',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 32,
+    justifyContent: 'center',
+    marginLeft: 8,
+    width: 32
   },
   emptyCard: {
     backgroundColor: palette.cardSoft,
@@ -1285,30 +1766,84 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700'
   },
+  feedTimestamp: {
+    color: palette.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 'auto',
+    textAlign: 'right'
+  },
   feedBody: {
     color: palette.textMuted,
     fontSize: 14,
     lineHeight: 20
   },
-  teeTimeCard: {
-    backgroundColor: palette.cardSoft,
-    borderColor: palette.border,
-    borderRadius: 20,
-    borderWidth: 1,
-    gap: 12,
-    padding: 16
+  feedImage: {
+    borderRadius: 18,
+    height: 220,
+    marginTop: 8,
+    width: '100%'
   },
-  teeTimeCopy: {
-    gap: 4
-  },
-  teeTimeTitle: {
+  feedPhotoCaption: {
     color: palette.text,
-    fontSize: 18,
-    fontWeight: '700'
-  },
-  teeTimeMeta: {
-    color: palette.textMuted,
     fontSize: 14,
-    lineHeight: 20
+    lineHeight: 20,
+    marginTop: 10
+  },
+  scoreHeroRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 16,
+    justifyContent: 'space-between'
+  },
+  scoreBadge: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(103,232,249,0.12)',
+    borderColor: 'rgba(103,232,249,0.22)',
+    borderRadius: 18,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 74,
+    minWidth: 74,
+    paddingHorizontal: 14
+  },
+  scoreBadgeValue: {
+    color: palette.text,
+    fontSize: 28,
+    fontWeight: '900'
+  },
+  feedActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8
+  },
+  feedActionButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(103,232,249,0.08)',
+    borderColor: 'rgba(103,232,249,0.18)',
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8
+  },
+  feedActionText: {
+    color: palette.aqua,
+    fontSize: 12,
+    fontWeight: '800'
+  },
+  commentComposer: {
+    gap: 8,
+    marginTop: 8
+  },
+  commentInput: {
+    backgroundColor: palette.card,
+    borderColor: palette.border,
+    borderRadius: 16,
+    borderWidth: 1,
+    color: palette.text,
+    minHeight: 48,
+    paddingHorizontal: 14
   },
 })

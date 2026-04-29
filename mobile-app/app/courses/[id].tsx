@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Redirect, useLocalSearchParams } from 'expo-router'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -14,10 +14,12 @@ import {
   TextInput,
   View
 } from 'react-native'
+import * as ImagePicker from 'expo-image-picker'
 import { Avatar } from '@/components/Avatar'
 import { BrandHeader } from '@/components/BrandHeader'
 import { PrimaryButton } from '@/components/PrimaryButton'
 import { apiGet, apiPost } from '@/lib/api'
+import { uploadImageToStorage } from '@/lib/supabase'
 import { palette } from '@/lib/theme'
 import { useAuth } from '@/providers/AuthProvider'
 
@@ -25,6 +27,11 @@ type CourseReview = {
   id: string
   rating?: number | null
   comment?: string | null
+  course_condition_rating?: number | null
+  staff_rating?: number | null
+  price_rating?: number | null
+  difficulty_rating?: number | null
+  photo_url?: string | null
   created_at?: string
   user_profiles?: {
     first_name?: string | null
@@ -60,9 +67,12 @@ const reviewCategories = [
 export default function CourseScreen() {
   const { loading, user } = useAuth()
   const { id } = useLocalSearchParams<{ id: string }>()
+  const scrollRef = useRef<ScrollView | null>(null)
   const [busy, setBusy] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [reviewPhotoUri, setReviewPhotoUri] = useState('')
+  const [reviewComposerY, setReviewComposerY] = useState(0)
   const [course, setCourse] = useState<CourseDetail | null>(null)
   const [comment, setComment] = useState('')
   const [ratings, setRatings] = useState<Record<string, number>>({
@@ -115,18 +125,32 @@ export default function CourseScreen() {
     setSaving(true)
 
     try {
-      const categorySummary = reviewCategories
-        .map((category) => `${category}: ${ratings[category]}/5`)
-        .join(' • ')
+      let uploadedPhotoUrl: string | null = null
+
+      if (reviewPhotoUri) {
+        const upload = await uploadImageToStorage({
+          uri: reviewPhotoUri,
+          fileName: `course-review-${Date.now()}.jpg`,
+          mimeType: 'image/jpeg',
+          folder: 'course-reviews'
+        })
+        uploadedPhotoUrl = upload.publicUrl
+      }
 
       await apiPost('/api/golf-courses/review', {
         course_id: course.id,
         user_id: user.id,
         rating: Math.round(averageRating),
-        comment: [categorySummary, comment.trim()].filter(Boolean).join('\n\n')
+        comment: comment.trim(),
+        course_condition_rating: ratings['Course Condition'],
+        staff_rating: ratings.Staff,
+        price_rating: ratings.Price,
+        difficulty_rating: ratings.Difficulty,
+        photo_url: uploadedPhotoUrl
       })
 
       setComment('')
+      setReviewPhotoUri('')
       setRatings({
         'Course Condition': 0,
         Staff: 0,
@@ -142,9 +166,30 @@ export default function CourseScreen() {
     }
   }
 
+  const handlePickReviewPhoto = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
+
+    if (!permission.granted) {
+      Alert.alert('Photo access needed', 'Allow photo access to add a course review photo.')
+      return
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      aspect: [4, 3],
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.85
+    })
+
+    if (!result.canceled && result.assets[0]) {
+      setReviewPhotoUri(result.assets[0].uri)
+    }
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
@@ -157,37 +202,48 @@ export default function CourseScreen() {
           />
         }
       >
-        <BrandHeader showBack />
+        <BrandHeader
+          showBack
+          largeLogo
+          rightIconName="create-outline"
+          onRightPress={() => scrollRef.current?.scrollTo({ y: reviewComposerY, animated: true })}
+        />
 
         <View style={styles.heroCard}>
-          {course?.course_image_url ? (
-            <Image source={{ uri: course.course_image_url }} style={styles.coverImage} />
-          ) : (
-            <View style={styles.coverFallback}>
-              <Text style={styles.coverFallbackText}>Golf Club</Text>
-            </View>
-          )}
-          <View style={styles.identityRow}>
-            <Avatar label={course?.name || 'Course'} shape="rounded" size={86} uri={course?.logo_url} />
-            <View style={styles.identityCopy}>
-              <Text style={styles.name}>{course?.name || 'Golf club'}</Text>
-              <Text style={styles.meta}>{course?.location || 'Location not set'}</Text>
-              <Text style={styles.meta}>
-                Founded {course?.year_founded || course?.founded || 'not listed'} • {course?.holes || 18} holes
+          <View style={styles.coverShell}>
+            {course?.course_image_url ? (
+              <Image source={{ uri: course.course_image_url }} style={styles.coverImage} />
+            ) : (
+              <View style={styles.coverFallback}>
+                <Text style={styles.coverFallbackText}>Golf Club</Text>
+              </View>
+            )}
+          </View>
+          <View style={styles.avatarWrap}>
+            <Avatar label={course?.name || 'Course'} shape="rounded" size={94} uri={course?.logo_url} />
+          </View>
+          <View style={styles.identityStack}>
+            <Text style={styles.name}>{course?.name || 'Golf club'}</Text>
+            <Text style={styles.locationLine}>{course?.location || 'Location not set'}</Text>
+            <View style={styles.ratingStrip}>
+              <Ionicons color={palette.gold} name="star" size={18} />
+              <Text style={styles.ratingText}>
+                {course?.average_rating ? course.average_rating.toFixed(1) : 'New course'} average • {course?.review_count || 0} reviews
               </Text>
             </View>
-          </View>
-          <View style={styles.ratingStrip}>
-            <Ionicons color={palette.gold} name="star" size={18} />
-            <Text style={styles.ratingText}>
-              {course?.average_rating ? course.average_rating.toFixed(1) : 'New course'} • {course?.review_count || 0} reviews
-            </Text>
+            <View style={styles.courseFactsRow}>
+              <Text style={styles.meta}>Founded {course?.year_founded || course?.founded || 'not listed'}</Text>
+              <Text style={styles.meta}>{course?.holes || 18} holes</Text>
+            </View>
           </View>
           {busy ? <ActivityIndicator color={palette.aqua} /> : null}
           {course?.description ? <Text style={styles.body}>{course.description}</Text> : null}
         </View>
 
-        <View style={styles.card}>
+        <View
+          style={styles.card}
+          onLayout={(event) => setReviewComposerY(event.nativeEvent.layout.y)}
+        >
           <Text style={styles.sectionTitle}>Leave a review</Text>
           <Text style={styles.body}>Rate the parts golfers actually care about before they book a round.</Text>
           {reviewCategories.map((category) => (
@@ -217,6 +273,16 @@ export default function CourseScreen() {
             style={styles.input}
             value={comment}
           />
+          <Pressable onPress={handlePickReviewPhoto} style={styles.photoReviewButton}>
+            {reviewPhotoUri ? (
+              <Image source={{ uri: reviewPhotoUri }} style={styles.reviewPhotoPreview} />
+            ) : (
+              <>
+                <Ionicons color={palette.aqua} name="image-outline" size={18} />
+                <Text style={styles.photoReviewText}>Add course photo</Text>
+              </>
+            )}
+          </Pressable>
           <PrimaryButton label={saving ? 'Posting...' : 'Post Review'} loading={saving} onPress={handleSaveReview} />
         </View>
 
@@ -239,6 +305,19 @@ export default function CourseScreen() {
                 </View>
               </View>
               {review.comment ? <Text style={styles.body}>{review.comment}</Text> : null}
+              <View style={styles.categoryMiniGrid}>
+                {[
+                  ['Condition', review.course_condition_rating],
+                  ['Staff', review.staff_rating],
+                  ['Price', review.price_rating],
+                  ['Difficulty', review.difficulty_rating]
+                ].map(([label, value]) => (
+                  <Text key={String(label)} style={styles.categoryMini}>
+                    {label}: {value || '-'}
+                  </Text>
+                ))}
+              </View>
+              {review.photo_url ? <Image source={{ uri: review.photo_url }} style={styles.reviewPhoto} /> : null}
             </View>
           ))}
         </View>
@@ -265,8 +344,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     padding: 18
   },
-  coverImage: {
+  coverShell: {
     borderRadius: 22,
+    overflow: 'hidden'
+  },
+  coverImage: {
     height: 170,
     width: '100%'
   },
@@ -286,25 +368,45 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase'
   },
-  identityRow: {
+  avatarWrap: {
     alignItems: 'center',
-    flexDirection: 'row',
-    gap: 14
+    alignSelf: 'center',
+    borderColor: palette.card,
+    borderRadius: 28,
+    borderWidth: 6,
+    marginTop: -64,
+    zIndex: 2
   },
-  identityCopy: {
-    flex: 1,
-    gap: 4
+  identityStack: {
+    alignItems: 'center',
+    gap: 6,
+    marginTop: -2
   },
   name: {
     color: palette.text,
     fontSize: 24,
     fontWeight: '800',
-    letterSpacing: -0.4
+    letterSpacing: -0.4,
+    textAlign: 'center'
+  },
+  locationLine: {
+    color: palette.textMuted,
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center'
+  },
+  courseFactsRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    justifyContent: 'center'
   },
   meta: {
     color: palette.textMuted,
     fontSize: 13,
-    lineHeight: 18
+    lineHeight: 18,
+    textAlign: 'center'
   },
   ratingStrip: {
     alignItems: 'center',
@@ -361,6 +463,47 @@ const styles = StyleSheet.create({
     minHeight: 110,
     padding: 14,
     textAlignVertical: 'top'
+  },
+  photoReviewButton: {
+    alignItems: 'center',
+    backgroundColor: palette.cardSoft,
+    borderColor: palette.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    minHeight: 56,
+    justifyContent: 'center',
+    overflow: 'hidden'
+  },
+  photoReviewText: {
+    color: palette.aqua,
+    fontSize: 14,
+    fontWeight: '800'
+  },
+  reviewPhotoPreview: {
+    height: 160,
+    width: '100%'
+  },
+  categoryMiniGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8
+  },
+  categoryMini: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 999,
+    color: palette.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+    overflow: 'hidden',
+    paddingHorizontal: 10,
+    paddingVertical: 6
+  },
+  reviewPhoto: {
+    borderRadius: 16,
+    height: 160,
+    width: '100%'
   },
   reviewCard: {
     backgroundColor: 'rgba(255,255,255,0.03)',

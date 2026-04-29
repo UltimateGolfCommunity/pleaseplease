@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { createServerClient } from '@/lib/supabase-server'
 
-const optionalProfileColumns = ['home_course', 'home_club', 'bag_items', 'header_image_url', 'avatar_url', 'handicap', 'location']
+const optionalProfileColumns = ['home_course', 'home_club', 'bag_items', 'header_image_url', 'avatar_url', 'handicap', 'location', 'ace_details']
 
 function getMissingProfileColumn(error: any) {
   const message = `${error?.message || ''} ${error?.details || ''}`.toLowerCase()
@@ -93,6 +93,7 @@ export async function PUT(request: NextRequest) {
       location,
       home_course,
       home_club,
+      ace_details,
       bag_items
     } = body
     
@@ -176,6 +177,7 @@ export async function PUT(request: NextRequest) {
     if (location !== undefined) updateData.location = location
     if (home_course !== undefined) updateData.home_course = home_course
     if (home_club !== undefined) updateData.home_club = home_club
+    if (ace_details !== undefined) updateData.ace_details = ace_details
     if (bag_items !== undefined) updateData.bag_items = bag_items
     
     // Only set full_name if both first_name and last_name are provided
@@ -224,6 +226,7 @@ export async function PUT(request: NextRequest) {
           location: location || '',
           home_course: home_course || '',
           home_club: home_club || home_course || '',
+          ace_details: ace_details || null,
           bag_items: bag_items || {},
           updated_at: new Date().toISOString()
         },

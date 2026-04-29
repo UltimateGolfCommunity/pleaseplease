@@ -1,26 +1,46 @@
 -- Add user_activities table for tracking user actions
--- This allows the profile page to show real recent activity
+-- This powers the network feed, golfer timelines, group activity, and photo posts.
 
--- Create activity types enum
-CREATE TYPE activity_type AS ENUM (
-  'profile_updated',
-  'tee_time_created',
-  'tee_time_applied',
-  'tee_time_accepted',
-  'tee_time_declined',
-  'group_joined',
-  'group_created',
-  'group_invited',
-  'group_invitation_accepted',
-  'group_invitation_declined',
-  'connection_requested',
-  'connection_accepted',
-  'connection_declined',
-  'round_logged',
-  'course_reviewed',
-  'badge_earned',
-  'message_sent'
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type
+    WHERE typname = 'activity_type'
+  ) THEN
+    CREATE TYPE activity_type AS ENUM (
+      'profile_updated',
+      'profile_photo_updated',
+      'cover_photo_updated',
+      'tee_time_created',
+      'tee_time_updated',
+      'tee_time_applied',
+      'tee_time_accepted',
+      'tee_time_declined',
+      'group_joined',
+      'group_created',
+      'group_invited',
+      'group_invitation_accepted',
+      'group_invitation_declined',
+      'group_logo_updated',
+      'group_cover_updated',
+      'group_details_updated',
+      'group_member_role_updated',
+      'group_board_post',
+      'group_thread_reply',
+      'connection_requested',
+      'connection_accepted',
+      'connection_declined',
+      'connection_added',
+      'round_logged',
+      'course_reviewed',
+      'photo_posted',
+      'badge_earned',
+      'message_sent'
+    );
+  END IF;
+END
+$$;
 
 -- Create user_activities table
 CREATE TABLE IF NOT EXISTS user_activities (
@@ -31,8 +51,9 @@ CREATE TABLE IF NOT EXISTS user_activities (
     description TEXT,
     related_id UUID, -- ID of related entity (tee_time_id, group_id, etc.)
     related_type TEXT, -- Type of related entity ('tee_time', 'group', 'user', etc.)
-    metadata JSONB, -- Additional data like course name, group name, etc.
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    metadata JSONB DEFAULT '{}'::jsonb, -- Additional data like course name, group name, etc.
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Create indexes for better performance
@@ -40,20 +61,32 @@ CREATE INDEX IF NOT EXISTS idx_user_activities_user_id ON user_activities(user_i
 CREATE INDEX IF NOT EXISTS idx_user_activities_created_at ON user_activities(created_at);
 CREATE INDEX IF NOT EXISTS idx_user_activities_activity_type ON user_activities(activity_type);
 CREATE INDEX IF NOT EXISTS idx_user_activities_related_id ON user_activities(related_id);
+CREATE INDEX IF NOT EXISTS idx_user_activities_related_type ON user_activities(related_type);
+CREATE INDEX IF NOT EXISTS idx_user_activities_user_created_at ON user_activities(user_id, created_at DESC);
 
 -- Enable RLS
 ALTER TABLE user_activities ENABLE ROW LEVEL SECURITY;
 
--- Users can view their own activities
-CREATE POLICY "Users can view own activities" ON user_activities 
+DROP POLICY IF EXISTS "Users can view own activities" ON user_activities;
+CREATE POLICY "Users can view own activities" ON user_activities
 FOR SELECT USING (auth.uid() = user_id);
 
--- Users can insert their own activities
-CREATE POLICY "Users can insert own activities" ON user_activities 
+DROP POLICY IF EXISTS "Users can insert own activities" ON user_activities;
+CREATE POLICY "Users can insert own activities" ON user_activities
 FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update own activities" ON user_activities;
+CREATE POLICY "Users can update own activities" ON user_activities
+FOR UPDATE USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can delete own activities" ON user_activities;
+CREATE POLICY "Users can delete own activities" ON user_activities
+FOR DELETE USING (auth.uid() = user_id);
+
 -- System can insert activities for any user (for automated tracking)
-CREATE POLICY "System can insert activities" ON user_activities 
+DROP POLICY IF EXISTS "System can insert activities" ON user_activities;
+CREATE POLICY "System can insert activities" ON user_activities
 FOR INSERT WITH CHECK (true);
 
 -- Grant permissions

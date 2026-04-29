@@ -1,9 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { PropsWithChildren } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
+import Constants from 'expo-constants'
+import { Platform } from 'react-native'
 import { apiGet } from '@/lib/api'
 import { mobileSupabase } from '@/lib/supabase'
 import { markMobileBootHealthy, prepareMobileBoot } from '@/lib/startupRecovery'
+
+type NotificationsModule = typeof import('expo-notifications')
 
 type MobileProfile = {
   id: string
@@ -24,6 +28,11 @@ type MobileProfile = {
   playing_style?: string | null
   goals?: string | null
   experience_level?: string | null
+  ace_details?: {
+    course?: string | null
+    date?: string | null
+    hole?: string | null
+  } | null
   bag_items?: Record<string, string | null> | null
 }
 
@@ -40,6 +49,7 @@ type AuthContextValue = {
     email: string
     password: string
   }) => Promise<void>
+  resetPassword: (email: string) => Promise<void>
   signOut: () => Promise<void>
   syncAuthSession: () => Promise<void>
   refreshProfile: (userId?: string) => Promise<void>
@@ -53,7 +63,8 @@ const optionalProfileColumns = [
   'header_image_url',
   'avatar_url',
   'handicap',
-  'location'
+  'location',
+  'ace_details'
 ]
 
 function getMissingProfileColumn(error: unknown) {
@@ -104,6 +115,23 @@ function buildProfileUpdateAttempts(updates: Record<string, unknown>) {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
+let notificationsModule: NotificationsModule | null = null
+
+try {
+  notificationsModule = require('expo-notifications') as NotificationsModule
+} catch (error) {
+  console.warn('expo-notifications native module is unavailable in this build:', error)
+}
+
+notificationsModule?.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true
+  })
+})
+
 async function fetchProfile(userId: string) {
   try {
     const profile = await apiGet<MobileProfile>(`/api/profile?userId=${encodeURIComponent(userId)}`)
@@ -130,6 +158,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const loading = false
   const [authBusy, setAuthBusy] = useState(false)
   const userRef = useRef<User | null>(null)
+  const pushTokenRef = useRef<string | null>(null)
+  const pushRegistrationAttemptedRef = useRef<string | null>(null)
 
   useEffect(() => {
     userRef.current = user
@@ -157,6 +187,68 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setProfile(null)
     }
   }, [refreshProfile])
+
+  const registerPushNotifications = useCallback(async (userId: string) => {
+    if (!userId) return
+    if (pushRegistrationAttemptedRef.current === userId) return
+    pushRegistrationAttemptedRef.current = userId
+    if (!notificationsModule) return
+
+    try {
+      const existingPermissions = await notificationsModule.getPermissionsAsync()
+      let finalStatus = existingPermissions.status
+
+      if (finalStatus !== 'granted') {
+        const requested = await notificationsModule.requestPermissionsAsync()
+        finalStatus = requested.status
+      }
+
+      if (finalStatus !== 'granted') {
+        return
+      }
+
+      if (Platform.OS === 'android') {
+        await notificationsModule.setNotificationChannelAsync('default', {
+          name: 'default',
+          importance: notificationsModule.AndroidImportance.DEFAULT
+        })
+      }
+
+      const projectId =
+        Constants.expoConfig?.extra?.eas?.projectId ||
+        Constants.easConfig?.projectId
+
+      if (!projectId) {
+        return
+      }
+
+      const tokenResponse = await notificationsModule.getExpoPushTokenAsync({ projectId })
+      const expoPushToken = tokenResponse.data
+
+      if (!expoPushToken || expoPushToken === pushTokenRef.current) {
+        return
+      }
+
+      pushTokenRef.current = expoPushToken
+
+      await fetch(
+        `${(process.env.EXPO_PUBLIC_SITE_URL || 'https://www.ultimategolfcommunity.com').replace(/\/$/, '')}/api/notifications`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            action: 'register_push_token',
+            user_id: userId,
+            expo_push_token: expoPushToken
+          })
+        }
+      )
+    } catch (error) {
+      console.warn('Unable to register push notifications in mobile app:', error)
+    }
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -220,6 +312,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return () => clearTimeout(timer)
   }, [])
 
+  useEffect(() => {
+    if (!user?.id) return
+    void registerPushNotifications(user.id)
+  }, [registerPushNotifications, user?.id])
+
   const signIn = useCallback(async (email: string, password: string) => {
     setAuthBusy(true)
     try {
@@ -256,6 +353,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         email: email.trim(),
         password,
         options: {
+          emailRedirectTo: `${process.env.EXPO_PUBLIC_SITE_URL || 'https://www.ultimategolfcommunity.com'}/login`,
           data: {
             first_name: firstName.trim(),
             last_name: lastName.trim(),
@@ -288,14 +386,47 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }, [applySession])
 
+  const resetPassword = useCallback(async (email: string) => {
+    setAuthBusy(true)
+    try {
+      const { error } = await mobileSupabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${process.env.EXPO_PUBLIC_SITE_URL || 'https://www.ultimategolfcommunity.com'}/login`
+      })
+
+      if (error) {
+        throw error
+      }
+    } finally {
+      setAuthBusy(false)
+    }
+  }, [])
+
   const signOut = useCallback(async () => {
     setAuthBusy(true)
     try {
+      if (userRef.current?.id) {
+        await fetch(
+          `${(process.env.EXPO_PUBLIC_SITE_URL || 'https://www.ultimategolfcommunity.com').replace(/\/$/, '')}/api/notifications`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              action: 'clear_push_token',
+              user_id: userRef.current.id
+            })
+          }
+        ).catch(() => null)
+      }
+
       const { error } = await mobileSupabase.auth.signOut()
       if (error) {
         throw error
       }
 
+      pushTokenRef.current = null
+      pushRegistrationAttemptedRef.current = null
       applySession(null)
     } finally {
       setAuthBusy(false)
@@ -394,12 +525,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
       authBusy,
       signIn,
       signUp,
+      resetPassword,
       signOut,
       syncAuthSession,
       refreshProfile,
       updateProfile
     }),
-    [user, session, profile, loading, authBusy, signIn, signUp, signOut, syncAuthSession, refreshProfile, updateProfile]
+    [user, session, profile, loading, authBusy, signIn, signUp, resetPassword, signOut, syncAuthSession, refreshProfile, updateProfile]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

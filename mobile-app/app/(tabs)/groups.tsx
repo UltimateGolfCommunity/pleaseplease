@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Redirect, router } from 'expo-router'
+import { useCallback, useEffect, useState } from 'react'
+import { Redirect, router, useLocalSearchParams } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
+import Ionicons from '@expo/vector-icons/Ionicons'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -32,6 +34,13 @@ type Group = {
   is_member?: boolean
   logo_url?: string | null
   image_url?: string | null
+  member_preview?: {
+    id: string
+    first_name?: string | null
+    last_name?: string | null
+    username?: string | null
+    avatar_url?: string | null
+  }[]
 }
 
 type GroupActivity = {
@@ -93,20 +102,36 @@ function getGroupActivityTitle(item: GroupActivity) {
   }
 }
 
+function getGroupActivityIcon(activityType?: string) {
+  switch (activityType) {
+    case 'group_joined':
+      return 'person-add-outline'
+    case 'group_logo_updated':
+    case 'group_cover_updated':
+      return 'image-outline'
+    case 'group_created':
+      return 'sparkles-outline'
+    case 'group_details_updated':
+      return 'create-outline'
+    default:
+      return 'chatbox-ellipses-outline'
+  }
+}
+
 export default function GroupsTab() {
-  const { loading, user, profile } = useAuth()
+  const params = useLocalSearchParams<{ compose?: string }>()
+  const { loading, user } = useAuth()
   const [refreshing, setRefreshing] = useState(false)
   const [busy, setBusy] = useState(true)
   const [creating, setCreating] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [showCreateForm, setShowCreateForm] = useState(false)
-  const [joiningId, setJoiningId] = useState<string | null>(null)
+  const [showMyGroupsMenu, setShowMyGroupsMenu] = useState(false)
   const [myGroups, setMyGroups] = useState<Group[]>([])
-  const [discoverGroups, setDiscoverGroups] = useState<Group[]>([])
   const [groupActivity, setGroupActivity] = useState<GroupActivity[]>([])
-  const [leaderboardArea, setLeaderboardArea] = useState('')
   const [form, setForm] = useState({
     name: '',
+    slogan: '',
     description: '',
     location: '',
     group_type: 'community',
@@ -114,48 +139,20 @@ export default function GroupsTab() {
     maxMembers: '10'
   })
 
-  const localLeaderboard = useMemo(() => {
-    const localText = (leaderboardArea || profile?.location || '').split(',')[0]?.trim().toLowerCase()
-    const pool = localText
-      ? discoverGroups.filter((group) => (group.location || '').toLowerCase().includes(localText))
-      : discoverGroups
-
-    return [...pool].sort((a, b) => (b.member_count || 0) - (a.member_count || 0)).slice(0, 8)
-  }, [discoverGroups, leaderboardArea, profile?.location])
-
-  const suggestedGroups = useMemo(() => {
-    const myGroupIds = new Set(myGroups.map((group) => group.id))
-    const locationText = (profile?.location || '').split(',')[0]?.trim().toLowerCase()
-
-    return discoverGroups
-      .filter((group) => !group.is_member && !myGroupIds.has(group.id))
-      .sort((a, b) => {
-        const aLocal = locationText && (a.location || '').toLowerCase().includes(locationText) ? 1 : 0
-        const bLocal = locationText && (b.location || '').toLowerCase().includes(locationText) ? 1 : 0
-        return bLocal - aLocal || (b.member_count || 0) - (a.member_count || 0)
-      })
-      .slice(0, 4)
-  }, [discoverGroups, myGroups, profile?.location])
-
   const loadGroups = useCallback(async () => {
     if (!user?.id) return
 
     try {
-      const [mine, discover, activityResponse] = await Promise.all([
+      const [mine, activityResponse] = await Promise.all([
         apiGet<{ success: boolean; groups: Group[] }>(`/api/groups?user_id=${encodeURIComponent(user.id)}`),
-        apiGet<{ success: boolean; groups: Group[] }>(
-          `/api/groups?action=search&user_id=${encodeURIComponent(user.id)}&query=`
-        ),
         apiGet<{ success: boolean; activities: GroupActivity[] }>(
           `/api/activities?action=groups&user_id=${encodeURIComponent(user.id)}&limit=10`
         ).catch(() => ({ success: true, activities: [] }))
       ])
 
       const myGroupList = mine.groups || []
-      const discoverList = discover.groups || []
 
       setMyGroups(myGroupList)
-      setDiscoverGroups(discoverList)
       setGroupActivity(activityResponse.activities || [])
     } finally {
       setBusy(false)
@@ -164,15 +161,18 @@ export default function GroupsTab() {
   }, [user?.id])
 
   useEffect(() => {
-    setLeaderboardArea(profile?.location || '')
-  }, [profile?.location])
-
-  useEffect(() => {
     if (user?.id) {
       setBusy(true)
       loadGroups()
     }
   }, [loadGroups, user?.id])
+
+  useEffect(() => {
+    if (params.compose === 'create-group') {
+      setShowCreateForm(true)
+      router.setParams({ compose: undefined })
+    }
+  }, [params.compose])
 
   if (!loading && !user) {
     return <Redirect href="/welcome" />
@@ -231,6 +231,7 @@ export default function GroupsTab() {
     try {
       await apiPost('/api/groups', {
         name: form.name.trim(),
+        slogan: form.slogan.trim(),
         description: form.description.trim(),
         location: form.location.trim(),
         logo_url: form.logo_url.trim() || null,
@@ -242,6 +243,7 @@ export default function GroupsTab() {
       Alert.alert('Group created', 'Your group is ready for members to join.')
       setForm({
         name: '',
+        slogan: '',
         description: '',
         location: '',
         group_type: 'community',
@@ -255,24 +257,6 @@ export default function GroupsTab() {
       Alert.alert('Unable to create group', error instanceof Error ? error.message : 'Please try again.')
     } finally {
       setCreating(false)
-    }
-  }
-
-  const handleJoin = async (groupId: string) => {
-    if (!user?.id) return
-
-    setJoiningId(groupId)
-    try {
-      await apiPost('/api/groups', {
-        action: 'join',
-        group_id: groupId,
-        user_id: user.id
-      })
-      await loadGroups()
-    } catch (error) {
-      Alert.alert('Unable to join group', error instanceof Error ? error.message : 'Please try again.')
-    } finally {
-      setJoiningId(null)
     }
   }
 
@@ -291,14 +275,13 @@ export default function GroupsTab() {
           />
         }
       >
-        <BrandHeader largeLogo />
-
-        <View style={styles.actions}>
-          <PrimaryButton
-            label={showCreateForm ? 'Close Form' : 'Create Group'}
-            onPress={() => setShowCreateForm((value) => !value)}
-          />
-        </View>
+        <BrandHeader
+          largeLogo
+          leftIconName="people-outline"
+          onLeftPress={() => setShowMyGroupsMenu(true)}
+          rightIconName={showCreateForm ? 'close' : 'add'}
+          onRightPress={() => setShowCreateForm((value) => !value)}
+        />
 
         {showCreateForm ? (
           <View style={styles.searchCard}>
@@ -334,6 +317,13 @@ export default function GroupsTab() {
               placeholderTextColor={palette.textMuted}
               style={styles.input}
               value={form.name}
+            />
+            <TextInput
+              onChangeText={(value) => setForm((current) => ({ ...current, slogan: value }))}
+              placeholder="Group slogan"
+              placeholderTextColor={palette.textMuted}
+              style={styles.input}
+              value={form.slogan}
             />
             <TextInput
               onChangeText={(value) => setForm((current) => ({ ...current, description: value }))}
@@ -387,81 +377,10 @@ export default function GroupsTab() {
           </View>
         ) : null}
 
-        <View style={styles.discoveryHero}>
-          <Text style={styles.sectionEyebrow}>Discovery</Text>
-          <Text style={styles.discoveryTitle}>Find a crew before your next round</Text>
-          <Text style={styles.helper}>
-            Join course clubs, local weekend games, and city groups so your feed has people worth playing with.
-          </Text>
-          <View style={styles.discoveryStatsRow}>
-            <View style={styles.discoveryStat}>
-              <Text style={styles.discoveryStatValue}>{discoverGroups.length}</Text>
-              <Text style={styles.discoveryStatLabel}>Open groups</Text>
-            </View>
-            <View style={styles.discoveryStat}>
-              <Text style={styles.discoveryStatValue}>{localLeaderboard[0]?.member_count || 0}</Text>
-              <Text style={styles.discoveryStatLabel}>Top local members</Text>
-            </View>
-          </View>
-        </View>
-
-        {suggestedGroups.length ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Suggested groups</Text>
-            {suggestedGroups.map((group) => (
-              <View key={group.id} style={styles.card}>
-                <Pressable onPress={() => router.push(`/group/${group.id}`)} style={styles.linkArea}>
-                  <View style={styles.groupRow}>
-                    <Avatar
-                      label={group.name}
-                      shape="rounded"
-                      size={56}
-                      uri={group.logo_url || group.image_url}
-                    />
-                    <View style={styles.groupCopy}>
-                      <Text style={styles.cardTitle}>{group.name}</Text>
-                      <Text style={styles.cardMeta}>
-                        {(group.group_type || 'community').replace(/^./, (char) => char.toUpperCase())} •{' '}
-                        {group.member_count || 0} members
-                      </Text>
-                      <Text style={styles.cardBody}>
-                        {group.location || 'Location not set'} • {group.description || 'A new place to find golf people.'}
-                      </Text>
-                    </View>
-                  </View>
-                </Pressable>
-                <PrimaryButton
-                  label="Join Group"
-                  loading={joiningId === group.id}
-                  onPress={() => handleJoin(group.id)}
-                />
-              </View>
-            ))}
-          </View>
-        ) : null}
-
-        {localLeaderboard.length ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Top groups near you</Text>
-            <Text style={styles.helper}>
-              Ranked by member count near {(leaderboardArea || profile?.location || 'your area').split(',')[0]}.
-            </Text>
-            {localLeaderboard.slice(0, 3).map((group, index) => (
-              <Pressable key={group.id} onPress={() => router.push(`/group/${group.id}`)} style={styles.leaderboardPodiumCard}>
-                <Text style={styles.leaderboardRank}>#{index + 1}</Text>
-                <View style={styles.groupCopy}>
-                  <Text style={styles.cardTitle}>{group.name}</Text>
-                  <Text style={styles.cardMeta}>
-                    {group.location || 'Location not set'} • {group.member_count || 0} members
-                  </Text>
-                </View>
-              </Pressable>
-            ))}
-          </View>
-        ) : null}
-
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Activity feed</Text>
+          <View style={styles.feedHeader}>
+            <Text style={styles.sectionEyebrow}>Activity Feed</Text>
+          </View>
           {busy ? <ActivityIndicator color={palette.aqua} /> : null}
           {!busy && groupActivity.length === 0 ? (
             <View style={styles.emptyCard}>
@@ -473,95 +392,92 @@ export default function GroupsTab() {
             <Pressable
               key={item.id}
               onPress={() => item.group?.id && router.push(`/group/${item.group.id}`)}
-              style={styles.card}
+              style={styles.feedCard}
             >
-              <Text style={styles.cardTitle}>{item.group?.name || 'Group activity'}</Text>
-              <Text style={styles.cardBody}>{getGroupActivityTitle(item)}</Text>
-              <Text style={styles.cardMeta}>
-                {item.description || 'Fresh movement inside your golf communities.'} •{' '}
-                {formatRelativeTime(item.created_at)}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>My groups</Text>
-          {busy ? <ActivityIndicator color={palette.aqua} /> : null}
-          {!busy && myGroups.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>No groups joined yet</Text>
-              <Text style={styles.empty}>Create one or join a course and it will land here.</Text>
-            </View>
-          ) : null}
-          {myGroups.map((group) => (
-            <Pressable key={group.id} onPress={() => router.push(`/group/${group.id}`)} style={styles.card}>
-              <View style={styles.groupRow}>
-                <Avatar
-                  label={group.name}
-                  shape="rounded"
-                  size={56}
-                  uri={group.logo_url || group.image_url}
-                />
-                <View style={styles.groupCopy}>
-                  <Text style={styles.cardTitle}>{group.name}</Text>
-                  <Text style={styles.cardMeta}>
-                    {(group.group_type || 'community').replace(/^./, (char) => char.toUpperCase())} •{' '}
-                    {group.member_count || 0} members
+              <View style={styles.feedCardTop}>
+                <View style={styles.feedIconWrap}>
+                  <Ionicons
+                    color={palette.aqua}
+                    name={getGroupActivityIcon(item.activity_type)}
+                    size={18}
+                  />
+                </View>
+                <View style={styles.feedCopy}>
+                  <View style={styles.feedMetaRow}>
+                    <Text style={styles.feedGroupName}>{item.group?.name || 'Group activity'}</Text>
+                    <Text style={styles.feedTime}>{formatRelativeTime(item.created_at)}</Text>
+                  </View>
+                  <Text style={styles.feedHeadline}>{getGroupActivityTitle(item)}</Text>
+                  <Text style={styles.feedDescription}>
+                    {item.description || 'Fresh movement inside your golf communities.'}
                   </Text>
-                  {group.location ? <Text style={styles.cardBody}>{group.location}</Text> : null}
+                </View>
+              </View>
+              <View style={styles.feedFooter}>
+                <View style={styles.feedPill}>
+                  <Ionicons color={palette.aqua} name="golf-outline" size={13} />
+                  <Text style={styles.feedPillText}>{item.group?.location || 'Community update'}</Text>
                 </View>
               </View>
             </Pressable>
           ))}
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Groups leaderboard</Text>
-          {leaderboardArea || profile?.location ? (
-            <Text style={styles.helper}>
-              Ranked by member count near {(leaderboardArea || profile?.location || 'your area').split(',')[0]}.
-            </Text>
-          ) : null}
-          {!busy && localLeaderboard.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>No local groups yet</Text>
-              <Text style={styles.empty}>As groups grow around you, the local leaderboard will show the top clubs here.</Text>
-            </View>
-          ) : null}
-          {localLeaderboard.map((group, index) => (
-            <View key={group.id} style={styles.card}>
-              <Pressable onPress={() => router.push(`/group/${group.id}`)} style={styles.linkArea}>
-                <View style={styles.groupRow}>
-                  <Avatar
-                    label={group.name}
-                    shape="rounded"
-                    size={56}
-                    uri={group.logo_url || group.image_url}
-                  />
-                  <View style={styles.groupCopy}>
-                    <Text style={styles.cardTitle}>
-                      #{index + 1} {group.name}
-                    </Text>
-                    <Text style={styles.cardMeta}>
-                      {(group.group_type || 'community').replace(/^./, (char) => char.toUpperCase())} •{' '}
-                      {group.member_count || 0} members
-                    </Text>
-                    {group.location ? <Text style={styles.cardBody}>{group.location}</Text> : null}
+      </ScrollView>
+      <Modal
+        animationType="slide"
+        transparent
+        visible={showMyGroupsMenu}
+        onRequestClose={() => setShowMyGroupsMenu(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setShowMyGroupsMenu(false)}>
+          <Pressable style={styles.modalCard} onPress={() => {}}>
+            <Text style={styles.sectionEyebrow}>My Groups</Text>
+            <Text style={styles.sectionTitle}>Choose a group</Text>
+            {myGroups.length === 0 ? (
+              <Text style={styles.helper}>Create or join a group and it will appear here.</Text>
+            ) : null}
+            {myGroups.map((group) => (
+              <Pressable
+                key={group.id}
+                onPress={() => {
+                  setShowMyGroupsMenu(false)
+                  router.push(`/group/${group.id}`)
+                }}
+                style={styles.drawerGroupRow}
+              >
+                <Avatar label={group.name} shape="rounded" size={52} uri={group.logo_url || group.image_url} />
+                <View style={styles.groupCopy}>
+                  <Text style={styles.cardTitle}>{group.name}</Text>
+                  <Text style={styles.cardMeta}>
+                    {group.location || 'Location not set'} • {group.member_count || 0} members
+                  </Text>
+                  <View style={styles.drawerMembersRow}>
+                    {(group.member_preview || []).slice(0, 5).map((member, index) => (
+                      <View
+                        key={member.id}
+                        style={[styles.drawerMemberAvatar, { marginLeft: index ? -10 : 0 }]}
+                      >
+                        <Avatar
+                          label={member.first_name || member.username || 'G'}
+                          size={28}
+                          uri={member.avatar_url}
+                        />
+                      </View>
+                    ))}
+                    {group.member_count ? (
+                      <Text style={styles.drawerMemberCount}>
+                        {group.member_count} member{group.member_count === 1 ? '' : 's'}
+                      </Text>
+                    ) : null}
                   </View>
                 </View>
               </Pressable>
-              {!group.is_member ? (
-                <PrimaryButton
-                  label="Join"
-                  loading={joiningId === group.id}
-                  onPress={() => handleJoin(group.id)}
-                />
-              ) : null}
-            </View>
-          ))}
-        </View>
-      </ScrollView>
+            ))}
+            <PrimaryButton label="Close" variant="ghost" onPress={() => setShowMyGroupsMenu(false)} />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   )
 }
@@ -585,61 +501,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 12,
     padding: 14
-  },
-  discoveryHero: {
-    backgroundColor: 'rgba(103,232,249,0.08)',
-    borderColor: 'rgba(103,232,249,0.2)',
-    borderRadius: 28,
-    borderWidth: 1,
-    gap: 12,
-    padding: 20
-  },
-  discoveryTitle: {
-    color: palette.text,
-    fontSize: 26,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-    lineHeight: 30
-  },
-  discoveryStatsRow: {
-    flexDirection: 'row',
-    gap: 10
-  },
-  discoveryStat: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 18,
-    borderWidth: 1,
-    flex: 1,
-    padding: 12
-  },
-  discoveryStatValue: {
-    color: palette.text,
-    fontSize: 24,
-    fontWeight: '800'
-  },
-  discoveryStatLabel: {
-    color: palette.textMuted,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase'
-  },
-  leaderboardPodiumCard: {
-    alignItems: 'center',
-    backgroundColor: palette.card,
-    borderColor: palette.border,
-    borderRadius: 24,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 14,
-    padding: 16
-  },
-  leaderboardRank: {
-    color: palette.aqua,
-    fontSize: 26,
-    fontWeight: '900',
-    minWidth: 44
   },
   imagePickerRow: {
     alignItems: 'center',
@@ -736,6 +597,30 @@ const styles = StyleSheet.create({
   section: {
     gap: 12
   },
+  feedHeader: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(103,232,249,0.07)',
+    borderColor: 'rgba(103,232,249,0.16)',
+    borderRadius: 26,
+    borderWidth: 1,
+    gap: 6,
+    paddingHorizontal: 18,
+    paddingVertical: 18
+  },
+  feedTitle: {
+    color: palette.text,
+    fontSize: 24,
+    fontWeight: '800',
+    letterSpacing: -0.4,
+    textAlign: 'center'
+  },
+  feedSubtitle: {
+    color: palette.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
+    maxWidth: 280,
+    textAlign: 'center'
+  },
   sectionEyebrow: {
     color: palette.aqua,
     fontSize: 12,
@@ -753,6 +638,87 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20
   },
+  feedCard: {
+    backgroundColor: palette.card,
+    borderColor: 'rgba(103,232,249,0.12)',
+    borderRadius: 24,
+    borderWidth: 1,
+    gap: 14,
+    padding: 18,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18
+  },
+  feedCardTop: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 14
+  },
+  feedIconWrap: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(103,232,249,0.1)',
+    borderColor: 'rgba(103,232,249,0.16)',
+    borderRadius: 16,
+    borderWidth: 1,
+    height: 42,
+    justifyContent: 'center',
+    width: 42
+  },
+  feedCopy: {
+    flex: 1,
+    gap: 6
+  },
+  feedMetaRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between'
+  },
+  feedGroupName: {
+    color: palette.aqua,
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 1,
+    textTransform: 'uppercase'
+  },
+  feedTime: {
+    color: palette.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+    marginLeft: 10
+  },
+  feedHeadline: {
+    color: palette.text,
+    fontSize: 18,
+    fontWeight: '800',
+    lineHeight: 23
+  },
+  feedDescription: {
+    color: palette.textMuted,
+    fontSize: 14,
+    lineHeight: 20
+  },
+  feedFooter: {
+    alignItems: 'flex-start',
+    flexDirection: 'row'
+  },
+  feedPill: {
+    alignItems: 'center',
+    backgroundColor: palette.cardSoft,
+    borderColor: palette.border,
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 7
+  },
+  feedPillText: {
+    color: palette.textMuted,
+    fontSize: 12,
+    fontWeight: '700'
+  },
   card: {
     backgroundColor: palette.card,
     borderColor: palette.border,
@@ -760,6 +726,47 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 10,
     padding: 18
+  },
+  modalBackdrop: {
+    backgroundColor: 'rgba(3,10,8,0.72)',
+    flex: 1,
+    justifyContent: 'flex-end',
+    padding: 18
+  },
+  modalCard: {
+    backgroundColor: palette.card,
+    borderColor: palette.border,
+    borderRadius: 28,
+    borderWidth: 1,
+    gap: 12,
+    maxHeight: '78%',
+    padding: 20
+  },
+  drawerGroupRow: {
+    alignItems: 'center',
+    backgroundColor: palette.cardSoft,
+    borderColor: palette.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    padding: 12
+  },
+  drawerMembersRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    marginTop: 8
+  },
+  drawerMemberAvatar: {
+    borderColor: palette.cardSoft,
+    borderRadius: 999,
+    borderWidth: 2
+  },
+  drawerMemberCount: {
+    color: palette.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+    marginLeft: 10
   },
   linkArea: {
     gap: 6

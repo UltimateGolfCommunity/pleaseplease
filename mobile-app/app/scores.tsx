@@ -44,7 +44,9 @@ export default function ScoresScreen() {
   const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [holesPlayed, setHolesPlayed] = useState<9 | 18>(18)
+  const [scoreMode, setScoreMode] = useState<'total' | 'holes'>('total')
   const [courseName, setCourseName] = useState('')
+  const [totalOnlyScore, setTotalOnlyScore] = useState('')
   const [rounds, setRounds] = useState<RoundRecord[]>([])
   const [holeScores, setHoleScores] = useState<string[]>(buildHoleScores(18))
 
@@ -82,15 +84,21 @@ export default function ScoresScreen() {
     [holeScores]
   )
 
-  const totalScore = useMemo(
-    () => numericScores.reduce((sum, score) => sum + score, 0),
-    [numericScores]
-  )
+  const totalScore = useMemo(() => {
+    if (scoreMode === 'total') {
+      return Number(totalOnlyScore) || 0
+    }
 
-  const averagePerHole = useMemo(
-    () => (numericScores.length ? totalScore / numericScores.length : 0),
-    [numericScores.length, totalScore]
-  )
+    return numericScores.reduce((sum, score) => sum + score, 0)
+  }, [numericScores, scoreMode, totalOnlyScore])
+
+  const averagePerHole = useMemo(() => {
+    if (scoreMode === 'total') {
+      return totalScore ? totalScore / holesPlayed : 0
+    }
+
+    return numericScores.length ? totalScore / numericScores.length : 0
+  }, [holesPlayed, numericScores.length, scoreMode, totalScore])
 
   const overallAverage = useMemo(() => {
     const totals = rounds.reduce(
@@ -120,8 +128,13 @@ export default function ScoresScreen() {
       return
     }
 
-    if (numericScores.length !== holesPlayed) {
+    if (scoreMode === 'holes' && numericScores.length !== holesPlayed) {
       Alert.alert('Incomplete scorecard', `Please enter a score for all ${holesPlayed} holes.`)
+      return
+    }
+
+    if (scoreMode === 'total' && (!Number(totalOnlyScore) || Number(totalOnlyScore) <= 0)) {
+      Alert.alert('Missing score', 'Enter your total round score.')
       return
     }
 
@@ -132,11 +145,13 @@ export default function ScoresScreen() {
         user_id: user.id,
         course_name: courseName.trim(),
         holes_played: holesPlayed,
-        hole_scores: numericScores,
+        hole_scores: scoreMode === 'holes' ? numericScores : [],
+        total_score: scoreMode === 'total' ? Number(totalOnlyScore) : undefined,
         played_at: new Date().toISOString()
       })
 
       setCourseName('')
+      setTotalOnlyScore('')
       setHoleScores(buildHoleScores(holesPlayed))
       setShowForm(false)
       await loadRounds()
@@ -219,6 +234,36 @@ export default function ScoresScreen() {
               })}
             </View>
 
+            <View style={styles.segmentRow}>
+              {[
+                { label: 'Total Score', value: 'total' as const },
+                { label: 'By Hole', value: 'holes' as const }
+              ].map((option) => {
+                const active = scoreMode === option.value
+
+                return (
+                  <Pressable
+                    key={option.value}
+                    onPress={() => setScoreMode(option.value)}
+                    style={[styles.segment, active && styles.segmentActive]}
+                  >
+                    <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>{option.label}</Text>
+                  </Pressable>
+                )
+              })}
+            </View>
+
+            {scoreMode === 'total' ? (
+              <TextInput
+                keyboardType="number-pad"
+                onChangeText={setTotalOnlyScore}
+                placeholder="Total score, ex. 82"
+                placeholderTextColor={palette.textMuted}
+                style={styles.input}
+                value={totalOnlyScore}
+              />
+            ) : null}
+
             <View style={styles.liveSummary}>
               <Text style={styles.liveSummaryText}>Current total: {totalScore || '--'}</Text>
               <Text style={styles.liveSummaryText}>
@@ -226,6 +271,7 @@ export default function ScoresScreen() {
               </Text>
             </View>
 
+            {scoreMode === 'holes' ? (
             <View style={styles.holesGrid}>
               {Array.from({ length: holesPlayed }).map((_, index) => (
                 <View key={index} style={styles.holeCard}>
@@ -245,6 +291,7 @@ export default function ScoresScreen() {
                 </View>
               ))}
             </View>
+            ) : null}
 
             <PrimaryButton label={saving ? 'Saving...' : 'Save Scorecard'} loading={saving} onPress={handleSaveRound} />
           </View>
