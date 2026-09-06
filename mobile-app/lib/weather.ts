@@ -38,16 +38,16 @@ function parseWindSpeed(value?: string | null) {
   return Math.round(matches.reduce((sum, current) => sum + current, 0) / matches.length)
 }
 
-function fallbackWeather(location: string): MobileWeatherData {
-  return {
-    location,
-    temperature: 72,
-    description: 'partly cloudy',
-    icon: '02d',
-    humidity: 60,
-    windSpeed: 8,
-    feelsLike: 72
-  }
+function mapWeatherCode(code?: number | null) {
+  if (code === 0) return 'clear sky'
+  if (code === 1 || code === 2) return 'partly cloudy'
+  if (code === 3) return 'overcast'
+  if ([45, 48].includes(code || -1)) return 'foggy'
+  if ([51, 53, 55, 56, 57].includes(code || -1)) return 'drizzle'
+  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code || -1)) return 'rain'
+  if ([71, 73, 75, 77, 85, 86].includes(code || -1)) return 'snow'
+  if ([95, 96, 99].includes(code || -1)) return 'thunderstorms'
+  return 'current conditions'
 }
 
 async function getCoordinatesFromCity(city: string) {
@@ -86,6 +86,29 @@ export async function getMobileWeatherAtCoordinates(
   longitude: number,
   fallbackLocation = 'Current location'
 ): Promise<MobileWeatherData> {
+  const currentResponse = await fetch(
+    `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&temperature_unit=fahrenheit&wind_speed_unit=mph`
+  )
+
+  if (currentResponse.ok) {
+    const current = (await currentResponse.json())?.current
+
+    if (typeof current?.temperature_2m === 'number') {
+      const description = mapWeatherCode(current.weather_code)
+      return {
+        location: fallbackLocation,
+        temperature: Math.round(current.temperature_2m),
+        description,
+        icon: mapForecastToIcon(description),
+        humidity: Math.round(current.relative_humidity_2m ?? 0),
+        windSpeed: Math.round(current.wind_speed_10m ?? 0),
+        feelsLike: Math.round(current.apparent_temperature ?? current.temperature_2m)
+      }
+    }
+  }
+
+  // Open-Meteo provides observed current conditions. weather.gov remains a
+  // real-data fallback in case that request is temporarily unavailable.
   const pointsResponse = await fetch(`https://api.weather.gov/points/${latitude},${longitude}`, {
     headers: WEATHER_GOV_HEADERS
   })
@@ -134,10 +157,6 @@ export async function getMobileWeatherAtCoordinates(
 }
 
 export async function getMobileWeather(city: string): Promise<MobileWeatherData> {
-  try {
-    const { latitude, longitude, matchedAddress } = await getCoordinatesFromCity(city)
-    return await getMobileWeatherAtCoordinates(latitude, longitude, matchedAddress)
-  } catch {
-    return fallbackWeather(city)
-  }
+  const { latitude, longitude, matchedAddress } = await getCoordinatesFromCity(city)
+  return getMobileWeatherAtCoordinates(latitude, longitude, matchedAddress)
 }
