@@ -923,6 +923,10 @@ export default function ProfileTab() {
               <View style={styles.aboutProfilePanel}>
               {profile?.bio ? (
                 <View style={[styles.bioCard, styles.aboutBioCard]}>
+                  <View style={styles.aboutBioHeading}>
+                    <Ionicons color="#d8bd76" name="chatbubble-ellipses-outline" size={15} />
+                    <Text style={styles.aboutBioEyebrow}>Member&apos;s Note</Text>
+                  </View>
                   <Text style={[styles.meta, styles.bioText]}>{profile.bio}</Text>
                 </View>
               ) : null}
@@ -975,8 +979,11 @@ export default function ProfileTab() {
                   <Text style={styles.aboutInfoValue}>{scoreSummary.totalRounds || '0'}</Text>
                 </View>
               </View>
-              <View style={styles.socialSection}>
-                <Text style={styles.aboutSectionTitle}>Social Links</Text>
+              <View style={[styles.socialSection, styles.aboutDetailCard]}>
+                <View style={styles.aboutSectionHeading}>
+                  <Ionicons color="#d8bd76" name="share-social-outline" size={16} />
+                  <Text style={styles.aboutSectionTitle}>Social Links</Text>
+                </View>
                 {isInlineAboutEditing ? (
                   <View style={styles.inlineFieldStack}>
                     <TextInput
@@ -1026,7 +1033,10 @@ export default function ProfileTab() {
                 )}
               </View>
               <View style={styles.aceCard}>
-                <Text style={styles.aboutSectionTitle}>Hole In One</Text>
+                <View style={styles.aboutSectionHeading}>
+                  <Ionicons color="#f6e7ba" name="flag-outline" size={16} />
+                  <Text style={styles.aboutSectionTitle}>Hole In One</Text>
+                </View>
                 {isInlineAboutEditing ? (
                   <View style={styles.inlineFieldStack}>
                     <TextInput
@@ -1072,7 +1082,11 @@ export default function ProfileTab() {
                   <Text style={styles.infoLine}>No ace logged yet.</Text>
                 )}
               </View>
-              <Text style={styles.aboutSectionTitle}>What&apos;s In The Bag</Text>
+              <View style={styles.aboutBagSection}>
+              <View style={styles.aboutSectionHeading}>
+                <Ionicons color="#d8bd76" name="briefcase-outline" size={16} />
+                <Text style={styles.aboutSectionTitle}>What&apos;s In The Bag</Text>
+              </View>
               <View style={styles.bagGrid}>
               {bagFields.map((field) => {
                 const value = bagItems[field.key]?.trim()
@@ -1098,6 +1112,7 @@ export default function ProfileTab() {
                   </View>
                 )
               })}
+              </View>
               </View>
               </View>
             </View>
@@ -1717,14 +1732,15 @@ const styles = StyleSheet.create({
     textAlign: 'left'
   },
   bioText: {
-    color: '#264335',
+    color: '#f5eedc',
     fontFamily: 'Georgia',
-    fontSize: 15,
-    lineHeight: 22
+    fontSize: 16,
+    lineHeight: 24
   },
   bioCard: {
-    backgroundColor: '#f3efe4',
-    borderColor: 'rgba(210,180,104,0.28)',
+    backgroundColor: 'rgba(7, 39, 28, 0.64)',
+    borderColor: 'rgba(216,189,118,0.34)',
+    borderLeftWidth: 3,
     borderRadius: 18,
     borderWidth: 1,
     marginHorizontal: 20,
@@ -1736,6 +1752,19 @@ const styles = StyleSheet.create({
     marginHorizontal: 0,
     marginTop: 0
   },
+  aboutBioHeading: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 7,
+    marginBottom: 8
+  },
+  aboutBioEyebrow: {
+    color: '#d8bd76',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase'
+  },
   activityCard: {
     backgroundColor: 'transparent',
     gap: 14,
@@ -1743,9 +1772,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20
   },
   aboutProfilePanel: {
-    backgroundColor: '#34715b',
-    borderColor: 'rgba(234,246,216,0.3)',
-    borderRadius: 24,
+    backgroundColor: '#28634d',
+    borderColor: 'rgba(216,189,118,0.24)',
+    borderRadius: 26,
     borderWidth: 1,
     gap: 12,
     padding: 12
@@ -2106,8 +2135,8 @@ const styles = StyleSheet.create({
     marginLeft: 'auto'
   },
   bagRow: {
-    backgroundColor: '#3b7e65',
-    borderColor: 'rgba(234,246,216,0.24)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.15)',
     borderRadius: 14,
     borderWidth: 1,
     flex: 1,
@@ -2128,7 +2157,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase'
   },
   bagValue: {
-    color: palette.text,
+    color: '#fffaf0',
     fontSize: 13,
     fontWeight: '600',
     lineHeight: 20
@@ -2138,32 +2167,40 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8
   },
+  aboutBagSection: {
+    backgroundColor: 'rgba(7,39,28,0.3)',
+    borderColor: 'rgba(255,255,255,0.14)',
+    borderRadius: 19,
+    borderWidth: 1,
+    gap: 10,
+    padding: 12
+  },
   aboutInfoCard: {
-    backgroundColor: '#3b7e65',
-    borderColor: 'rgba(234,246,216,0.24)',
-    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.09)',
+    borderColor: 'rgba(255,255,255,0.17)',
+    borderRadius: 17,
     borderWidth: 1,
     gap: 2,
     minWidth: '47%',
     padding: 10
   },
   aboutInfoLabel: {
-    color: palette.textMuted,
+    color: 'rgba(245,238,220,0.58)',
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.8,
     textTransform: 'uppercase'
   },
   aboutInfoValue: {
-    color: palette.text,
+    color: '#fffaf0',
     fontSize: 14,
     fontWeight: '700',
     lineHeight: 20
   },
   aceCard: {
-    backgroundColor: '#3d301a',
-    borderColor: 'rgba(232,216,178,0.28)',
-    borderRadius: 18,
+    backgroundColor: 'rgba(74, 53, 23, 0.76)',
+    borderColor: 'rgba(232,216,178,0.36)',
+    borderRadius: 19,
     borderWidth: 1,
     gap: 8,
     padding: 12
@@ -2173,6 +2210,18 @@ const styles = StyleSheet.create({
     fontFamily: 'Georgia',
     fontSize: 16,
     fontWeight: '800'
+  },
+  aboutSectionHeading: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 7
+  },
+  aboutDetailCard: {
+    backgroundColor: 'rgba(7,39,28,0.3)',
+    borderColor: 'rgba(255,255,255,0.14)',
+    borderRadius: 19,
+    borderWidth: 1,
+    padding: 12
   },
   socialSection: {
     gap: 7
@@ -2184,8 +2233,8 @@ const styles = StyleSheet.create({
   },
   socialChip: {
     alignItems: 'center',
-    backgroundColor: '#3b7e65',
-    borderColor: 'rgba(234,246,216,0.24)',
+    backgroundColor: 'rgba(255,255,255,0.11)',
+    borderColor: 'rgba(216,189,118,0.27)',
     borderRadius: 999,
     borderWidth: 1,
     flexDirection: 'row',
@@ -2204,8 +2253,8 @@ const styles = StyleSheet.create({
     gap: 6
   },
   acePill: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,250,240,0.08)',
+    borderColor: 'rgba(246,231,186,0.18)',
     borderRadius: 12,
     borderWidth: 1,
     gap: 2,
