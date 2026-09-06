@@ -73,6 +73,7 @@ async function createGroupWithFallback(
     logo_url,
     group_type,
     maxMembers,
+    is_private,
     user_id
   }: {
     name: string
@@ -82,6 +83,7 @@ async function createGroupWithFallback(
     logo_url?: string | null
     group_type?: string
     maxMembers?: number
+    is_private?: boolean
     user_id: string
   }
 ) {
@@ -94,6 +96,7 @@ async function createGroupWithFallback(
       logo_url: logo_url || null,
       group_type: group_type || 'community',
       max_members: maxMembers || 10,
+      is_private: Boolean(is_private),
       creator_id: user_id,
       status: 'active'
     },
@@ -161,7 +164,8 @@ async function updateGroupWithFallback(
     group_type,
     logo_url,
     header_image_url,
-    image_url
+    image_url,
+    is_private
   }: {
     name?: string
     description?: string
@@ -171,6 +175,7 @@ async function updateGroupWithFallback(
     logo_url?: string | null
     header_image_url?: string | null
     image_url?: string | null
+    is_private?: boolean
   }
 ) {
   const attempts = [
@@ -182,7 +187,8 @@ async function updateGroupWithFallback(
       group_type,
       logo_url,
       header_image_url,
-      image_url
+      image_url,
+      is_private
     },
     {
       name,
@@ -354,6 +360,7 @@ export async function POST(request: NextRequest) {
       logo_url,
       header_image_url,
       image_url,
+      is_private,
       maxMembers,
       group_type,
       user_id: bodyUserId,
@@ -412,7 +419,17 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      // Check if user is already a member
+      const { data: joinGroup, error: joinGroupError } = await supabase
+        .from('golf_groups')
+        .select('id, name, is_private')
+        .eq('id', group_id)
+        .maybeSingle()
+
+      if (joinGroupError || !joinGroup) {
+        return NextResponse.json({ error: 'Group not found' }, { status: 404 })
+      }
+
+      // Check if user already has a membership or a pending request.
       const { data: existingMember, error: checkError } = await supabase
         .from('group_members')
         .select('*')
@@ -426,7 +443,11 @@ export async function POST(request: NextRequest) {
       }
 
       if (existingMember) {
-        return NextResponse.json({ error: 'User is already a member of this group' }, { status: 409 })
+        return NextResponse.json({
+          error: (existingMember.status || '').toLowerCase() === 'pending'
+            ? 'Your request to join is awaiting approval'
+            : 'User is already a member of this group'
+        }, { status: 409 })
       }
 
       // Add user to group
@@ -436,7 +457,7 @@ export async function POST(request: NextRequest) {
           group_id,
           user_id,
           role: 'member',
-          status: 'active',
+          status: joinGroup.is_private ? 'pending' : 'active',
           joined_at: new Date().toISOString()
         })
         .select()
@@ -449,28 +470,22 @@ export async function POST(request: NextRequest) {
 
       console.log('✅ User joined group successfully:', member.id)
 
-      const { data: joinedGroup } = await supabase
-        .from('golf_groups')
-        .select('id, name')
-        .eq('id', group_id)
-        .maybeSingle()
-
-      await logGroupActivity(supabase, {
-        userId: user_id,
-        groupId: group_id,
-        activityType: 'group_joined',
-        title: 'Joined a group',
-        description: `Joined ${joinedGroup?.name || 'a golf group'}`,
-        metadata: {
-          group_id,
-          group_name: joinedGroup?.name || null
-        }
-      })
+      if (!joinGroup.is_private) {
+        await logGroupActivity(supabase, {
+          userId: user_id,
+          groupId: group_id,
+          activityType: 'group_joined',
+          title: 'Joined a group',
+          description: `Joined ${joinGroup.name || 'a golf group'}`,
+          metadata: { group_id, group_name: joinGroup.name || null }
+        })
+      }
 
       return NextResponse.json({
         success: true,
-        message: 'Successfully joined the group',
-        member
+        message: joinGroup.is_private ? 'Join request sent to the group admins' : 'Successfully joined the group',
+        member,
+        pending: Boolean(joinGroup.is_private)
       })
     }
 
@@ -568,7 +583,8 @@ export async function POST(request: NextRequest) {
         group_type,
         logo_url,
         header_image_url,
-        image_url
+        image_url,
+        is_private
       })
 
       if (updateError) {
@@ -661,6 +677,33 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    if (action === 'review_join_request') {
+      if (!group_id || !member_user_id || !['approve', 'decline'].includes(String(role).toLowerCase())) {
+        return NextResponse.json({ error: 'Group, member, and decision are required' }, { status: 400 })
+      }
+
+      const permission = await canManageGroup(supabase, group_id, user_id)
+      if (!permission.allowed) {
+        return NextResponse.json({ error: 'Only group admins can review join requests' }, { status: 403 })
+      }
+
+      const nextStatus = String(role).toLowerCase() === 'approve' ? 'active' : 'declined'
+      const { data: member, error: reviewError } = await supabase
+        .from('group_members')
+        .update({ status: nextStatus })
+        .eq('group_id', group_id)
+        .eq('user_id', member_user_id)
+        .eq('status', 'pending')
+        .select()
+        .single()
+
+      if (reviewError) {
+        return NextResponse.json({ error: 'Failed to review join request', details: reviewError.message }, { status: 500 })
+      }
+
+      return NextResponse.json({ success: true, member })
+    }
+
     if (!name) {
       return NextResponse.json(
         { error: 'Group name is required' },
@@ -678,6 +721,7 @@ export async function POST(request: NextRequest) {
         slogan,
         logo_url,
         group_type,
+        is_private,
         maxMembers,
         user_id
       })

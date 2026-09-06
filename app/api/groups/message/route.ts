@@ -327,15 +327,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const { data: activityGroup } = await supabase
+      .from('golf_groups')
+      .select('name')
+      .eq('id', group_id)
+      .maybeSingle()
+
+    const groupName = activityGroup?.name || 'a group'
     const { error: activityError } = await supabase.from('user_activities').insert({
       user_id,
       activity_type: parent_message_id ? 'group_thread_reply' : 'group_board_post',
-      title: parent_message_id ? 'Replied in a group thread' : 'Posted in a group',
+      title: parent_message_id ? `replied in ${groupName}` : `posted in ${groupName}`,
       description: message.substring(0, 140),
       related_id: group_id,
       related_type: 'group',
       metadata: {
         group_id,
+        group_name: groupName,
         message_id: data?.id || null
       }
     })

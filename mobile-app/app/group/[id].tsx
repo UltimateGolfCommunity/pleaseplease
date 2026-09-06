@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Keyboard,
   Modal,
   Pressable,
   RefreshControl,
@@ -18,7 +19,6 @@ import {
   View
 } from 'react-native'
 import { Avatar } from '@/components/Avatar'
-import { BrandHeader } from '@/components/BrandHeader'
 import { PrimaryButton } from '@/components/PrimaryButton'
 import { apiGet, apiPost } from '@/lib/api'
 import { getShareableGroupLink, uploadImageToStorage } from '@/lib/supabase'
@@ -36,6 +36,7 @@ type GroupDetail = {
   image_url?: string | null
   header_image_url?: string | null
   creator_id?: string | null
+  is_private?: boolean | null
 }
 
 type Member = {
@@ -115,10 +116,12 @@ export default function GroupScreen() {
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [group, setGroup] = useState<GroupDetail | null>(null)
   const [members, setMembers] = useState<Member[]>([])
+  const [pendingMembers, setPendingMembers] = useState<Member[]>([])
   const [messages, setMessages] = useState<GroupMessage[]>([])
   const [groupFeed, setGroupFeed] = useState<GroupActivity[]>([])
   const [connections, setConnections] = useState<ConnectionRecord[]>([])
   const [draft, setDraft] = useState('')
+  const [composerOpen, setComposerOpen] = useState(false)
   const [activeSection, setActiveSection] = useState<'board' | 'members' | 'info'>('board')
   const [editForm, setEditForm] = useState({
     name: '',
@@ -126,6 +129,7 @@ export default function GroupScreen() {
     description: '',
     location: '',
     group_type: 'community'
+    ,is_private: false
   })
 
   const loadGroup = useCallback(async () => {
@@ -133,8 +137,8 @@ export default function GroupScreen() {
 
     try {
       const [response, connectionsResponse] = await Promise.all([
-        apiGet<{ success: boolean; group: GroupDetail; members: Member[] }>(
-          `/api/groups/${encodeURIComponent(id)}`
+        apiGet<{ success: boolean; group: GroupDetail; members: Member[]; pending_members?: Member[] }>(
+          `/api/groups/${encodeURIComponent(id)}${user?.id ? `?user_id=${encodeURIComponent(user.id)}` : ''}`
         ),
         user?.id
           ? apiGet<{ success: boolean; connections: ConnectionRecord[] }>(
@@ -144,6 +148,7 @@ export default function GroupScreen() {
       ])
       setGroup(response.group)
       setMembers(response.members || [])
+      setPendingMembers(response.pending_members || [])
       setConnections(connectionsResponse.connections || [])
 
       if (user?.id) {
@@ -183,6 +188,7 @@ export default function GroupScreen() {
       description: group.description || '',
       location: group.location || '',
       group_type: group.group_type || 'community'
+      ,is_private: Boolean(group.is_private)
     })
   }, [group])
 
@@ -371,7 +377,8 @@ export default function GroupScreen() {
         description: editForm.description.trim(),
         slogan: editForm.slogan.trim(),
         location: editForm.location.trim(),
-        group_type: editForm.group_type
+        group_type: editForm.group_type,
+        is_private: editForm.is_private
       })
 
       if (response.group) {
@@ -437,10 +444,24 @@ export default function GroupScreen() {
       setMessages(response.messages || [])
       setDraft('')
       setReplyingTo(null)
+      setComposerOpen(false)
+      Keyboard.dismiss()
     } catch (error) {
       Alert.alert('Unable to post', error instanceof Error ? error.message : 'Please try again.')
     } finally {
       setPosting(false)
+    }
+  }
+
+  const handleReviewRequest = async (member: Member, decision: 'approve' | 'decline') => {
+    if (!user?.id || !group?.id || !member.user_id) return
+    try {
+      await apiPost('/api/groups', {
+        action: 'review_join_request', group_id: group.id, user_id: user.id, member_user_id: member.user_id, role: decision
+      })
+      await loadGroup()
+    } catch (error) {
+      Alert.alert('Unable to review request', error instanceof Error ? error.message : 'Please try again.')
     }
   }
 
@@ -493,6 +514,7 @@ export default function GroupScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
         contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -504,12 +526,6 @@ export default function GroupScreen() {
           />
         }
       >
-        <BrandHeader
-          showBack
-          rightIconName="share-social-outline"
-          onRightPress={() => setShowShareModal(true)}
-        />
-
         <View style={styles.hero}>
           <View style={styles.coverShell}>
             {group?.header_image_url || group?.image_url ? (
@@ -519,84 +535,66 @@ export default function GroupScreen() {
                 <Text style={styles.coverFallbackText}>Add cover photo</Text>
               </View>
             )}
-            {isEditing ? (
-              <Pressable onPress={() => void handlePickGroupImage('cover')} style={styles.inlineMediaButton}>
-                <Text style={styles.inlineMediaButtonText}>{uploadingCover ? 'Updating...' : 'Edit Cover'}</Text>
+            <View style={styles.coverScrim} />
+            <View style={styles.coverActions}>
+              <Pressable onPress={() => setShowShareModal(true)} style={styles.coverActionButton}>
+                <Ionicons color="#ffffff" name="share-social-outline" size={20} />
               </Pressable>
-            ) : null}
-          </View>
-          <View style={styles.heroTop}>
-            <View style={styles.logoColumn}>
-              <Avatar
-                label={group?.name || 'Group'}
-                shape="rounded"
-                size={92}
-                uri={group?.logo_url || group?.image_url}
-              />
-              {isEditing ? (
-                <Pressable onPress={() => void handlePickGroupImage('logo')} style={styles.inlineLogoButton}>
-                  <Text style={styles.inlineMediaButtonText}>{uploadingLogo ? 'Updating...' : 'Edit Logo'}</Text>
+              {isMember ? (
+                <Pressable onPress={() => { setActiveSection('board'); setComposerOpen(true) }} style={styles.coverActionButton}>
+                  <Ionicons color="#ffffff" name="create-outline" size={21} />
                 </Pressable>
               ) : null}
             </View>
-            <View style={styles.heroCopy}>
+            <View style={styles.groupTypeCoverIcon}>
+              <Ionicons
+                color="#ffffff"
+                name={(group?.group_type || 'community').toLowerCase() === 'course' ? 'golf-outline' : 'people-outline'}
+                size={19}
+              />
+            </View>
+            <View style={styles.heroCenteredContent}>
+              <Avatar label={group?.name || 'Group'} shape="rounded" size={88} uri={group?.logo_url || group?.image_url} />
               {busy ? <ActivityIndicator color={palette.aqua} /> : null}
               {isEditing ? (
-                <>
-                  <TextInput
-                    onChangeText={(value) => setEditForm((current) => ({ ...current, name: value }))}
-                    placeholder="Group name"
-                    placeholderTextColor={palette.textMuted}
-                    style={styles.inlineNameInput}
-                    value={editForm.name}
-                  />
-                  <Text style={styles.heroSubtitle}>{(editForm.group_type || 'community').replace(/^./, (char) => char.toUpperCase())} group</Text>
-                </>
+                <TextInput onChangeText={(value) => setEditForm((current) => ({ ...current, name: value }))} placeholder="Group name" placeholderTextColor="rgba(255,255,255,0.65)" style={styles.inlineNameInput} value={editForm.name} />
               ) : (
                 <>
-                  <Text style={styles.name}>{group?.name || id?.replace(/-/g, ' ') || 'Group'}</Text>
-                  <Text style={styles.heroSubtitle}>{group?.slogan || `${groupTypeLabel} group`}</Text>
+                  <Text numberOfLines={1} style={styles.name}>{group?.name || id?.replace(/-/g, ' ') || 'Group'}</Text>
+                  <Text numberOfLines={2} style={styles.heroStory}>{group?.description || group?.slogan || `${groupTypeLabel} golf group`}</Text>
                   <View style={styles.heroMetaInlineRow}>
                     {group?.location ? <Text style={styles.heroMetaInlineText}>{group.location}</Text> : null}
-                    <Pressable onPress={() => setActiveSection('members')}>
-                      <Text style={styles.heroMetaInlineAccent}>{members.length} members</Text>
-                    </Pressable>
+                    <Pressable onPress={() => setActiveSection('members')}><Text style={styles.heroMetaInlineAccent}>{members.length} members</Text></Pressable>
+                    {group?.is_private ? <Text style={styles.heroMetaInlineText}>Private</Text> : null}
                   </View>
-                  <Text style={styles.heroStory}>
-                    {group?.description ||
-                      'Build the story of this group so local golfers know exactly who it is for.'}
-                  </Text>
                 </>
               )}
             </View>
-          </View>
-          <View style={styles.metaRow}>
-            {isEditing ? (
-              <TextInput
-                onChangeText={(value) => setEditForm((current) => ({ ...current, location: value }))}
-                placeholder="City or course area"
-                placeholderTextColor={palette.textMuted}
-                style={styles.inlineMetaInput}
-                value={editForm.location}
-              />
-            ) : null}
-            <Text style={styles.metaPill}>Founded by {founderName}</Text>
-          </View>
-          {!isMember ? <PrimaryButton label="Join Group" loading={joining} onPress={handleJoin} /> : null}
-          {isOwner ? (
-            <View style={styles.quickActions}>
-              <Pressable onPress={() => setIsEditing((current) => !current)} style={styles.quickAction}>
-                <Ionicons color={palette.aqua} name="shield-checkmark-outline" size={18} />
-                <Text style={styles.quickActionText}>Admin</Text>
+            {isOwner ? (
+              <Pressable
+                accessibilityLabel={isEditing ? 'Change group cover photo' : 'Edit group'}
+                onPress={() => {
+                  if (isEditing) {
+                    void handlePickGroupImage('cover')
+                  } else {
+                    setActiveSection('info')
+                    setIsEditing(true)
+                  }
+                }}
+                style={styles.groupEditButton}
+              >
+                <Ionicons color="#ffffff" name={isEditing ? 'camera-outline' : 'settings-outline'} size={19} />
               </Pressable>
-            </View>
-          ) : null}
+            ) : null}
+          </View>
+          {!isMember ? <PrimaryButton label={group?.is_private ? 'Request to Join' : 'Join Group'} loading={joining} onPress={handleJoin} /> : null}
         </View>
 
         <View style={styles.tabRow}>
           {[
-            { label: 'Board', value: 'board' as const },
-            { label: 'Info', value: 'info' as const }
+            { label: 'Posts', value: 'board' as const },
+            { label: 'About', value: 'info' as const },
+            { label: 'Members', value: 'members' as const }
           ].map((tab) => {
             const active = activeSection === tab.value
 
@@ -613,9 +611,7 @@ export default function GroupScreen() {
         </View>
 
         {activeSection === 'info' ? (
-          <View style={styles.card}>
-            <Text style={styles.sectionEyebrow}>About</Text>
-            <Text style={styles.sectionTitle}>What this group is about</Text>
+          <View style={styles.aboutFeed}>
             {isEditing ? (
               <>
                 <TextInput
@@ -651,6 +647,17 @@ export default function GroupScreen() {
                     )
                   })}
                 </View>
+                <View style={styles.typeRow}>
+                  {[
+                    { label: 'Public', value: false, icon: 'globe-outline' as const },
+                    { label: 'Private', value: true, icon: 'lock-closed-outline' as const }
+                  ].map((option) => (
+                    <Pressable key={option.label} onPress={() => setEditForm((current) => ({ ...current, is_private: option.value }))} style={[styles.typeChip, editForm.is_private === option.value && styles.typeChipActive]}>
+                      <Ionicons color={editForm.is_private === option.value ? palette.aqua : palette.textMuted} name={option.icon} size={17} />
+                      <Text style={[styles.typeLabel, editForm.is_private === option.value && styles.typeLabelActive]}>{option.label}</Text>
+                    </Pressable>
+                  ))}
+                </View>
                 <View style={styles.editActions}>
                   <PrimaryButton label="Cancel" variant="ghost" onPress={() => setIsEditing(false)} />
                   <PrimaryButton
@@ -668,14 +675,6 @@ export default function GroupScreen() {
             )}
             <View style={styles.infoGrid}>
               <View style={styles.infoPill}>
-                <Text style={styles.infoLabel}>Type</Text>
-                <Text style={styles.infoValue}>
-                  {isEditing
-                    ? (editForm.group_type || 'community').replace(/^./, (char) => char.toUpperCase())
-                    : groupTypeLabel}
-                </Text>
-              </View>
-              <View style={styles.infoPill}>
                 <Text style={styles.infoLabel}>Founder</Text>
                 <Text style={styles.infoValue}>{founderName}</Text>
               </View>
@@ -692,9 +691,7 @@ export default function GroupScreen() {
             </View>
           </View>
         ) : activeSection === 'members' ? (
-          <View style={styles.card}>
-            <Text style={styles.sectionEyebrow}>People</Text>
-            <Text style={styles.sectionTitle}>{members.length} group members</Text>
+          <View style={styles.membersFeed}>
             {isOwner ? (
               <View style={styles.inviteSection}>
                 <Text style={styles.inviteTitle}>Add members</Text>
@@ -735,6 +732,23 @@ export default function GroupScreen() {
                     </View>
                   ))
                 )}
+              </View>
+            ) : null}
+            {isOwner && pendingMembers.length ? (
+              <View style={styles.inviteSection}>
+                <Text style={styles.inviteTitle}>Join requests</Text>
+                {pendingMembers.map((member) => (
+                  <View key={member.id} style={styles.memberRow}>
+                    <View style={styles.memberIdentity}>
+                      <Avatar label={member.user_profiles?.first_name || member.user_profiles?.username || 'G'} size={42} uri={member.user_profiles?.avatar_url} />
+                      <Text style={styles.memberName}>{member.user_profiles?.first_name || member.user_profiles?.username || 'Golfer'}</Text>
+                    </View>
+                    <View style={styles.requestActions}>
+                      <Pressable onPress={() => void handleReviewRequest(member, 'decline')} style={styles.roleButton}><Text style={styles.roleButtonText}>Decline</Text></Pressable>
+                      <Pressable onPress={() => void handleReviewRequest(member, 'approve')} style={styles.roleButton}><Text style={styles.roleButtonText}>Approve</Text></Pressable>
+                    </View>
+                  </View>
+                ))}
               </View>
             ) : null}
             {members.length === 0 ? (
@@ -779,39 +793,17 @@ export default function GroupScreen() {
             ))}
           </View>
         ) : (
-          <View style={styles.card}>
-            <Text style={styles.sectionEyebrow}>Board</Text>
-            <Text style={styles.sectionTitle}>Community board</Text>
-            <Text style={styles.body}>
-              Post scores, photos, tee-time updates, or start a thread for the group.
-            </Text>
-            <View style={styles.groupFeedPanel}>
-              <Text style={styles.inviteTitle}>Group activity feed</Text>
-              {groupFeed.length === 0 ? (
-                <Text style={styles.body}>Member activity, tee times, posts, and score movement will show here.</Text>
-              ) : null}
-              {groupFeed.map((item) => (
-                <View key={item.id} style={styles.groupFeedItem}>
-                  <Avatar
-                    label={item.actor?.first_name || item.actor?.username || 'UGC'}
-                    size={34}
-                    uri={item.actor?.avatar_url}
-                  />
-                  <View style={styles.memberCopy}>
-                    <Text style={styles.memberName}>{item.title || 'Group activity'}</Text>
-                    {item.description ? <Text style={styles.memberMeta}>{item.description}</Text> : null}
-                  </View>
-                </View>
-              ))}
-            </View>
-            {replyingTo ? (
+          <View style={styles.postsFeed}>
+            {composerOpen && isMember ? (
+              <View style={styles.composerPanel}>
+                {replyingTo ? (
               <View style={styles.replyBanner}>
                 <Text style={styles.replyBannerText}>Replying to a member post</Text>
                 <Pressable onPress={() => setReplyingTo(null)}>
                   <Text style={styles.replyCancel}>Cancel</Text>
                 </Pressable>
               </View>
-            ) : null}
+                ) : null}
             <TextInput
               multiline
               onChangeText={setDraft}
@@ -821,6 +813,8 @@ export default function GroupScreen() {
               value={draft}
             />
             <PrimaryButton label={posting ? 'Posting...' : 'Post to Group'} loading={posting} onPress={handlePostMessage} />
+              </View>
+            ) : null}
 
             {messages.length === 0 ? (
               <Text style={styles.body}>No posts yet. Start the conversation for this group.</Text>
@@ -848,7 +842,7 @@ export default function GroupScreen() {
                       {message.liked_by_user ? 'Unlike' : 'Like'}{message.like_count ? ` (${message.like_count})` : ''}
                     </Text>
                   </Pressable>
-                  <Pressable onPress={() => setReplyingTo(message.id)}>
+                  <Pressable onPress={() => { setReplyingTo(message.id); setComposerOpen(true) }}>
                     <Text style={styles.messageAction}>Reply</Text>
                   </Pressable>
                 </View>
@@ -901,7 +895,9 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: 20,
-    padding: 20
+    paddingBottom: 150,
+    paddingHorizontal: 20,
+    paddingTop: 4
   },
   editInput: {
     backgroundColor: palette.cardSoft,
@@ -929,6 +925,8 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     flex: 1,
+    flexDirection: 'row',
+    gap: 7,
     justifyContent: 'center',
     minHeight: 48,
     paddingHorizontal: 16
@@ -959,18 +957,54 @@ const styles = StyleSheet.create({
     borderColor: palette.border,
     borderRadius: 28,
     borderWidth: 1,
-    gap: 14,
-    padding: 20
+    gap: 12,
+    padding: 8
   },
   coverShell: {
-    borderRadius: 22,
-    height: 176,
+    borderRadius: 24,
+    height: 286,
     overflow: 'hidden',
     position: 'relative'
   },
   coverImage: {
     height: '100%',
     width: '100%'
+  },
+  coverScrim: {
+    backgroundColor: 'rgba(3,16,10,0.38)',
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0
+  },
+  coverActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    left: 14,
+    position: 'absolute',
+    right: 14,
+    top: 14,
+    zIndex: 2
+  },
+  coverActionButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(4,22,14,0.72)',
+    borderColor: 'rgba(255,255,255,0.22)',
+    borderRadius: 18,
+    borderWidth: 1,
+    height: 38,
+    justifyContent: 'center',
+    width: 38
+  },
+  heroCenteredContent: {
+    alignItems: 'center',
+    bottom: 18,
+    gap: 7,
+    left: 22,
+    position: 'absolute',
+    right: 22,
+    zIndex: 1
   },
   coverFallback: {
     alignItems: 'center',
@@ -996,6 +1030,28 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     position: 'absolute',
     right: 12
+  },
+  groupEditButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(4,22,14,0.76)',
+    borderColor: 'rgba(255,255,255,0.26)',
+    borderRadius: 18,
+    borderWidth: 1,
+    bottom: 14,
+    height: 40,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 14,
+    width: 40,
+    zIndex: 3
+  },
+  groupTypeCoverIcon: {
+    alignItems: 'center',
+    bottom: 14,
+    justifyContent: 'center',
+    left: 14,
+    position: 'absolute',
+    zIndex: 2
   },
   inlineLogoButton: {
     backgroundColor: 'rgba(255,255,255,0.06)',
@@ -1027,30 +1083,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10
+    gap: 10,
+    justifyContent: 'center'
   },
   heroMetaInlineText: {
-    color: palette.textMuted,
+    color: 'rgba(255,255,255,0.82)',
     fontSize: 13,
     fontWeight: '600'
   },
   heroMetaInlineAccent: {
-    color: palette.aqua,
+    color: '#a5f3fc',
     fontSize: 13,
     fontWeight: '700'
   },
   name: {
-    color: palette.text,
-    fontSize: 26,
+    color: '#ffffff',
+    fontSize: 27,
     fontWeight: '700',
     textTransform: 'capitalize'
   },
   inlineNameInput: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderColor: palette.border,
+    backgroundColor: 'rgba(4,18,12,0.48)',
+    borderColor: 'rgba(255,255,255,0.3)',
     borderRadius: 16,
     borderWidth: 1,
-    color: palette.text,
+    color: '#ffffff',
     fontSize: 24,
     fontWeight: '700',
     minHeight: 52,
@@ -1062,10 +1119,11 @@ const styles = StyleSheet.create({
     fontWeight: '600'
   },
   heroStory: {
-    color: palette.textMuted,
+    color: 'rgba(255,255,255,0.88)',
     fontSize: 14,
-    lineHeight: 21,
-    marginTop: 4
+    lineHeight: 20,
+    maxWidth: 290,
+    textAlign: 'center'
   },
   metaRow: {
     flexDirection: 'row',
@@ -1312,6 +1370,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800'
   },
+  requestActions: {
+    flexDirection: 'row',
+    gap: 6
+  },
   composeInput: {
     backgroundColor: palette.cardSoft,
     borderColor: palette.border,
@@ -1323,13 +1385,34 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     textAlignVertical: 'top'
   },
-  messageCard: {
-    backgroundColor: palette.cardSoft,
+  composerPanel: {
+    backgroundColor: palette.card,
     borderColor: palette.border,
-    borderRadius: 18,
+    borderRadius: 22,
+    borderWidth: 1,
+    gap: 12,
+    padding: 14
+  },
+  postsFeed: {
+    gap: 12
+  },
+  membersFeed: {
+    gap: 12
+  },
+  aboutFeed: {
+    gap: 12
+  },
+  messageCard: {
+    backgroundColor: palette.card,
+    borderColor: palette.border,
+    borderRadius: 22,
     borderWidth: 1,
     gap: 10,
-    padding: 14
+    padding: 14,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12
   },
   messageTop: {
     alignItems: 'center',

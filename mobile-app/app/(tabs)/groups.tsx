@@ -17,7 +17,6 @@ import {
   View
 } from 'react-native'
 import { Avatar } from '@/components/Avatar'
-import { BrandHeader } from '@/components/BrandHeader'
 import { PrimaryButton } from '@/components/PrimaryButton'
 import { apiGet, apiPost } from '@/lib/api'
 import { uploadImageToStorage } from '@/lib/supabase'
@@ -136,7 +135,8 @@ export default function GroupsTab() {
     location: '',
     group_type: 'community',
     logo_url: '',
-    maxMembers: '10'
+    maxMembers: '10',
+    is_private: false
   })
 
   const loadGroups = useCallback(async () => {
@@ -236,6 +236,7 @@ export default function GroupsTab() {
         location: form.location.trim(),
         logo_url: form.logo_url.trim() || null,
         group_type: form.group_type.trim() || 'community',
+        is_private: form.is_private,
         maxMembers: Number(form.maxMembers) || 10,
         user_id: user.id
       })
@@ -248,7 +249,8 @@ export default function GroupsTab() {
         location: '',
         group_type: 'community',
         logo_url: '',
-        maxMembers: '10'
+        maxMembers: '10',
+        is_private: false
       })
       setShowCreateForm(false)
       setBusy(true)
@@ -275,13 +277,15 @@ export default function GroupsTab() {
           />
         }
       >
-        <BrandHeader
-          largeLogo
-          leftIconName="people-outline"
-          onLeftPress={() => setShowMyGroupsMenu(true)}
-          rightIconName={showCreateForm ? 'close' : 'add'}
-          onRightPress={() => setShowCreateForm((value) => !value)}
-        />
+        <View style={styles.topBar}>
+          <Pressable accessibilityLabel="My groups" onPress={() => setShowMyGroupsMenu(true)} style={[styles.topBarButton, styles.topBarLeftAction]}>
+            <Ionicons color={palette.text} name="people-outline" size={21} />
+          </Pressable>
+          <Text style={styles.topBarTitle}>Activity Feed</Text>
+          <Pressable accessibilityLabel={showCreateForm ? 'Close group creation' : 'Create group'} onPress={() => setShowCreateForm((value) => !value)} style={[styles.topBarButton, styles.topBarRightAction]}>
+            <Ionicons color={palette.text} name={showCreateForm ? 'close' : 'add'} size={24} />
+          </Pressable>
+        </View>
 
         {showCreateForm ? (
           <View style={styles.searchCard}>
@@ -369,6 +373,30 @@ export default function GroupsTab() {
                 value={form.maxMembers}
               />
             </View>
+            <View style={styles.visibilitySection}>
+              <Text style={styles.visibilityTitle}>Who can join?</Text>
+              <View style={styles.visibilityRow}>
+                {[
+                  { label: 'Public', value: false, detail: 'Anyone can join' },
+                  { label: 'Private', value: true, detail: 'Admin approval required' }
+                ].map((option) => {
+                  const active = form.is_private === option.value
+                  return (
+                    <Pressable
+                      key={option.label}
+                      onPress={() => setForm((current) => ({ ...current, is_private: option.value }))}
+                      style={[styles.visibilityOption, active && styles.visibilityOptionActive]}
+                    >
+                      <Ionicons color={active ? palette.aqua : palette.textMuted} name={option.value ? 'lock-closed-outline' : 'globe-outline'} size={17} />
+                      <View style={styles.visibilityCopy}>
+                        <Text style={[styles.visibilityLabel, active && styles.visibilityLabelActive]}>{option.label}</Text>
+                        <Text style={styles.visibilityDetail}>{option.detail}</Text>
+                      </View>
+                    </Pressable>
+                  )
+                })}
+              </View>
+            </View>
             <PrimaryButton
               label="Create Group"
               loading={creating || uploadingImage}
@@ -378,9 +406,6 @@ export default function GroupsTab() {
         ) : null}
 
         <View style={styles.section}>
-          <View style={styles.feedHeader}>
-            <Text style={styles.sectionEyebrow}>Activity Feed</Text>
-          </View>
           {busy ? <ActivityIndicator color={palette.aqua} /> : null}
           {!busy && groupActivity.length === 0 ? (
             <View style={styles.emptyCard}>
@@ -413,12 +438,6 @@ export default function GroupsTab() {
                   </Text>
                 </View>
               </View>
-              <View style={styles.feedFooter}>
-                <View style={styles.feedPill}>
-                  <Ionicons color={palette.aqua} name="golf-outline" size={13} />
-                  <Text style={styles.feedPillText}>{item.group?.location || 'Community update'}</Text>
-                </View>
-              </View>
             </Pressable>
           ))}
         </View>
@@ -432,48 +451,25 @@ export default function GroupsTab() {
       >
         <Pressable style={styles.modalBackdrop} onPress={() => setShowMyGroupsMenu(false)}>
           <Pressable style={styles.modalCard} onPress={() => {}}>
-            <Text style={styles.sectionEyebrow}>My Groups</Text>
-            <Text style={styles.sectionTitle}>Choose a group</Text>
+            <Text style={[styles.sectionEyebrow, styles.myGroupsHeading]}>My Groups</Text>
             {myGroups.length === 0 ? (
               <Text style={styles.helper}>Create or join a group and it will appear here.</Text>
             ) : null}
-            {myGroups.map((group) => (
-              <Pressable
-                key={group.id}
-                onPress={() => {
-                  setShowMyGroupsMenu(false)
-                  router.push(`/group/${group.id}`)
-                }}
-                style={styles.drawerGroupRow}
-              >
-                <Avatar label={group.name} shape="rounded" size={52} uri={group.logo_url || group.image_url} />
-                <View style={styles.groupCopy}>
-                  <Text style={styles.cardTitle}>{group.name}</Text>
-                  <Text style={styles.cardMeta}>
-                    {group.location || 'Location not set'} • {group.member_count || 0} members
-                  </Text>
-                  <View style={styles.drawerMembersRow}>
-                    {(group.member_preview || []).slice(0, 5).map((member, index) => (
-                      <View
-                        key={member.id}
-                        style={[styles.drawerMemberAvatar, { marginLeft: index ? -10 : 0 }]}
-                      >
-                        <Avatar
-                          label={member.first_name || member.username || 'G'}
-                          size={28}
-                          uri={member.avatar_url}
-                        />
-                      </View>
-                    ))}
-                    {group.member_count ? (
-                      <Text style={styles.drawerMemberCount}>
-                        {group.member_count} member{group.member_count === 1 ? '' : 's'}
-                      </Text>
-                    ) : null}
-                  </View>
-                </View>
-              </Pressable>
-            ))}
+            <View style={styles.myGroupsGrid}>
+              {myGroups.map((group) => (
+                <Pressable
+                  key={group.id}
+                  onPress={() => {
+                    setShowMyGroupsMenu(false)
+                    router.push(`/group/${group.id}`)
+                  }}
+                  style={styles.groupCircleTile}
+                >
+                  <Avatar label={group.name} shape="circle" size={66} uri={group.logo_url || group.image_url} />
+                  <Text numberOfLines={2} style={styles.groupCircleName}>{group.name}</Text>
+                </Pressable>
+              ))}
+            </View>
             <PrimaryButton label="Close" variant="ghost" onPress={() => setShowMyGroupsMenu(false)} />
           </Pressable>
         </Pressable>
@@ -493,6 +489,37 @@ const styles = StyleSheet.create({
   },
   actions: {
     gap: 12
+  },
+  topBar: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    minHeight: 48
+  },
+  topBarTitle: {
+    color: palette.text,
+    fontFamily: 'Georgia',
+    fontSize: 27,
+    fontWeight: '700',
+    letterSpacing: -0.5
+  },
+  topBarButton: {
+    alignItems: 'center',
+    backgroundColor: palette.cardSoft,
+    borderColor: palette.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    height: 38,
+    justifyContent: 'center',
+    width: 38
+  },
+  topBarLeftAction: {
+    left: 0,
+    position: 'absolute'
+  },
+  topBarRightAction: {
+    position: 'absolute',
+    right: 0
   },
   searchCard: {
     backgroundColor: palette.card,
@@ -594,18 +621,52 @@ const styles = StyleSheet.create({
   flexInput: {
     flex: 1
   },
+  visibilitySection: {
+    gap: 8
+  },
+  visibilityTitle: {
+    color: palette.text,
+    fontSize: 14,
+    fontWeight: '800'
+  },
+  visibilityRow: {
+    flexDirection: 'row',
+    gap: 10
+  },
+  visibilityOption: {
+    alignItems: 'center',
+    backgroundColor: palette.cardSoft,
+    borderColor: palette.border,
+    borderRadius: 16,
+    borderWidth: 1,
+    flex: 1,
+    flexDirection: 'row',
+    gap: 8,
+    padding: 12
+  },
+  visibilityOptionActive: {
+    backgroundColor: 'rgba(103,232,249,0.11)',
+    borderColor: 'rgba(103,232,249,0.32)'
+  },
+  visibilityCopy: {
+    flex: 1,
+    gap: 2
+  },
+  visibilityLabel: {
+    color: palette.text,
+    fontSize: 13,
+    fontWeight: '800'
+  },
+  visibilityLabelActive: {
+    color: palette.aqua
+  },
+  visibilityDetail: {
+    color: palette.textMuted,
+    fontSize: 10,
+    lineHeight: 14
+  },
   section: {
     gap: 12
-  },
-  feedHeader: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(103,232,249,0.07)',
-    borderColor: 'rgba(103,232,249,0.16)',
-    borderRadius: 26,
-    borderWidth: 1,
-    gap: 6,
-    paddingHorizontal: 18,
-    paddingVertical: 18
   },
   feedTitle: {
     color: palette.text,
@@ -699,26 +760,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20
   },
-  feedFooter: {
-    alignItems: 'flex-start',
-    flexDirection: 'row'
-  },
-  feedPill: {
-    alignItems: 'center',
-    backgroundColor: palette.cardSoft,
-    borderColor: palette.border,
-    borderRadius: 999,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 7
-  },
-  feedPillText: {
-    color: palette.textMuted,
-    fontSize: 12,
-    fontWeight: '700'
-  },
   card: {
     backgroundColor: palette.card,
     borderColor: palette.border,
@@ -741,6 +782,28 @@ const styles = StyleSheet.create({
     gap: 12,
     maxHeight: '78%',
     padding: 20
+  },
+  myGroupsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 18,
+    justifyContent: 'center',
+    paddingVertical: 8
+  },
+  myGroupsHeading: {
+    textAlign: 'center'
+  },
+  groupCircleTile: {
+    alignItems: 'center',
+    gap: 7,
+    width: 76
+  },
+  groupCircleName: {
+    color: palette.text,
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 16,
+    textAlign: 'center'
   },
   drawerGroupRow: {
     alignItems: 'center',

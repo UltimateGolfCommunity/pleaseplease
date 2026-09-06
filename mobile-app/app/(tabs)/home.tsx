@@ -774,39 +774,16 @@ export default function HomeTab() {
             />
             <View style={styles.feedProfileHeaderCopy}>
               <Text style={styles.feedProfileName}>{actorName}</Text>
-              <Text style={styles.feedProfileMeta}>Posted a tee time</Text>
+              <Text style={styles.feedProfileMeta}>Posted a tee time · {formatFeedTimestamp(item.created_at)}</Text>
             </View>
-            <Text style={styles.feedTimestamp}>{formatFeedTimestamp(item.created_at)}</Text>
           </View>
           <Text style={styles.feedSpecialTitle}>{courseName || 'Open tee time'}</Text>
           <Text style={styles.feedSpecialMeta}>
             {[teeDateLabel, teeTimeLabel, location].filter(Boolean).join(' • ')}
           </Text>
-          {(item.tee_time?.accepted_players || []).length ? (
-            <View style={styles.feedJoinedRow}>
-              <View style={styles.feedJoinedAvatars}>
-                {(item.tee_time?.accepted_players || []).slice(0, 4).map((player, index) => (
-                  <View
-                    key={`${item.id}-joiner-${player.id || index}`}
-                    style={[styles.feedJoinedAvatarWrap, index > 0 && styles.feedJoinedAvatarOverlap]}
-                  >
-                    <Avatar
-                      label={getProfileName(player)}
-                      size={28}
-                      uri={player.avatar_url || undefined}
-                    />
-                  </View>
-                ))}
-              </View>
-              <Text style={styles.feedJoinedText}>
-                {(item.tee_time?.accepted_players || []).length} joined
-              </Text>
-            </View>
-          ) : null}
-          <View style={styles.feedSpecialActions}>
-            <Pressable onPress={() => router.push('/tee-times')} style={styles.feedSecondaryButton}>
-              <Text style={styles.feedSecondaryButtonText}>View Tee Times</Text>
-            </Pressable>
+          {(item.tee_time?.accepted_players || []).length ? <Text style={styles.feedJoinedText}>{(item.tee_time?.accepted_players || []).length} joined</Text> : null}
+          {item.user_id !== user?.id ? (
+            <View style={styles.feedSpecialActions}>
             {item.user_id !== user?.id ? (
               <Pressable
                 onPress={() => void handleJoinTeeTimeFromFeed(item)}
@@ -817,7 +794,8 @@ export default function HomeTab() {
                 </Text>
               </Pressable>
             ) : null}
-          </View>
+            </View>
+          ) : null}
         </View>
       )
     }
@@ -847,6 +825,25 @@ export default function HomeTab() {
       )
     }
 
+    if (item.activity_type === 'profile_photo_updated') {
+      const profilePhotoUrl = imageUrl || item.actor?.avatar_url || ''
+
+      return (
+        profilePhotoUrl ? (
+          <Pressable onPress={() => setSelectedImageUrl(profilePhotoUrl)} style={styles.feedImageWrap}>
+            <Image source={{ uri: profilePhotoUrl }} style={styles.feedImage} />
+            <View style={styles.feedPhotoAuthor}>
+              <Avatar label={actorLabel} size={32} uri={item.actor?.avatar_url || undefined} />
+              <View style={styles.feedPhotoAuthorCopy}>
+                <Text numberOfLines={1} style={styles.feedPhotoAuthorName}>{actorName}</Text>
+                <Text style={styles.feedPhotoAuthorTime}>Updated profile photo · {formatFeedTimestamp(item.created_at)}</Text>
+              </View>
+            </View>
+          </Pressable>
+        ) : null
+      )
+    }
+
     if (item.activity_type === 'profile_updated') {
       return (
         <View style={styles.feedProfileHeader}>
@@ -871,9 +868,8 @@ export default function HomeTab() {
             />
             <View style={styles.feedProfileHeaderCopy}>
               <Text style={styles.feedProfileName}>{actorName}</Text>
-              <Text style={styles.feedProfileMeta}>Logged a round</Text>
+              <Text style={styles.feedProfileMeta}>Logged a round · {formatFeedTimestamp(item.created_at)}</Text>
             </View>
-            <Text style={styles.feedTimestamp}>{formatFeedTimestamp(item.created_at)}</Text>
           </View>
           <View style={styles.scoreHeroRow}>
             <View style={styles.scoreCopy}>
@@ -907,8 +903,8 @@ export default function HomeTab() {
             />
             <View style={styles.feedProfileHeaderCopy}>
               <Text style={styles.feedProfileName}>{actorName}</Text>
+              <Text style={styles.feedProfileMeta}>Updated the bag · {formatFeedTimestamp(item.created_at)}</Text>
             </View>
-            <Text style={styles.feedTimestamp}>{formatFeedTimestamp(item.created_at)}</Text>
           </View>
           <Text style={styles.feedSpecialMeta}>{describeBagUpdate(item)}</Text>
         </View>
@@ -955,7 +951,9 @@ export default function HomeTab() {
           />
           <View style={styles.feedHeaderCopy}>
             <Text style={styles.feedTitle}>
-              {actorName} • {item.title || 'Activity'}
+              {item.activity_type === 'group_board_post' || item.activity_type === 'group_thread_reply'
+                ? `${actorName} ${item.title || 'posted in a group'}`
+                : `${actorName} • ${item.title || 'Activity'}`}
             </Text>
             {item.description ? <Text style={styles.feedBody}>{item.description}</Text> : null}
           </View>

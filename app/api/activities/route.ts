@@ -22,10 +22,12 @@ async function notifyConnectedGolfersOfPost(supabase: any, activity: any) {
 
   if (connectionsError || !connections?.length) return
 
-  const recipientIds = Array.from(new Set(
-    connections.map((connection: any) =>
-      connection.requester_id === activity.user_id ? connection.recipient_id : connection.requester_id
-    ).filter(Boolean)
+  const recipientIds = Array.from(new Set<string>(
+    connections
+      .map((connection: any): unknown =>
+        connection.requester_id === activity.user_id ? connection.recipient_id : connection.requester_id
+      )
+      .filter((userId: unknown): userId is string => typeof userId === 'string' && userId.length > 0)
   ))
   const actorName = [actor?.first_name, actor?.last_name].filter(Boolean).join(' ') || actor?.username || 'A connection'
 

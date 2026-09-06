@@ -648,7 +648,8 @@ export default function ProfileTab() {
               ? 'Changed golfer profile photo'
               : 'Changed golfer profile cover photo',
           metadata: {
-            target
+            target,
+            image_url: target === 'avatar' ? upload.publicUrl : undefined
           }
         }).catch(() => null)
         await loadProfile()
