@@ -696,6 +696,20 @@ export async function POST(request: NextRequest) {
               })
             ])
 
+            await createNotificationAndDeliverPush(supabase, {
+              userId: data.connected_user_id,
+              type: 'connection_accepted',
+              title: 'Connection accepted',
+              message: 'You are now connected with a golfer in the community.',
+              relatedId: acceptedConnection.id,
+              notificationData: {
+                connection_id: acceptedConnection.id,
+                connected_user_id: data.user_id
+              }
+            }).catch((error: unknown) => {
+              console.warn('⚠️ Unable to send accepted connection notification:', error)
+            })
+
             return NextResponse.json({
               success: true,
               autoAccepted: true,
@@ -815,6 +829,20 @@ export async function POST(request: NextRequest) {
               }
             })
           ])
+
+          await createNotificationAndDeliverPush(supabase, {
+            userId: connection.requester_id,
+            type: 'connection_accepted',
+            title: 'Connection accepted',
+            message: 'You are now connected with a golfer in the community.',
+            relatedId: updatedConnection.id,
+            notificationData: {
+              connection_id: updatedConnection.id,
+              connected_user_id: user_id
+            }
+          }).catch((error: unknown) => {
+            console.warn('⚠️ Unable to send accepted connection notification:', error)
+          })
         }
 
         return NextResponse.json({

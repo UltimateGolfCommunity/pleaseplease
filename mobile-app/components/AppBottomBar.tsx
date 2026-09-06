@@ -156,7 +156,7 @@ export function AppBottomBar() {
         finalImageUrl = upload.publicUrl
       }
 
-      const { error } = await mobileSupabase.from('user_activities').insert({
+      await apiPost('/api/activities', {
         user_id: user.id,
         activity_type: 'photo_posted',
         related_id: null,
@@ -168,10 +168,6 @@ export function AppBottomBar() {
           caption: photoCaption.trim()
         }
       })
-
-      if (error) {
-        throw new Error(error.message || 'Unable to create post.')
-      }
 
       resetPhotoComposer()
       closeCompose()

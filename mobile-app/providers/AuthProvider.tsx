@@ -455,7 +455,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
 
     const { home_course, ...restUpdates } = updates
-    const normalizedUpdates = {
+    const normalizedUpdates: Record<string, unknown> = {
       ...restUpdates,
       ...(home_course !== undefined
         ? {

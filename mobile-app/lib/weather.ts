@@ -81,7 +81,11 @@ async function getCoordinatesFromCity(city: string) {
   }
 }
 
-async function getWeatherFromCoords(latitude: number, longitude: number, fallbackLocation: string) {
+export async function getMobileWeatherAtCoordinates(
+  latitude: number,
+  longitude: number,
+  fallbackLocation = 'Current location'
+): Promise<MobileWeatherData> {
   const pointsResponse = await fetch(`https://api.weather.gov/points/${latitude},${longitude}`, {
     headers: WEATHER_GOV_HEADERS
   })
@@ -132,7 +136,7 @@ async function getWeatherFromCoords(latitude: number, longitude: number, fallbac
 export async function getMobileWeather(city: string): Promise<MobileWeatherData> {
   try {
     const { latitude, longitude, matchedAddress } = await getCoordinatesFromCity(city)
-    return await getWeatherFromCoords(latitude, longitude, matchedAddress)
+    return await getMobileWeatherAtCoordinates(latitude, longitude, matchedAddress)
   } catch {
     return fallbackWeather(city)
   }

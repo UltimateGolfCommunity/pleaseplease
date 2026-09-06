@@ -1,5 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
+import { createNotificationAndDeliverPush } from '@/lib/notifications'
+
+const connectionPostTypes = new Set(['photo_posted', 'tee_time_created', 'group_board_post', 'group_thread_reply'])
+
+async function notifyConnectedGolfersOfPost(supabase: any, activity: any) {
+  if (!connectionPostTypes.has(activity.activity_type) || !activity.user_id) return
+
+  const [{ data: connections, error: connectionsError }, { data: actor }] = await Promise.all([
+    supabase
+      .from('user_connections')
+      .select('requester_id, recipient_id')
+      .or(`requester_id.eq.${activity.user_id},recipient_id.eq.${activity.user_id}`)
+      .eq('status', 'accepted'),
+    supabase
+      .from('user_profiles')
+      .select('first_name, last_name, username')
+      .eq('id', activity.user_id)
+      .maybeSingle()
+  ])
+
+  if (connectionsError || !connections?.length) return
+
+  const recipientIds = Array.from(new Set(
+    connections.map((connection: any) =>
+      connection.requester_id === activity.user_id ? connection.recipient_id : connection.requester_id
+    ).filter(Boolean)
+  ))
+  const actorName = [actor?.first_name, actor?.last_name].filter(Boolean).join(' ') || actor?.username || 'A connection'
+
+  await Promise.allSettled(recipientIds.map((userId) =>
+    createNotificationAndDeliverPush(supabase, {
+      userId,
+      type: 'connection_post',
+      title: `${actorName} posted`,
+      message: activity.description || activity.title || 'Shared a new post with your golf network.',
+      relatedId: activity.id,
+      notificationData: {
+        activity_id: activity.id,
+        actor_id: activity.user_id,
+        activity_type: activity.activity_type
+      }
+    })
+  ))
+}
 
 function normalizeActivityDate(activity: any) {
   return new Date(activity?.created_at || activity?.updated_at || 0).getTime()
@@ -464,6 +508,10 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    await notifyConnectedGolfersOfPost(supabase, data).catch((notificationError) => {
+      console.warn('Unable to notify connected golfers of a post:', notificationError)
+    })
 
     return NextResponse.json({ 
       success: true, 

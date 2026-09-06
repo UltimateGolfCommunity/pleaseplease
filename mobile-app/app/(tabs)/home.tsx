@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Redirect, router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker'
 import Ionicons from '@expo/vector-icons/Ionicons'
+import * as Location from 'expo-location'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   ActivityIndicator,
@@ -22,7 +23,7 @@ import { apiGet, apiPost } from '@/lib/api'
 import { fetchNetworkFeed, type NetworkFeedActivity } from '@/lib/feed'
 import { mobileSupabase } from '@/lib/supabase'
 import { palette } from '@/lib/theme'
-import { getMobileWeather, type MobileWeatherData } from '@/lib/weather'
+import { getMobileWeather, getMobileWeatherAtCoordinates, type MobileWeatherData } from '@/lib/weather'
 import { useAuth } from '@/providers/AuthProvider'
 
 type TeeTime = {
@@ -305,7 +306,17 @@ export default function HomeTab() {
   const loadWeather = useCallback(async () => {
     try {
       setWeatherLoading(true)
-      const response = await getMobileWeather(weatherQuery)
+      const permissions = await Location.requestForegroundPermissionsAsync()
+      const response = permissions.status === 'granted'
+        ? await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
+            .then((position) =>
+              getMobileWeatherAtCoordinates(
+                position.coords.latitude,
+                position.coords.longitude,
+                weatherQuery
+              )
+            )
+        : await getMobileWeather(weatherQuery)
       setWeather(response)
     } catch {
       setWeather(null)

@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { BrandHeader } from '@/components/BrandHeader'
 import { PrimaryButton } from '@/components/PrimaryButton'
+import { apiPost } from '@/lib/api'
 import { uploadImageToStorage, mobileSupabase } from '@/lib/supabase'
 import { palette } from '@/lib/theme'
 import { useAuth } from '@/providers/AuthProvider'
@@ -90,19 +91,13 @@ export default function PostPhotoScreen() {
           throw new Error(error.message || 'Unable to update post.')
         }
       } else {
-        const { error } = await mobileSupabase
-          .from('user_activities')
-          .insert({
-            user_id: user.id,
-            activity_type: 'photo_posted',
-            related_id: null,
-            related_type: null,
-            ...payload
-          })
-
-        if (error) {
-          throw new Error(error.message || 'Unable to create post.')
-        }
+        await apiPost('/api/activities', {
+          user_id: user.id,
+          activity_type: 'photo_posted',
+          related_id: null,
+          related_type: null,
+          ...payload
+        })
       }
 
       Alert.alert(isEditing ? 'Post updated' : 'Photo posted', isEditing ? 'Your post is updated in the network feed.' : 'Your photo is now in the network feed.')
