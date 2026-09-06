@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Redirect, router } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
 import Ionicons from '@expo/vector-icons/Ionicons'
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   ActivityIndicator,
@@ -91,6 +92,14 @@ type AceDetails = {
   course?: string | null
   date?: string | null
   hole?: string | null
+}
+
+type MemberGroup = {
+  id: string
+  name: string
+  logo_url?: string | null
+  image_url?: string | null
+  member_count?: number
 }
 
 const bagFields: { key: keyof BagItems; label: string; placeholder: string }[] = [
@@ -329,6 +338,7 @@ export default function ProfileTab() {
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [rounds, setRounds] = useState<RoundRecord[]>([])
   const [connections, setConnections] = useState<ConnectionRecord[]>([])
+  const [memberGroups, setMemberGroups] = useState<MemberGroup[]>([])
   const [ratingSummary, setRatingSummary] = useState<RatingSummary>({
     average: null,
     count: 0,
@@ -435,7 +445,7 @@ export default function ProfileTab() {
 
     try {
       await refreshProfile(user.id)
-      const [userBadges, activityResponse, connectionResponse, ratingResponse, scoreResponse] = await Promise.all([
+      const [userBadges, activityResponse, connectionResponse, ratingResponse, scoreResponse, groupsResponse] = await Promise.all([
         apiGet<BadgeRecord[]>(`/api/badges?action=user_badges&user_id=${encodeURIComponent(user.id)}`),
         apiGet<{ success: boolean; activities: ActivityItem[] }>(
           `/api/activities?user_id=${encodeURIComponent(user.id)}&limit=24`
@@ -446,7 +456,9 @@ export default function ProfileTab() {
         apiGet<RatingSummary>(`/api/users?action=rating&id=${encodeURIComponent(user.id)}&viewer_id=${encodeURIComponent(user.id)}`)
           .catch(() => ({ average: null, count: 0, viewerRating: null })),
         apiGet<{ success: boolean; rounds: RoundRecord[] }>(`/api/scores?user_id=${encodeURIComponent(user.id)}`)
-          .catch(() => ({ success: true, rounds: [] }))
+          .catch(() => ({ success: true, rounds: [] })),
+        apiGet<{ success: boolean; groups: MemberGroup[] }>(`/api/groups?user_id=${encodeURIComponent(user.id)}`)
+          .catch(() => ({ success: true, groups: [] }))
       ])
 
       setBadges(userBadges || [])
@@ -454,6 +466,7 @@ export default function ProfileTab() {
       setConnections(connectionResponse?.connections || [])
       setRatingSummary(ratingResponse)
       setRounds(scoreResponse.rounds || [])
+      setMemberGroups(groupsResponse.groups || [])
     } finally {
       setBusy(false)
       setRefreshing(false)
@@ -982,7 +995,7 @@ export default function ProfileTab() {
               <View style={[styles.socialSection, styles.aboutDetailCard]}>
                 <View style={styles.aboutSectionHeading}>
                   <Ionicons color="#d8bd76" name="share-social-outline" size={16} />
-                  <Text style={styles.aboutSectionTitle}>Social Links</Text>
+                  <Text style={styles.aboutSectionTitle}>Social</Text>
                 </View>
                 {isInlineAboutEditing ? (
                   <View style={styles.inlineFieldStack}>
@@ -1082,9 +1095,29 @@ export default function ProfileTab() {
                   <Text style={styles.infoLine}>No ace logged yet.</Text>
                 )}
               </View>
+              <View style={styles.aboutGroupsSection}>
+                <View style={styles.aboutSectionHeading}>
+                  <Ionicons color="#d8bd76" name="people-outline" size={16} />
+                  <Text style={styles.aboutSectionTitle}>Member Groups</Text>
+                </View>
+                {memberGroups.length ? (
+                  <View style={styles.memberGroupRow}>
+                    {memberGroups.slice(0, 6).map((group) => (
+                      <Pressable key={group.id} onPress={() => router.push(`/group/${group.id}`)} style={styles.memberGroupItem}>
+                        {group.logo_url || group.image_url ? (
+                          <Image source={{ uri: group.logo_url || group.image_url || '' }} style={styles.memberGroupLogo} />
+                        ) : (
+                          <View style={styles.memberGroupLogoFallback}><Text style={styles.memberGroupInitial}>{group.name.slice(0, 1)}</Text></View>
+                        )}
+                        <Text numberOfLines={1} style={styles.memberGroupName}>{group.name}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                ) : <Text style={styles.infoLine}>No groups joined yet.</Text>}
+              </View>
               <View style={styles.aboutBagSection}>
               <View style={styles.aboutSectionHeading}>
-                <Ionicons color="#d8bd76" name="briefcase-outline" size={16} />
+                <MaterialCommunityIcons color="#d8bd76" name="golf" size={18} />
                 <Text style={styles.aboutSectionTitle}>What&apos;s In The Bag</Text>
               </View>
               <View style={styles.bagGrid}>
@@ -2174,6 +2207,54 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 10,
     padding: 12
+  },
+  aboutGroupsSection: {
+    backgroundColor: 'rgba(7,39,28,0.3)',
+    borderColor: 'rgba(255,255,255,0.14)',
+    borderRadius: 19,
+    borderWidth: 1,
+    gap: 10,
+    padding: 12
+  },
+  memberGroupRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 9
+  },
+  memberGroupItem: {
+    alignItems: 'center',
+    gap: 5,
+    maxWidth: 70,
+    width: 70
+  },
+  memberGroupLogo: {
+    borderColor: 'rgba(216,189,118,0.28)',
+    borderRadius: 15,
+    borderWidth: 1,
+    height: 48,
+    width: 48
+  },
+  memberGroupLogoFallback: {
+    alignItems: 'center',
+    backgroundColor: '#3b7e65',
+    borderColor: 'rgba(216,189,118,0.28)',
+    borderRadius: 15,
+    borderWidth: 1,
+    height: 48,
+    justifyContent: 'center',
+    width: 48
+  },
+  memberGroupInitial: {
+    color: '#f6e7ba',
+    fontFamily: 'Georgia',
+    fontSize: 19,
+    fontWeight: '800'
+  },
+  memberGroupName: {
+    color: '#fffaf0',
+    fontSize: 10,
+    fontWeight: '800',
+    textAlign: 'center'
   },
   aboutInfoCard: {
     backgroundColor: 'rgba(255,255,255,0.09)',

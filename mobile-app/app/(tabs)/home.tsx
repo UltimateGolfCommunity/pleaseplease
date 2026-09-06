@@ -307,16 +307,23 @@ export default function HomeTab() {
     try {
       setWeatherLoading(true)
       const permissions = await Location.requestForegroundPermissionsAsync()
-      const response = permissions.status === 'granted'
-        ? await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
-            .then((position) =>
-              getMobileWeatherAtCoordinates(
-                position.coords.latitude,
-                position.coords.longitude,
-                weatherQuery
-              )
-            )
-        : await getMobileWeather(weatherQuery)
+      let response: WeatherData
+
+      if (permissions.status === 'granted') {
+        const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
+        const places = await Location.reverseGeocodeAsync(position.coords).catch(() => [])
+        const place = places[0]
+        const currentLocationLabel = [place?.city, place?.region].filter(Boolean).join(', ') || weatherQuery
+
+        response = await getMobileWeatherAtCoordinates(
+          position.coords.latitude,
+          position.coords.longitude,
+          currentLocationLabel
+        )
+      } else {
+        response = await getMobileWeather(weatherQuery)
+      }
+
       setWeather(response)
     } catch {
       setWeather(null)

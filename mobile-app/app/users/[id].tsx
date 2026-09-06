@@ -14,8 +14,6 @@ import {
   View
 } from 'react-native'
 import { Avatar } from '@/components/Avatar'
-import { BrandHeader } from '@/components/BrandHeader'
-import { PrimaryButton } from '@/components/PrimaryButton'
 import { apiGet, apiPost } from '@/lib/api'
 import { palette } from '@/lib/theme'
 import { useAuth } from '@/providers/AuthProvider'
@@ -113,6 +111,13 @@ type AceDetails = {
   course?: string | null
   date?: string | null
   hole?: string | null
+}
+
+type MemberGroup = {
+  id: string
+  name: string
+  logo_url?: string | null
+  image_url?: string | null
 }
 
 const bagFields: { key: keyof BagItems; label: string }[] = [
@@ -268,6 +273,7 @@ export default function PublicUserScreen() {
   const [profile, setProfile] = useState<PublicUser | null>(null)
   const [status, setStatus] = useState<ConnectionStatusResponse['status']>('none')
   const [connections, setConnections] = useState<ConnectionRecord[]>([])
+  const [memberGroups, setMemberGroups] = useState<MemberGroup[]>([])
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [rounds, setRounds] = useState<RoundRecord[]>([])
   const [activeTab, setActiveTab] = useState<'activity' | 'about'>('activity')
@@ -296,7 +302,7 @@ export default function PublicUserScreen() {
     if (!id) return
 
     try {
-      const [profileResponse, statusResponse, ratingResponse, connectionsResponse, activityResponse, roundsResponse] = await Promise.all([
+      const [profileResponse, statusResponse, ratingResponse, connectionsResponse, activityResponse, roundsResponse, groupsResponse] = await Promise.all([
         apiGet<PublicUser>(`/api/users?id=${encodeURIComponent(id)}`),
         user?.id
           ? apiGet<ConnectionStatusResponse>(
@@ -320,6 +326,10 @@ export default function PublicUserScreen() {
         apiGet<{ success: boolean; rounds: RoundRecord[] }>(`/api/scores?user_id=${encodeURIComponent(id)}`).catch(() => ({
           success: true,
           rounds: []
+        })),
+        apiGet<{ success: boolean; groups: MemberGroup[] }>(`/api/groups?user_id=${encodeURIComponent(id)}`).catch(() => ({
+          success: true,
+          groups: []
         }))
       ])
 
@@ -329,6 +339,7 @@ export default function PublicUserScreen() {
       setConnections(connectionsResponse.connections || [])
       setActivities(activityResponse.activities || [])
       setRounds(roundsResponse.rounds || [])
+      setMemberGroups(groupsResponse.groups || [])
     } finally {
       setBusy(false)
       setRefreshing(false)
@@ -370,15 +381,6 @@ export default function PublicUserScreen() {
     }
   }
 
-  const actionLabel =
-    status === 'connected'
-      ? 'Connected'
-      : status === 'pending'
-        ? 'Request Sent'
-      : status === 'incoming_pending'
-        ? 'Accept on web for now'
-        : 'Add Connection'
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -394,13 +396,6 @@ export default function PublicUserScreen() {
           />
         }
       >
-        <BrandHeader
-          showBack
-          largeLogo
-          rightIconName="mail-outline"
-          onRightPress={() => id && router.push(`/messages/${id}`)}
-        />
-
         <View style={styles.heroCard}>
           <View style={styles.coverShell}>
             {profile?.header_image_url && !coverLoadFailed ? (
@@ -416,6 +411,27 @@ export default function PublicUserScreen() {
               </View>
             )}
             <View style={styles.coverOverlay} />
+            <View style={styles.coverActions}>
+              <Pressable
+                accessibilityLabel={status === 'connected' ? 'Connected' : 'Add connection'}
+                disabled={connecting || status === 'connected' || status === 'pending' || status === 'incoming_pending'}
+                onPress={handleConnect}
+                style={[styles.coverActionButton, styles.connectionCoverButton, status === 'connected' && styles.connectionCoverButtonActive]}
+              >
+                <Ionicons
+                  color={status === 'connected' ? '#e8c45b' : '#fffaf0'}
+                  name={status === 'connected' ? 'checkmark-circle' : status === 'pending' ? 'time-outline' : 'person-add-outline'}
+                  size={21}
+                />
+              </Pressable>
+              <Pressable
+                accessibilityLabel="Add to group"
+                onPress={() => router.push('/groups')}
+                style={styles.coverActionButton}
+              >
+                <Ionicons color="#fffaf0" name="people-outline" size={20} />
+              </Pressable>
+            </View>
 
             <View style={styles.coverIdentity}>
               <View style={styles.avatarWrap}>
@@ -443,20 +459,6 @@ export default function PublicUserScreen() {
                 </View>
               </View>
             </View>
-          </View>
-
-          <View style={styles.actionGrid}>
-            <PrimaryButton
-              disabled={status === 'connected' || status === 'pending' || status === 'incoming_pending'}
-              label={actionLabel}
-              loading={connecting}
-              onPress={handleConnect}
-            />
-            <PrimaryButton
-              label="Add to Group"
-              variant="ghost"
-              onPress={() => router.push('/groups')}
-            />
           </View>
 
         </View>
@@ -547,7 +549,7 @@ export default function PublicUserScreen() {
         ) : (
           <View style={styles.card}>
             <Text style={styles.sectionEyebrow}>About</Text>
-            <Text style={styles.sectionTitle}>{displayName.split(' ')[0]}&apos;s golfer profile</Text>
+            <View style={styles.aboutProfilePanel}>
             {profile?.bio ? (
               <View style={styles.aboutBioCard}>
                 <Text style={styles.aboutBioEyebrow}>Member&apos;s Note</Text>
@@ -593,7 +595,28 @@ export default function PublicUserScreen() {
                 <Text style={styles.helper}>No hole in one posted yet.</Text>
               )}
             </View>
+            <View style={styles.aboutGroupsSection}>
+              <View style={styles.aboutSectionHeading}>
+                <Ionicons color="#d8bd76" name="people-outline" size={16} />
+                <Text style={styles.aboutSectionTitle}>Member Groups</Text>
+              </View>
+              {memberGroups.length ? (
+                <View style={styles.memberGroupRow}>
+                  {memberGroups.slice(0, 6).map((group) => (
+                    <Pressable key={group.id} onPress={() => router.push(`/group/${group.id}`)} style={styles.memberGroupItem}>
+                      {group.logo_url || group.image_url ? (
+                        <Image source={{ uri: group.logo_url || group.image_url || '' }} style={styles.memberGroupLogo} />
+                      ) : (
+                        <View style={styles.memberGroupLogoFallback}><Text style={styles.memberGroupInitial}>{group.name.slice(0, 1)}</Text></View>
+                      )}
+                      <Text numberOfLines={1} style={styles.memberGroupName}>{group.name}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              ) : <Text style={styles.helper}>No groups joined yet.</Text>}
+            </View>
             <Text style={styles.aboutSectionTitle}>What&apos;s In The Bag</Text>
+            <View style={styles.bagGrid}>
             {bagFields.map((field) => {
               const value = bagItems[field.key]?.trim()
               return (
@@ -603,6 +626,8 @@ export default function PublicUserScreen() {
                 </View>
               )
             })}
+            </View>
+            </View>
           </View>
         )}
       </ScrollView>
@@ -659,6 +684,31 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0
   },
+  coverActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    left: 12,
+    position: 'absolute',
+    right: 12,
+    top: 12
+  },
+  coverActionButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(4,18,12,0.52)',
+    borderColor: 'rgba(255,250,240,0.22)',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 38,
+    justifyContent: 'center',
+    width: 38
+  },
+  connectionCoverButton: {
+    backgroundColor: 'rgba(4,18,12,0.62)'
+  },
+  connectionCoverButtonActive: {
+    backgroundColor: 'rgba(51,93,45,0.82)',
+    borderColor: 'rgba(232,196,91,0.55)'
+  },
   avatarWrap: {
     borderColor: '#f6e7ba',
     borderRadius: 999,
@@ -672,16 +722,15 @@ const styles = StyleSheet.create({
     width: '100%'
   },
   coverIdentity: {
-    alignItems: 'flex-end',
-    bottom: 16,
-    flexDirection: 'row',
-    gap: 12,
+    alignItems: 'center',
+    bottom: 14,
+    gap: 5,
     left: 16,
     position: 'absolute',
     right: 16
   },
   identityStack: {
-    flex: 1,
+    alignItems: 'center',
     gap: 3
   },
   name: {
@@ -699,13 +748,15 @@ const styles = StyleSheet.create({
   homeCourse: {
     color: 'rgba(255,250,240,0.78)',
     fontSize: 13,
-    fontWeight: '700'
+    fontWeight: '700',
+    textAlign: 'center'
   },
   heroStats: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: 6,
-    marginTop: 7
+    justifyContent: 'center',
+    marginTop: 5
   },
   heroStat: {
     backgroundColor: 'rgba(5,28,20,0.5)',
@@ -731,10 +782,6 @@ const styles = StyleSheet.create({
   },
   actionRow: {
     marginTop: 16
-  },
-  actionGrid: {
-    gap: 10,
-    padding: 14
   },
   tabRow: {
     backgroundColor: palette.bgElevated,
@@ -812,6 +859,67 @@ const styles = StyleSheet.create({
     fontFamily: 'Georgia',
     fontSize: 15,
     lineHeight: 22
+  },
+  aboutProfilePanel: {
+    backgroundColor: '#28634d',
+    borderColor: 'rgba(216,189,118,0.24)',
+    borderRadius: 24,
+    borderWidth: 1,
+    gap: 12,
+    padding: 12
+  },
+  aboutSectionHeading: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 7
+  },
+  aboutGroupsSection: {
+    backgroundColor: 'rgba(7,39,28,0.3)',
+    borderColor: 'rgba(255,255,255,0.14)',
+    borderRadius: 19,
+    borderWidth: 1,
+    gap: 10,
+    padding: 12
+  },
+  memberGroupRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 9
+  },
+  memberGroupItem: {
+    alignItems: 'center',
+    gap: 5,
+    maxWidth: 70,
+    width: 70
+  },
+  memberGroupLogo: {
+    borderColor: 'rgba(216,189,118,0.28)',
+    borderRadius: 15,
+    borderWidth: 1,
+    height: 48,
+    width: 48
+  },
+  memberGroupLogoFallback: {
+    alignItems: 'center',
+    backgroundColor: '#3b7e65',
+    borderColor: 'rgba(216,189,118,0.28)',
+    borderRadius: 15,
+    borderWidth: 1,
+    height: 48,
+    justifyContent: 'center',
+    width: 48
+  },
+  memberGroupInitial: {
+    color: '#f6e7ba',
+    fontFamily: 'Georgia',
+    fontSize: 19,
+    fontWeight: '800'
+  },
+  memberGroupName: {
+    color: '#fffaf0',
+    fontSize: 10,
+    fontWeight: '800',
+    textAlign: 'center'
   },
   roundActivityCard: {
     backgroundColor: 'rgba(255,255,255,0.03)',
@@ -924,12 +1032,18 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase'
   },
   bagRow: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.09)',
+    borderColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 15,
     borderWidth: 1,
     gap: 4,
+    minWidth: '47%',
     padding: 14
+  },
+  bagGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8
   },
   bagLabel: {
     color: palette.aqua,
@@ -950,8 +1064,8 @@ const styles = StyleSheet.create({
     gap: 10
   },
   aboutInfoCard: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(255,255,255,0.09)',
+    borderColor: 'rgba(255,255,255,0.15)',
     borderRadius: 18,
     borderWidth: 1,
     gap: 4,
