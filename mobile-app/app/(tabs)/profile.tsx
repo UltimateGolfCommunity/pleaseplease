@@ -5,7 +5,6 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   ActivityIndicator,
-  Clipboard,
   Alert,
   Image,
   Linking,
@@ -19,7 +18,6 @@ import {
   TextInput,
   View
 } from 'react-native'
-import { BrandHeader } from '@/components/BrandHeader'
 import { Avatar } from '@/components/Avatar'
 import { PrimaryButton } from '@/components/PrimaryButton'
 import { apiDelete, apiGet, apiPost } from '@/lib/api'
@@ -87,15 +85,6 @@ type BagItems = {
   putter?: string | null
   ball?: string | null
   shoes?: string | null
-}
-
-type CourseHoleAverage = {
-  courseName: string
-  rounds: number
-  holes: {
-    hole: number
-    average: number
-  }[]
 }
 
 type AceDetails = {
@@ -226,6 +215,27 @@ function formatActivityTime(value: string) {
 }
 
 function getActivityLabel(activity: ActivityItem) {
+  if (activity.activity_type === 'profile_updated') {
+    const fields = Array.isArray(activity.metadata?.fields_updated)
+      ? activity.metadata.fields_updated.filter((field): field is string => typeof field === 'string')
+      : []
+    const socialLabels: Record<string, string> = {
+      linkedin: 'LinkedIn',
+      instagram: 'Instagram',
+      facebook: 'Facebook',
+      x: 'X'
+    }
+    const socialField = fields.find((field) => socialLabels[field])
+
+    if (socialField) return `Added ${socialLabels[socialField]} to profile`
+    if (fields.length === 1) return `Updated ${fields[0].replace(/_/g, ' ')}`
+    return 'Updated profile'
+  }
+
+  if (activity.activity_type === 'bag_updated' && activity.description) {
+    return activity.description.replace(/^Updated\s+/i, 'Updated ')
+  }
+
   switch (activity.activity_type) {
     case 'tee_time_created':
       return 'Posted a tee time'
@@ -233,8 +243,8 @@ function getActivityLabel(activity: ActivityItem) {
       return 'Updated a tee time'
     case 'round_logged':
       return 'Logged a score'
-    case 'profile_updated':
-      return 'Updated profile'
+    case 'photo_posted':
+      return 'Shared a photo'
     case 'profile_photo_updated':
       return 'Updated profile photo'
     case 'profile_cover_updated':
@@ -243,8 +253,6 @@ function getActivityLabel(activity: ActivityItem) {
       return 'Joined a tee time'
     case 'connection_added':
       return 'Added a new connection'
-    case 'bag_updated':
-      return 'Updated what is in the bag'
     case 'group_joined':
       return 'Joined a group'
     case 'group_created':
@@ -269,6 +277,17 @@ function getActivityRoundScore(activity: ActivityItem) {
   return typeof activity.metadata?.score === 'number' ? activity.metadata.score : null
 }
 
+function getActivityImageUrl(activity: ActivityItem) {
+  const imageKeys = ['image_url', 'photo_url', 'image', 'photo']
+
+  for (const key of imageKeys) {
+    const value = activity.metadata?.[key]
+    if (typeof value === 'string' && value.trim()) return value
+  }
+
+  return null
+}
+
 function getActivityRoundCourse(activity: ActivityItem) {
   return typeof activity.metadata?.course_name === 'string' ? activity.metadata.course_name : null
 }
@@ -290,12 +309,6 @@ function findRoundForActivity(activity: ActivityItem, rounds: RoundRecord[]) {
   }) || null
 }
 
-function getAverageScoreAtCourse(round: RoundRecord, rounds: RoundRecord[]) {
-  const sameCourseRounds = rounds.filter((item) => item.course_name === round.course_name)
-  if (!sameCourseRounds.length) return round.total_score
-  return sameCourseRounds.reduce((sum, item) => sum + item.total_score, 0) / sameCourseRounds.length
-}
-
 export default function ProfileTab() {
   const { loading, profile, refreshProfile, session, signOut, updateProfile, user } = useAuth()
   const [busy, setBusy] = useState(true)
@@ -309,6 +322,8 @@ export default function ProfileTab() {
   const [showBagModal, setShowBagModal] = useState(false)
   const [savingBag, setSavingBag] = useState(false)
   const [activeProfileTab, setActiveProfileTab] = useState<'activity' | 'about'>('activity')
+  const [expandedRoundId, setExpandedRoundId] = useState<string | null>(null)
+  const isInlineAboutEditing = false
   const [refreshing, setRefreshing] = useState(false)
   const [badges, setBadges] = useState<BadgeRecord[]>([])
   const [activities, setActivities] = useState<ActivityItem[]>([])
@@ -328,6 +343,10 @@ export default function ProfileTab() {
     location: '',
     handicap: '',
     home_course: '',
+    linkedin_url: '',
+    instagram_url: '',
+    facebook_url: '',
+    x_url: '',
     ace_course: '',
     ace_date: '',
     ace_hole: ''
@@ -349,6 +368,41 @@ export default function ProfileTab() {
   const isVerified = !!session?.user?.email_confirmed_at
   const founderBadge = badges.find((badge) => badge.badge?.name === 'Founding Member')
   const aceDetails = useMemo(() => normalizeAceDetails(profile?.ace_details), [profile?.ace_details])
+  const socialLinks = useMemo(() => {
+    const normalizeUrl = (value?: string | null) => {
+      const trimmed = value?.trim() || ''
+      if (!trimmed) return ''
+      if (/^https?:\/\//i.test(trimmed)) return trimmed
+      return `https://${trimmed}`
+    }
+
+    return [
+      {
+        key: 'linkedin',
+        label: 'LinkedIn',
+        icon: 'logo-linkedin' as const,
+        url: normalizeUrl(profile?.linkedin_url)
+      },
+      {
+        key: 'instagram',
+        label: 'Instagram',
+        icon: 'logo-instagram' as const,
+        url: normalizeUrl(profile?.instagram_url)
+      },
+      {
+        key: 'facebook',
+        label: 'Facebook',
+        icon: 'logo-facebook' as const,
+        url: normalizeUrl(profile?.facebook_url)
+      },
+      {
+        key: 'x',
+        label: 'X',
+        icon: 'logo-twitter' as const,
+        url: normalizeUrl(profile?.x_url)
+      }
+    ].filter((item) => item.url)
+  }, [profile?.facebook_url, profile?.instagram_url, profile?.linkedin_url, profile?.x_url])
   const acceptedConnections = useMemo(() => {
     return connections
       .map((connection) =>
@@ -356,27 +410,6 @@ export default function ProfileTab() {
       )
       .filter(Boolean) as UserCard[]
   }, [connections, user?.id])
-  const profileSummary = useMemo(() => {
-    const bits = [
-      profile?.home_course || profile?.home_club || null,
-      profile?.location || null,
-      profile?.handicap !== null && profile?.handicap !== undefined
-        ? `Handicap ${profile.handicap}`
-        : null,
-      `${acceptedConnections.length} Connections`,
-      ratingSummary.average ? `${ratingSummary.average.toFixed(1)}★` : null
-    ].filter(Boolean)
-
-    return bits.length ? bits.join(' • ') : 'Complete your golfer profile'
-  }, [
-    acceptedConnections.length,
-    profile?.handicap,
-    profile?.home_club,
-    profile?.home_course,
-    profile?.location,
-    ratingSummary.average
-  ])
-
   const scoreSummary = useMemo(() => {
     if (!rounds.length) {
       return {
@@ -397,42 +430,6 @@ export default function ProfileTab() {
     }
   }, [rounds])
 
-  const courseHoleAverages = useMemo<CourseHoleAverage[]>(() => {
-    const byCourse = new Map<string, RoundRecord[]>()
-
-    rounds.forEach((round) => {
-      const courseName = round.course_name || 'Unknown course'
-      const courseRounds = byCourse.get(courseName) || []
-      courseRounds.push(round)
-      byCourse.set(courseName, courseRounds)
-    })
-
-    return Array.from(byCourse.entries())
-      .map(([courseName, courseRounds]) => {
-        const maxHoles = Math.max(...courseRounds.map((round) => round.holes_played || round.hole_scores.length || 0))
-        const holes = Array.from({ length: maxHoles }).map((_, index) => {
-          const scores = courseRounds
-            .map((round) => round.hole_scores?.[index])
-            .filter((score): score is number => Number.isFinite(score))
-          const average = scores.length
-            ? scores.reduce((sum, score) => sum + score, 0) / scores.length
-            : 0
-
-          return {
-            hole: index + 1,
-            average
-          }
-        })
-
-        return {
-          courseName,
-          rounds: courseRounds.length,
-          holes
-        }
-      })
-      .sort((a, b) => b.rounds - a.rounds)
-  }, [rounds])
-
   const loadProfile = useCallback(async () => {
     if (!user?.id) return
 
@@ -441,7 +438,7 @@ export default function ProfileTab() {
       const [userBadges, activityResponse, connectionResponse, ratingResponse, scoreResponse] = await Promise.all([
         apiGet<BadgeRecord[]>(`/api/badges?action=user_badges&user_id=${encodeURIComponent(user.id)}`),
         apiGet<{ success: boolean; activities: ActivityItem[] }>(
-          `/api/activities?user_id=${encodeURIComponent(user.id)}&limit=6`
+          `/api/activities?user_id=${encodeURIComponent(user.id)}&limit=24`
         ).catch(() => ({ success: true, activities: [] })),
         apiGet<{ success: boolean; connections: ConnectionRecord[] }>(
           `/api/users?action=connections&id=${encodeURIComponent(user.id)}`
@@ -480,6 +477,10 @@ export default function ProfileTab() {
       location: profile?.location || '',
       handicap: profile?.handicap?.toString() || '',
       home_course: profile?.home_course || profile?.home_club || '',
+      linkedin_url: profile?.linkedin_url || '',
+      instagram_url: profile?.instagram_url || '',
+      facebook_url: profile?.facebook_url || '',
+      x_url: profile?.x_url || '',
       ace_course: nextAce?.course || '',
       ace_date: nextAce?.date || '',
       ace_hole: nextAce?.hole || ''
@@ -525,6 +526,22 @@ export default function ProfileTab() {
         updatedFields.push('handicap')
       }
 
+      if ((profile?.linkedin_url || '') !== form.linkedin_url.trim()) {
+        updatedFields.push('linkedin')
+      }
+
+      if ((profile?.instagram_url || '') !== form.instagram_url.trim()) {
+        updatedFields.push('instagram')
+      }
+
+      if ((profile?.facebook_url || '') !== form.facebook_url.trim()) {
+        updatedFields.push('facebook')
+      }
+
+      if ((profile?.x_url || '') !== form.x_url.trim()) {
+        updatedFields.push('x')
+      }
+
       if (
         (aceDetails?.course || '') !== nextAceCourse ||
         (aceDetails?.date || '') !== nextAceDate ||
@@ -541,6 +558,10 @@ export default function ProfileTab() {
         location: nextLocation,
         handicap: nextHandicap,
         home_course: nextHomeCourse,
+        linkedin_url: form.linkedin_url.trim(),
+        instagram_url: form.instagram_url.trim(),
+        facebook_url: form.facebook_url.trim(),
+        x_url: form.x_url.trim(),
         ace_details: nextAceDetails
       })
 
@@ -716,7 +737,7 @@ export default function ProfileTab() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['left', 'right', 'bottom']} style={styles.safeArea}>
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -730,22 +751,31 @@ export default function ProfileTab() {
           />
         }
       >
-        <BrandHeader
-          largeLogo
-          leftIconName="qr-code-outline"
-          onLeftPress={() => {
-            setShowEditModal(false)
-            setShowSettingsModal(false)
-            setShowProfileMenu(false)
-            setShowShareModal(true)
-          }}
-          rightIconName="ellipsis-horizontal"
-          onRightPress={() => {
-            setShowShareModal(false)
-            setShowSettingsModal(false)
-            setShowProfileMenu(true)
-          }}
-        />
+        <View style={styles.profileTopActions}>
+          <Pressable
+            accessibilityLabel="Share profile"
+            onPress={() => {
+              setShowEditModal(false)
+              setShowSettingsModal(false)
+              setShowProfileMenu(false)
+              setShowShareModal(true)
+            }}
+            style={styles.profileHeaderButton}
+          >
+            <Ionicons color={palette.text} name="qr-code-outline" size={20} />
+          </Pressable>
+          <Pressable
+            accessibilityLabel="Profile menu"
+            onPress={() => {
+              setShowShareModal(false)
+              setShowSettingsModal(false)
+              setShowProfileMenu(true)
+            }}
+            style={styles.profileHeaderButton}
+          >
+            <Ionicons color={palette.text} name="ellipsis-horizontal" size={20} />
+          </Pressable>
+        </View>
 
         <View style={styles.headerCard}>
           <View style={styles.coverShell}>
@@ -757,44 +787,60 @@ export default function ProfileTab() {
                 <Text style={styles.coverFallbackText}>Add a profile cover photo</Text>
               </View>
             )}
-          </View>
-          <View style={styles.identityStack}>
-            <View style={styles.avatarWrap}>
-              <Avatar label={displayName} size={108} uri={profile?.avatar_url} />
-            </View>
-            <View style={styles.profileTopCopy}>
-              <View style={styles.nameRow}>
-                <Text style={styles.name}>{displayName}</Text>
-                {founderBadge ? (
-                  <Ionicons color={palette.gold} name="cafe" size={20} style={styles.crownIcon} />
-                ) : null}
+            <View style={styles.coverShade} />
+            {socialLinks.length ? (
+              <View style={styles.coverSocialLinks}>
+                {socialLinks.map((link) => (
+                  <Pressable
+                    key={link.key}
+                    accessibilityLabel={`Open ${link.label}`}
+                    onPress={() => void Linking.openURL(link.url)}
+                    style={styles.coverSocialLink}
+                  >
+                    <Ionicons color="#fffaf0" name={link.icon} size={17} />
+                  </Pressable>
+                ))}
               </View>
-              {isVerified ? (
-                <View style={styles.badgeRow}>
-                  <Text style={styles.verified}>Verified</Text>
-                </View>
-              ) : null}
-              <Pressable onPress={() => router.push('/connections')} style={styles.infoRibbon}>
-                <Text style={styles.headlineMeta}>{profileSummary}</Text>
-              </Pressable>
-              <View style={styles.ratingSummaryRow}>
-                <View style={styles.ratingBadge}>
-                  <Ionicons color={palette.gold} name="star" size={16} />
-                  <Text style={styles.ratingBadgeText}>
-                    {ratingSummary.average ? ratingSummary.average.toFixed(1) : 'New golfer'}
-                  </Text>
-                </View>
-                <Text style={styles.ratingSummaryText}>
-                  {ratingSummary.count ? `${ratingSummary.count} ratings` : 'Waiting on first rating'}
-                </Text>
+            ) : null}
+            <View style={styles.coverAvatarCluster}>
+              <View style={styles.avatarWrap}>
+                <Avatar label={displayName} size={94} uri={profile?.avatar_url} />
               </View>
-              {profile?.bio ? (
-                <View style={styles.bioCard}>
-                  <Text style={styles.meta}>{profile.bio}</Text>
-                </View>
-              ) : null}
             </View>
+            <Pressable onPress={() => router.push('/connections')} style={styles.identityBusinessCard}>
+              <View style={styles.identityTopRow}>
+                <View style={styles.identityHeadline}>
+                  <View style={styles.identityNameRow}>
+                    <Text numberOfLines={1} style={styles.name}>
+                      {displayName}
+                    </Text>
+                    {isVerified ? <Ionicons color="#38bdf8" name="checkmark-circle" size={20} /> : null}
+                    {founderBadge ? <Text style={styles.identityCrown}>👑</Text> : null}
+                  </View>
+                </View>
+              </View>
+
+              <Text numberOfLines={1} style={styles.businessClubLine}>
+                {profile?.home_course || profile?.home_club || 'No home club added yet'}
+              </Text>
+
+              <View style={styles.businessMetricsRow}>
+                <View style={styles.businessMetric}>
+                  <Text numberOfLines={1} style={styles.businessMetricLabel}>Handicap</Text>
+                  <Text style={styles.businessMetricValue}>{profile?.handicap ?? '--'}</Text>
+                </View>
+                <View style={styles.businessMetric}>
+                  <Text numberOfLines={1} style={styles.businessMetricLabel}>Connections</Text>
+                  <Text style={styles.businessMetricValue}>{acceptedConnections.length}</Text>
+                </View>
+                <View style={styles.businessMetric}>
+                  <Text numberOfLines={1} style={styles.businessMetricLabel}>Ratings</Text>
+                  <Text style={styles.businessMetricValue}>{ratingSummary.count || '--'}</Text>
+                </View>
+              </View>
+            </Pressable>
           </View>
+
           <View style={styles.profileTabRow}>
             <Pressable
               onPress={() => setActiveProfileTab('activity')}
@@ -815,57 +861,20 @@ export default function ProfileTab() {
           </View>
           {activeProfileTab === 'activity' ? (
             <View style={styles.activityCard}>
-              <View style={styles.activityHeader}>
-                <Text style={styles.infoTitle}>Activity</Text>
-                <View style={styles.activityCountPill}>
-                  <Text style={styles.activityCountText}>{activities.length}</Text>
-                </View>
-              </View>
-              <View style={styles.scorePanel}>
-                <View style={styles.scoreStat}>
-                  <Text style={styles.scoreLabel}>Rounds</Text>
-                  <Text style={styles.scoreValue}>{scoreSummary.totalRounds || '--'}</Text>
-                </View>
-                <View style={styles.scoreStat}>
-                  <Text style={styles.scoreLabel}>Avg Score</Text>
-                  <Text style={styles.scoreValue}>
-                    {scoreSummary.averageRound ? scoreSummary.averageRound.toFixed(1) : '--'}
-                  </Text>
-                </View>
-                <View style={styles.scoreStat}>
-                  <Text style={styles.scoreLabel}>Best</Text>
-                  <Text style={styles.scoreValue}>{scoreSummary.bestRound?.total_score || '--'}</Text>
-                </View>
-              </View>
-              {courseHoleAverages.slice(0, 2).map((course) => (
-                <View key={course.courseName} style={styles.courseAverageCard}>
-                  <View style={styles.courseAverageHeader}>
-                    <Text style={styles.courseAverageTitle}>{course.courseName}</Text>
-                    <Text style={styles.courseAverageMeta}>{course.rounds} logged rounds</Text>
-                  </View>
-                  <View style={styles.holeAverageGrid}>
-                    {course.holes.slice(0, 18).map((hole) => (
-                      <View key={hole.hole} style={styles.holeAveragePill}>
-                        <Text style={styles.holeAverageLabel}>H{hole.hole}</Text>
-                        <Text style={styles.holeAverageValue}>{hole.average ? hole.average.toFixed(1) : '--'}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              ))}
               {busy ? <ActivityIndicator color={palette.aqua} /> : null}
               {!busy && activities.length === 0 ? (
                 <Text style={styles.infoLine}>No profile activity yet. Tee times, rounds, photo changes, connections, and bag updates will show up here.</Text>
               ) : null}
               {activities.map((activity) => {
                 const linkedRound = activity.activity_type === 'round_logged' ? findRoundForActivity(activity, rounds) : null
-                const courseAverage = linkedRound ? getAverageScoreAtCourse(linkedRound, rounds) : null
 
                 if (linkedRound) {
+                  const expanded = expandedRoundId === linkedRound.id
+
                   return (
                     <Pressable
                       key={activity.id}
-                      onPress={() => router.push(`/rounds/${linkedRound.id}`)}
+                      onPress={() => setExpandedRoundId((current) => (current === linkedRound.id ? null : linkedRound.id))}
                       style={styles.roundActivityCard}
                     >
                       <View style={styles.roundActivityHeader}>
@@ -877,30 +886,32 @@ export default function ProfileTab() {
                         </View>
                         <Text style={styles.roundActivityScore}>{linkedRound.total_score}</Text>
                       </View>
-                      <View style={styles.roundActivityStats}>
-                        <View style={styles.roundActivityPill}>
-                          <Text style={styles.roundActivityPillLabel}>Handicap</Text>
-                          <Text style={styles.roundActivityPillValue}>{profile?.handicap ?? '--'}</Text>
-                        </View>
-                        <View style={styles.roundActivityPill}>
-                          <Text style={styles.roundActivityPillLabel}>Course Avg</Text>
-                          <Text style={styles.roundActivityPillValue}>{courseAverage ? courseAverage.toFixed(1) : '--'}</Text>
-                        </View>
-                        <View style={styles.roundActivityPill}>
-                          <Text style={styles.roundActivityPillLabel}>Avg / Hole</Text>
-                          <Text style={styles.roundActivityPillValue}>{linkedRound.average_score_per_hole.toFixed(2)}</Text>
-                        </View>
+                      <View style={styles.roundActivityExpandRow}>
+                        <Text style={styles.roundActivityExpandText}>{expanded ? 'Hide hole scores' : 'View hole scores'}</Text>
+                        <Ionicons color={palette.aqua} name={expanded ? 'chevron-up' : 'chevron-down'} size={16} />
                       </View>
+                      {expanded ? (
+                        <View style={styles.roundScoreGrid}>
+                          {linkedRound.hole_scores.map((score, index) => (
+                            <View key={`${linkedRound.id}-${index}`} style={styles.roundScorePill}>
+                              <Text style={styles.roundScoreHole}>Hole {index + 1}</Text>
+                              <Text style={styles.roundScoreValue}>{score}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      ) : null}
                     </Pressable>
                   )
                 }
+
+                const activityImageUrl = getActivityImageUrl(activity)
 
                 return (
                   <View key={activity.id} style={styles.activityRow}>
                     <View style={styles.activityDot} />
                     <View style={styles.activityCopy}>
                       <Text style={styles.activityTitle}>{getActivityLabel(activity)}</Text>
-                      {activity.description ? <Text style={styles.activityDescription}>{activity.description}</Text> : null}
+                      {activityImageUrl ? <Image source={{ uri: activityImageUrl }} style={styles.activityImage} /> : null}
                     </View>
                     <Text style={styles.activityTime}>{formatActivityTime(activity.created_at)}</Text>
                   </View>
@@ -909,34 +920,140 @@ export default function ProfileTab() {
             </View>
           ) : (
             <View style={styles.activityCard}>
-              <View style={styles.activityHeader}>
-                <Text style={styles.infoTitle}>About</Text>
-                <Pressable onPress={() => setShowBagModal(true)} style={styles.bagEditButton}>
-                  <Ionicons color={palette.aqua} name="create-outline" size={16} />
-                  <Text style={styles.bagEditText}>Edit</Text>
-                </Pressable>
-              </View>
+              <View style={styles.aboutProfilePanel}>
+              {profile?.bio ? (
+                <View style={[styles.bioCard, styles.aboutBioCard]}>
+                  <Text style={[styles.meta, styles.bioText]}>{profile.bio}</Text>
+                </View>
+              ) : null}
               <View style={styles.aboutInfoGrid}>
                 <View style={styles.aboutInfoCard}>
                   <Text style={styles.aboutInfoLabel}>Home Course</Text>
-                  <Text style={styles.aboutInfoValue}>{profile?.home_course || profile?.home_club || 'Not added yet'}</Text>
+                  {isInlineAboutEditing ? (
+                    <TextInput
+                      onChangeText={(value) => setForm((current) => ({ ...current, home_course: value }))}
+                      placeholder="Home course"
+                      placeholderTextColor={palette.textMuted}
+                      style={styles.aboutInlineInput}
+                      value={form.home_course}
+                    />
+                  ) : (
+                    <Text style={styles.aboutInfoValue}>{profile?.home_course || profile?.home_club || 'Not added yet'}</Text>
+                  )}
                 </View>
                 <View style={styles.aboutInfoCard}>
                   <Text style={styles.aboutInfoLabel}>Location</Text>
-                  <Text style={styles.aboutInfoValue}>{profile?.location || 'Not added yet'}</Text>
+                  {isInlineAboutEditing ? (
+                    <TextInput
+                      onChangeText={(value) => setForm((current) => ({ ...current, location: value }))}
+                      placeholder="Location"
+                      placeholderTextColor={palette.textMuted}
+                      style={styles.aboutInlineInput}
+                      value={form.location}
+                    />
+                  ) : (
+                    <Text style={styles.aboutInfoValue}>{profile?.location || 'Not added yet'}</Text>
+                  )}
                 </View>
                 <View style={styles.aboutInfoCard}>
                   <Text style={styles.aboutInfoLabel}>Handicap</Text>
-                  <Text style={styles.aboutInfoValue}>{profile?.handicap ?? 'Not added yet'}</Text>
+                  {isInlineAboutEditing ? (
+                    <TextInput
+                      keyboardType="decimal-pad"
+                      onChangeText={(value) => setForm((current) => ({ ...current, handicap: value }))}
+                      placeholder="Handicap"
+                      placeholderTextColor={palette.textMuted}
+                      style={styles.aboutInlineInput}
+                      value={form.handicap}
+                    />
+                  ) : (
+                    <Text style={styles.aboutInfoValue}>{profile?.handicap ?? 'Not added yet'}</Text>
+                  )}
                 </View>
                 <View style={styles.aboutInfoCard}>
                   <Text style={styles.aboutInfoLabel}>Rounds Logged</Text>
                   <Text style={styles.aboutInfoValue}>{scoreSummary.totalRounds || '0'}</Text>
                 </View>
               </View>
+              <View style={styles.socialSection}>
+                <Text style={styles.aboutSectionTitle}>Social Links</Text>
+                {isInlineAboutEditing ? (
+                  <View style={styles.inlineFieldStack}>
+                    <TextInput
+                      autoCapitalize="none"
+                      onChangeText={(value) => setForm((current) => ({ ...current, linkedin_url: value }))}
+                      placeholder="LinkedIn URL"
+                      placeholderTextColor={palette.textMuted}
+                      style={styles.input}
+                      value={form.linkedin_url}
+                    />
+                    <TextInput
+                      autoCapitalize="none"
+                      onChangeText={(value) => setForm((current) => ({ ...current, instagram_url: value }))}
+                      placeholder="Instagram URL"
+                      placeholderTextColor={palette.textMuted}
+                      style={styles.input}
+                      value={form.instagram_url}
+                    />
+                    <TextInput
+                      autoCapitalize="none"
+                      onChangeText={(value) => setForm((current) => ({ ...current, facebook_url: value }))}
+                      placeholder="Facebook URL"
+                      placeholderTextColor={palette.textMuted}
+                      style={styles.input}
+                      value={form.facebook_url}
+                    />
+                    <TextInput
+                      autoCapitalize="none"
+                      onChangeText={(value) => setForm((current) => ({ ...current, x_url: value }))}
+                      placeholder="X URL"
+                      placeholderTextColor={palette.textMuted}
+                      style={styles.input}
+                      value={form.x_url}
+                    />
+                  </View>
+                ) : socialLinks.length ? (
+                  <View style={styles.socialGrid}>
+                    {socialLinks.map((link) => (
+                      <Pressable key={link.key} onPress={() => void Linking.openURL(link.url)} style={styles.socialChip}>
+                        <Ionicons color={palette.aqua} name={link.icon} size={16} />
+                        <Text style={styles.socialChipText}>{link.label}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                ) : (
+                  <Text style={styles.infoLine}>Add LinkedIn, Instagram, Facebook, or X from edit profile.</Text>
+                )}
+              </View>
               <View style={styles.aceCard}>
                 <Text style={styles.aboutSectionTitle}>Hole In One</Text>
-                {aceDetails ? (
+                {isInlineAboutEditing ? (
+                  <View style={styles.inlineFieldStack}>
+                    <TextInput
+                      onChangeText={(value) => setForm((current) => ({ ...current, ace_course: value }))}
+                      placeholder="Hole-in-one course"
+                      placeholderTextColor={palette.textMuted}
+                      style={styles.input}
+                      value={form.ace_course}
+                    />
+                    <View style={styles.editRow}>
+                      <TextInput
+                        onChangeText={(value) => setForm((current) => ({ ...current, ace_hole: value }))}
+                        placeholder="Hole"
+                        placeholderTextColor={palette.textMuted}
+                        style={[styles.input, styles.flexInput]}
+                        value={form.ace_hole}
+                      />
+                      <TextInput
+                        onChangeText={(value) => setForm((current) => ({ ...current, ace_date: value }))}
+                        placeholder="Date"
+                        placeholderTextColor={palette.textMuted}
+                        style={[styles.input, styles.flexInput]}
+                        value={form.ace_date}
+                      />
+                    </View>
+                  </View>
+                ) : aceDetails ? (
                   <View style={styles.aceDetailsRow}>
                     <View style={styles.acePill}>
                       <Text style={styles.acePillLabel}>Course</Text>
@@ -956,15 +1073,33 @@ export default function ProfileTab() {
                 )}
               </View>
               <Text style={styles.aboutSectionTitle}>What&apos;s In The Bag</Text>
+              <View style={styles.bagGrid}>
               {bagFields.map((field) => {
                 const value = bagItems[field.key]?.trim()
                 return (
                   <View key={field.key} style={styles.bagRow}>
                     <Text style={styles.bagLabel}>{field.label}</Text>
-                    <Text style={styles.bagValue}>{value || 'Not added yet'}</Text>
+                    {isInlineAboutEditing ? (
+                      <TextInput
+                        onChangeText={(nextValue) =>
+                          setBagItems((current) => ({
+                            ...current,
+                            [field.key]: nextValue
+                          }))
+                        }
+                        placeholder={field.placeholder}
+                        placeholderTextColor={palette.textMuted}
+                        style={styles.aboutInlineInput}
+                        value={bagItems[field.key] || ''}
+                      />
+                    ) : (
+                      <Text style={styles.bagValue}>{value || 'Not added yet'}</Text>
+                    )}
                   </View>
                 )
               })}
+              </View>
+              </View>
             </View>
           )}
         </View>
@@ -989,6 +1124,15 @@ export default function ProfileTab() {
                   setShowProfileMenu(false)
                   setShowShareModal(false)
                   setShowEditModal(true)
+                }}
+              />
+              <PrimaryButton
+                label="My Tee Times"
+                variant="ghost"
+                onPress={() => {
+                  setShowProfileMenu(false)
+                  setShowShareModal(false)
+                  router.push('/tee-times')
                 }}
               />
               <PrimaryButton
@@ -1128,36 +1272,64 @@ export default function ProfileTab() {
         >
           <Pressable style={styles.modalBackdrop} onPress={() => setShowShareModal(false)}>
             <Pressable style={[styles.modalCard, styles.shareModalCard]} onPress={() => {}}>
-              <Text style={styles.sectionEyebrow}>Share</Text>
-              <Text style={styles.infoTitle}>Invite with link or QR</Text>
-              <Text style={styles.infoLine}>
-                Share this link or let another golfer scan the code to jump straight into adding you.
-              </Text>
-              <View style={styles.qrCard}>
-                <View style={styles.qrBadge}>
-                  <Ionicons color={palette.aqua} name="qr-code-outline" size={16} />
-                  <Text style={styles.qrBadgeText}>Scan to connect</Text>
+              <View style={styles.qrBusinessCard}>
+                {profile?.header_image_url ? (
+                  <Image source={{ uri: profile.header_image_url }} style={styles.qrBusinessCardImage} />
+                ) : (
+                  <View style={styles.qrBusinessCardFallback} />
+                )}
+                <View style={styles.qrBusinessCardShade} />
+                <View style={styles.qrCardBrandRow}>
+                  <View>
+                    <Text style={styles.qrCardBrand}>Ultimate Golf Community</Text>
+                    <Text style={styles.qrCardType}>Member Card</Text>
+                  </View>
+                  {socialLinks.length ? (
+                    <View style={styles.qrCardSocialLinks}>
+                      {socialLinks.map((link) => (
+                        <Pressable
+                          key={link.key}
+                          accessibilityLabel={`Open ${link.label}`}
+                          onPress={() => void Linking.openURL(link.url)}
+                          style={styles.qrCardSocialLink}
+                        >
+                          <Ionicons color="#f6e7ba" name={link.icon} size={15} />
+                        </Pressable>
+                      ))}
+                    </View>
+                  ) : null}
                 </View>
-                {shareQrUrl ? <Image source={{ uri: shareQrUrl }} style={styles.qrImage} /> : null}
-                <Text style={styles.qrHint}>Point your camera at the code or send the invite link below.</Text>
-              </View>
-              <View style={styles.shareLinkBox}>
-                <Text style={styles.shareLinkLabel}>Invite link</Text>
-                <Text selectable numberOfLines={2} style={styles.shareLinkText}>
-                  {shareLink}
-                </Text>
+                <View style={styles.qrBusinessCardTop}>
+                  <View style={styles.qrAvatarWrap}>
+                    <Avatar label={displayName} size={66} uri={profile?.avatar_url} />
+                  </View>
+                  <View style={styles.qrIdentityCopy}>
+                    <Text numberOfLines={1} style={styles.qrBusinessCardName}>{displayName}</Text>
+                    <Text numberOfLines={1} style={styles.qrBusinessCardCourse}>
+                      {profile?.home_course || profile?.home_club || 'Ultimate Golf Community'}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.qrBusinessCardStats}>
+                  <View style={styles.qrBusinessCardStat}>
+                    <Text style={styles.qrBusinessCardStatLabel}>Handicap</Text>
+                    <Text style={styles.qrBusinessCardStatValue}>{profile?.handicap ?? '--'}</Text>
+                  </View>
+                  <View style={styles.qrBusinessCardStat}>
+                    <Text style={styles.qrBusinessCardStatLabel}>Connections</Text>
+                    <Text style={styles.qrBusinessCardStatValue}>{acceptedConnections.length}</Text>
+                  </View>
+                  <View style={styles.qrBusinessCardStat}>
+                    <Text style={styles.qrBusinessCardStatLabel}>Ratings</Text>
+                    <Text style={styles.qrBusinessCardStatValue}>{ratingSummary.count || '--'}</Text>
+                  </View>
+                </View>
+                <View style={styles.qrBusinessCardBottom}>
+                  {shareQrUrl ? <Image source={{ uri: shareQrUrl }} style={styles.qrImage} /> : null}
+                  <Text style={styles.qrScanLabel}>Scan to view profile</Text>
+                </View>
               </View>
               <View style={styles.shareActionRow}>
-                <Pressable
-                  onPress={() => {
-                    Clipboard.setString(shareLink)
-                    Alert.alert('Copied', 'Invite link copied to your clipboard.')
-                  }}
-                  style={styles.shareActionButton}
-                >
-                  <Ionicons color={palette.text} name="copy-outline" size={18} />
-                  <Text style={styles.shareActionText}>Copy Link</Text>
-                </Pressable>
                 <Pressable
                   onPress={() => Share.share({ message: shareLink, url: shareLink })}
                   style={[styles.shareActionButton, styles.shareActionButtonPrimary]}
@@ -1178,7 +1350,13 @@ export default function ProfileTab() {
           onRequestClose={() => setShowEditModal(false)}
         >
           <Pressable style={styles.modalBackdrop} onPress={() => setShowEditModal(false)}>
-            <Pressable style={styles.modalCard} onPress={() => {}}>
+            <Pressable style={styles.editProfileDialog} onPress={() => {}}>
+              <ScrollView
+                contentContainerStyle={styles.editProfileContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator
+                style={styles.editProfileScroll}
+              >
               <Text style={styles.infoTitle}>Edit profile</Text>
               <View style={styles.editMediaRow}>
                 <PrimaryButton
@@ -1226,6 +1404,55 @@ export default function ProfileTab() {
               />
               <View style={styles.editRow}>
                 <TextInput
+                  keyboardType="decimal-pad"
+                  onChangeText={(value) => setForm((current) => ({ ...current, handicap: value }))}
+                  placeholder="Handicap"
+                  placeholderTextColor={palette.textMuted}
+                  style={[styles.input, styles.flexInput]}
+                  value={form.handicap}
+                />
+                <TextInput
+                  onChangeText={(value) => setForm((current) => ({ ...current, location: value }))}
+                  placeholder="Location"
+                  placeholderTextColor={palette.textMuted}
+                  style={[styles.input, styles.flexInput]}
+                  value={form.location}
+                />
+              </View>
+              <TextInput
+                autoCapitalize="none"
+                onChangeText={(value) => setForm((current) => ({ ...current, linkedin_url: value }))}
+                placeholder="LinkedIn URL"
+                placeholderTextColor={palette.textMuted}
+                style={styles.input}
+                value={form.linkedin_url}
+              />
+              <TextInput
+                autoCapitalize="none"
+                onChangeText={(value) => setForm((current) => ({ ...current, instagram_url: value }))}
+                placeholder="Instagram URL"
+                placeholderTextColor={palette.textMuted}
+                style={styles.input}
+                value={form.instagram_url}
+              />
+              <TextInput
+                autoCapitalize="none"
+                onChangeText={(value) => setForm((current) => ({ ...current, facebook_url: value }))}
+                placeholder="Facebook URL"
+                placeholderTextColor={palette.textMuted}
+                style={styles.input}
+                value={form.facebook_url}
+              />
+              <TextInput
+                autoCapitalize="none"
+                onChangeText={(value) => setForm((current) => ({ ...current, x_url: value }))}
+                placeholder="X URL"
+                placeholderTextColor={palette.textMuted}
+                style={styles.input}
+                value={form.x_url}
+              />
+              <View style={styles.editRow}>
+                <TextInput
                   onChangeText={(value) => setForm((current) => ({ ...current, ace_course: value }))}
                   placeholder="Hole-in-one course"
                   placeholderTextColor={palette.textMuted}
@@ -1247,23 +1474,6 @@ export default function ProfileTab() {
                 style={styles.input}
                 value={form.ace_date}
               />
-              <View style={styles.editRow}>
-                <TextInput
-                  onChangeText={(value) => setForm((current) => ({ ...current, location: value }))}
-                  placeholder="Location"
-                  placeholderTextColor={palette.textMuted}
-                  style={[styles.input, styles.flexInput]}
-                  value={form.location}
-                />
-                <TextInput
-                  keyboardType="decimal-pad"
-                  onChangeText={(value) => setForm((current) => ({ ...current, handicap: value }))}
-                  placeholder="Handicap"
-                  placeholderTextColor={palette.textMuted}
-                  style={[styles.input, styles.flexInput]}
-                  value={form.handicap}
-                />
-              </View>
               <TextInput
                 multiline
                 onChangeText={(value) => setForm((current) => ({ ...current, bio: value }))}
@@ -1272,8 +1482,11 @@ export default function ProfileTab() {
                 style={[styles.input, styles.bioInput]}
                 value={form.bio}
               />
-              <PrimaryButton label="Save Profile" loading={saving} onPress={handleSave} />
-              <PrimaryButton label="Close" variant="ghost" onPress={() => setShowEditModal(false)} />
+              </ScrollView>
+              <View style={styles.editProfileFooter}>
+                <PrimaryButton label="Save Profile" loading={saving} onPress={handleSave} />
+                <PrimaryButton label="Close" variant="ghost" onPress={() => setShowEditModal(false)} />
+              </View>
             </Pressable>
           </Pressable>
         </Modal>
@@ -1289,27 +1502,49 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: 20,
-    padding: 20
+    paddingBottom: 40,
+    paddingHorizontal: 0,
+    paddingTop: 0
+  },
+  profileTopActions: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    height: 96,
+    justifyContent: 'space-between',
+    marginHorizontal: 16,
+    paddingTop: 44,
+    position: 'relative',
+    zIndex: 5
+  },
+  profileHeaderButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(4,18,12,0.68)',
+    borderColor: 'rgba(232,216,178,0.28)',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 40,
+    justifyContent: 'center',
+    width: 40
   },
   headerCard: {
-    backgroundColor: palette.card,
-    borderColor: palette.border,
-    borderRadius: 28,
-    borderWidth: 1,
-    gap: 16,
-    marginTop: -12,
-    overflow: 'hidden',
-    padding: 18
+    backgroundColor: 'transparent',
+    gap: 0,
+    marginTop: -56,
+    overflow: 'visible',
+    paddingHorizontal: 0,
+    zIndex: 1
   },
   coverShell: {
-    borderRadius: 22,
-    height: 190,
-    marginBottom: 26,
+    borderColor: 'rgba(232,216,178,0.14)',
+    borderRadius: 28,
+    borderWidth: 1,
+    height: 270,
+    marginHorizontal: 16,
     overflow: 'hidden',
     position: 'relative'
   },
   coverGlow: {
-    backgroundColor: 'rgba(103,232,249,0.12)',
+    backgroundColor: 'rgba(210,180,104,0.18)',
     borderRadius: 999,
     height: 180,
     position: 'absolute',
@@ -1322,11 +1557,30 @@ const styles = StyleSheet.create({
     height: '100%',
     width: '100%'
   },
+  coverShade: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(4,18,12,0.42)'
+  },
+  coverSocialLinks: {
+    flexDirection: 'row',
+    gap: 8,
+    left: 16,
+    position: 'absolute',
+    top: 64
+  },
+  coverSocialLink: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(4,18,12,0.60)',
+    borderColor: 'rgba(232,216,178,0.28)',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 34,
+    justifyContent: 'center',
+    width: 34
+  },
   coverFallback: {
     alignItems: 'center',
     backgroundColor: palette.cardSoft,
-    borderColor: palette.border,
-    borderWidth: 1,
     height: '100%',
     justifyContent: 'center',
     width: '100%'
@@ -1336,64 +1590,100 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600'
   },
-  identityStack: {
+  coverAvatarCluster: {
     alignItems: 'center',
-    marginTop: -58
+    gap: 10,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 46
   },
   avatarWrap: {
-    borderColor: palette.card,
+    borderColor: '#e8d8b2',
     borderRadius: 999,
-    borderWidth: 6,
+    borderWidth: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.18,
+    shadowOpacity: 0.34,
     shadowRadius: 18
   },
-  profileTopCopy: {
+  identityBusinessCard: {
     alignItems: 'center',
-    gap: 1,
-    marginTop: 12,
+    bottom: undefined,
+    gap: 5,
+    left: 16,
+    position: 'absolute',
+    right: 16,
+    top: 154
+  },
+  identityTopRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'center',
+    position: 'relative',
     width: '100%'
   },
-  nameRow: {
+  identityHeadline: {
+    alignItems: 'center',
+    flex: 1,
+    gap: 4
+  },
+  identityNameRow: {
     alignItems: 'center',
     flexDirection: 'row',
+    gap: 6,
     justifyContent: 'center',
-    marginBottom: 0
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    justifyContent: 'center'
+    maxWidth: '100%'
   },
   name: {
-    color: palette.text,
-    fontSize: 28,
-    fontWeight: '700',
-    letterSpacing: -0.4,
-    lineHeight: 28,
-    textAlign: 'center'
+    color: '#fffaf0',
+    fontFamily: 'Georgia',
+    fontSize: 20,
+    fontWeight: '800',
+    flexShrink: 1,
+    letterSpacing: -0.5,
+    lineHeight: 23,
+    textShadowColor: 'rgba(0,0,0,0.55)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 5
   },
-  crownIcon: {
-    marginBottom: -4,
-    marginLeft: 8
+  identityCrown: {
+    fontSize: 19
   },
-  infoRibbon: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 999,
-    borderWidth: 1,
-    marginTop: -16,
-    paddingHorizontal: 16,
-    paddingVertical: 8
-  },
-  headlineMeta: {
-    color: palette.text,
-    fontSize: 14,
+  businessClubLine: {
+    color: 'rgba(255,250,240,0.70)',
+    fontSize: 12,
     fontWeight: '600',
-    lineHeight: 18,
-    textAlign: 'center'
+    lineHeight: 15,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.55)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4
+  },
+  businessMetricsRow: {
+    flexDirection: 'row',
+    gap: 4,
+    marginTop: 2,
+    width: '100%'
+  },
+  businessMetric: {
+    alignItems: 'center',
+    flex: 1,
+    gap: 1
+  },
+  businessMetricLabel: {
+    color: 'rgba(255,250,240,0.68)',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase'
+  },
+  businessMetricValue: {
+    color: '#fffaf0',
+    fontFamily: 'Georgia',
+    fontSize: 16,
+    fontWeight: '800'
   },
   ratingSummaryRow: {
     alignItems: 'center',
@@ -1402,22 +1692,6 @@ const styles = StyleSheet.create({
     gap: 10,
     justifyContent: 'center',
     marginTop: 6
-  },
-  ratingBadge: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(245, 158, 11, 0.12)',
-    borderColor: 'rgba(245, 158, 11, 0.28)',
-    borderRadius: 999,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6
-  },
-  ratingBadgeText: {
-    color: palette.text,
-    fontSize: 13,
-    fontWeight: '700'
   },
   ratingSummaryText: {
     color: palette.textMuted,
@@ -1440,46 +1714,65 @@ const styles = StyleSheet.create({
     color: palette.textMuted,
     fontSize: 14,
     lineHeight: 20,
-    textAlign: 'center'
+    textAlign: 'left'
+  },
+  bioText: {
+    color: '#264335',
+    fontFamily: 'Georgia',
+    fontSize: 15,
+    lineHeight: 22
   },
   bioCard: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 20,
+    backgroundColor: '#f3efe4',
+    borderColor: 'rgba(210,180,104,0.28)',
+    borderRadius: 18,
     borderWidth: 1,
-    marginTop: 6,
+    marginHorizontal: 20,
+    marginTop: 14,
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    width: '100%'
+    paddingVertical: 14
+  },
+  aboutBioCard: {
+    marginHorizontal: 0,
+    marginTop: 0
   },
   activityCard: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'transparent',
+    gap: 14,
+    marginTop: 12,
+    paddingHorizontal: 20
+  },
+  aboutProfilePanel: {
+    backgroundColor: '#34715b',
+    borderColor: 'rgba(234,246,216,0.3)',
     borderRadius: 24,
     borderWidth: 1,
     gap: 12,
-    marginTop: 2,
-    padding: 16
+    padding: 12
   },
   profileTabRow: {
-    backgroundColor: palette.bgElevated,
-    borderColor: palette.border,
-    borderRadius: 999,
+    backgroundColor: '#34715b',
+    borderColor: 'rgba(234,246,216,0.28)',
+    borderRadius: 18,
     borderWidth: 1,
     flexDirection: 'row',
     gap: 8,
-    padding: 6
+    marginHorizontal: 20,
+    marginTop: 12,
+    padding: 5
   },
   profileTab: {
     alignItems: 'center',
-    borderRadius: 999,
+    borderRadius: 13,
     flex: 1,
     justifyContent: 'center',
     minHeight: 42,
     paddingHorizontal: 12
   },
   profileTabActive: {
-    backgroundColor: palette.card
+    backgroundColor: '#e8d8b2',
+    borderColor: '#e8d8b2',
+    borderWidth: 1
   },
   profileTabText: {
     color: palette.textMuted,
@@ -1489,12 +1782,13 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase'
   },
   profileTabTextActive: {
-    color: palette.text
+    color: '#102c20'
   },
   activityHeader: {
     alignItems: 'center',
     flexDirection: 'row',
-    justifyContent: 'space-between'
+    justifyContent: 'flex-end',
+    marginBottom: 2
   },
   activityCountPill: {
     alignItems: 'center',
@@ -1517,9 +1811,9 @@ const styles = StyleSheet.create({
     gap: 10
   },
   scoreStat: {
-    backgroundColor: 'rgba(103,232,249,0.08)',
-    borderColor: 'rgba(103,232,249,0.16)',
-    borderRadius: 18,
+    backgroundColor: '#3b7e65',
+    borderColor: 'rgba(234,246,216,0.24)',
+    borderRadius: 16,
     borderWidth: 1,
     flex: 1,
     gap: 4,
@@ -1533,14 +1827,15 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase'
   },
   scoreValue: {
-    color: palette.text,
-    fontSize: 20,
+    color: '#f6e7ba',
+    fontFamily: 'Georgia',
+    fontSize: 24,
     fontWeight: '800'
   },
   courseAverageCard: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 18,
+    backgroundColor: '#3b7e65',
+    borderColor: 'rgba(234,246,216,0.24)',
+    borderRadius: 20,
     borderWidth: 1,
     gap: 10,
     padding: 12
@@ -1600,6 +1895,37 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textTransform: 'uppercase'
   },
+  aboutActionRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8
+  },
+  aboutSecondaryButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 999,
+    borderWidth: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8
+  },
+  aboutSecondaryButtonText: {
+    color: palette.textMuted,
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'uppercase'
+  },
+  aboutInlineInput: {
+    color: palette.text,
+    fontSize: 15,
+    fontWeight: '700',
+    minHeight: 34,
+    padding: 0
+  },
+  inlineFieldStack: {
+    gap: 10
+  },
   modalBackdrop: {
     alignItems: 'center',
     backgroundColor: 'rgba(3,10,8,0.68)',
@@ -1617,13 +1943,37 @@ const styles = StyleSheet.create({
     padding: 20,
     width: '100%'
   },
+  editProfileDialog: {
+    backgroundColor: palette.card,
+    borderColor: palette.border,
+    borderRadius: 24,
+    borderWidth: 1,
+    maxHeight: '88%',
+    overflow: 'hidden',
+    width: '100%'
+  },
+  editProfileScroll: {
+    flexGrow: 0,
+    flexShrink: 1
+  },
+  editProfileContent: {
+    gap: 12,
+    padding: 20
+  },
+  editProfileFooter: {
+    backgroundColor: palette.card,
+    borderTopColor: palette.border,
+    borderTopWidth: 1,
+    gap: 8,
+    padding: 14
+  },
   shareModalCard: {
     gap: 14
   },
   roundActivityCard: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 18,
+    backgroundColor: '#3b7e65',
+    borderColor: 'rgba(234,246,216,0.24)',
+    borderRadius: 20,
     borderWidth: 1,
     gap: 10,
     padding: 12
@@ -1649,6 +1999,45 @@ const styles = StyleSheet.create({
   roundActivityScore: {
     color: palette.text,
     fontSize: 28,
+    fontWeight: '800'
+  },
+  roundActivityExpandRow: {
+    alignItems: 'center',
+    borderTopColor: 'rgba(232,216,178,0.12)',
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: 10
+  },
+  roundActivityExpandText: {
+    color: palette.aqua,
+    fontSize: 12,
+    fontWeight: '700'
+  },
+  roundScoreGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8
+  },
+  roundScorePill: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(103,232,249,0.08)',
+    borderColor: 'rgba(103,232,249,0.16)',
+    borderRadius: 12,
+    borderWidth: 1,
+    minWidth: '21%',
+    paddingHorizontal: 8,
+    paddingVertical: 8
+  },
+  roundScoreHole: {
+    color: palette.textMuted,
+    fontSize: 9,
+    fontWeight: '800',
+    textTransform: 'uppercase'
+  },
+  roundScoreValue: {
+    color: palette.text,
+    fontSize: 17,
     fontWeight: '800'
   },
   roundActivityStats: {
@@ -1679,16 +2068,16 @@ const styles = StyleSheet.create({
   },
   activityRow: {
     alignItems: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 18,
+    backgroundColor: '#3b7e65',
+    borderColor: 'rgba(234,246,216,0.24)',
+    borderRadius: 16,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: 10,
-    padding: 12
+    gap: 8,
+    padding: 10
   },
   activityDot: {
-    backgroundColor: palette.aqua,
+    backgroundColor: '#d5b970',
     borderRadius: 999,
     height: 8,
     marginTop: 7,
@@ -1700,14 +2089,15 @@ const styles = StyleSheet.create({
   },
   activityTitle: {
     color: palette.text,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
-    lineHeight: 20
+    lineHeight: 19
   },
-  activityDescription: {
-    color: palette.textMuted,
-    fontSize: 13,
-    lineHeight: 18
+  activityImage: {
+    borderRadius: 12,
+    height: 150,
+    marginTop: 6,
+    width: '100%'
   },
   activityTime: {
     color: palette.textMuted,
@@ -1716,15 +2106,22 @@ const styles = StyleSheet.create({
     marginLeft: 'auto'
   },
   bagRow: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 18,
+    backgroundColor: '#3b7e65',
+    borderColor: 'rgba(234,246,216,0.24)',
+    borderRadius: 14,
     borderWidth: 1,
-    gap: 4,
-    padding: 14
+    flex: 1,
+    gap: 2,
+    minWidth: '47%',
+    padding: 10
+  },
+  bagGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8
   },
   bagLabel: {
-    color: palette.aqua,
+    color: '#d5b970',
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 1,
@@ -1732,23 +2129,23 @@ const styles = StyleSheet.create({
   },
   bagValue: {
     color: palette.text,
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '600',
     lineHeight: 20
   },
   aboutInfoGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10
+    gap: 8
   },
   aboutInfoCard: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 18,
+    backgroundColor: '#3b7e65',
+    borderColor: 'rgba(234,246,216,0.24)',
+    borderRadius: 16,
     borderWidth: 1,
-    gap: 4,
+    gap: 2,
     minWidth: '47%',
-    padding: 14
+    padding: 10
   },
   aboutInfoLabel: {
     color: palette.textMuted,
@@ -1759,37 +2156,62 @@ const styles = StyleSheet.create({
   },
   aboutInfoValue: {
     color: palette.text,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     lineHeight: 20
   },
   aceCard: {
-    backgroundColor: 'rgba(245, 158, 11, 0.08)',
-    borderColor: 'rgba(245, 158, 11, 0.18)',
-    borderRadius: 20,
+    backgroundColor: '#3d301a',
+    borderColor: 'rgba(232,216,178,0.28)',
+    borderRadius: 18,
     borderWidth: 1,
-    gap: 10,
-    padding: 16
+    gap: 8,
+    padding: 12
   },
   aboutSectionTitle: {
-    color: palette.text,
+    color: '#f6e7ba',
+    fontFamily: 'Georgia',
     fontSize: 16,
     fontWeight: '800'
+  },
+  socialSection: {
+    gap: 7
+  },
+  socialGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 7
+  },
+  socialChip: {
+    alignItems: 'center',
+    backgroundColor: '#3b7e65',
+    borderColor: 'rgba(234,246,216,0.24)',
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 7
+  },
+  socialChipText: {
+    color: palette.text,
+    fontSize: 12,
+    fontWeight: '700'
   },
   aceDetailsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8
+    gap: 6
   },
   acePill: {
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
     gap: 2,
     minWidth: '31%',
-    paddingHorizontal: 12,
-    paddingVertical: 10
+    paddingHorizontal: 8,
+    paddingVertical: 7
   },
   acePillLabel: {
     color: palette.textMuted,
@@ -1805,48 +2227,155 @@ const styles = StyleSheet.create({
     lineHeight: 18
   },
   qrCard: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 22,
-    borderWidth: 1,
-    overflow: 'hidden',
-    paddingHorizontal: 18,
-    paddingVertical: 18
+    display: 'none'
   },
-  qrBadge: {
+  qrBusinessCard: {
     alignItems: 'center',
-    backgroundColor: 'rgba(103,232,249,0.10)',
-    borderColor: 'rgba(103,232,249,0.22)',
+    borderColor: 'rgba(232,216,178,0.30)',
+    borderRadius: 24,
+    borderWidth: 1,
+    height: 400,
+    overflow: 'hidden',
+    position: 'relative'
+  },
+  qrBusinessCardImage: {
+    height: '100%',
+    position: 'absolute',
+    width: '100%'
+  },
+  qrBusinessCardFallback: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#15382c'
+  },
+  qrBusinessCardShade: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(3,10,8,0.56)'
+  },
+  qrCardBrandRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    left: 18,
+    position: 'absolute',
+    right: 18,
+    top: 16
+  },
+  qrCardSocialLinks: {
+    flexDirection: 'row',
+    gap: 6
+  },
+  qrCardSocialLink: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(4,18,12,0.48)',
+    borderColor: 'rgba(232,216,178,0.18)',
     borderRadius: 999,
     borderWidth: 1,
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 7
+    height: 28,
+    justifyContent: 'center',
+    width: 28
   },
-  qrBadgeText: {
-    color: palette.text,
-    fontSize: 12,
+  qrCardBrand: {
+    color: '#f6e7ba',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 1.1,
+    textTransform: 'uppercase'
+  },
+  qrCardType: {
+    color: 'rgba(255,250,240,0.72)',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase'
+  },
+  qrBusinessCardTop: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    left: 20,
+    position: 'absolute',
+    right: 20,
+    top: 48
+  },
+  qrAvatarWrap: {
+    borderColor: '#e8d8b2',
+    borderRadius: 999,
+    borderWidth: 3
+  },
+  qrIdentityCopy: {
+    flex: 1,
+    gap: 4
+  },
+  qrBusinessCardName: {
+    color: palette.white,
+    fontFamily: 'Georgia',
+    fontSize: 24,
     fontWeight: '700',
+    lineHeight: 28,
+    textAlign: 'left'
+  },
+  qrBusinessCardCourse: {
+    color: 'rgba(255,250,240,0.74)',
+    fontSize: 13,
+    fontWeight: '600'
+  },
+  qrBusinessCardStats: {
+    flexDirection: 'row',
+    gap: 6,
+    left: 20,
+    position: 'absolute',
+    right: 20,
+    top: 130
+  },
+  qrBusinessCardStat: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(4,18,12,0.52)',
+    borderColor: 'rgba(232,216,178,0.16)',
+    borderRadius: 12,
+    borderWidth: 1,
+    flex: 1,
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 8
+  },
+  qrBusinessCardStatLabel: {
+    color: 'rgba(232,216,178,0.68)',
+    fontSize: 8,
+    fontWeight: '800',
     letterSpacing: 0.4,
     textTransform: 'uppercase'
+  },
+  qrBusinessCardStatValue: {
+    color: '#fffaf0',
+    fontFamily: 'Georgia',
+    fontSize: 18,
+    fontWeight: '800'
+  },
+  qrBusinessCardBottom: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    backgroundColor: '#f8f3e7',
+    borderColor: 'rgba(232,216,178,0.70)',
+    borderRadius: 18,
+    borderWidth: 1,
+    bottom: 16,
+    padding: 10,
+    position: 'absolute'
   },
   qrImage: {
     alignSelf: 'center',
     backgroundColor: palette.white,
-    borderRadius: 28,
-    height: 224,
-    marginBottom: 12,
-    padding: 14,
-    width: 224
+    borderRadius: 10,
+    height: 148,
+    width: 148
   },
-  qrHint: {
-    color: palette.textMuted,
-    fontSize: 13,
-    lineHeight: 19,
-    textAlign: 'center'
+  qrScanLabel: {
+    color: '#234334',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.7,
+    marginTop: 4,
+    textTransform: 'uppercase'
   },
   shareLinkBox: {
     backgroundColor: palette.bgElevated,

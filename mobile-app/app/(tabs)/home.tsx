@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -16,7 +17,6 @@ import {
   View
 } from 'react-native'
 import { Avatar } from '@/components/Avatar'
-import { BrandHeader } from '@/components/BrandHeader'
 import { PrimaryButton } from '@/components/PrimaryButton'
 import { apiGet, apiPost } from '@/lib/api'
 import { fetchNetworkFeed, type NetworkFeedActivity } from '@/lib/feed'
@@ -104,46 +104,13 @@ function estimatePrecipitationRisk(weather: WeatherData) {
   return Math.max(5, Math.min(35, 5 + Math.round(humidityBump / 2)))
 }
 
-function getGolfRecommendation(weather: WeatherData) {
-  const description = weather.description.toLowerCase()
-  const precipRisk = estimatePrecipitationRisk(weather)
-
-  if (description.includes('thunder') || precipRisk >= 80) {
-    return 'Rough golf weather today'
-  }
-
-  if (weather.windSpeed >= 20) {
-    return 'Playable, but very windy'
-  }
-
-  if (weather.temperature <= 45) {
-    return 'Cold round, bundle up'
-  }
-
-  if (weather.temperature >= 92) {
-    return 'Playable, but hot and draining'
-  }
-
-  if (precipRisk >= 50) {
-    return 'Borderline, keep an eye on the sky'
-  }
-
-  return 'Great day to tee it up'
-}
-
-function formatUpcomingTeeTime(teeTime?: TeeTime | null) {
-  if (!teeTime?.tee_time_date) return 'No tee times yet'
-
-  const base = new Date(`${teeTime.tee_time_date}T${teeTime.tee_time_time || '12:00:00'}`)
-  const dateLabel = base.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric'
-  })
-  const timeLabel = teeTime.tee_time_time
-    ? base.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
-    : null
-
-  return timeLabel ? `${dateLabel} • ${timeLabel}` : dateLabel
+function getWeatherIconName(description?: string): keyof typeof Ionicons.glyphMap {
+  const value = description?.toLowerCase() || ''
+  if (value.includes('thunder')) return 'thunderstorm-outline'
+  if (value.includes('rain') || value.includes('drizzle') || value.includes('shower')) return 'rainy-outline'
+  if (value.includes('snow') || value.includes('sleet')) return 'snow-outline'
+  if (value.includes('cloud') || value.includes('overcast')) return 'partly-sunny-outline'
+  return 'sunny-outline'
 }
 
 function formatFeedTimestamp(value?: string) {
@@ -194,6 +161,23 @@ function describeBagUpdate(activity: Activity) {
   return summary
 }
 
+function getProfileUpdateText(activity: Activity) {
+  const fields = Array.isArray(activity.metadata?.fields_updated)
+    ? activity.metadata.fields_updated.filter((field): field is string => typeof field === 'string')
+    : []
+  const socialLabels: Record<string, string> = {
+    linkedin: 'LinkedIn',
+    instagram: 'Instagram',
+    facebook: 'Facebook',
+    x: 'X'
+  }
+  const socialField = fields.find((field) => socialLabels[field])
+
+  if (socialField) return `Added ${socialLabels[socialField]} to Profile`
+  if (fields.length === 1) return `Updated ${fields[0].replace(/_/g, ' ')} on Profile`
+  return 'Updated Profile'
+}
+
 async function getDirectInteractionSummary(activityId: string, userId: string) {
   const [likesResult, commentsResult] = await Promise.all([
     mobileSupabase.from('activity_likes').select('user_id').eq('activity_id', activityId),
@@ -233,10 +217,12 @@ export default function HomeTab() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedTime, setSelectedTime] = useState<Date | null>(null)
   const [nextTeeTime, setNextTeeTime] = useState<TeeTime | null>(null)
-  const [myTeeTimes, setMyTeeTimes] = useState<TeeTime[]>([])
   const [activityFeed, setActivityFeed] = useState<Activity[]>([])
   const [commentingOn, setCommentingOn] = useState<string | null>(null)
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({})
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null)
+  const [selectedLikesActivityId, setSelectedLikesActivityId] = useState<string | null>(null)
+  const [selectedCommentsActivityId, setSelectedCommentsActivityId] = useState<string | null>(null)
   const [joiningFeedTeeTimeId, setJoiningFeedTeeTimeId] = useState<string | null>(null)
   const [myGroups, setMyGroups] = useState<GroupOption[]>([])
   const [unreadNotifications, setUnreadNotifications] = useState(0)
@@ -282,7 +268,6 @@ export default function HomeTab() {
           return aValue.localeCompare(bValue)
         })
 
-      setMyTeeTimes(myRounds || [])
       const nextMine = futureMyRounds[0] || null
       setNextTeeTime(nextMine)
       setActivityFeed(feed || [])
@@ -376,6 +361,26 @@ export default function HomeTab() {
 
   if (!loading && !user) {
     return <Redirect href="/welcome" />
+  }
+
+  const selectedLikesActivity =
+    activityFeed.find((item) => item.id === selectedLikesActivityId) || null
+  const selectedCommentsActivity =
+    activityFeed.find((item) => item.id === selectedCommentsActivityId) || null
+  const clubhouseTitle = profile?.first_name ? `${profile.first_name}'s Clubhouse` : 'Your Clubhouse'
+
+  const getProfileName = (profile?: {
+    first_name?: string | null
+    last_name?: string | null
+    username?: string | null
+  } | null) => {
+    const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim()
+    return fullName || profile?.username || 'UGC Golfer'
+  }
+
+  const getTopComment = (activity: Activity) => {
+    const comments = Array.isArray(activity.comments) ? activity.comments : []
+    return comments[0] || null
   }
 
   const resetComposer = () => {
@@ -488,13 +493,26 @@ export default function HomeTab() {
 
     const liked = !!activity.liked_by_user
     const previousLikeCount = activity.like_count || 0
+    const viewerLike = {
+      user_id: user.id,
+      user_profiles: {
+        id: user.id,
+        first_name: profile?.first_name || null,
+        last_name: profile?.last_name || null,
+        username: profile?.username || null,
+        avatar_url: profile?.avatar_url || null
+      }
+    }
     setActivityFeed((current) =>
       current.map((item) =>
         item.id === activity.id
           ? {
               ...item,
               liked_by_user: !liked,
-              like_count: Math.max((item.like_count || 0) + (liked ? -1 : 1), 0)
+              like_count: Math.max((item.like_count || 0) + (liked ? -1 : 1), 0),
+              likes: liked
+                ? (item.likes || []).filter((like) => like.user_id !== user.id)
+                : [viewerLike, ...(item.likes || []).filter((like) => like.user_id !== user.id)]
             }
           : item
       )
@@ -555,17 +573,40 @@ export default function HomeTab() {
     if (!comment) return
 
     try {
-      const { error } = await mobileSupabase.from('activity_comments').insert({
-        activity_id: activityId,
-        user_id: user.id,
-        comment
-      })
+      const { data, error } = await mobileSupabase
+        .from('activity_comments')
+        .insert({
+          activity_id: activityId,
+          user_id: user.id,
+          comment
+        })
+        .select(`
+          id,
+          activity_id,
+          comment,
+          created_at,
+          user_id,
+          user_profiles:user_id (
+            id,
+            first_name,
+            last_name,
+            username,
+            avatar_url
+          )
+        `)
+        .single()
 
       if (error) {
         throw new Error(error.message || 'Unable to comment on this post.')
       }
 
       const summary = await getDirectInteractionSummary(activityId, user.id)
+      const normalizedComment = data
+        ? {
+            ...data,
+            user_profiles: Array.isArray(data.user_profiles) ? data.user_profiles[0] || null : data.user_profiles || null
+          }
+        : null
 
       setCommentDrafts((current) => ({ ...current, [activityId]: '' }))
       setCommentingOn(null)
@@ -576,7 +617,8 @@ export default function HomeTab() {
                 ...item,
                 comment_count: summary.comment_count,
                 like_count: summary.like_count,
-                liked_by_user: summary.liked_by_user
+                liked_by_user: summary.liked_by_user,
+                comments: normalizedComment ? [normalizedComment, ...(item.comments || [])] : item.comments
               }
             : item
         )
@@ -687,6 +729,7 @@ export default function HomeTab() {
           : ''
     const imageUrl =
       typeof item.metadata?.image_url === 'string' ? item.metadata.image_url : ''
+    const topComment = getTopComment(item)
 
     if (item.activity_type === 'tee_time_created') {
       const teeDateLabel = teeDate
@@ -721,6 +764,27 @@ export default function HomeTab() {
           <Text style={styles.feedSpecialMeta}>
             {[teeDateLabel, teeTimeLabel, location].filter(Boolean).join(' • ')}
           </Text>
+          {(item.tee_time?.accepted_players || []).length ? (
+            <View style={styles.feedJoinedRow}>
+              <View style={styles.feedJoinedAvatars}>
+                {(item.tee_time?.accepted_players || []).slice(0, 4).map((player, index) => (
+                  <View
+                    key={`${item.id}-joiner-${player.id || index}`}
+                    style={[styles.feedJoinedAvatarWrap, index > 0 && styles.feedJoinedAvatarOverlap]}
+                  >
+                    <Avatar
+                      label={getProfileName(player)}
+                      size={28}
+                      uri={player.avatar_url || undefined}
+                    />
+                  </View>
+                ))}
+              </View>
+              <Text style={styles.feedJoinedText}>
+                {(item.tee_time?.accepted_players || []).length} joined
+              </Text>
+            </View>
+          ) : null}
           <View style={styles.feedSpecialActions}>
             <Pressable onPress={() => router.push('/tee-times')} style={styles.feedSecondaryButton}>
               <Text style={styles.feedSecondaryButtonText}>View Tee Times</Text>
@@ -743,6 +807,44 @@ export default function HomeTab() {
     if (item.activity_type === 'photo_posted') {
       return (
         <>
+          {imageUrl ? (
+            <Pressable onPress={() => setSelectedImageUrl(imageUrl)} style={styles.feedImageWrap}>
+              <Image source={{ uri: imageUrl }} style={styles.feedImage} />
+              <View style={styles.feedPhotoAuthor}>
+                <Avatar label={actorLabel} size={32} uri={item.actor?.avatar_url || undefined} />
+                <View style={styles.feedPhotoAuthorCopy}>
+                  <Text numberOfLines={1} style={styles.feedPhotoAuthorName}>{actorName}</Text>
+                  <Text style={styles.feedPhotoAuthorTime}>{formatFeedTimestamp(item.created_at)}</Text>
+                </View>
+              </View>
+              {item.user_id === user?.id ? (
+                <Pressable onPress={() => handleEditFeedPost(item)} style={styles.feedPhotoEditButton}>
+                  <Ionicons color="#ffffff" name="create-outline" size={16} />
+                </Pressable>
+              ) : null}
+            </Pressable>
+          ) : null}
+          {caption ? <Text style={styles.feedPhotoCaption}>{caption}</Text> : null}
+        </>
+      )
+    }
+
+    if (item.activity_type === 'profile_updated') {
+      return (
+        <View style={styles.feedProfileHeader}>
+          <Avatar label={actorLabel} size={34} uri={item.actor?.avatar_url || undefined} />
+          <View style={styles.feedProfileHeaderCopy}>
+            <Text style={styles.feedProfileName}>{actorName}</Text>
+            <Text style={styles.feedProfileMeta}>{getProfileUpdateText(item)}</Text>
+          </View>
+          <Text style={styles.feedTimestamp}>{formatFeedTimestamp(item.created_at)}</Text>
+        </View>
+      )
+    }
+
+    if (item.activity_type === 'round_logged') {
+      return (
+        <Pressable onPress={() => handleOpenRoundFromFeed(item)} style={styles.feedSpecialCard}>
           <View style={styles.feedProfileHeader}>
             <Avatar
               label={actorLabel}
@@ -751,29 +853,12 @@ export default function HomeTab() {
             />
             <View style={styles.feedProfileHeaderCopy}>
               <Text style={styles.feedProfileName}>{actorName}</Text>
+              <Text style={styles.feedProfileMeta}>Logged a round</Text>
             </View>
-            <Text style={styles.feedTimestamp}>{formatFeedTimestamp(item.created_at)}</Text>
-            {item.user_id === user?.id ? (
-              <Pressable onPress={() => handleEditFeedPost(item)} style={styles.feedEditButton}>
-                <Ionicons color={palette.aqua} name="create-outline" size={16} />
-              </Pressable>
-            ) : null}
-          </View>
-          {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.feedImage} /> : null}
-          {caption ? <Text style={styles.feedPhotoCaption}>{caption}</Text> : null}
-        </>
-      )
-    }
-
-    if (item.activity_type === 'round_logged') {
-      return (
-        <Pressable onPress={() => handleOpenRoundFromFeed(item)} style={styles.feedSpecialCard}>
-          <View style={styles.feedSpecialHeader}>
-            <Text style={styles.feedSpecialEyebrow}>{actorName} logged a round</Text>
             <Text style={styles.feedTimestamp}>{formatFeedTimestamp(item.created_at)}</Text>
           </View>
           <View style={styles.scoreHeroRow}>
-            <View>
+            <View style={styles.scoreCopy}>
               <Text style={styles.feedSpecialTitle}>{courseName || 'Golf round'}</Text>
               <Text style={styles.feedSpecialMeta}>
                 {[
@@ -812,6 +897,36 @@ export default function HomeTab() {
       )
     }
 
+    if (item.activity_type === 'connection_added') {
+      const connectedName = getProfileName(item.related_user)
+
+      return (
+        <View style={styles.feedSpecialCard}>
+          <View style={styles.feedProfileHeader}>
+            <View style={styles.connectionAvatarPair}>
+              <Avatar
+                label={actorLabel}
+                size={40}
+                uri={item.actor?.avatar_url || undefined}
+              />
+              <View style={styles.connectionAvatarOverlap}>
+                <Avatar
+                  label={connectedName}
+                  size={32}
+                  uri={item.related_user?.avatar_url || undefined}
+                />
+              </View>
+            </View>
+            <View style={styles.feedProfileHeaderCopy}>
+              <Text style={styles.feedProfileName}>{actorName}</Text>
+              <Text style={styles.feedSpecialMeta}>Connected with {connectedName}</Text>
+            </View>
+            <Text style={styles.feedTimestamp}>{formatFeedTimestamp(item.created_at)}</Text>
+          </View>
+        </View>
+      )
+    }
+
     return (
       <>
         <View style={styles.feedHeader}>
@@ -829,7 +944,9 @@ export default function HomeTab() {
           <Text style={styles.feedTimestamp}>{formatFeedTimestamp(item.created_at)}</Text>
         </View>
         {imageUrl ? (
-          <Image source={{ uri: imageUrl }} style={styles.feedImage} />
+          <Pressable onPress={() => setSelectedImageUrl(imageUrl)}>
+            <Image source={{ uri: imageUrl }} style={styles.feedImage} />
+          </Pressable>
         ) : null}
       </>
     )
@@ -876,75 +993,69 @@ export default function HomeTab() {
               </Pressable>
             </View>
 
-            <BrandHeader largeLogo />
-          </View>
-
-        <View style={styles.weatherCard}>
-          <View style={styles.weatherHeader}>
-            <View style={styles.weatherHeaderCopy}>
-              <Text style={styles.weatherEyebrow}>Golf weather</Text>
-              <Text style={styles.weatherLocation}>{weather?.location || weatherQuery}</Text>
-            </View>
-            <Text style={styles.weatherTemp}>
-              {weatherLoading ? '--' : weather ? `${weather.temperature}°` : '--'}
-            </Text>
-          </View>
-
-          {weather ? (
-            <>
-              <Text style={styles.weatherDescription}>
-                {weather.description} • {getGolfRecommendation(weather)}
-              </Text>
-              <View style={styles.weatherMetrics}>
-                <View style={styles.weatherMetric}>
-                  <Text style={styles.weatherMetricLabel}>Wind</Text>
-                  <Text style={styles.weatherMetricValue}>{weather.windSpeed} mph</Text>
-                </View>
-                <View style={styles.weatherMetric}>
-                  <Text style={styles.weatherMetricLabel}>Precip Risk</Text>
-                  <Text style={styles.weatherMetricValue}>{estimatePrecipitationRisk(weather)}%</Text>
-                </View>
-                <View style={styles.weatherMetric}>
-                  <Text style={styles.weatherMetricLabel}>Feels Like</Text>
-                  <Text style={styles.weatherMetricValue}>{weather.feelsLike}°</Text>
+            <View style={styles.clubhouseMasthead}>
+              <View pointerEvents="none" style={styles.clubhouseRoofBackdrop}>
+                <View style={styles.clubhouseRoofGable} />
+                <View style={styles.clubhouseFacade}>
+                  <View style={styles.clubhouseWindow} />
+                  <View style={styles.clubhouseWindow} />
+                  <View style={styles.clubhouseDoor} />
+                  <View style={styles.clubhouseWindow} />
+                  <View style={styles.clubhouseWindow} />
                 </View>
               </View>
-            </>
-          ) : (
-            <Text style={styles.weatherFallback}>
-              {weatherLoading
-                ? 'Loading local golf conditions...'
-                : 'Weather is unavailable right now.'}
-            </Text>
-          )}
-        </View>
-
-        <Pressable onPress={() => router.push('/tee-times')} style={styles.myTeeTimesCard}>
-          <View style={styles.myTeeTimesHeader}>
-            <View style={styles.myTeeTimesTitleRow}>
-              <Ionicons color={palette.aqua} name="golf-outline" size={16} />
-              <Text style={styles.myTeeTimesTitle}>My Tee Times</Text>
-            </View>
-            <View style={styles.myTeeTimesCountPill}>
-              <Text style={styles.myTeeTimesCountText}>{myTeeTimes.length}</Text>
+              <Text style={styles.clubhouseEyebrow}>Your private golf club</Text>
+              <Text numberOfLines={1} style={styles.clubhouseTitle}>{clubhouseTitle}</Text>
             </View>
           </View>
-          {nextTeeTime ? (
-            <View style={styles.myTeeTimesBody}>
-              <Text numberOfLines={1} style={styles.myTeeTimesCourse}>
-                {nextTeeTime.course_name || 'Open tee time'}
-              </Text>
-              <Text numberOfLines={1} style={styles.myTeeTimesMeta}>
-                {formatUpcomingTeeTime(nextTeeTime)}
-                {(nextTeeTime.location || nextTeeTime.course_location)
-                  ? ` • ${nextTeeTime.location || nextTeeTime.course_location}`
-                  : ''}
-              </Text>
+
+        <View style={styles.dashboardTopRow}>
+          <View style={styles.weatherCard}>
+            <View style={styles.weatherCardTopRow}>
+              <View>
+                <Text style={styles.weatherKicker}>Course conditions</Text>
+                <Text numberOfLines={1} style={styles.weatherLocation}>
+                  {weather?.location || weatherQuery}
+                </Text>
+              </View>
+              <View style={styles.weatherIconOrb}>
+                <Ionicons color="#f6e7ba" name={getWeatherIconName(weather?.description)} size={22} />
+              </View>
             </View>
-          ) : (
-            <Text style={styles.myTeeTimesEmpty}>Tap to see your tee times and post the next one.</Text>
-          )}
-        </Pressable>
+            <View style={styles.weatherCompactRow}>
+              <View style={styles.weatherPrimaryBlock}>
+                <Text style={styles.weatherTemp}>
+                  {weatherLoading ? '--' : weather ? `${weather.temperature}°` : '--'}
+                </Text>
+                {weather ? <Text style={styles.weatherDescription}>{weather.description}</Text> : null}
+              </View>
+
+              {weather ? (
+                <View style={styles.weatherMetricsCompact}>
+                  <View style={styles.weatherMetricCompact}>
+                    <Text style={styles.weatherMetricValue}>{estimatePrecipitationRisk(weather)}%</Text>
+                    <Text style={styles.weatherMetricLabel}>Rain</Text>
+                  </View>
+                  <View style={styles.weatherMetricCompact}>
+                    <Text style={styles.weatherMetricValue}>{weather.windSpeed} mph</Text>
+                    <Text style={styles.weatherMetricLabel}>Wind</Text>
+                  </View>
+                  <View style={styles.weatherMetricCompact}>
+                    <Text style={styles.weatherMetricValue}>{weather.feelsLike}°</Text>
+                    <Text style={styles.weatherMetricLabel}>Feels like</Text>
+                  </View>
+                </View>
+              ) : null}
+            </View>
+            {!weather ? (
+              <Text style={styles.weatherFallback}>
+                {weatherLoading
+                  ? 'Loading local golf conditions...'
+                  : 'Weather is unavailable right now.'}
+              </Text>
+            ) : null}
+          </View>
+        </View>
 
         {showCreateForm ? (
           <View style={styles.formCard}>
@@ -1155,8 +1266,7 @@ export default function HomeTab() {
           </View>
         ) : null}
 
-        <View style={styles.card}>
-          <Text style={styles.feedCardAccent}>Network feed</Text>
+        <View style={styles.feedSection}>
           {busy ? <ActivityIndicator color={palette.aqua} /> : null}
           {!busy && activityFeed.length === 0 ? (
             <View style={styles.emptyCard}>
@@ -1186,6 +1296,24 @@ export default function HomeTab() {
                       <Text style={styles.feedActionText}>{item.comment_count || 0}</Text>
                     </Pressable>
                   </View>
+                  {item.like_count ? (
+                    <Pressable onPress={() => setSelectedLikesActivityId(item.id)}>
+                      <Text style={styles.feedInlineMeta}>{item.like_count} {item.like_count === 1 ? 'like' : 'likes'}</Text>
+                    </Pressable>
+                  ) : null}
+                  {getTopComment(item) ? (
+                    <View style={styles.feedCommentPreview}>
+                      <Text style={styles.feedCommentAuthor}>
+                        {getProfileName(getTopComment(item)?.user_profiles)}
+                      </Text>
+                      <Text style={styles.feedCommentText}>{getTopComment(item)?.comment || ''}</Text>
+                    </View>
+                  ) : null}
+                  {item.comment_count ? (
+                    <Pressable onPress={() => setSelectedCommentsActivityId(item.id)}>
+                      <Text style={styles.feedInlineMeta}>View all comments</Text>
+                    </Pressable>
+                  ) : null}
                   {commentingOn === item.id ? (
                     <View style={styles.commentComposer}>
                       <TextInput
@@ -1206,6 +1334,97 @@ export default function HomeTab() {
         </View>
         </ScrollView>
 
+        <Modal
+          animationType="fade"
+          transparent
+          visible={!!selectedImageUrl}
+          onRequestClose={() => setSelectedImageUrl(null)}
+        >
+          <Pressable style={styles.modalBackdrop} onPress={() => setSelectedImageUrl(null)}>
+            {selectedImageUrl ? <Image source={{ uri: selectedImageUrl }} style={styles.fullscreenImage} /> : null}
+          </Pressable>
+        </Modal>
+
+        <Modal
+          animationType="slide"
+          transparent
+          visible={!!selectedLikesActivity}
+          onRequestClose={() => setSelectedLikesActivityId(null)}
+        >
+          <Pressable style={styles.modalBackdrop} onPress={() => setSelectedLikesActivityId(null)}>
+            <Pressable style={styles.modalCard} onPress={() => {}}>
+              <Text style={styles.sectionTitle}>Likes</Text>
+              <ScrollView contentContainerStyle={styles.modalList}>
+                {(selectedLikesActivity?.likes || []).map((like, index) => (
+                  <View key={`${like.user_id || index}-like`} style={styles.modalRow}>
+                    <Avatar
+                      label={getProfileName(like.user_profiles)}
+                      size={40}
+                      uri={like.user_profiles?.avatar_url || undefined}
+                    />
+                    <Text style={styles.feedProfileName}>{getProfileName(like.user_profiles)}</Text>
+                  </View>
+                ))}
+                {!selectedLikesActivity?.likes?.length ? (
+                  <Text style={styles.body}>No likes yet.</Text>
+                ) : null}
+              </ScrollView>
+            </Pressable>
+          </Pressable>
+        </Modal>
+
+        <Modal
+          animationType="slide"
+          transparent
+          visible={!!selectedCommentsActivity}
+          onRequestClose={() => setSelectedCommentsActivityId(null)}
+        >
+          <Pressable style={styles.modalBackdrop} onPress={() => setSelectedCommentsActivityId(null)}>
+            <Pressable style={styles.modalCard} onPress={() => {}}>
+              <Text style={styles.sectionTitle}>Comments</Text>
+              <ScrollView contentContainerStyle={styles.modalList}>
+                {(selectedCommentsActivity?.comments || []).map((comment) => (
+                  <View key={comment.id} style={styles.commentModalCard}>
+                    <View style={styles.modalRow}>
+                      <Avatar
+                        label={getProfileName(comment.user_profiles)}
+                        size={36}
+                        uri={comment.user_profiles?.avatar_url || undefined}
+                      />
+                      <View style={styles.feedProfileHeaderCopy}>
+                        <Text style={styles.feedProfileName}>{getProfileName(comment.user_profiles)}</Text>
+                        <Text style={styles.feedProfileMeta}>{formatFeedTimestamp(comment.created_at)}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.body}>{comment.comment || ''}</Text>
+                  </View>
+                ))}
+                {!selectedCommentsActivity?.comments?.length ? (
+                  <Text style={styles.body}>No comments yet.</Text>
+                ) : null}
+              </ScrollView>
+              <View style={styles.commentComposer}>
+                <TextInput
+                  onChangeText={(value) =>
+                    selectedCommentsActivity
+                      ? setCommentDrafts((current) => ({ ...current, [selectedCommentsActivity.id]: value }))
+                      : null
+                  }
+                  placeholder="Write a comment..."
+                  placeholderTextColor={palette.textMuted}
+                  style={styles.commentInput}
+                  value={selectedCommentsActivity ? commentDrafts[selectedCommentsActivity.id] || '' : ''}
+                />
+                <PrimaryButton
+                  label="Post"
+                  onPress={() =>
+                    selectedCommentsActivity ? void handlePostFeedComment(selectedCommentsActivity.id) : undefined
+                  }
+                />
+              </View>
+            </Pressable>
+          </Pressable>
+        </Modal>
       </View>
     </SafeAreaView>
   )
@@ -1222,12 +1441,87 @@ const styles = StyleSheet.create({
   content: {
     gap: 14,
     padding: 20,
-    paddingBottom: 120
+    paddingBottom: 120,
+    paddingTop: 6
   },
   headerShell: {
     justifyContent: 'center',
-    minHeight: 74,
+    minHeight: 112,
     position: 'relative'
+  },
+  clubhouseMasthead: {
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    minHeight: 108,
+    overflow: 'hidden',
+    paddingHorizontal: 52,
+    paddingTop: 36,
+    position: 'relative'
+  },
+  clubhouseRoofBackdrop: {
+    bottom: -2,
+    height: 114,
+    left: -30,
+    position: 'absolute',
+    right: -30
+  },
+  clubhouseRoofGable: {
+    alignSelf: 'center',
+    borderBottomColor: 'rgba(232,216,178,0.12)',
+    borderBottomWidth: 62,
+    borderLeftColor: 'transparent',
+    borderLeftWidth: 190,
+    borderRightColor: 'transparent',
+    borderRightWidth: 190,
+    height: 0,
+    position: 'absolute',
+    top: 2,
+    width: 0
+  },
+  clubhouseFacade: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    backgroundColor: 'rgba(232,216,178,0.08)',
+    borderColor: 'rgba(232,216,178,0.17)',
+    borderTopWidth: 2,
+    borderWidth: 1,
+    bottom: 0,
+    flexDirection: 'row',
+    height: 54,
+    justifyContent: 'space-evenly',
+    position: 'absolute',
+    width: '82%'
+  },
+  clubhouseWindow: {
+    backgroundColor: 'rgba(4,18,12,0.36)',
+    borderColor: 'rgba(232,216,178,0.16)',
+    borderWidth: 1,
+    height: 22,
+    width: 22
+  },
+  clubhouseDoor: {
+    alignSelf: 'flex-end',
+    backgroundColor: 'rgba(4,18,12,0.48)',
+    borderColor: 'rgba(232,216,178,0.16)',
+    borderWidth: 1,
+    height: 34,
+    width: 26
+  },
+  clubhouseEyebrow: {
+    color: '#d5b970',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    marginBottom: 5,
+    textTransform: 'uppercase'
+  },
+  clubhouseTitle: {
+    color: '#fffaf0',
+    fontFamily: 'Georgia',
+    fontSize: 27,
+    fontWeight: '700',
+    letterSpacing: -0.4,
+    textAlign: 'center'
   },
   headerActions: {
     bottom: 0,
@@ -1280,87 +1574,121 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800'
   },
+  dashboardTopRow: {
+    alignItems: 'stretch',
+    flexDirection: 'column',
+    marginTop: -12
+  },
+  dashboardHalfCard: {
+    flex: 1,
+    minWidth: 0
+  },
   weatherCard: {
-    backgroundColor: palette.card,
-    borderColor: palette.border,
+    backgroundColor: '#133a2b',
+    borderColor: 'rgba(232,216,178,0.18)',
     borderRadius: 24,
     borderWidth: 1,
     gap: 8,
-    marginTop: -8,
-    paddingHorizontal: 14,
-    paddingVertical: 12
+    minHeight: 122,
+    overflow: 'hidden',
+    padding: 12
   },
-  weatherHeader: {
-    alignItems: 'center',
+  weatherCardTopRow: {
+    alignItems: 'flex-start',
     flexDirection: 'row',
     justifyContent: 'space-between'
   },
-  weatherHeaderCopy: {
-    flex: 1,
-    gap: 2
-  },
-  weatherEyebrow: {
-    color: palette.aqua,
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1.2,
+  weatherKicker: {
+    color: '#d5b970',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 1.3,
+    marginBottom: 2,
     textTransform: 'uppercase'
   },
   weatherLocation: {
-    color: palette.text,
-    fontSize: 15,
-    fontWeight: '700'
-  },
-  weatherTemp: {
-    color: palette.text,
-    fontSize: 24,
+    color: '#fffaf0',
+    fontFamily: 'Georgia',
+    fontSize: 16,
     fontWeight: '800'
   },
+  weatherIconOrb: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(232,216,178,0.10)',
+    borderColor: 'rgba(232,216,178,0.20)',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 38,
+    justifyContent: 'center',
+    width: 38
+  },
+  weatherCompactRow: {
+    alignItems: 'flex-end',
+    flexDirection: 'row',
+    gap: 8
+  },
+  weatherPrimaryBlock: {
+    flex: 1,
+    gap: 0
+  },
+  weatherTemp: {
+    color: '#fffaf0',
+    fontFamily: 'Georgia',
+    fontSize: 34,
+    fontWeight: '700',
+    lineHeight: 36
+  },
   weatherDescription: {
-    color: palette.textMuted,
-    fontSize: 13,
-    lineHeight: 18,
+    color: 'rgba(255,250,240,0.70)',
+    fontSize: 11,
+    fontWeight: '700',
     textTransform: 'capitalize'
   },
-  weatherMetrics: {
+  weatherMetricsCompact: {
     flexDirection: 'row',
-    gap: 6
-  },
-  weatherMetric: {
-    backgroundColor: palette.cardSoft,
-    borderColor: palette.border,
-    borderRadius: 16,
-    borderWidth: 1,
     flex: 1,
+    gap: 4,
+    justifyContent: 'flex-end'
+  },
+  weatherMetricCompact: {
+    backgroundColor: 'rgba(4,18,12,0.24)',
+    borderColor: 'rgba(232,216,178,0.12)',
+    borderRadius: 11,
+    borderWidth: 1,
+    alignItems: 'flex-start',
     gap: 2,
-    paddingHorizontal: 8,
-    paddingVertical: 7
+    minHeight: 43,
+    minWidth: 58,
+    paddingHorizontal: 6,
+    paddingVertical: 5
   },
   weatherMetricLabel: {
-    color: palette.textMuted,
-    fontSize: 10,
+    color: 'rgba(232,216,178,0.62)',
+    fontSize: 8,
     fontWeight: '700',
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
     textTransform: 'uppercase'
   },
   weatherMetricValue: {
-    color: palette.text,
-    fontSize: 13,
-    fontWeight: '700'
+    color: '#fffaf0',
+    fontSize: 12,
+    fontWeight: '800'
   },
   weatherFallback: {
     color: palette.textMuted,
     fontSize: 13,
-    lineHeight: 18
+    lineHeight: 18,
+    marginTop: 2
   },
   myTeeTimesCard: {
-    backgroundColor: palette.card,
-    borderColor: palette.border,
+    backgroundColor: 'rgba(25,64,49,0.88)',
+    borderColor: 'rgba(111,168,144,0.16)',
     borderRadius: 22,
     borderWidth: 1,
-    gap: 8,
+    gap: 10,
+    minHeight: 154,
     paddingHorizontal: 14,
-    paddingVertical: 12
+    paddingVertical: 14
   },
   myTeeTimesHeader: {
     alignItems: 'center',
@@ -1374,9 +1702,9 @@ const styles = StyleSheet.create({
   },
   myTeeTimesTitle: {
     color: palette.text,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '800',
-    letterSpacing: 0.6,
+    letterSpacing: 1.1,
     textTransform: 'uppercase'
   },
   myTeeTimesCountPill: {
@@ -1396,22 +1724,36 @@ const styles = StyleSheet.create({
     fontWeight: '800'
   },
   myTeeTimesBody: {
-    gap: 2
+    gap: 6,
+    marginTop: 2
   },
   myTeeTimesCourse: {
     color: palette.text,
-    fontSize: 15,
-    fontWeight: '700'
+    fontSize: 16,
+    fontWeight: '800',
+    lineHeight: 21
   },
-  myTeeTimesMeta: {
-    color: palette.textMuted,
+  myTeeTimesMetaPrimary: {
+    color: palette.aqua,
     fontSize: 13,
+    fontWeight: '700',
     lineHeight: 18
+  },
+  myTeeTimesMetaSecondary: {
+    color: palette.textMuted,
+    fontSize: 12,
+    lineHeight: 17
   },
   myTeeTimesEmpty: {
     color: palette.textMuted,
     fontSize: 13,
     lineHeight: 18
+  },
+  myTeeTimesLink: {
+    color: palette.text,
+    fontSize: 12,
+    fontWeight: '700',
+    opacity: 0.8
   },
   formCard: {
     backgroundColor: palette.card,
@@ -1458,6 +1800,17 @@ const styles = StyleSheet.create({
     gap: 14,
     padding: 20
   },
+  feedSection: {
+    gap: 14,
+    marginHorizontal: -20,
+    paddingHorizontal: 16
+  },
+  feedIntroSection: {
+    marginHorizontal: -20,
+    marginTop: -24,
+    paddingHorizontal: 16,
+    paddingBottom: 10
+  },
   sectionTitle: {
     color: palette.text,
     fontSize: 22,
@@ -1465,9 +1818,9 @@ const styles = StyleSheet.create({
   },
   feedCardAccent: {
     color: palette.aqua,
-    fontSize: 22,
-    fontWeight: '700',
-    letterSpacing: 0.4,
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 2.4,
     textAlign: 'center'
   },
   body: {
@@ -1642,15 +1995,15 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     gap: 6,
-    padding: 14
+    padding: 12
   },
   feedSpecialCard: {
     backgroundColor: 'rgba(6,20,16,0.28)',
     borderColor: 'rgba(103,232,249,0.14)',
     borderRadius: 18,
     borderWidth: 1,
-    gap: 10,
-    padding: 14
+    gap: 8,
+    padding: 12
   },
   feedSpecialHeader: {
     alignItems: 'center',
@@ -1666,7 +2019,7 @@ const styles = StyleSheet.create({
   },
   feedSpecialTitle: {
     color: palette.text,
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '800'
   },
   feedSpecialMeta: {
@@ -1780,21 +2133,70 @@ const styles = StyleSheet.create({
   },
   feedImage: {
     borderRadius: 18,
-    height: 220,
-    marginTop: 8,
+    height: 230,
     width: '100%'
+  },
+  feedImageWrap: {
+    overflow: 'hidden',
+    position: 'relative'
+  },
+  feedPhotoAuthor: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(5,24,16,0.68)',
+    borderColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 7,
+    left: 10,
+    maxWidth: '72%',
+    paddingHorizontal: 7,
+    paddingVertical: 5,
+    position: 'absolute',
+    top: 10
+  },
+  feedPhotoAuthorCopy: {
+    flexShrink: 1
+  },
+  feedPhotoAuthorName: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800'
+  },
+  feedPhotoAuthorTime: {
+    color: 'rgba(255,255,255,0.76)',
+    fontSize: 10,
+    fontWeight: '600'
+  },
+  feedPhotoEditButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(5,24,16,0.68)',
+    borderColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 32,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 10,
+    top: 10,
+    width: 32
   },
   feedPhotoCaption: {
     color: palette.text,
     fontSize: 14,
-    lineHeight: 20,
-    marginTop: 10
+    lineHeight: 19,
+    marginTop: 2
   },
   scoreHeroRow: {
-    alignItems: 'center',
+    alignItems: 'stretch',
     flexDirection: 'row',
     gap: 16,
     justifyContent: 'space-between'
+  },
+  scoreCopy: {
+    flex: 1,
+    gap: 4,
+    minWidth: 0
   },
   scoreBadge: {
     alignItems: 'center',
@@ -1802,10 +2204,11 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(103,232,249,0.22)',
     borderRadius: 18,
     borderWidth: 1,
+    flexShrink: 0,
     justifyContent: 'center',
     minHeight: 74,
-    minWidth: 74,
-    paddingHorizontal: 14
+    minWidth: 82,
+    paddingHorizontal: 16
   },
   scoreBadgeValue: {
     color: palette.text,
@@ -1833,6 +2236,59 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800'
   },
+  feedInlineMeta: {
+    color: palette.textMuted,
+    fontSize: 13,
+    fontWeight: '700'
+  },
+  feedCommentPreview: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: palette.border,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 10
+  },
+  feedCommentAuthor: {
+    color: palette.text,
+    fontSize: 13,
+    fontWeight: '800'
+  },
+  feedCommentText: {
+    color: palette.textMuted,
+    fontSize: 13,
+    lineHeight: 18
+  },
+  feedJoinedRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10
+  },
+  feedJoinedAvatars: {
+    alignItems: 'center',
+    flexDirection: 'row'
+  },
+  feedJoinedAvatarWrap: {
+    borderColor: palette.card,
+    borderRadius: 999,
+    borderWidth: 2
+  },
+  feedJoinedAvatarOverlap: {
+    marginLeft: -8
+  },
+  feedJoinedText: {
+    color: palette.textMuted,
+    fontSize: 13,
+    fontWeight: '700'
+  },
+  connectionAvatarPair: {
+    alignItems: 'center',
+    flexDirection: 'row'
+  },
+  connectionAvatarOverlap: {
+    marginLeft: -10
+  },
   commentComposer: {
     gap: 8,
     marginTop: 8
@@ -1846,4 +2302,43 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingHorizontal: 14
   },
+  modalBackdrop: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.78)',
+    flex: 1,
+    justifyContent: 'center',
+    padding: 20
+  },
+  modalCard: {
+    backgroundColor: palette.card,
+    borderColor: palette.border,
+    borderRadius: 24,
+    borderWidth: 1,
+    gap: 14,
+    maxHeight: '82%',
+    padding: 20,
+    width: '100%'
+  },
+  modalList: {
+    gap: 12
+  },
+  modalRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12
+  },
+  commentModalCard: {
+    backgroundColor: palette.cardSoft,
+    borderColor: palette.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 10,
+    padding: 14
+  },
+  fullscreenImage: {
+    borderRadius: 20,
+    height: '76%',
+    resizeMode: 'contain',
+    width: '100%'
+  }
 })

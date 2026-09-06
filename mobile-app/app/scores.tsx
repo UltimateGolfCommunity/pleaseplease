@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Redirect } from 'expo-router'
+import { Redirect, router } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   ActivityIndicator,
@@ -15,6 +15,7 @@ import {
 import { BrandHeader } from '@/components/BrandHeader'
 import { PrimaryButton } from '@/components/PrimaryButton'
 import { apiGet, apiPost } from '@/lib/api'
+import { mobileSupabase } from '@/lib/supabase'
 import { palette } from '@/lib/theme'
 import { useAuth } from '@/providers/AuthProvider'
 
@@ -31,6 +32,11 @@ type RoundRecord = {
 type ScoresPayload = {
   success: boolean
   rounds: RoundRecord[]
+}
+
+type SaveRoundPayload = {
+  success: boolean
+  round: RoundRecord
 }
 
 function buildHoleScores(count: 9 | 18) {
@@ -141,7 +147,7 @@ export default function ScoresScreen() {
     setSaving(true)
 
     try {
-      await apiPost('/api/scores', {
+      const response = await apiPost<SaveRoundPayload>('/api/scores', {
         user_id: user.id,
         course_name: courseName.trim(),
         holes_played: holesPlayed,
@@ -150,11 +156,43 @@ export default function ScoresScreen() {
         played_at: new Date().toISOString()
       })
 
+      const savedRound = response.round
+
+      if (savedRound?.id) {
+        const { data: existingActivity } = await mobileSupabase
+          .from('user_activities')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('activity_type', 'round_logged')
+          .eq('related_id', savedRound.id)
+          .maybeSingle()
+
+        if (!existingActivity) {
+          await mobileSupabase.from('user_activities').insert({
+            user_id: user.id,
+            activity_type: 'round_logged',
+            title: 'Logged a score',
+            description: `Logged ${savedRound.total_score} at ${savedRound.course_name}`,
+            related_id: savedRound.id,
+            related_type: 'round',
+            metadata: {
+              round_id: savedRound.id,
+              course_name: savedRound.course_name,
+              score: savedRound.total_score,
+              holes_played: savedRound.holes_played,
+              average_score_per_hole: savedRound.average_score_per_hole,
+              played_at: savedRound.played_at
+            }
+          })
+        }
+      }
+
       setCourseName('')
       setTotalOnlyScore('')
       setHoleScores(buildHoleScores(holesPlayed))
       setShowForm(false)
       await loadRounds()
+      router.replace({ pathname: '/home', params: { refresh: String(Date.now()) } })
     } catch (error) {
       Alert.alert('Unable to save round', error instanceof Error ? error.message : 'Please try again.')
     } finally {

@@ -2,7 +2,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { createServerClient } from '@/lib/supabase-server'
 
-const optionalProfileColumns = ['home_course', 'home_club', 'bag_items', 'header_image_url', 'avatar_url', 'handicap', 'location', 'ace_details']
+const optionalProfileColumns = [
+  'home_course',
+  'home_club',
+  'bag_items',
+  'header_image_url',
+  'avatar_url',
+  'handicap',
+  'location',
+  'ace_details',
+  'linkedin_url',
+  'instagram_url',
+  'facebook_url',
+  'x_url'
+]
 
 function getMissingProfileColumn(error: any) {
   const message = `${error?.message || ''} ${error?.details || ''}`.toLowerCase()
@@ -94,7 +107,11 @@ export async function PUT(request: NextRequest) {
       home_course,
       home_club,
       ace_details,
-      bag_items
+      bag_items,
+      linkedin_url,
+      instagram_url,
+      facebook_url,
+      x_url
     } = body
     
     if (!id) {
@@ -150,6 +167,10 @@ export async function PUT(request: NextRequest) {
         header_image_url,
         handicap,
         location,
+        linkedin_url,
+        instagram_url,
+        facebook_url,
+        x_url,
         email: body.email,
         full_name: first_name && last_name ? `${first_name} ${last_name}`.trim() : '',
         updated_at: new Date().toISOString(),
@@ -179,6 +200,10 @@ export async function PUT(request: NextRequest) {
     if (home_club !== undefined) updateData.home_club = home_club
     if (ace_details !== undefined) updateData.ace_details = ace_details
     if (bag_items !== undefined) updateData.bag_items = bag_items
+    if (linkedin_url !== undefined) updateData.linkedin_url = linkedin_url
+    if (instagram_url !== undefined) updateData.instagram_url = instagram_url
+    if (facebook_url !== undefined) updateData.facebook_url = facebook_url
+    if (x_url !== undefined) updateData.x_url = x_url
     
     // Only set full_name if both first_name and last_name are provided
     if (first_name && last_name) {
@@ -228,6 +253,10 @@ export async function PUT(request: NextRequest) {
           home_club: home_club || home_course || '',
           ace_details: ace_details || null,
           bag_items: bag_items || {},
+          linkedin_url: linkedin_url || '',
+          instagram_url: instagram_url || '',
+          facebook_url: facebook_url || '',
+          x_url: x_url || '',
           updated_at: new Date().toISOString()
         },
         id

@@ -301,7 +301,7 @@ export default function PublicUserScreen() {
         user?.id
           ? apiGet<ConnectionStatusResponse>(
               `/api/users?action=status&id=${encodeURIComponent(id)}&viewer_id=${encodeURIComponent(user.id)}`
-            )
+            ).catch(() => ({ success: true, status: 'none' as const }))
           : Promise.resolve({ success: true, status: 'none' as const }),
         apiGet<RatingSummary>(
           `/api/users?action=rating&id=${encodeURIComponent(id)}${user?.id ? `&viewer_id=${encodeURIComponent(user.id)}` : ''}`

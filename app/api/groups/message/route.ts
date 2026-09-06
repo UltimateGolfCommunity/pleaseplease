@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase'
+import { createAdminClient } from '@/lib/supabase-admin'
 
-const supabase = createServerClient()
+function getSupabase() {
+  return createAdminClient()
+}
 
 function isMissingColumnError(error: any, columnName: string) {
   const message = `${error?.message || ''} ${error?.details || ''}`.toLowerCase()
@@ -48,6 +50,7 @@ function buildThread(messages: any[]) {
 }
 
 async function verifyGroupMember(groupId: string, userId: string) {
+  const supabase = getSupabase()
   const { data: group, error: groupError } = await supabase
     .from('golf_groups')
     .select('id, creator_id')
@@ -82,6 +85,7 @@ async function verifyGroupMember(groupId: string, userId: string) {
 }
 
 async function fetchGroupMessages(groupId: string, userId: string) {
+  const supabase = getSupabase()
   let messages: any[] | null = null
   let error: any = null
 
@@ -201,6 +205,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getSupabase()
     const { action = 'post', group_id, user_id, message, parent_message_id, message_id } = await request.json()
     
     if (!group_id || !user_id) {
@@ -322,7 +327,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    await supabase.from('user_activities').insert({
+    const { error: activityError } = await supabase.from('user_activities').insert({
       user_id,
       activity_type: parent_message_id ? 'group_thread_reply' : 'group_board_post',
       title: parent_message_id ? 'Replied in a group thread' : 'Posted in a group',
@@ -333,9 +338,11 @@ export async function POST(request: NextRequest) {
         group_id,
         message_id: data?.id || null
       }
-    }).catch((activityError: unknown) => {
-      console.warn('Group message saved, but activity log failed:', activityError)
     })
+
+    if (activityError) {
+      console.warn('Group message saved, but activity log failed:', activityError)
+    }
 
     // Create notifications for other group members
     const { data: members, error: membersError } = await supabase

@@ -28,6 +28,10 @@ type MobileProfile = {
   playing_style?: string | null
   goals?: string | null
   experience_level?: string | null
+  linkedin_url?: string | null
+  instagram_url?: string | null
+  facebook_url?: string | null
+  x_url?: string | null
   ace_details?: {
     course?: string | null
     date?: string | null
@@ -64,7 +68,11 @@ const optionalProfileColumns = [
   'avatar_url',
   'handicap',
   'location',
-  'ace_details'
+  'ace_details',
+  'linkedin_url',
+  'instagram_url',
+  'facebook_url',
+  'x_url'
 ]
 
 function getMissingProfileColumn(error: unknown) {
@@ -477,6 +485,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       if (!response.ok) {
         throw new Error(payload?.error || payload?.details || 'Unable to update profile.')
+      }
+
+      // Older deployed API versions accepted social fields but silently dropped them.
+      // Treat a non-round-tripping value as a failed save so the direct Supabase
+      // fallback below persists the complete profile update.
+      const fieldsThatMustRoundTrip = ['handicap', 'linkedin_url', 'instagram_url', 'facebook_url', 'x_url']
+      const droppedField = fieldsThatMustRoundTrip.find(
+        (field) => field in normalizedUpdates && payload?.[field] !== normalizedUpdates[field]
+      )
+
+      if (droppedField) {
+        throw new Error(`The profile service did not save ${droppedField}.`)
       }
     } catch (apiError) {
       let lastDirectError: unknown = null

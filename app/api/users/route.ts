@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
+import { createNotificationAndDeliverPush } from '@/lib/notifications'
 
 const connectionProfileFields = 'id, first_name, last_name, username, avatar_url, location, handicap, bio'
 
@@ -729,6 +730,21 @@ export async function POST(request: NextRequest) {
         }
 
         console.log('✅ Connection created successfully:', newConnection.id)
+
+        await createNotificationAndDeliverPush(supabase, {
+          userId: data.connected_user_id,
+          type: 'connection_request',
+          title: 'New connection request',
+          message: 'A golfer wants to connect with you.',
+          relatedId: data.user_id,
+          notificationData: {
+            connection_id: newConnection.id,
+            requester_id: data.user_id
+          }
+        }).catch((error: unknown) => {
+          console.warn('⚠️ Unable to create connection request notification:', error)
+        })
+
         return NextResponse.json({ 
           success: true, 
           message: 'Connection request sent successfully',
