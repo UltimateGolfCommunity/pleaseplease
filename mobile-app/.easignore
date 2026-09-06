@@ -1,0 +1,5 @@
+.expo
+app-store-screenshots
+node_modules
+ios/build
+*.log
