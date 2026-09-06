@@ -6,7 +6,6 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  Linking,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -272,6 +271,8 @@ export default function PublicUserScreen() {
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [rounds, setRounds] = useState<RoundRecord[]>([])
   const [activeTab, setActiveTab] = useState<'activity' | 'about'>('activity')
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false)
+  const [coverLoadFailed, setCoverLoadFailed] = useState(false)
   const [ratingSummary, setRatingSummary] = useState<RatingSummary>({
     average: null,
     count: 0,
@@ -280,7 +281,6 @@ export default function PublicUserScreen() {
 
   const displayName = useMemo(() => formatName(profile), [profile])
   const homeCourse = profile?.home_course || profile?.home_club || 'Home course not added'
-  const linkedinUrl = profile?.linkedin_url || profile?.linkedin || ''
   const bagItems = useMemo(() => normalizeBagItems(profile?.bag_items), [profile?.bag_items])
   const aceDetails = useMemo(() => normalizeAceDetails(profile?.ace_details), [profile?.ace_details])
 
@@ -342,6 +342,11 @@ export default function PublicUserScreen() {
     }
   }, [id, loadUser])
 
+  useEffect(() => {
+    setAvatarLoadFailed(false)
+    setCoverLoadFailed(false)
+  }, [profile?.avatar_url, profile?.header_image_url])
+
   if (!loading && !user) {
     return <Redirect href="/welcome" />
   }
@@ -398,53 +403,46 @@ export default function PublicUserScreen() {
 
         <View style={styles.heroCard}>
           <View style={styles.coverShell}>
-            {profile?.header_image_url ? (
-              <Image source={{ uri: profile.header_image_url }} style={styles.coverImage} />
+            {profile?.header_image_url && !coverLoadFailed ? (
+              <Image
+                onError={() => setCoverLoadFailed(true)}
+                source={{ uri: profile.header_image_url }}
+                style={styles.coverImage}
+              />
             ) : (
               <View style={styles.coverFallback}>
-                <Text style={styles.coverFallbackText}>Golfer profile</Text>
+                <Ionicons color="rgba(246,231,186,0.8)" name="flag-outline" size={34} />
+                <Text style={styles.coverFallbackText}>The golfer&apos;s clubhouse</Text>
               </View>
             )}
             <View style={styles.coverOverlay} />
-          </View>
 
-          <View style={styles.avatarWrap}>
-            <Avatar label={displayName} size={108} uri={profile?.avatar_url} />
-          </View>
-
-          <View style={styles.identityStack}>
-            <View style={styles.nameRow}>
-              <Text style={styles.name}>{displayName}</Text>
-              {profile?.is_founder_verified ? (
-                <Ionicons color={palette.emerald} name="checkmark-circle" size={22} style={styles.nameBadgeIcon} />
-              ) : null}
-            </View>
-            <Text style={styles.homeCourse}>{homeCourse}</Text>
-            <Pressable onPress={() => id && router.push(`/users/${id}/connections`)} style={styles.connectionsHeaderLink}>
-              <Text style={styles.metaLine}>
-              {profile?.location || 'Location not added'} • Handicap {profile?.handicap ?? 'N/A'} •{' '}
-              {connectedGolfers.length} Connections
-              </Text>
-            </Pressable>
-            <Pressable onPress={() => id && router.push(`/users/${id}/reviews`)} style={styles.ratingRow}>
-              <View style={styles.ratingBadge}>
-                <Ionicons color={palette.gold} name="star" size={16} />
-                <Text style={styles.ratingBadgeText}>
-                  {ratingSummary.average ? ratingSummary.average.toFixed(1) : 'New'}
-                </Text>
+            <View style={styles.coverIdentity}>
+              <View style={styles.avatarWrap}>
+                {profile?.avatar_url && !avatarLoadFailed ? (
+                  <Image
+                    onError={() => setAvatarLoadFailed(true)}
+                    source={{ uri: profile.avatar_url }}
+                    style={styles.avatarImage}
+                  />
+                ) : (
+                  <Avatar label={displayName} size={92} />
+                )}
               </View>
-              <Text style={styles.ratingText}>
-                {ratingSummary.count ? `${ratingSummary.count} golfer ratings` : 'Waiting on first rating'}
-              </Text>
-              <Ionicons color={palette.aqua} name="chevron-forward" size={16} />
-            </Pressable>
-            {linkedinUrl ? (
-              <Pressable onPress={() => void Linking.openURL(linkedinUrl)} style={styles.linkedinChip}>
-                <Ionicons color={palette.aqua} name="logo-linkedin" size={16} />
-                <Text style={styles.linkedinText}>LinkedIn</Text>
-              </Pressable>
-            ) : null}
-            {profile?.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
+              <View style={styles.identityStack}>
+                <View style={styles.nameRow}>
+                  <Text numberOfLines={1} style={styles.name}>{displayName}</Text>
+                  {profile?.is_founder_verified ? <Ionicons color="#6ad5ef" name="checkmark-circle" size={19} /> : null}
+                  {profile?.is_founder_verified ? <Ionicons color="#e8c45b" name="trophy" size={17} /> : null}
+                </View>
+                <Text numberOfLines={1} style={styles.homeCourse}>{homeCourse}</Text>
+                <View style={styles.heroStats}>
+                  <View style={styles.heroStat}><Text style={styles.heroStatLabel}>Handicap</Text><Text style={styles.heroStatValue}>{profile?.handicap ?? '--'}</Text></View>
+                  <Pressable onPress={() => id && router.push(`/users/${id}/connections`)} style={styles.heroStat}><Text style={styles.heroStatLabel}>Connections</Text><Text style={styles.heroStatValue}>{connectedGolfers.length}</Text></Pressable>
+                  <Pressable onPress={() => id && router.push(`/users/${id}/reviews`)} style={styles.heroStat}><Text style={styles.heroStatLabel}>Rating</Text><Text style={styles.heroStatValue}>{ratingSummary.average ? ratingSummary.average.toFixed(1) : '--'}</Text></Pressable>
+                </View>
+              </View>
+            </View>
           </View>
 
           <View style={styles.actionGrid}>
@@ -550,6 +548,12 @@ export default function PublicUserScreen() {
           <View style={styles.card}>
             <Text style={styles.sectionEyebrow}>About</Text>
             <Text style={styles.sectionTitle}>{displayName.split(' ')[0]}&apos;s golfer profile</Text>
+            {profile?.bio ? (
+              <View style={styles.aboutBioCard}>
+                <Text style={styles.aboutBioEyebrow}>Member&apos;s Note</Text>
+                <Text style={styles.aboutBioText}>{profile.bio}</Text>
+              </View>
+            ) : null}
             <View style={styles.aboutInfoGrid}>
               <View style={styles.aboutInfoCard}>
                 <Text style={styles.aboutInfoLabel}>Home Course</Text>
@@ -613,19 +617,19 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: 20,
-    padding: 20
+    padding: 20,
+    paddingBottom: 150
   },
   heroCard: {
-    backgroundColor: palette.card,
-    borderColor: palette.border,
+    backgroundColor: '#183f30',
+    borderColor: 'rgba(216,189,118,0.24)',
     borderRadius: 28,
     borderWidth: 1,
     overflow: 'hidden',
-    padding: 18
+    padding: 0
   },
   coverShell: {
-    borderRadius: 22,
-    height: 188,
+    height: 286,
     overflow: 'hidden',
     position: 'relative'
   },
@@ -635,18 +639,20 @@ const styles = StyleSheet.create({
   },
   coverFallback: {
     alignItems: 'center',
-    backgroundColor: palette.cardSoft,
+    backgroundColor: '#245640',
+    gap: 8,
     height: '100%',
     justifyContent: 'center',
     width: '100%'
   },
   coverFallbackText: {
-    color: palette.textMuted,
-    fontSize: 15,
-    fontWeight: '600'
+    color: '#f6e7ba',
+    fontFamily: 'Georgia',
+    fontSize: 16,
+    fontWeight: '700'
   },
   coverOverlay: {
-    backgroundColor: 'rgba(3,10,8,0.18)',
+    backgroundColor: 'rgba(3,10,8,0.42)',
     bottom: 0,
     left: 0,
     position: 'absolute',
@@ -654,106 +660,81 @@ const styles = StyleSheet.create({
     top: 0
   },
   avatarWrap: {
-    alignSelf: 'center',
-    borderColor: palette.card,
+    borderColor: '#f6e7ba',
     borderRadius: 999,
-    borderWidth: 6,
-    marginTop: -58,
-    zIndex: 2
+    borderWidth: 3,
+    height: 92,
+    overflow: 'hidden',
+    width: 92
+  },
+  avatarImage: {
+    height: '100%',
+    width: '100%'
+  },
+  coverIdentity: {
+    alignItems: 'flex-end',
+    bottom: 16,
+    flexDirection: 'row',
+    gap: 12,
+    left: 16,
+    position: 'absolute',
+    right: 16
   },
   identityStack: {
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 8
+    flex: 1,
+    gap: 3
   },
   name: {
-    color: palette.text,
-    fontSize: 30,
-    fontWeight: '700',
-    textAlign: 'center'
+    color: '#fffaf0',
+    flexShrink: 1,
+    fontFamily: 'Georgia',
+    fontSize: 27,
+    fontWeight: '700'
   },
   nameRow: {
     alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 36,
-    paddingHorizontal: 34,
-    position: 'relative'
-  },
-  nameBadgeIcon: {
-    position: 'absolute',
-    right: 0
+    flexDirection: 'row',
+    gap: 5
   },
   homeCourse: {
-    color: palette.text,
-    fontSize: 18,
-    fontWeight: '600',
-    textAlign: 'center'
+    color: 'rgba(255,250,240,0.78)',
+    fontSize: 13,
+    fontWeight: '700'
   },
-  metaLine: {
-    color: palette.textMuted,
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: 'center'
-  },
-  connectionsHeaderLink: {
-    alignItems: 'center'
-  },
-  ratingRow: {
+  heroStats: {
     alignItems: 'center',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    justifyContent: 'center'
-  },
-  ratingBadge: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(245, 158, 11, 0.12)',
-    borderColor: 'rgba(245, 158, 11, 0.28)',
-    borderRadius: 999,
-    borderWidth: 1,
     flexDirection: 'row',
     gap: 6,
-    paddingHorizontal: 10,
+    marginTop: 7
+  },
+  heroStat: {
+    backgroundColor: 'rgba(5,28,20,0.5)',
+    borderColor: 'rgba(255,250,240,0.16)',
+    borderRadius: 10,
+    borderWidth: 1,
+    minWidth: 70,
+    paddingHorizontal: 8,
     paddingVertical: 6
   },
-  ratingBadgeText: {
-    color: palette.text,
-    fontSize: 13,
-    fontWeight: '700'
+  heroStatLabel: {
+    color: 'rgba(246,231,186,0.64)',
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 0.7,
+    textTransform: 'uppercase'
   },
-  ratingText: {
-    color: palette.textMuted,
-    fontSize: 13,
-    fontWeight: '600'
-  },
-  linkedinChip: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(103,232,249,0.12)',
-    borderColor: 'rgba(103,232,249,0.28)',
-    borderRadius: 999,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8
-  },
-  linkedinText: {
-    color: palette.aqua,
-    fontSize: 13,
-    fontWeight: '700'
-  },
-  bio: {
-    color: palette.textMuted,
+  heroStatValue: {
+    color: '#fffaf0',
     fontSize: 15,
-    lineHeight: 22,
-    textAlign: 'center'
+    fontWeight: '900',
+    marginTop: 1
   },
   actionRow: {
     marginTop: 16
   },
   actionGrid: {
     gap: 10,
-    marginTop: 16
+    padding: 14
   },
   tabRow: {
     backgroundColor: palette.bgElevated,
@@ -807,6 +788,28 @@ const styles = StyleSheet.create({
   },
   helper: {
     color: palette.textMuted,
+    fontSize: 15,
+    lineHeight: 22
+  },
+  aboutBioCard: {
+    backgroundColor: 'rgba(7,39,28,0.58)',
+    borderColor: 'rgba(216,189,118,0.32)',
+    borderLeftWidth: 3,
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 7,
+    padding: 14
+  },
+  aboutBioEyebrow: {
+    color: '#d8bd76',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1.1,
+    textTransform: 'uppercase'
+  },
+  aboutBioText: {
+    color: '#f5eedc',
+    fontFamily: 'Georgia',
     fontSize: 15,
     lineHeight: 22
   },
