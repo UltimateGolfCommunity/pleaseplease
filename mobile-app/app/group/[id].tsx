@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Redirect, useLocalSearchParams } from 'expo-router'
+import { Redirect, router, useLocalSearchParams } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -37,6 +37,10 @@ type GroupDetail = {
   header_image_url?: string | null
   creator_id?: string | null
   is_private?: boolean | null
+  tournament_date?: string | null
+  tournament_format?: string | null
+  tournament_type?: string | null
+  tournament_matchups?: string | null
 }
 
 type Member = {
@@ -100,6 +104,14 @@ type GroupActivity = {
   } | null
 }
 
+type TournamentScore = {
+  id: string
+  total_score: number
+  score_label?: string | null
+  user_id: string
+  user_profiles?: UserCard | null
+}
+
 export default function GroupScreen() {
   const { loading, user } = useAuth()
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -120,16 +132,23 @@ export default function GroupScreen() {
   const [messages, setMessages] = useState<GroupMessage[]>([])
   const [groupFeed, setGroupFeed] = useState<GroupActivity[]>([])
   const [connections, setConnections] = useState<ConnectionRecord[]>([])
+  const [tournamentScores, setTournamentScores] = useState<TournamentScore[]>([])
+  const [scoreDraft, setScoreDraft] = useState('')
+  const [scoreSaving, setScoreSaving] = useState(false)
   const [draft, setDraft] = useState('')
   const [composerOpen, setComposerOpen] = useState(false)
-  const [activeSection, setActiveSection] = useState<'board' | 'members' | 'info'>('board')
+  const [activeSection, setActiveSection] = useState<'board' | 'members' | 'info' | 'scores'>('board')
   const [editForm, setEditForm] = useState({
     name: '',
     slogan: '',
     description: '',
     location: '',
-    group_type: 'community'
-    ,is_private: false
+    group_type: 'community',
+    is_private: false,
+    tournament_date: '',
+    tournament_format: 'Stroke Play',
+    tournament_type: '',
+    tournament_matchups: ''
   })
 
   const loadGroup = useCallback(async () => {
@@ -150,6 +169,15 @@ export default function GroupScreen() {
       setMembers(response.members || [])
       setPendingMembers(response.pending_members || [])
       setConnections(connectionsResponse.connections || [])
+
+      if ((response.group.group_type || '').toLowerCase() === 'tournament') {
+        const scores = await apiGet<{ success: boolean; scores: TournamentScore[] }>(
+          `/api/groups/scores?group_id=${encodeURIComponent(id)}`
+        ).catch(() => ({ success: true, scores: [] as TournamentScore[] }))
+        setTournamentScores(scores.scores || [])
+      } else {
+        setTournamentScores([])
+      }
 
       if (user?.id) {
         try {
@@ -187,8 +215,12 @@ export default function GroupScreen() {
       slogan: group.slogan || '',
       description: group.description || '',
       location: group.location || '',
-      group_type: group.group_type || 'community'
-      ,is_private: Boolean(group.is_private)
+      group_type: group.group_type || 'community',
+      is_private: Boolean(group.is_private),
+      tournament_date: group.tournament_date || '',
+      tournament_format: group.tournament_format || 'Stroke Play',
+      tournament_type: group.tournament_type || '',
+      tournament_matchups: group.tournament_matchups || ''
     })
   }, [group])
 
@@ -211,6 +243,7 @@ export default function GroupScreen() {
   const isOwner =
     group?.creator_id === user?.id ||
     ['admin', 'owner', 'creator'].includes((myMembership?.role || '').toLowerCase())
+  const isTournament = (group?.group_type || '').toLowerCase() === 'tournament'
   const acceptedConnections = connections
     .map((connection) =>
       connection.requester_id === user?.id ? connection.recipient : connection.requester
@@ -378,7 +411,11 @@ export default function GroupScreen() {
         slogan: editForm.slogan.trim(),
         location: editForm.location.trim(),
         group_type: editForm.group_type,
-        is_private: editForm.is_private
+        is_private: editForm.is_private,
+        tournament_date: editForm.tournament_date.trim() || null,
+        tournament_format: editForm.tournament_format.trim() || null,
+        tournament_type: editForm.tournament_type.trim() || null,
+        tournament_matchups: editForm.tournament_matchups.trim() || null
       })
 
       if (response.group) {
@@ -400,6 +437,25 @@ export default function GroupScreen() {
       Alert.alert('Unable to update group', error instanceof Error ? error.message : 'Please try again.')
     } finally {
       setSavingEdit(false)
+    }
+  }
+
+  const handleSaveTournamentScore = async () => {
+    if (!user?.id || !group?.id || !scoreDraft.trim()) return
+    const totalScore = Number(scoreDraft)
+    if (!Number.isFinite(totalScore)) {
+      Alert.alert('Enter a score', 'Use a whole number for your tournament score.')
+      return
+    }
+    setScoreSaving(true)
+    try {
+      await apiPost('/api/groups/scores', { group_id: group.id, user_id: user.id, total_score: totalScore })
+      setScoreDraft('')
+      await loadGroup()
+    } catch (error) {
+      Alert.alert('Unable to save score', error instanceof Error ? error.message : 'Please try again.')
+    } finally {
+      setScoreSaving(false)
     }
   }
 
@@ -537,8 +593,8 @@ export default function GroupScreen() {
             )}
             <View style={styles.coverScrim} />
             <View style={styles.coverActions}>
-              <Pressable onPress={() => setShowShareModal(true)} style={styles.coverActionButton}>
-                <Ionicons color="#ffffff" name="share-social-outline" size={20} />
+              <Pressable accessibilityLabel="Go back" onPress={() => router.back()} style={styles.coverActionButton}>
+                <Ionicons color="#ffffff" name="chevron-back" size={23} />
               </Pressable>
               {isMember ? (
                 <Pressable onPress={() => { setActiveSection('board'); setComposerOpen(true) }} style={styles.coverActionButton}>
@@ -549,7 +605,7 @@ export default function GroupScreen() {
             <View style={styles.groupTypeCoverIcon}>
               <Ionicons
                 color="#ffffff"
-                name={(group?.group_type || 'community').toLowerCase() === 'course' ? 'golf-outline' : 'people-outline'}
+                name={isTournament ? 'trophy' : (group?.group_type || 'community').toLowerCase() === 'course' ? 'golf-outline' : 'people-outline'}
                 size={19}
               />
             </View>
@@ -564,7 +620,7 @@ export default function GroupScreen() {
                   <Text numberOfLines={2} style={styles.heroStory}>{group?.description || group?.slogan || `${groupTypeLabel} golf group`}</Text>
                   <View style={styles.heroMetaInlineRow}>
                     {group?.location ? <Text style={styles.heroMetaInlineText}>{group.location}</Text> : null}
-                    <Pressable onPress={() => setActiveSection('members')}><Text style={styles.heroMetaInlineAccent}>{members.length} members</Text></Pressable>
+                    <Pressable onPress={() => setActiveSection('members')}><Text style={styles.heroMetaInlineAccent}>{members.length} {isTournament ? 'participants' : 'members'}</Text></Pressable>
                     {group?.is_private ? <Text style={styles.heroMetaInlineText}>Private</Text> : null}
                   </View>
                 </>
@@ -594,7 +650,8 @@ export default function GroupScreen() {
           {[
             { label: 'Posts', value: 'board' as const },
             { label: 'About', value: 'info' as const },
-            { label: 'Members', value: 'members' as const }
+            ...(isTournament ? [{ label: 'Scores', value: 'scores' as const }] : []),
+            { label: isTournament ? 'Participants' : 'Members', value: 'members' as const }
           ].map((tab) => {
             const active = activeSection === tab.value
 
@@ -629,10 +686,11 @@ export default function GroupScreen() {
                   style={styles.editInput}
                   value={editForm.slogan}
                 />
-                <View style={styles.typeRow}>
+                {!isTournament ? <View style={styles.typeRow}>
                   {[
                     { label: 'Community', value: 'community' },
-                    { label: 'Course', value: 'course' }
+                    { label: 'Course', value: 'course' },
+                    { label: 'Tournament', value: 'tournament' }
                   ].map((option) => {
                     const active = editForm.group_type === option.value
 
@@ -646,7 +704,21 @@ export default function GroupScreen() {
                       </Pressable>
                     )
                   })}
-                </View>
+                </View> : null}
+                {isTournament || editForm.group_type === 'tournament' ? (
+                  <View style={styles.tournamentEditFields}>
+                    <TextInput onChangeText={(value) => setEditForm((current) => ({ ...current, tournament_date: value }))} placeholder="Tournament date (YYYY-MM-DD)" placeholderTextColor={palette.textMuted} style={styles.editInput} value={editForm.tournament_date} />
+                    <View style={styles.typeRow}>
+                      {['Stroke Play', 'Match Play', 'Ryder Cup'].map((format) => (
+                        <Pressable key={format} onPress={() => setEditForm((current) => ({ ...current, tournament_format: format }))} style={[styles.typeChip, editForm.tournament_format === format && styles.typeChipActive]}>
+                          <Text style={[styles.typeLabel, editForm.tournament_format === format && styles.typeLabelActive]}>{format}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                    <TextInput onChangeText={(value) => setEditForm((current) => ({ ...current, tournament_type: value }))} placeholder="Tournament type or division" placeholderTextColor={palette.textMuted} style={styles.editInput} value={editForm.tournament_type} />
+                    {editForm.tournament_format !== 'Stroke Play' ? <TextInput multiline onChangeText={(value) => setEditForm((current) => ({ ...current, tournament_matchups: value }))} placeholder="Matchups" placeholderTextColor={palette.textMuted} style={[styles.editInput, styles.editTextarea]} value={editForm.tournament_matchups} /> : null}
+                  </View>
+                ) : null}
                 <View style={styles.typeRow}>
                   {[
                     { label: 'Public', value: false, icon: 'globe-outline' as const },
@@ -689,14 +761,38 @@ export default function GroupScreen() {
                 <Text style={styles.infoValue}>{members.length}</Text>
               </View>
             </View>
+            {isTournament ? (
+              <View style={styles.tournamentInfoCard}>
+                <View style={styles.tournamentInfoRow}><Text style={styles.infoLabel}>Date</Text><Text style={styles.tournamentInfoValue}>{group?.tournament_date ? new Date(`${group.tournament_date}T12:00:00`).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) : 'To be announced'}</Text></View>
+                <View style={styles.tournamentInfoRow}><Text style={styles.infoLabel}>Format</Text><Text style={styles.tournamentInfoValue}>{group?.tournament_format || 'Stroke Play'}</Text></View>
+                {group?.tournament_type ? <View style={styles.tournamentInfoRow}><Text style={styles.infoLabel}>Type</Text><Text style={styles.tournamentInfoValue}>{group.tournament_type}</Text></View> : null}
+                <View style={styles.matchupsBlock}>
+                  <Text style={styles.infoLabel}>Matchups</Text>
+                  <Text style={styles.body}>{group?.tournament_matchups || (isOwner ? 'Add pairings in tournament settings.' : 'Pairings will be announced by the tournament admin.')}</Text>
+                </View>
+              </View>
+            ) : null}
+          </View>
+        ) : activeSection === 'scores' && isTournament ? (
+          <View style={styles.scoresFeed}>
+            {isMember ? <View style={styles.scoreEntry}><TextInput keyboardType="number-pad" onChangeText={setScoreDraft} placeholder="Your total score" placeholderTextColor={palette.textMuted} style={styles.scoreInput} value={scoreDraft} /><PrimaryButton label={scoreSaving ? 'Saving...' : 'Post Score'} loading={scoreSaving} onPress={handleSaveTournamentScore} /></View> : <Text style={styles.body}>Join this tournament to post your score.</Text>}
+            {tournamentScores.length === 0 ? <Text style={styles.body}>Scores will appear here as participants post them.</Text> : null}
+            {tournamentScores.map((score, index) => (
+              <View key={score.id} style={styles.scoreRow}>
+                <Text style={styles.scorePlace}>{index + 1}</Text>
+                <Avatar label={score.user_profiles?.first_name || score.user_profiles?.username || 'G'} size={42} uri={score.user_profiles?.avatar_url} />
+                <Text style={styles.scoreName}>{[score.user_profiles?.first_name, score.user_profiles?.last_name].filter(Boolean).join(' ') || score.user_profiles?.username || 'Participant'}</Text>
+                <Text style={styles.scoreTotal}>{score.total_score}</Text>
+              </View>
+            ))}
           </View>
         ) : activeSection === 'members' ? (
           <View style={styles.membersFeed}>
             {isOwner ? (
               <View style={styles.inviteSection}>
-                <Text style={styles.inviteTitle}>Add members</Text>
+                <Text style={styles.inviteTitle}>{isTournament ? 'Add participants' : 'Add members'}</Text>
                 <Text style={styles.body}>
-                  Invite golfers from your connections directly into this group.
+                  Invite golfers from your connections directly into this {isTournament ? 'tournament' : 'group'}.
                 </Text>
                 {inviteableConnections.length === 0 ? (
                   <Text style={styles.body}>
@@ -861,6 +957,9 @@ export default function GroupScreen() {
           </View>
         )}
       </ScrollView>
+      <Pressable accessibilityLabel="Share group QR code" onPress={() => setShowShareModal(true)} style={styles.floatingQrButton}>
+        <Ionicons color={palette.text} name="qr-code-outline" size={25} />
+      </Pressable>
       <Modal
         animationType="slide"
         transparent
@@ -868,18 +967,47 @@ export default function GroupScreen() {
         onRequestClose={() => setShowShareModal(false)}
       >
         <Pressable style={styles.modalBackdrop} onPress={() => setShowShareModal(false)}>
-          <Pressable style={styles.modalCard} onPress={() => {}}>
-            <Text style={styles.sectionEyebrow}>Instant invite</Text>
-            <Text style={styles.sectionTitle}>Scan to join {group?.name || 'this group'}</Text>
-            <Text style={styles.body}>
-              Pull this up on the first tee, at the clubhouse, or in a group chat.
-            </Text>
-            {groupQrUrl ? <Image source={{ uri: groupQrUrl }} style={styles.qrImage} /> : null}
-            <Text style={styles.shareLink}>{groupLink}</Text>
-            <PrimaryButton
-              label="Share Group"
-              onPress={() => void Share.share({ message: groupLink, url: groupLink })}
-            />
+          <Pressable style={[styles.modalCard, styles.groupShareModalCard]} onPress={() => {}}>
+            <View style={styles.groupQrBusinessCard}>
+              {group?.header_image_url || group?.image_url ? (
+                <Image source={{ uri: group?.header_image_url || group?.image_url || '' }} style={styles.groupQrBusinessCardImage} />
+              ) : <View style={styles.groupQrBusinessCardFallback} />}
+              <View style={styles.groupQrBusinessCardShade} />
+              <View style={styles.groupQrBrandRow}>
+                <View>
+                  <Text style={styles.groupQrBrand}>Ultimate Golf Community</Text>
+                  <Text style={styles.groupQrCardType}>Group Pass</Text>
+                </View>
+                <Ionicons color="#f6e7ba" name="people-outline" size={19} />
+              </View>
+              <View style={styles.groupQrIdentity}>
+                <Avatar label={group?.name || 'Group'} size={70} uri={group?.logo_url || group?.image_url} />
+                <Text numberOfLines={1} style={styles.groupQrName}>{group?.name || 'Golf Group'}</Text>
+                <Text numberOfLines={2} style={styles.groupQrDescription}>{group?.slogan || group?.description || 'A golf community on Ultimate Golf Community'}</Text>
+              </View>
+              <View style={styles.groupQrStats}>
+                <View style={styles.groupQrStat}>
+                  <Text style={styles.groupQrStatLabel}>Members</Text>
+                  <Text style={styles.groupQrStatValue}>{members.length}</Text>
+                </View>
+                <View style={styles.groupQrStat}>
+                  <Text style={styles.groupQrStatLabel}>Type</Text>
+                  <Text style={styles.groupQrStatValue}>{groupTypeLabel}</Text>
+                </View>
+                <View style={styles.groupQrStat}>
+                  <Text style={styles.groupQrStatLabel}>Access</Text>
+                  <Text style={styles.groupQrStatValue}>{group?.is_private ? 'Private' : 'Public'}</Text>
+                </View>
+              </View>
+              <View style={styles.groupQrBottom}>
+                {groupQrUrl ? <Image source={{ uri: groupQrUrl }} style={styles.qrImage} /> : null}
+                <Text style={styles.qrScanLabel}>Scan to join this group</Text>
+              </View>
+            </View>
+            <Pressable onPress={() => void Share.share({ message: groupLink, url: groupLink })} style={styles.groupShareButton}>
+              <Ionicons color={palette.bg} name="share-social-outline" size={18} />
+              <Text style={styles.groupShareButtonText}>Share Group</Text>
+            </Pressable>
             <PrimaryButton label="Close" variant="ghost" onPress={() => setShowShareModal(false)} />
           </Pressable>
         </Pressable>
@@ -953,12 +1081,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end'
   },
   hero: {
-    backgroundColor: palette.card,
-    borderColor: palette.border,
-    borderRadius: 28,
-    borderWidth: 1,
     gap: 12,
-    padding: 8
   },
   coverShell: {
     borderRadius: 24,
@@ -987,6 +1110,17 @@ const styles = StyleSheet.create({
     top: 14,
     zIndex: 2
   },
+  floatingQrButton: {
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+    bottom: 132,
+    height: 52,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 20,
+    width: 52,
+    zIndex: 10
+  },
   coverActionButton: {
     alignItems: 'center',
     backgroundColor: 'rgba(4,22,14,0.72)',
@@ -999,7 +1133,7 @@ const styles = StyleSheet.create({
   },
   heroCenteredContent: {
     alignItems: 'center',
-    bottom: 18,
+    bottom: 48,
     gap: 7,
     left: 22,
     position: 'absolute',
@@ -1100,6 +1234,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 27,
     fontWeight: '700',
+    textAlign: 'center',
     textTransform: 'capitalize'
   },
   inlineNameInput: {
@@ -1282,6 +1417,33 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600'
   },
+  tournamentEditFields: {
+    gap: 10
+  },
+  tournamentInfoCard: {
+    backgroundColor: 'rgba(215,183,104,0.08)',
+    borderColor: 'rgba(215,183,104,0.2)',
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 12,
+    padding: 15
+  },
+  tournamentInfoRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between'
+  },
+  tournamentInfoValue: {
+    color: palette.text,
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '700',
+    marginLeft: 20,
+    textAlign: 'right'
+  },
+  matchupsBlock: {
+    gap: 6
+  },
   inviteSection: {
     backgroundColor: 'rgba(255,255,255,0.03)',
     borderColor: 'rgba(255,255,255,0.08)',
@@ -1399,6 +1561,51 @@ const styles = StyleSheet.create({
   membersFeed: {
     gap: 12
   },
+  scoresFeed: {
+    gap: 12
+  },
+  scoreEntry: {
+    flexDirection: 'row',
+    gap: 10
+  },
+  scoreInput: {
+    backgroundColor: palette.cardSoft,
+    borderColor: palette.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    color: palette.text,
+    flex: 1,
+    minHeight: 50,
+    paddingHorizontal: 14
+  },
+  scoreRow: {
+    alignItems: 'center',
+    backgroundColor: palette.cardSoft,
+    borderColor: palette.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 11,
+    padding: 12
+  },
+  scorePlace: {
+    color: '#d7b768',
+    fontSize: 16,
+    fontWeight: '800',
+    textAlign: 'center',
+    width: 20
+  },
+  scoreName: {
+    color: palette.text,
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '700'
+  },
+  scoreTotal: {
+    color: '#d7b768',
+    fontSize: 23,
+    fontWeight: '800'
+  },
   aboutFeed: {
     gap: 12
   },
@@ -1481,6 +1688,143 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 14,
     padding: 20
+  },
+  groupShareModalCard: {
+    gap: 12,
+    padding: 14
+  },
+  groupQrBusinessCard: {
+    backgroundColor: '#123d2d',
+    borderColor: 'rgba(246,231,186,0.3)',
+    borderRadius: 24,
+    borderWidth: 1,
+    height: 490,
+    overflow: 'hidden',
+    padding: 18,
+    position: 'relative'
+  },
+  groupQrBusinessCardImage: {
+    bottom: 0,
+    height: '100%',
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    width: '100%'
+  },
+  groupQrBusinessCardFallback: {
+    backgroundColor: '#1e5c45',
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0
+  },
+  groupQrBusinessCardShade: {
+    backgroundColor: 'rgba(4,18,12,0.72)',
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0
+  },
+  groupQrBrandRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    zIndex: 1
+  },
+  groupQrBrand: {
+    color: '#f6e7ba',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase'
+  },
+  groupQrCardType: {
+    color: 'rgba(255,255,255,0.72)',
+    fontSize: 10,
+    fontWeight: '700',
+    marginTop: 2,
+    textTransform: 'uppercase'
+  },
+  groupQrIdentity: {
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 20,
+    zIndex: 1
+  },
+  groupQrName: {
+    color: '#ffffff',
+    fontSize: 24,
+    fontWeight: '800',
+    marginTop: 5,
+    textAlign: 'center'
+  },
+  groupQrDescription: {
+    color: 'rgba(255,255,255,0.82)',
+    fontSize: 12,
+    lineHeight: 17,
+    maxWidth: 270,
+    textAlign: 'center'
+  },
+  groupQrStats: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 15,
+    zIndex: 1
+  },
+  groupQrStat: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(3,18,11,0.55)',
+    borderColor: 'rgba(246,231,186,0.18)',
+    borderRadius: 14,
+    borderWidth: 1,
+    flex: 1,
+    gap: 3,
+    paddingVertical: 9
+  },
+  groupQrStatLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.7,
+    textTransform: 'uppercase'
+  },
+  groupQrStatValue: {
+    color: '#f6e7ba',
+    fontSize: 13,
+    fontWeight: '800'
+  },
+  groupQrBottom: {
+    alignItems: 'center',
+    bottom: 16,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    zIndex: 1
+  },
+  groupShareButton: {
+    alignItems: 'center',
+    backgroundColor: palette.aqua,
+    borderRadius: 999,
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
+    minHeight: 46
+  },
+  groupShareButtonText: {
+    color: palette.bg,
+    fontSize: 14,
+    fontWeight: '800'
+  },
+  qrScanLabel: {
+    color: '#f6e7ba',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.7,
+    marginTop: 7,
+    textTransform: 'uppercase'
   },
   qrImage: {
     alignSelf: 'center',

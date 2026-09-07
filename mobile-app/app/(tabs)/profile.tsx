@@ -934,122 +934,16 @@ export default function ProfileTab() {
             </View>
           ) : (
             <View style={styles.activityCard}>
-              <View style={styles.aboutProfilePanel}>
+              <View style={styles.aboutFeed}>
               {profile?.bio ? (
                 <View style={[styles.bioCard, styles.aboutBioCard]}>
-                  <View style={styles.aboutBioHeading}>
-                    <Ionicons color="#d8bd76" name="chatbubble-ellipses-outline" size={15} />
-                    <Text style={styles.aboutBioEyebrow}>Member&apos;s Note</Text>
-                  </View>
                   <Text style={[styles.meta, styles.bioText]}>{profile.bio}</Text>
                 </View>
               ) : null}
-              <View style={styles.aboutInfoGrid}>
-                <View style={styles.aboutInfoCard}>
-                  <Text style={styles.aboutInfoLabel}>Home Course</Text>
-                  {isInlineAboutEditing ? (
-                    <TextInput
-                      onChangeText={(value) => setForm((current) => ({ ...current, home_course: value }))}
-                      placeholder="Home course"
-                      placeholderTextColor={palette.textMuted}
-                      style={styles.aboutInlineInput}
-                      value={form.home_course}
-                    />
-                  ) : (
-                    <Text style={styles.aboutInfoValue}>{profile?.home_course || profile?.home_club || 'Not added yet'}</Text>
-                  )}
-                </View>
-                <View style={styles.aboutInfoCard}>
-                  <Text style={styles.aboutInfoLabel}>Location</Text>
-                  {isInlineAboutEditing ? (
-                    <TextInput
-                      onChangeText={(value) => setForm((current) => ({ ...current, location: value }))}
-                      placeholder="Location"
-                      placeholderTextColor={palette.textMuted}
-                      style={styles.aboutInlineInput}
-                      value={form.location}
-                    />
-                  ) : (
-                    <Text style={styles.aboutInfoValue}>{profile?.location || 'Not added yet'}</Text>
-                  )}
-                </View>
-                <View style={styles.aboutInfoCard}>
-                  <Text style={styles.aboutInfoLabel}>Handicap</Text>
-                  {isInlineAboutEditing ? (
-                    <TextInput
-                      keyboardType="decimal-pad"
-                      onChangeText={(value) => setForm((current) => ({ ...current, handicap: value }))}
-                      placeholder="Handicap"
-                      placeholderTextColor={palette.textMuted}
-                      style={styles.aboutInlineInput}
-                      value={form.handicap}
-                    />
-                  ) : (
-                    <Text style={styles.aboutInfoValue}>{profile?.handicap ?? 'Not added yet'}</Text>
-                  )}
-                </View>
-                <View style={styles.aboutInfoCard}>
-                  <Text style={styles.aboutInfoLabel}>Rounds Logged</Text>
-                  <Text style={styles.aboutInfoValue}>{scoreSummary.totalRounds || '0'}</Text>
-                </View>
-              </View>
-              <View style={[styles.socialSection, styles.aboutDetailCard]}>
-                <View style={styles.aboutSectionHeading}>
-                  <Ionicons color="#d8bd76" name="share-social-outline" size={16} />
-                  <Text style={styles.aboutSectionTitle}>Social</Text>
-                </View>
-                {isInlineAboutEditing ? (
-                  <View style={styles.inlineFieldStack}>
-                    <TextInput
-                      autoCapitalize="none"
-                      onChangeText={(value) => setForm((current) => ({ ...current, linkedin_url: value }))}
-                      placeholder="LinkedIn URL"
-                      placeholderTextColor={palette.textMuted}
-                      style={styles.input}
-                      value={form.linkedin_url}
-                    />
-                    <TextInput
-                      autoCapitalize="none"
-                      onChangeText={(value) => setForm((current) => ({ ...current, instagram_url: value }))}
-                      placeholder="Instagram URL"
-                      placeholderTextColor={palette.textMuted}
-                      style={styles.input}
-                      value={form.instagram_url}
-                    />
-                    <TextInput
-                      autoCapitalize="none"
-                      onChangeText={(value) => setForm((current) => ({ ...current, facebook_url: value }))}
-                      placeholder="Facebook URL"
-                      placeholderTextColor={palette.textMuted}
-                      style={styles.input}
-                      value={form.facebook_url}
-                    />
-                    <TextInput
-                      autoCapitalize="none"
-                      onChangeText={(value) => setForm((current) => ({ ...current, x_url: value }))}
-                      placeholder="X URL"
-                      placeholderTextColor={palette.textMuted}
-                      style={styles.input}
-                      value={form.x_url}
-                    />
-                  </View>
-                ) : socialLinks.length ? (
-                  <View style={styles.socialGrid}>
-                    {socialLinks.map((link) => (
-                      <Pressable key={link.key} onPress={() => void Linking.openURL(link.url)} style={styles.socialChip}>
-                        <Ionicons color={palette.aqua} name={link.icon} size={16} />
-                        <Text style={styles.socialChipText}>{link.label}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                ) : (
-                  <Text style={styles.infoLine}>Add LinkedIn, Instagram, Facebook, or X from edit profile.</Text>
-                )}
-              </View>
               <View style={styles.aceCard}>
                 <View style={styles.aboutSectionHeading}>
-                  <Ionicons color="#f6e7ba" name="flag-outline" size={16} />
-                  <Text style={styles.aboutSectionTitle}>Hole In One</Text>
+                  <Ionicons color="#183f2e" name="flag-outline" size={16} />
+                  <Text style={[styles.aboutSectionTitle, styles.aceTitle]}>Hole In One</Text>
                 </View>
                 {isInlineAboutEditing ? (
                   <View style={styles.inlineFieldStack}>
@@ -1551,7 +1445,7 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: 20,
-    paddingBottom: 40,
+    paddingBottom: 156,
     paddingHorizontal: 0,
     paddingTop: 0
   },
@@ -1805,13 +1699,8 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingHorizontal: 20
   },
-  aboutProfilePanel: {
-    backgroundColor: '#28634d',
-    borderColor: 'rgba(216,189,118,0.24)',
-    borderRadius: 26,
-    borderWidth: 1,
+  aboutFeed: {
     gap: 12,
-    padding: 12
   },
   profileTabRow: {
     backgroundColor: '#34715b',
@@ -2280,12 +2169,15 @@ const styles = StyleSheet.create({
     lineHeight: 20
   },
   aceCard: {
-    backgroundColor: 'rgba(74, 53, 23, 0.76)',
-    borderColor: 'rgba(232,216,178,0.36)',
+    backgroundColor: '#d8bd76',
+    borderColor: '#f6e7ba',
     borderRadius: 19,
     borderWidth: 1,
     gap: 8,
     padding: 12
+  },
+  aceTitle: {
+    color: '#183f2e'
   },
   aboutSectionTitle: {
     color: '#f6e7ba',
@@ -2335,8 +2227,8 @@ const styles = StyleSheet.create({
     gap: 6
   },
   acePill: {
-    backgroundColor: 'rgba(255,250,240,0.08)',
-    borderColor: 'rgba(246,231,186,0.18)',
+    backgroundColor: 'rgba(255,250,240,0.35)',
+    borderColor: 'rgba(24,63,46,0.18)',
     borderRadius: 12,
     borderWidth: 1,
     gap: 2,
@@ -2345,14 +2237,14 @@ const styles = StyleSheet.create({
     paddingVertical: 7
   },
   acePillLabel: {
-    color: palette.textMuted,
+    color: 'rgba(24,63,46,0.72)',
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.7,
     textTransform: 'uppercase'
   },
   acePillValue: {
-    color: palette.text,
+    color: '#183f2e',
     fontSize: 14,
     fontWeight: '700',
     lineHeight: 18

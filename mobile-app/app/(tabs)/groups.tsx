@@ -33,6 +33,9 @@ type Group = {
   is_member?: boolean
   logo_url?: string | null
   image_url?: string | null
+  tournament_date?: string | null
+  tournament_format?: string | null
+  tournament_type?: string | null
   member_preview?: {
     id: string
     first_name?: string | null
@@ -135,8 +138,13 @@ export default function GroupsTab() {
     location: '',
     group_type: 'community',
     logo_url: '',
+    header_image_url: '',
     maxMembers: '10',
-    is_private: false
+    is_private: false,
+    tournament_date: '',
+    tournament_format: 'Stroke Play',
+    tournament_type: '',
+    tournament_matchups: ''
   })
 
   const loadGroups = useCallback(async () => {
@@ -178,7 +186,7 @@ export default function GroupsTab() {
     return <Redirect href="/welcome" />
   }
 
-  const handlePickGroupImage = async () => {
+  const handlePickGroupImage = async (target: 'logo' | 'cover') => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
 
     if (!permission.granted) {
@@ -198,7 +206,7 @@ export default function GroupsTab() {
     }
 
     const asset = result.assets[0]
-    const fileName = asset.fileName || `group-${Date.now()}.jpg`
+    const fileName = asset.fileName || `group-${target}-${Date.now()}.jpg`
     const mimeType = asset.mimeType || 'image/jpeg'
 
     setUploadingImage(true)
@@ -208,10 +216,10 @@ export default function GroupsTab() {
         uri: asset.uri,
         fileName,
         mimeType,
-        folder: 'group-logos'
+        folder: target === 'logo' ? 'group-logos' : 'group-covers'
       })
 
-      setForm((current) => ({ ...current, logo_url: upload.publicUrl }))
+      setForm((current) => ({ ...current, [target === 'logo' ? 'logo_url' : 'header_image_url']: upload.publicUrl }))
     } catch (error) {
       Alert.alert('Unable to upload image', error instanceof Error ? error.message : 'Please try again.')
     } finally {
@@ -235,13 +243,18 @@ export default function GroupsTab() {
         description: form.description.trim(),
         location: form.location.trim(),
         logo_url: form.logo_url.trim() || null,
+        header_image_url: form.header_image_url.trim() || null,
         group_type: form.group_type.trim() || 'community',
         is_private: form.is_private,
+        tournament_date: form.group_type === 'tournament' ? form.tournament_date.trim() || null : null,
+        tournament_format: form.group_type === 'tournament' ? form.tournament_format.trim() || null : null,
+        tournament_type: form.group_type === 'tournament' ? form.tournament_type.trim() || null : null,
+        tournament_matchups: form.group_type === 'tournament' ? form.tournament_matchups.trim() || null : null,
         maxMembers: Number(form.maxMembers) || 10,
         user_id: user.id
       })
 
-      Alert.alert('Group created', 'Your group is ready for members to join.')
+      Alert.alert(form.group_type === 'tournament' ? 'Tournament created' : 'Group created', form.group_type === 'tournament' ? 'Your tournament is ready for participants.' : 'Your group is ready for members to join.')
       setForm({
         name: '',
         slogan: '',
@@ -249,8 +262,13 @@ export default function GroupsTab() {
         location: '',
         group_type: 'community',
         logo_url: '',
+        header_image_url: '',
         maxMembers: '10',
-        is_private: false
+        is_private: false,
+        tournament_date: '',
+        tournament_format: 'Stroke Play',
+        tournament_type: '',
+        tournament_matchups: ''
       })
       setShowCreateForm(false)
       setBusy(true)
@@ -289,49 +307,55 @@ export default function GroupsTab() {
 
         {showCreateForm ? (
           <View style={styles.searchCard}>
-            <Text style={styles.sectionEyebrow}>Build a group</Text>
-            <Text style={styles.sectionTitle}>Create a group</Text>
-          <Text style={styles.helper}>
-            Start a local community or a course-based club people can rally around.
-          </Text>
+            <Text style={styles.sectionEyebrow}>Build a community</Text>
+            <Text style={styles.sectionTitle}>Create a group or tournament</Text>
+          {form.group_type !== 'tournament' ? <Text style={styles.helper}>Start a local community or a course-based club people can rally around.</Text> : null}
           <View style={styles.imagePickerRow}>
             {form.logo_url ? (
               <Image source={{ uri: form.logo_url }} style={styles.previewImage} />
             ) : (
-              <View style={styles.previewFallback}>
-                <Text style={styles.previewFallbackText}>Add image</Text>
-              </View>
+              <View style={styles.previewFallback}><Text style={styles.previewFallbackText}>{form.group_type === 'tournament' ? 'Add logo' : 'Add image'}</Text></View>
             )}
             <View style={styles.imagePickerCopy}>
-              <Text style={styles.imagePickerTitle}>Group photo</Text>
+              <Text style={styles.imagePickerTitle}>{form.group_type === 'tournament' ? 'Tournament logo' : 'Group photo'}</Text>
               <Text style={styles.imagePickerBody}>
-                Add the visual members will recognize in discovery and on the club page.
+                Add the visual {form.group_type === 'tournament' ? 'participants' : 'members'} will recognize in discovery and on the {form.group_type === 'tournament' ? 'tournament' : 'club'} page.
               </Text>
               <PrimaryButton
-                label={uploadingImage ? 'Uploading...' : form.logo_url ? 'Change Image' : 'Choose Image'}
+                label={uploadingImage ? 'Uploading...' : form.logo_url ? (form.group_type === 'tournament' ? 'Change Logo' : 'Change Image') : (form.group_type === 'tournament' ? 'Choose Logo' : 'Choose Image')}
                 variant="ghost"
                 loading={uploadingImage}
-                onPress={handlePickGroupImage}
+                onPress={() => void handlePickGroupImage('logo')}
               />
             </View>
           </View>
+          {form.group_type === 'tournament' ? (
+            <View style={styles.imagePickerRow}>
+              {form.header_image_url ? <Image source={{ uri: form.header_image_url }} style={styles.coverPreviewImage} /> : <View style={styles.coverPreviewFallback}><Text style={styles.previewFallbackText}>Add cover</Text></View>}
+              <View style={styles.imagePickerCopy}>
+                <Text style={styles.imagePickerTitle}>Tournament cover</Text>
+                <Text style={styles.imagePickerBody}>Set the scene for this tournament&apos;s home page.</Text>
+                <PrimaryButton label={form.header_image_url ? 'Change Cover' : 'Choose Cover'} variant="ghost" loading={uploadingImage} onPress={() => void handlePickGroupImage('cover')} />
+              </View>
+            </View>
+          ) : null}
             <TextInput
               onChangeText={(value) => setForm((current) => ({ ...current, name: value }))}
-              placeholder="Group name"
+              placeholder={form.group_type === 'tournament' ? 'Tournament name' : 'Group name'}
               placeholderTextColor={palette.textMuted}
               style={styles.input}
               value={form.name}
             />
             <TextInput
               onChangeText={(value) => setForm((current) => ({ ...current, slogan: value }))}
-              placeholder="Group slogan"
+              placeholder={form.group_type === 'tournament' ? 'Tournament slogan' : 'Group slogan'}
               placeholderTextColor={palette.textMuted}
               style={styles.input}
               value={form.slogan}
             />
             <TextInput
               onChangeText={(value) => setForm((current) => ({ ...current, description: value }))}
-              placeholder="Purpose of the group"
+              placeholder={form.group_type === 'tournament' ? 'Purpose of the tournament' : 'Purpose of the group'}
               placeholderTextColor={palette.textMuted}
               style={[styles.input, styles.tallInput]}
               value={form.description}
@@ -347,7 +371,8 @@ export default function GroupsTab() {
               <View style={styles.segmentRow}>
                 {[
                   { label: 'Community', value: 'community' },
-                  { label: 'Course', value: 'course' }
+                  { label: 'Course', value: 'course' },
+                  { label: 'Tournament', value: 'tournament' }
                 ].map((option) => {
                   const active = form.group_type === option.value
 
@@ -373,6 +398,20 @@ export default function GroupsTab() {
                 value={form.maxMembers}
               />
             </View>
+            {form.group_type === 'tournament' ? (
+              <View style={styles.tournamentFields}>
+                <TextInput onChangeText={(value) => setForm((current) => ({ ...current, tournament_date: value }))} placeholder="Tournament date (YYYY-MM-DD)" placeholderTextColor={palette.textMuted} style={styles.input} value={form.tournament_date} />
+                <View style={styles.segmentRow}>
+                  {['Stroke Play', 'Match Play', 'Ryder Cup'].map((format) => (
+                    <Pressable key={format} onPress={() => setForm((current) => ({ ...current, tournament_format: format }))} style={[styles.segment, form.tournament_format === format && styles.segmentActive]}>
+                      <Text style={[styles.segmentLabel, form.tournament_format === format && styles.segmentLabelActive]}>{format}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <TextInput onChangeText={(value) => setForm((current) => ({ ...current, tournament_type: value }))} placeholder="Tournament type or division (optional)" placeholderTextColor={palette.textMuted} style={styles.input} value={form.tournament_type} />
+                {form.tournament_format !== 'Stroke Play' ? <TextInput multiline onChangeText={(value) => setForm((current) => ({ ...current, tournament_matchups: value }))} placeholder="Matchups (for example: Luke vs. Grant)" placeholderTextColor={palette.textMuted} style={[styles.input, styles.tallInput]} value={form.tournament_matchups} /> : null}
+              </View>
+            ) : null}
             <View style={styles.visibilitySection}>
               <Text style={styles.visibilityTitle}>Who can join?</Text>
               <View style={styles.visibilityRow}>
@@ -398,14 +437,14 @@ export default function GroupsTab() {
               </View>
             </View>
             <PrimaryButton
-              label="Create Group"
+              label={form.group_type === 'tournament' ? 'Create Tournament' : 'Create Group'}
               loading={creating || uploadingImage}
               onPress={handleCreateGroup}
             />
           </View>
         ) : null}
 
-        <View style={styles.section}>
+        {!showCreateForm ? <View style={styles.section}>
           {busy ? <ActivityIndicator color={palette.aqua} /> : null}
           {!busy && groupActivity.length === 0 ? (
             <View style={styles.emptyCard}>
@@ -420,27 +459,23 @@ export default function GroupsTab() {
               style={styles.feedCard}
             >
               <View style={styles.feedCardTop}>
-                <View style={styles.feedIconWrap}>
-                  <Ionicons
-                    color={palette.aqua}
-                    name={getGroupActivityIcon(item.activity_type)}
-                    size={18}
-                  />
-                </View>
+                {item.group?.logo_url || item.group?.image_url ? (
+                  <Avatar label={item.group?.name || 'Group'} shape="circle" size={42} uri={item.group.logo_url || item.group.image_url} />
+                ) : (
+                  <View style={styles.feedIconWrap}>
+                    <Ionicons color={palette.aqua} name={getGroupActivityIcon(item.activity_type)} size={18} />
+                  </View>
+                )}
                 <View style={styles.feedCopy}>
                   <View style={styles.feedMetaRow}>
-                    <Text style={styles.feedGroupName}>{item.group?.name || 'Group activity'}</Text>
+                    <Text style={styles.feedHeadline}>{getGroupActivityTitle(item)}</Text>
                     <Text style={styles.feedTime}>{formatRelativeTime(item.created_at)}</Text>
                   </View>
-                  <Text style={styles.feedHeadline}>{getGroupActivityTitle(item)}</Text>
-                  <Text style={styles.feedDescription}>
-                    {item.description || 'Fresh movement inside your golf communities.'}
-                  </Text>
                 </View>
               </View>
             </Pressable>
           ))}
-        </View>
+        </View> : null}
 
       </ScrollView>
       <Modal
@@ -451,12 +486,12 @@ export default function GroupsTab() {
       >
         <Pressable style={styles.modalBackdrop} onPress={() => setShowMyGroupsMenu(false)}>
           <Pressable style={styles.modalCard} onPress={() => {}}>
-            <Text style={[styles.sectionEyebrow, styles.myGroupsHeading]}>My Groups</Text>
-            {myGroups.length === 0 ? (
+            {myGroups.some((group) => group.group_type !== 'tournament') ? <Text style={[styles.sectionEyebrow, styles.myGroupsHeading]}>My Groups</Text> : null}
+            {myGroups.filter((group) => group.group_type !== 'tournament').length === 0 ? (
               <Text style={styles.helper}>Create or join a group and it will appear here.</Text>
             ) : null}
             <View style={styles.myGroupsGrid}>
-              {myGroups.map((group) => (
+              {myGroups.filter((group) => group.group_type !== 'tournament').map((group) => (
                 <Pressable
                   key={group.id}
                   onPress={() => {
@@ -465,6 +500,15 @@ export default function GroupsTab() {
                   }}
                   style={styles.groupCircleTile}
                 >
+                  <Avatar label={group.name} shape="circle" size={66} uri={group.logo_url || group.image_url} />
+                  <Text numberOfLines={2} style={styles.groupCircleName}>{group.name}</Text>
+                </Pressable>
+              ))}
+            </View>
+            {myGroups.some((group) => group.group_type === 'tournament') ? <Text style={[styles.sectionEyebrow, styles.myGroupsHeading, styles.tournamentsHeading]}>My Tournaments</Text> : null}
+            <View style={styles.myGroupsGrid}>
+              {myGroups.filter((group) => group.group_type === 'tournament').map((group) => (
+                <Pressable key={group.id} onPress={() => { setShowMyGroupsMenu(false); router.push(`/group/${group.id}`) }} style={styles.groupCircleTile}>
                   <Avatar label={group.name} shape="circle" size={66} uri={group.logo_url || group.image_url} />
                   <Text numberOfLines={2} style={styles.groupCircleName}>{group.name}</Text>
                 </Pressable>
@@ -485,7 +529,8 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: 20,
-    padding: 20
+    padding: 20,
+    paddingBottom: 132
   },
   actions: {
     gap: 12
@@ -522,12 +567,8 @@ const styles = StyleSheet.create({
     right: 0
   },
   searchCard: {
-    backgroundColor: palette.card,
-    borderColor: palette.border,
-    borderRadius: 24,
-    borderWidth: 1,
     gap: 12,
-    padding: 14
+    paddingHorizontal: 2
   },
   imagePickerRow: {
     alignItems: 'center',
@@ -544,6 +585,11 @@ const styles = StyleSheet.create({
     height: 76,
     width: 76
   },
+  coverPreviewImage: {
+    borderRadius: 18,
+    height: 76,
+    width: 104
+  },
   previewFallback: {
     alignItems: 'center',
     backgroundColor: palette.bgElevated,
@@ -553,6 +599,16 @@ const styles = StyleSheet.create({
     height: 76,
     justifyContent: 'center',
     width: 76
+  },
+  coverPreviewFallback: {
+    alignItems: 'center',
+    backgroundColor: palette.bgElevated,
+    borderColor: palette.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    height: 76,
+    justifyContent: 'center',
+    width: 104
   },
   previewFallbackText: {
     color: palette.textMuted,
@@ -620,6 +676,9 @@ const styles = StyleSheet.create({
   },
   flexInput: {
     flex: 1
+  },
+  tournamentFields: {
+    gap: 10
   },
   visibilitySection: {
     gap: 8
@@ -689,6 +748,9 @@ const styles = StyleSheet.create({
     letterSpacing: 1.4,
     textTransform: 'uppercase'
   },
+  tournamentsHeading: {
+    marginTop: 14
+  },
   sectionTitle: {
     color: palette.text,
     fontSize: 22,
@@ -704,15 +766,14 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(103,232,249,0.12)',
     borderRadius: 24,
     borderWidth: 1,
-    gap: 14,
-    padding: 18,
+    padding: 13,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.12,
     shadowRadius: 18
   },
   feedCardTop: {
-    alignItems: 'flex-start',
+    alignItems: 'center',
     flexDirection: 'row',
     gap: 14
   },
@@ -728,7 +789,6 @@ const styles = StyleSheet.create({
   },
   feedCopy: {
     flex: 1,
-    gap: 6
   },
   feedMetaRow: {
     alignItems: 'center',
@@ -751,13 +811,9 @@ const styles = StyleSheet.create({
   },
   feedHeadline: {
     color: palette.text,
-    fontSize: 18,
+    flex: 1,
+    fontSize: 15,
     fontWeight: '800',
-    lineHeight: 23
-  },
-  feedDescription: {
-    color: palette.textMuted,
-    fontSize: 14,
     lineHeight: 20
   },
   card: {

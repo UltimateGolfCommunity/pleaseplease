@@ -10,8 +10,8 @@ import {
   Text,
   View
 } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { Avatar } from '@/components/Avatar'
-import { BrandHeader } from '@/components/BrandHeader'
 import { apiGet } from '@/lib/api'
 import { palette } from '@/lib/theme'
 import { useAuth } from '@/providers/AuthProvider'
@@ -39,14 +39,7 @@ type ConnectionsPayload = {
   connections: ConnectionRecord[]
 }
 
-type PublicUser = {
-  id: string
-  first_name?: string | null
-  last_name?: string | null
-  username?: string | null
-}
-
-function formatName(user?: UserCard | PublicUser | null) {
+function formatName(user?: UserCard | null) {
   return [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.username || 'UGC Golfer'
 }
 
@@ -56,7 +49,6 @@ export default function PublicUserConnectionsScreen() {
   const [busy, setBusy] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [connections, setConnections] = useState<ConnectionRecord[]>([])
-  const [profile, setProfile] = useState<PublicUser | null>(null)
 
   const connectedGolfers = useMemo(() => {
     if (!id) return []
@@ -70,12 +62,9 @@ export default function PublicUserConnectionsScreen() {
     if (!id) return
 
     try {
-      const [profileResponse, connectionsResponse] = await Promise.all([
-        apiGet<PublicUser>(`/api/users?id=${encodeURIComponent(id)}`),
-        apiGet<ConnectionsPayload>(`/api/users?action=connections&id=${encodeURIComponent(id)}`)
-      ])
-
-      setProfile(profileResponse)
+      const connectionsResponse = await apiGet<ConnectionsPayload>(
+        `/api/users?action=connections&id=${encodeURIComponent(id)}`
+      )
       setConnections(connectionsResponse.connections || [])
     } finally {
       setBusy(false)
@@ -109,11 +98,17 @@ export default function PublicUserConnectionsScreen() {
           />
         }
       >
-        <BrandHeader
-          title="Connections"
-          subtitle={`${formatName(profile)}'s golf network`}
-          showBack
-        />
+        <View style={styles.topBar}>
+          <Pressable
+            accessibilityLabel="Go back"
+            hitSlop={12}
+            onPress={() => router.back()}
+            style={styles.backButton}
+          >
+            <Ionicons color={palette.text} name="chevron-back" size={24} />
+          </Pressable>
+          <Text style={styles.pageTitle}>Connections</Text>
+        </View>
 
         <View style={styles.section}>
           {busy ? <ActivityIndicator color={palette.aqua} /> : null}
@@ -155,7 +150,26 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: 20,
-    padding: 20
+    paddingBottom: 20,
+    paddingHorizontal: 20
+  },
+  topBar: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    minHeight: 42
+  },
+  backButton: {
+    alignItems: 'center',
+    height: 42,
+    justifyContent: 'center',
+    width: 30
+  },
+  pageTitle: {
+    color: palette.text,
+    fontSize: 27,
+    fontWeight: '800',
+    letterSpacing: -0.5
   },
   section: {
     gap: 14

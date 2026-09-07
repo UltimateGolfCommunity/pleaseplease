@@ -547,9 +547,7 @@ export default function PublicUserScreen() {
             })}
           </View>
         ) : (
-          <View style={styles.card}>
-            <Text style={styles.sectionEyebrow}>About</Text>
-            <View style={styles.aboutProfilePanel}>
+          <View style={styles.aboutFeed}>
             {profile?.bio ? (
               <View style={styles.aboutBioCard}>
                 <Text style={styles.aboutBioEyebrow}>Member&apos;s Note</Text>
@@ -626,7 +624,6 @@ export default function PublicUserScreen() {
                 </View>
               )
             })}
-            </View>
             </View>
           </View>
         )}
@@ -860,13 +857,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22
   },
-  aboutProfilePanel: {
-    backgroundColor: '#28634d',
-    borderColor: 'rgba(216,189,118,0.24)',
-    borderRadius: 24,
-    borderWidth: 1,
+  aboutFeed: {
     gap: 12,
-    padding: 12
   },
   aboutSectionHeading: {
     alignItems: 'center',

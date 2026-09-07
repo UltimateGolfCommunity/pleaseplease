@@ -71,9 +71,14 @@ async function createGroupWithFallback(
     location,
     slogan,
     logo_url,
+    header_image_url,
     group_type,
     maxMembers,
     is_private,
+    tournament_date,
+    tournament_format,
+    tournament_type,
+    tournament_matchups,
     user_id
   }: {
     name: string
@@ -81,9 +86,14 @@ async function createGroupWithFallback(
     location?: string
     slogan?: string
     logo_url?: string | null
+    header_image_url?: string | null
     group_type?: string
     maxMembers?: number
     is_private?: boolean
+    tournament_date?: string | null
+    tournament_format?: string | null
+    tournament_type?: string | null
+    tournament_matchups?: string | null
     user_id: string
   }
 ) {
@@ -94,6 +104,24 @@ async function createGroupWithFallback(
       location: location || '',
       slogan: slogan || '',
       logo_url: logo_url || null,
+      header_image_url: header_image_url || null,
+      group_type: group_type || 'community',
+      max_members: maxMembers || 10,
+      is_private: Boolean(is_private),
+      tournament_date: tournament_date || null,
+      tournament_format: tournament_format || null,
+      tournament_type: tournament_type || null,
+      tournament_matchups: tournament_matchups || null,
+      creator_id: user_id,
+      status: 'active'
+    },
+    {
+      name,
+      description: description || '',
+      location: location || '',
+      slogan: slogan || '',
+      logo_url: logo_url || null,
+      header_image_url: header_image_url || null,
       group_type: group_type || 'community',
       max_members: maxMembers || 10,
       is_private: Boolean(is_private),
@@ -104,7 +132,7 @@ async function createGroupWithFallback(
       name,
       description: description || '',
       location: location || '',
-      logo_url: logo_url || null,
+      group_type: group_type || 'community',
       max_members: maxMembers || 10,
       creator_id: user_id,
       status: 'active'
@@ -112,19 +140,14 @@ async function createGroupWithFallback(
     {
       name,
       description: description || '',
-      max_members: maxMembers || 10,
-      creator_id: user_id,
-      status: 'active'
-    },
-    {
-      name,
-      description: description || '',
+      group_type: group_type || 'community',
       max_members: maxMembers || 10,
       creator_id: user_id
     },
     {
       name,
       description: description || '',
+      group_type: group_type || 'community',
       creator_id: user_id
     }
   ]
@@ -165,7 +188,11 @@ async function updateGroupWithFallback(
     logo_url,
     header_image_url,
     image_url,
-    is_private
+    is_private,
+    tournament_date,
+    tournament_format,
+    tournament_type,
+    tournament_matchups
   }: {
     name?: string
     description?: string
@@ -176,6 +203,10 @@ async function updateGroupWithFallback(
     header_image_url?: string | null
     image_url?: string | null
     is_private?: boolean
+    tournament_date?: string | null
+    tournament_format?: string | null
+    tournament_type?: string | null
+    tournament_matchups?: string | null
   }
 ) {
   const attempts = [
@@ -188,7 +219,11 @@ async function updateGroupWithFallback(
       logo_url,
       header_image_url,
       image_url,
-      is_private
+      is_private,
+      tournament_date,
+      tournament_format,
+      tournament_type,
+      tournament_matchups
     },
     {
       name,
@@ -363,6 +398,10 @@ export async function POST(request: NextRequest) {
       is_private,
       maxMembers,
       group_type,
+      tournament_date,
+      tournament_format,
+      tournament_type,
+      tournament_matchups,
       user_id: bodyUserId,
       invitees,
       group_id,
@@ -584,7 +623,11 @@ export async function POST(request: NextRequest) {
         logo_url,
         header_image_url,
         image_url,
-        is_private
+        is_private,
+        tournament_date,
+        tournament_format,
+        tournament_type,
+        tournament_matchups
       })
 
       if (updateError) {
@@ -720,8 +763,13 @@ export async function POST(request: NextRequest) {
         location,
         slogan,
         logo_url,
+        header_image_url,
         group_type,
         is_private,
+        tournament_date,
+        tournament_format,
+        tournament_type,
+        tournament_matchups,
         maxMembers,
         user_id
       })

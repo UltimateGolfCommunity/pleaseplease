@@ -13,17 +13,27 @@ type ComposeMode = 'menu' | 'photo' | 'tee-time' | 'score'
 type PrimaryRoute = '/home' | '/groups' | '/search' | '/profile'
 
 const primaryTabs = [
-  { key: 'home', label: 'Home', icon: 'home-outline' as const, activeIcon: 'home' as const, route: '/home' },
-  { key: 'groups', label: 'Groups', icon: 'people-outline' as const, activeIcon: 'people' as const, route: '/groups' },
-  { key: 'search', label: 'Search', icon: 'search-outline' as const, activeIcon: 'search' as const, route: '/search' },
-  { key: 'profile', label: 'Profile', icon: 'person-outline' as const, activeIcon: 'person' as const, route: '/profile' }
+  { key: 'home', icon: 'home-outline' as const, activeIcon: 'home' as const, route: '/home' },
+  { key: 'groups', icon: 'people-outline' as const, activeIcon: 'people' as const, route: '/groups' },
+  { key: 'search', icon: 'search-outline' as const, activeIcon: 'search' as const, route: '/search' },
+  { key: 'profile', icon: 'person-outline' as const, activeIcon: 'person' as const, route: '/profile' }
 ] as const satisfies readonly {
   key: string
-  label: string
   icon: keyof typeof Ionicons.glyphMap
   activeIcon: keyof typeof Ionicons.glyphMap
   route: PrimaryRoute
 }[]
+
+const golfBallDimples = [
+  { left: 25, top: 5 }, { left: 15, top: 9 }, { left: 35, top: 9 },
+  { left: 8, top: 16 }, { left: 19, top: 15 }, { left: 30, top: 15 }, { left: 42, top: 16 },
+  { left: 6, top: 22 }, { left: 15, top: 21 }, { left: 25, top: 21 }, { left: 35, top: 21 }, { left: 45, top: 22 },
+  { left: 13, top: 26 }, { left: 23, top: 25 }, { left: 33, top: 25 }, { left: 43, top: 27 },
+  { left: 9, top: 32 }, { left: 18, top: 32 }, { left: 28, top: 32 }, { left: 38, top: 33 }, { left: 48, top: 33 },
+  { left: 12, top: 38 }, { left: 22, top: 39 }, { left: 32, top: 39 }, { left: 42, top: 39 },
+  { left: 16, top: 45 }, { left: 26, top: 46 }, { left: 36, top: 46 },
+  { left: 23, top: 51 }, { left: 33, top: 51 }
+] as const
 
 function getActiveKey(pathname: string) {
   if (pathname.startsWith('/groups') || pathname.startsWith('/group')) return 'groups'
@@ -302,15 +312,15 @@ export function AppBottomBar() {
             const active = activeKey === tab.key
             return (
               <Pressable key={tab.key} onPress={() => router.push(tab.route)} style={styles.tabButton}>
-                <Ionicons color={active ? palette.aqua : palette.textMuted} name={active ? tab.activeIcon : tab.icon} size={24} />
-                <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{tab.label}</Text>
+                <Ionicons color={active ? palette.aqua : palette.textMuted} name={active ? tab.activeIcon : tab.icon} size={36} />
               </Pressable>
             )
           })}
 
           <Pressable onPress={() => setShowCreateWheel(true)} style={styles.composeTabButton}>
             <View style={styles.composeButton}>
-              <Ionicons color="#123826" name="add" size={28} />
+              {golfBallDimples.map((dimple, index) => <View key={index} pointerEvents="none" style={[styles.ballDimple, dimple]} />)}
+              <Ionicons color="#143f28" name="add" size={28} />
             </View>
           </Pressable>
 
@@ -318,8 +328,7 @@ export function AppBottomBar() {
             const active = activeKey === tab.key
             return (
               <Pressable key={tab.key} onPress={() => router.push(tab.route)} style={styles.tabButton}>
-                <Ionicons color={active ? palette.aqua : palette.textMuted} name={active ? tab.activeIcon : tab.icon} size={24} />
-                <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{tab.label}</Text>
+                <Ionicons color={active ? palette.aqua : palette.textMuted} name={active ? tab.activeIcon : tab.icon} size={36} />
               </Pressable>
             )
           })}
@@ -596,17 +605,7 @@ const styles = StyleSheet.create({
   tabButton: {
     alignItems: 'center',
     flex: 1,
-    gap: 4,
-    paddingVertical: 2
-  },
-  tabLabel: {
-    color: 'rgba(255,255,244,0.82)',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.3
-  },
-  tabLabelActive: {
-    color: '#f8edbf'
+    justifyContent: 'center'
   },
   composeTabButton: {
     alignItems: 'center',
@@ -616,15 +615,25 @@ const styles = StyleSheet.create({
   },
   composeButton: {
     alignItems: 'center',
-    backgroundColor: '#f4e7bc',
+    backgroundColor: '#fffef7',
+    borderColor: '#315065',
     borderRadius: 999,
+    borderWidth: 3,
     height: 58,
     justifyContent: 'center',
-    shadowColor: '#000000',
+    shadowColor: '#0a2e1a',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.22,
-    shadowRadius: 16,
+    shadowOpacity: 0.34,
+    shadowRadius: 14,
+    transform: [{ scale: 1.12 }],
     width: 58
+  },
+  ballDimple: {
+    backgroundColor: 'rgba(76,93,102,0.16)',
+    borderRadius: 999,
+    height: 4,
+    position: 'absolute',
+    width: 7
   },
   modalBackdrop: {
     backgroundColor: 'rgba(3,10,8,0.56)',
