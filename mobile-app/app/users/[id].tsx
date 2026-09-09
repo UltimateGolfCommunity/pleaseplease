@@ -515,9 +515,7 @@ export default function PublicUserScreen() {
         </View>
 
         {activeTab === 'activity' ? (
-          <View style={styles.card}>
-            <Text style={styles.sectionEyebrow}>Activity</Text>
-            <Text style={styles.sectionTitle}>{displayName.split(' ')[0]}&apos;s recent activity</Text>
+          <View style={styles.activityFeed}>
             {busy ? <ActivityIndicator color={palette.aqua} /> : null}
             {!busy && activities.length === 0 ? (
               <Text style={styles.helper}>
@@ -677,6 +675,9 @@ export default function PublicUserScreen() {
 }
 
 const styles = StyleSheet.create({
+  activityFeed: {
+    gap: 12
+  },
   groupPickerBackdrop: {
     backgroundColor: 'rgba(3,10,8,0.72)',
     flex: 1,
