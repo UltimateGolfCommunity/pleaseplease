@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -286,6 +287,9 @@ export default function PublicUserScreen() {
   const [status, setStatus] = useState<ConnectionStatusResponse['status']>('none')
   const [connections, setConnections] = useState<ConnectionRecord[]>([])
   const [memberGroups, setMemberGroups] = useState<MemberGroup[]>([])
+  const [myGroups, setMyGroups] = useState<MemberGroup[]>([])
+  const [showGroupPicker, setShowGroupPicker] = useState(false)
+  const [invitingGroupId, setInvitingGroupId] = useState<string | null>(null)
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [rounds, setRounds] = useState<RoundRecord[]>([])
   const [activeTab, setActiveTab] = useState<'activity' | 'about'>('activity')
@@ -314,7 +318,7 @@ export default function PublicUserScreen() {
     if (!id) return
 
     try {
-      const [profileResponse, statusResponse, ratingResponse, connectionsResponse, activityResponse, roundsResponse, groupsResponse] = await Promise.all([
+      const [profileResponse, statusResponse, ratingResponse, connectionsResponse, activityResponse, roundsResponse, groupsResponse, myGroupsResponse] = await Promise.all([
         apiGet<PublicUser>(`/api/users?id=${encodeURIComponent(id)}`),
         user?.id
           ? apiGet<ConnectionStatusResponse>(
@@ -342,7 +346,8 @@ export default function PublicUserScreen() {
         apiGet<{ success: boolean; groups: MemberGroup[] }>(`/api/groups?user_id=${encodeURIComponent(id)}`).catch(() => ({
           success: true,
           groups: []
-        }))
+        })),
+        user?.id ? apiGet<{ success: boolean; groups: MemberGroup[] }>(`/api/groups?user_id=${encodeURIComponent(user.id)}`).catch(() => ({ success: true, groups: [] })) : Promise.resolve({ success: true, groups: [] as MemberGroup[] })
       ])
 
       setProfile(profileResponse)
@@ -352,11 +357,26 @@ export default function PublicUserScreen() {
       setActivities(activityResponse.activities || [])
       setRounds(roundsResponse.rounds || [])
       setMemberGroups(groupsResponse.groups || [])
+      setMyGroups(myGroupsResponse.groups || [])
     } finally {
       setBusy(false)
       setRefreshing(false)
     }
   }, [id, user?.id])
+
+  const handleInviteToGroup = async (group: MemberGroup) => {
+    if (!user?.id || !profile?.id) return
+    setInvitingGroupId(group.id)
+    try {
+      await apiPost('/api/groups/invitations', { action: 'create', group_id: group.id, invited_user_id: profile.id, user_id: user.id })
+      Alert.alert('Invitation sent', `${displayName.split(' ')[0]} can accept the invitation from Notifications.`)
+      setShowGroupPicker(false)
+    } catch (error) {
+      Alert.alert('Unable to invite golfer', error instanceof Error ? error.message : 'Please try again.')
+    } finally {
+      setInvitingGroupId(null)
+    }
+  }
 
   useEffect(() => {
     if (id) {
@@ -438,7 +458,7 @@ export default function PublicUserScreen() {
               </Pressable>
               <Pressable
                 accessibilityLabel="Add to group"
-                onPress={() => router.push('/groups')}
+                onPress={() => myGroups.length ? setShowGroupPicker(true) : Alert.alert('No groups yet', 'Join or create a group first, then invite golfers from their profile.')}
                 style={styles.coverActionButton}
               >
                 <Ionicons color="#fffaf0" name="people-outline" size={20} />
@@ -638,11 +658,48 @@ export default function PublicUserScreen() {
           </View>
         )}
       </ScrollView>
+      <Modal animationType="slide" transparent visible={showGroupPicker} onRequestClose={() => setShowGroupPicker(false)}>
+        <Pressable style={styles.groupPickerBackdrop} onPress={() => setShowGroupPicker(false)}>
+          <Pressable style={styles.groupPickerCard} onPress={() => {}}>
+            <Text style={styles.groupPickerTitle}>Add {displayName.split(' ')[0]} to a group</Text>
+            <Text style={styles.groupPickerSubtitle}>Choose one of your groups. They will receive an invitation to accept.</Text>
+            {myGroups.map((group) => <Pressable key={group.id} disabled={invitingGroupId === group.id} onPress={() => void handleInviteToGroup(group)} style={styles.groupPickerItem}>
+              <Avatar label={group.name} size={42} uri={group.logo_url || group.image_url} />
+              <Text numberOfLines={1} style={styles.groupPickerName}>{group.name}</Text>
+              <Text style={styles.groupPickerInvite}>{invitingGroupId === group.id ? 'Sending…' : 'Invite'}</Text>
+            </Pressable>)}
+            <Pressable onPress={() => setShowGroupPicker(false)} style={styles.groupPickerCancel}><Text style={styles.groupPickerCancelText}>Cancel</Text></Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
+  groupPickerBackdrop: {
+    backgroundColor: 'rgba(3,10,8,0.72)',
+    flex: 1,
+    justifyContent: 'flex-end',
+    padding: 18
+  },
+  groupPickerCard: {
+    backgroundColor: palette.card,
+    borderColor: palette.border,
+    borderRadius: 28,
+    borderWidth: 1,
+    gap: 12,
+    padding: 20
+  },
+  groupPickerTitle: { color: palette.text, fontSize: 20, fontWeight: '800' },
+  groupPickerSubtitle: { color: palette.textMuted, fontSize: 14, lineHeight: 20 },
+  groupPickerItem: {
+    alignItems: 'center', backgroundColor: palette.cardSoft, borderColor: palette.border, borderRadius: 16, borderWidth: 1, flexDirection: 'row', gap: 10, padding: 10
+  },
+  groupPickerName: { color: palette.text, flex: 1, fontSize: 15, fontWeight: '700' },
+  groupPickerInvite: { color: palette.aqua, fontSize: 13, fontWeight: '800' },
+  groupPickerCancel: { alignItems: 'center', paddingVertical: 8 },
+  groupPickerCancelText: { color: palette.textMuted, fontSize: 14, fontWeight: '700' },
   safeArea: {
     backgroundColor: palette.bg,
     flex: 1

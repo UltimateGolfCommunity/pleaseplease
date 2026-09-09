@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { createAdminClient } from '@/lib/supabase-admin'
+import { createNotificationAndDeliverPush } from '@/lib/notifications'
 
 export async function GET(request: NextRequest) {
   try {
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
       // Verify user is the group creator or a member
       const { data: group, error: groupError } = await supabase
         .from('golf_groups')
-        .select('creator_id')
+        .select('creator_id, name')
         .eq('id', group_id)
         .single()
 
@@ -202,6 +203,24 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         )
       }
+
+      const { data: inviter } = await supabase
+        .from('user_profiles')
+        .select('first_name, last_name, username')
+        .eq('id', user_id)
+        .maybeSingle()
+      const inviterName = [inviter?.first_name, inviter?.last_name].filter(Boolean).join(' ') || inviter?.username || 'A golfer'
+
+      // The invitation remains the source of truth for accepting, while this
+      // creates the in-app/push notification that brings the recipient there.
+      await createNotificationAndDeliverPush(supabase, {
+        userId: invited_user_id,
+        type: 'group_invitation',
+        title: `Invitation to ${group.name || 'a group'}`,
+        message: `${inviterName} invited you to join ${group.name || 'their golf group'}.`,
+        relatedId: group_id,
+        notificationData: { invitation_id: invitation.id, group_id }
+      }).catch((notificationError) => console.warn('Unable to deliver group invitation notification:', notificationError))
 
       return NextResponse.json({ 
         success: true, 

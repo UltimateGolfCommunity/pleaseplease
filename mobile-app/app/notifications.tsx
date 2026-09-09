@@ -51,6 +51,12 @@ type PendingApplicationsPayload = {
   applications: PendingApplication[]
 }
 
+type GroupInvitation = {
+  id: string
+  group?: { id?: string; name?: string | null; logo_url?: string | null; image_url?: string | null } | null
+  inviter?: { first_name?: string | null; last_name?: string | null; username?: string | null } | null
+}
+
 function formatTimeAgo(timestamp?: string) {
   if (!timestamp) return 'Now'
 
@@ -94,25 +100,40 @@ export default function NotificationsScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const [notifications, setNotifications] = useState<NotificationRecord[]>([])
   const [pendingApplications, setPendingApplications] = useState<PendingApplication[]>([])
+  const [groupInvitations, setGroupInvitations] = useState<GroupInvitation[]>([])
   const [reviewingApplicationId, setReviewingApplicationId] = useState<string | null>(null)
+  const [reviewingInvitationId, setReviewingInvitationId] = useState<string | null>(null)
 
   const loadNotifications = useCallback(async () => {
     if (!user?.id) return
 
     try {
-      const [response, pendingResponse] = await Promise.all([
+      const [response, pendingResponse, invitationsResponse] = await Promise.all([
         apiGet<NotificationsPayload>(`/api/notifications?user_id=${encodeURIComponent(user.id)}`),
         apiGet<PendingApplicationsPayload>(
           `/api/tee-times?action=get-pending-applications&user_id=${encodeURIComponent(user.id)}`
-        ).catch(() => ({ applications: [] }))
+        ).catch(() => ({ applications: [] })),
+        apiGet<{ success: boolean; invitations: GroupInvitation[] }>(`/api/groups/invitations?user_id=${encodeURIComponent(user.id)}`).catch(() => ({ success: true, invitations: [] }))
       ])
       setNotifications(response.notifications || [])
       setPendingApplications(pendingResponse.applications || [])
+      setGroupInvitations(invitationsResponse.invitations || [])
     } finally {
       setBusy(false)
       setRefreshing(false)
     }
   }, [user?.id])
+
+  const handleGroupInvitation = async (invitationId: string, action: 'accept' | 'decline') => {
+    if (!user?.id) return
+    setReviewingInvitationId(invitationId)
+    try {
+      await apiPost('/api/groups/invitations', { action, invitation_id: invitationId, user_id: user.id })
+      await loadNotifications()
+    } finally {
+      setReviewingInvitationId(null)
+    }
+  }
 
   useEffect(() => {
     if (user?.id) {
@@ -189,6 +210,20 @@ export default function NotificationsScreen() {
           />
         }
       >
+        {groupInvitations.length ? <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Group invitations</Text><View style={styles.countPill}><Text style={styles.countPillText}>{groupInvitations.length}</Text></View></View>
+          {groupInvitations.map((invitation) => {
+            const inviterName = [invitation.inviter?.first_name, invitation.inviter?.last_name].filter(Boolean).join(' ') || invitation.inviter?.username || 'A golfer'
+            return <View key={invitation.id} style={styles.card}>
+              <Text style={styles.title}>Join {invitation.group?.name || 'a golf group'}</Text>
+              <Text style={styles.message}>{inviterName} invited you to join their community.</Text>
+              <View style={styles.actionRow}>
+                <Pressable onPress={() => void handleGroupInvitation(invitation.id, 'accept')} style={[styles.actionButton, styles.actionButtonPrimary]}><Text style={styles.actionButtonPrimaryText}>{reviewingInvitationId === invitation.id ? 'Working…' : 'Accept'}</Text></Pressable>
+                <Pressable onPress={() => void handleGroupInvitation(invitation.id, 'decline')} style={styles.actionButton}><Text style={styles.actionButtonText}>{reviewingInvitationId === invitation.id ? 'Working…' : 'Decline'}</Text></Pressable>
+              </View>
+            </View>
+          })}
+        </View> : null}
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Pending requests</Text>
