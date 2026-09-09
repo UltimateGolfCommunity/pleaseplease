@@ -458,6 +458,18 @@ export default function PublicUserScreen() {
             <View style={styles.coverOverlay} />
             <View style={styles.coverActions}>
               <Pressable
+                accessibilityLabel={status === 'connected' ? 'Connected' : 'Add connection'}
+                disabled={connecting || status === 'connected' || status === 'pending' || status === 'incoming_pending'}
+                onPress={handleConnect}
+                style={[styles.coverActionButton, styles.connectionCoverButton, status === 'connected' && styles.connectionCoverButtonActive]}
+              >
+                <Ionicons
+                  color={status === 'connected' ? '#e8c45b' : '#fffaf0'}
+                  name={status === 'connected' ? 'checkmark-circle' : status === 'pending' || status === 'incoming_pending' ? 'time-outline' : 'person-add-outline'}
+                  size={21}
+                />
+              </Pressable>
+              <Pressable
                 accessibilityLabel="Add to group"
                 onPress={() => myGroups.length ? setShowGroupPicker(true) : Alert.alert('No groups yet', 'Join or create a group first, then invite golfers from their profile.')}
                 style={styles.coverActionButton}
