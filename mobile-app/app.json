@@ -3,7 +3,7 @@
     "name": "Ultimate Golf Community",
     "slug": "ultimate-golf-community",
     "scheme": "ugcapp",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "icon": "./assets/ugc-app-icon.png",

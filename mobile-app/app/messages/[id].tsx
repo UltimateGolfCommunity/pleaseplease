@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Redirect, useLocalSearchParams } from 'expo-router'
+import { Redirect, router, useLocalSearchParams } from 'expo-router'
+import Ionicons from '@expo/vector-icons/Ionicons'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   ActivityIndicator,
@@ -15,7 +16,6 @@ import {
   View
 } from 'react-native'
 import { Avatar } from '@/components/Avatar'
-import { BrandHeader } from '@/components/BrandHeader'
 import { PrimaryButton } from '@/components/PrimaryButton'
 import { apiGet, apiPost } from '@/lib/api'
 import { palette } from '@/lib/theme'
@@ -146,18 +146,15 @@ export default function ConversationScreen() {
             />
           }
         >
-        <BrandHeader
-          title={formatName(otherUser)}
-          showBack
-        />
-
-        <View style={styles.headerCard}>
-          <Avatar label={formatName(otherUser)} size={68} uri={otherUser?.avatar_url} />
-            <View style={styles.headerCopy}>
-              <Text style={styles.headerName}>{formatName(otherUser)}</Text>
-              <Text style={styles.headerMeta}>Conversation</Text>
-            </View>
+        <View style={styles.conversationHeader}>
+          <Pressable accessibilityLabel="Back" hitSlop={10} onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons color={palette.text} name="chevron-back" size={23} />
+          </Pressable>
+          <View style={styles.headerIdentity}>
+            <Avatar label={formatName(otherUser)} size={46} uri={otherUser?.avatar_url} />
+            <Text numberOfLines={1} style={styles.headerName}>{formatName(otherUser)}</Text>
           </View>
+        </View>
 
           {busy ? <ActivityIndicator color={palette.aqua} /> : null}
 
@@ -226,28 +223,35 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 24
   },
-  headerCard: {
+  conversationHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    minHeight: 52,
+    position: 'relative'
+  },
+  backButton: {
     alignItems: 'center',
     backgroundColor: palette.card,
     borderColor: palette.border,
-    borderRadius: 24,
+    borderRadius: 999,
     borderWidth: 1,
-    flexDirection: 'row',
-    gap: 14,
-    padding: 18
+    height: 42,
+    justifyContent: 'center',
+    left: 0,
+    position: 'absolute',
+    width: 42
   },
-  headerCopy: {
-    flex: 1,
-    gap: 4
+  headerIdentity: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    maxWidth: '72%'
   },
   headerName: {
     color: palette.text,
     fontSize: 18,
     fontWeight: '700'
-  },
-  headerMeta: {
-    color: palette.textMuted,
-    fontSize: 14
   },
   emptyCard: {
     backgroundColor: palette.card,
