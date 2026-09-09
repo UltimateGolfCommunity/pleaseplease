@@ -111,7 +111,7 @@ function getGroupActivityDetail(item: GroupActivity) {
     case 'group_cover_updated': return 'The clubhouse view has been refreshed.'
     case 'group_details_updated': return 'Club information has been updated.'
     case 'group_created': return 'A new place for golfers to connect.'
-    default: return 'Group activity'
+    default: return null
   }
 }
 
@@ -485,7 +485,7 @@ export default function GroupsTab() {
                     <Text style={styles.feedHeadline}>{getGroupActivityTitle(item)}</Text>
                     <Text style={styles.feedTime}>{formatRelativeTime(item.created_at)}</Text>
                   </View>
-                  <Text numberOfLines={1} style={styles.feedDetail}>{getGroupActivityDetail(item)}</Text>
+                  {getGroupActivityDetail(item) ? <Text numberOfLines={1} style={styles.feedDetail}>{getGroupActivityDetail(item)}</Text> : null}
                   <View style={styles.feedGroupBadge}>
                     {item.group?.logo_url || item.group?.image_url ? <Avatar label={item.group?.name || 'Group'} shape="circle" size={18} uri={item.group.logo_url || item.group.image_url} /> : <Ionicons color={palette.aqua} name="people-outline" size={14} />}
                     <Text numberOfLines={1} style={styles.feedGroupName}>{item.group?.name || 'Golf community'}</Text>
