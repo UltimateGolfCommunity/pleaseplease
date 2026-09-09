@@ -211,6 +211,19 @@ function formatActivityLabel(activity: ActivityItem) {
   }
 }
 
+function getSpecificActivityLabel(activity: ActivityItem, actorName: string, relatedName?: string | null) {
+  const groupName = typeof activity.metadata?.group_name === 'string' ? activity.metadata.group_name : null
+  switch (activity.activity_type) {
+    case 'connection_added': return relatedName ? `${actorName} added ${relatedName} as a connection` : `${actorName} added a new connection`
+    case 'group_joined': return `${actorName} joined ${groupName || 'a group'}`
+    case 'group_created': return `${actorName} created ${groupName || 'a group'}`
+    case 'group_logo_updated': return `${actorName} updated ${groupName || 'a group'} logo`
+    case 'group_cover_updated': return `${actorName} updated ${groupName || 'a group'} cover photo`
+    case 'group_details_updated': return `${actorName} updated ${groupName || 'a group'} details`
+    default: return `${actorName} ${formatActivityLabel(activity).replace(/^./, (letter) => letter.toLowerCase())}`
+  }
+}
+
 function getActivityIcon(activityType: string): keyof typeof Ionicons.glyphMap {
   switch (activityType) {
     case 'tee_time_created': case 'tee_time_updated': case 'tee_time_joined': return 'golf-outline'
@@ -555,8 +568,7 @@ export default function PublicUserScreen() {
                     <View style={styles.activityEventIcon}><Ionicons color={palette.bg} name={getActivityIcon(activity.activity_type)} size={13} /></View>
                   </View>
                   <View style={styles.activityCopy}>
-                    <View style={styles.activityTitleRow}><Text numberOfLines={1} style={styles.activityTitle}>{displayName.split(' ')[0]} • {formatActivityLabel(activity)}</Text><Text style={styles.activityTime}>{formatRelativeTime(activity.created_at)}</Text></View>
-                    {activity.description ? <Text style={styles.activityDescription}>{activity.description}</Text> : null}
+                    <View style={styles.activityTitleRow}><Text numberOfLines={2} style={styles.activityTitle}>{getSpecificActivityLabel(activity, displayName.split(' ')[0], ([...connections.flatMap((connection) => [connection.requester, connection.recipient])].find((candidate) => candidate?.id === activity.related_id) as UserCard | undefined)?.first_name || ([...connections.flatMap((connection) => [connection.requester, connection.recipient])].find((candidate) => candidate?.id === activity.related_id) as UserCard | undefined)?.username)}</Text><Text style={styles.activityTime}>{formatRelativeTime(activity.created_at)}</Text></View>
                   </View>
                 </View>
               )
