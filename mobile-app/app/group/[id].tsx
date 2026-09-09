@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Redirect, router, useLocalSearchParams } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
+import * as Sharing from 'expo-sharing'
 import Ionicons from '@expo/vector-icons/Ionicons'
+import ViewShot from 'react-native-view-shot'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   ActivityIndicator,
@@ -194,6 +196,7 @@ export default function GroupScreen() {
   const [pendingInviteUserIds, setPendingInviteUserIds] = useState<Set<string>>(new Set())
   const [isEditing, setIsEditing] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
+  const qrCardRef = useRef<ViewShot>(null)
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [group, setGroup] = useState<GroupDetail | null>(null)
   const [members, setMembers] = useState<Member[]>([])
@@ -365,6 +368,19 @@ export default function GroupScreen() {
   const groupQrUrl = groupLink
     ? `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(groupLink)}`
     : ''
+  const handleShareQrCard = async () => {
+    try {
+      const uri = await qrCardRef.current?.capture?.()
+      if (!uri) throw new Error('The group card is not ready yet.')
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { mimeType: 'image/png', UTI: 'public.png', dialogTitle: `Share ${groupTypeLabel} card` })
+      } else {
+        await Share.share({ message: groupLink, url: groupLink })
+      }
+    } catch (error) {
+      Alert.alert('Unable to share card', error instanceof Error ? error.message : 'Please try again.')
+    }
+  }
   const isOwner =
     group?.creator_id === user?.id ||
     ['admin', 'owner', 'creator'].includes((myMembership?.role || '').toLowerCase())
@@ -1470,6 +1486,7 @@ export default function GroupScreen() {
       >
         <Pressable style={styles.modalBackdrop} onPress={() => setShowShareModal(false)}>
           <Pressable style={[styles.modalCard, styles.groupShareModalCard]} onPress={() => {}}>
+            <ViewShot ref={qrCardRef} options={{ format: 'png', quality: 1, result: 'tmpfile' }}>
             <View style={styles.groupQrBusinessCard}>
               {group?.header_image_url || group?.image_url ? (
                 <Image source={{ uri: group?.header_image_url || group?.image_url || '' }} style={styles.groupQrBusinessCardImage} />
@@ -1506,7 +1523,8 @@ export default function GroupScreen() {
                 <Text style={styles.qrScanLabel}>Scan to join this group</Text>
               </View>
             </View>
-            <Pressable onPress={() => void Share.share({ message: groupLink, url: groupLink })} style={styles.groupShareButton}>
+            </ViewShot>
+            <Pressable onPress={() => void handleShareQrCard()} style={styles.groupShareButton}>
               <Ionicons color={palette.bg} name="share-social-outline" size={18} />
               <Text style={styles.groupShareButtonText}>Share Group</Text>
             </Pressable>

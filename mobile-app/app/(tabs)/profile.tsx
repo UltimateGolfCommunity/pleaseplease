@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Redirect, router, useFocusEffect } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
+import * as Sharing from 'expo-sharing'
 import Ionicons from '@expo/vector-icons/Ionicons'
+import ViewShot from 'react-native-view-shot'
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
@@ -352,6 +354,7 @@ export default function ProfileTab() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
+  const qrCardRef = useRef<ViewShot>(null)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showBagModal, setShowBagModal] = useState(false)
   const [savingBag, setSavingBag] = useState(false)
@@ -391,6 +394,20 @@ export default function ProfileTab() {
   const shareQrUrl = shareLink
     ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(shareLink)}`
     : ''
+
+  const handleShareQrCard = async () => {
+    try {
+      const uri = await qrCardRef.current?.capture?.()
+      if (!uri) throw new Error('The profile card is not ready yet.')
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { mimeType: 'image/png', UTI: 'public.png', dialogTitle: 'Share member card' })
+      } else {
+        await Share.share({ message: shareLink, url: shareLink })
+      }
+    } catch (error) {
+      Alert.alert('Unable to share card', error instanceof Error ? error.message : 'Please try again.')
+    }
+  }
   const displayName = useMemo(() => {
     return (
       profile?.full_name ||
@@ -1243,6 +1260,7 @@ export default function ProfileTab() {
         >
           <Pressable style={styles.modalBackdrop} onPress={() => setShowShareModal(false)}>
             <Pressable style={[styles.modalCard, styles.shareModalCard]} onPress={() => {}}>
+              <ViewShot ref={qrCardRef} options={{ format: 'png', quality: 1, result: 'tmpfile' }}>
               <View style={styles.qrBusinessCard}>
                 {profile?.header_image_url ? (
                   <Image source={{ uri: profile.header_image_url }} style={styles.qrBusinessCardImage} />
@@ -1300,9 +1318,10 @@ export default function ProfileTab() {
                   <Text style={styles.qrScanLabel}>Scan to view profile</Text>
                 </View>
               </View>
+              </ViewShot>
               <View style={styles.shareActionRow}>
                 <Pressable
-                  onPress={() => Share.share({ message: shareLink, url: shareLink })}
+                  onPress={() => void handleShareQrCard()}
                   style={[styles.shareActionButton, styles.shareActionButtonPrimary]}
                 >
                   <Ionicons color={palette.bg} name="share-social-outline" size={18} />
