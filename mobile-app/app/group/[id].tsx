@@ -142,6 +142,8 @@ type TournamentSetup = {
   matchups: TournamentMatchup[]
   teams: TournamentTeam[]
   manualParticipants: ManualTournamentParticipant[]
+  closestToPin?: boolean
+  longestDrive?: boolean
 }
 
 function parseTournamentMatchups(value?: string | null): TournamentMatchup[] {
@@ -149,7 +151,7 @@ function parseTournamentMatchups(value?: string | null): TournamentMatchup[] {
 }
 
 function parseTournamentSetup(value?: string | null): TournamentSetup {
-  const empty = { matchups: [], teams: [], manualParticipants: [] } as TournamentSetup
+  const empty = { matchups: [], teams: [], manualParticipants: [], closestToPin: false, longestDrive: false } as TournamentSetup
   if (!value) return empty
   try {
     const parsed = JSON.parse(value)
@@ -157,7 +159,9 @@ function parseTournamentSetup(value?: string | null): TournamentSetup {
     return {
       matchups: Array.isArray(parsed?.matchups) ? parsed.matchups.filter((matchup: TournamentMatchup) => matchup?.leftUserId && matchup?.rightUserId) : [],
       teams: Array.isArray(parsed?.teams) ? parsed.teams.filter((team: TournamentTeam) => team?.id) : [],
-      manualParticipants: Array.isArray(parsed?.manualParticipants) ? parsed.manualParticipants.filter((participant: ManualTournamentParticipant) => participant?.id && participant?.name) : []
+      manualParticipants: Array.isArray(parsed?.manualParticipants) ? parsed.manualParticipants.filter((participant: ManualTournamentParticipant) => participant?.id && participant?.name) : [],
+      closestToPin: Boolean(parsed?.closestToPin),
+      longestDrive: Boolean(parsed?.longestDrive)
     }
   } catch {
     return empty
@@ -215,6 +219,8 @@ export default function GroupScreen() {
   const [manualParticipantName, setManualParticipantName] = useState('')
   const [manualParticipantHandicap, setManualParticipantHandicap] = useState('')
   const [manualParticipantPhotoUrl, setManualParticipantPhotoUrl] = useState<string | null>(null)
+  const [closestToPin, setClosestToPin] = useState(false)
+  const [longestDrive, setLongestDrive] = useState(false)
   const [draft, setDraft] = useState('')
   const [composerOpen, setComposerOpen] = useState(false)
   const [activeSection, setActiveSection] = useState<'board' | 'members' | 'info' | 'scores'>('board')
@@ -331,6 +337,8 @@ export default function GroupScreen() {
     setManualParticipantName('')
     setManualParticipantHandicap('')
     setManualParticipantPhotoUrl(null)
+    setClosestToPin(Boolean(setup.closestToPin))
+    setLongestDrive(Boolean(setup.longestDrive))
     setTeams(setup.teams.length ? setup.teams : [
       { id: 'team-a', name: 'Team One', logoUrl: null, memberIds: [] },
       { id: 'team-b', name: 'Team Two', logoUrl: null, memberIds: [] }
@@ -383,6 +391,25 @@ export default function GroupScreen() {
         return left.name.localeCompare(right.name)
       })
   }, [members, tournamentScores])
+  const teamScoreboard = useMemo(() => teams.slice(0, 2).map((team) => ({
+    ...team,
+    points: matchups.reduce((total, matchup) => {
+      const hasResult = matchup.leftScore !== null && matchup.leftScore !== undefined && matchup.rightScore !== null && matchup.rightScore !== undefined && matchup.leftScore !== matchup.rightScore
+      const leftWins = matchup.format === 'Stroke Play'
+        ? (matchup.leftScore || 0) < (matchup.rightScore || 0)
+        : (matchup.leftScore || 0) > (matchup.rightScore || 0)
+      const winnerId = hasResult ? (leftWins ? matchup.leftUserId : matchup.rightUserId) : null
+      return total + (winnerId && team.memberIds.includes(winnerId) ? 1 : 0)
+    }, 0)
+  })), [matchups, teams])
+  const matchupsByDay = useMemo(() => {
+    const grouped = new Map<string, TournamentMatchup[]>()
+    matchups.forEach((matchup) => {
+      const key = matchup.day || group?.tournament_date || 'Unscheduled'
+      grouped.set(key, [...(grouped.get(key) || []), matchup])
+    })
+    return Array.from(grouped.entries())
+  }, [group?.tournament_date, matchups])
   const acceptedConnections = connections
     .map((connection) =>
       connection.requester_id === user?.id ? connection.recipient : connection.requester
@@ -507,7 +534,7 @@ export default function GroupScreen() {
         tournament_end_date: group.tournament_end_date || null,
         tournament_format: group.tournament_format || 'Match Play',
         tournament_type: group.tournament_type || null,
-        tournament_matchups: JSON.stringify({ matchups: nextMatchups, teams, manualParticipants })
+        tournament_matchups: JSON.stringify({ matchups: nextMatchups, teams, manualParticipants, closestToPin, longestDrive })
       })
       if (response.group) setGroup((current) => current ? { ...current, ...response.group } : current)
       await loadGroup()
@@ -709,8 +736,8 @@ export default function GroupScreen() {
         tournament_end_date: editForm.tournament_end_date.trim() || null,
         tournament_format: editForm.tournament_format.trim() || null,
         tournament_type: editForm.tournament_type.trim() || null,
-        tournament_matchups: matchups.length || manualParticipants.length || teams.some((team) => team.memberIds.length || team.logoUrl || team.name.trim())
-          ? JSON.stringify({ matchups, teams, manualParticipants })
+        tournament_matchups: matchups.length || manualParticipants.length || teams.some((team) => team.memberIds.length || team.logoUrl || team.name.trim()) || closestToPin || longestDrive
+          ? JSON.stringify({ matchups, teams, manualParticipants, closestToPin, longestDrive })
           : null
       })
 
@@ -1064,6 +1091,20 @@ export default function GroupScreen() {
                         ))}
                       </View>
                     ) : null}
+                    <View style={styles.tournamentContestsEditor}>
+                      <Text style={styles.infoLabel}>Tournament contests</Text>
+                      <Text style={styles.matchupHint}>Choose the side contests available to players.</Text>
+                      <View style={styles.contestChoices}>
+                        <Pressable onPress={() => setClosestToPin((current) => !current)} style={[styles.contestChoice, closestToPin && styles.contestChoiceActive]}>
+                          <Ionicons color={closestToPin ? '#d7b768' : palette.textMuted} name="flag-outline" size={18} />
+                          <Text style={[styles.contestChoiceText, closestToPin && styles.contestChoiceTextActive]}>Closest to pin</Text>
+                        </Pressable>
+                        <Pressable onPress={() => setLongestDrive((current) => !current)} style={[styles.contestChoice, longestDrive && styles.contestChoiceActive]}>
+                          <Ionicons color={longestDrive ? '#d7b768' : palette.textMuted} name="golf-outline" size={18} />
+                          <Text style={[styles.contestChoiceText, longestDrive && styles.contestChoiceTextActive]}>Longest drive</Text>
+                        </Pressable>
+                      </View>
+                    </View>
                     {editForm.tournament_format === 'Stroke Play' ? (
                       <View style={styles.matchupBuilder}>
                         <Text style={styles.infoLabel}>Add a golfer manually</Text>
@@ -1179,6 +1220,11 @@ export default function GroupScreen() {
                 <View style={styles.tournamentInfoRow}><Text style={styles.infoLabel}>Dates</Text><Text style={styles.tournamentInfoValue}>{group?.tournament_date ? `${new Date(`${group.tournament_date}T12:00:00`).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}${group?.tournament_end_date && group.tournament_end_date !== group.tournament_date ? ` – ${new Date(`${group.tournament_end_date}T12:00:00`).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}` : `, ${new Date(`${group.tournament_date}T12:00:00`).getFullYear()}`}` : 'To be announced'}</Text></View>
                 <View style={styles.tournamentInfoRow}><Text style={styles.infoLabel}>Format</Text><Text style={styles.tournamentInfoValue}>{group?.tournament_format || 'Stroke Play'}</Text></View>
                 {group?.tournament_type ? <View style={styles.tournamentInfoRow}><Text style={styles.infoLabel}>Type</Text><Text style={styles.tournamentInfoValue}>{group.tournament_type}</Text></View> : null}
+                {(closestToPin || longestDrive) ? <View style={styles.tournamentContestsDisplay}>
+                  <Text style={styles.infoLabel}>On-course contests</Text>
+                  {closestToPin ? <View style={styles.tournamentContestRow}><Ionicons color="#d7b768" name="flag-outline" size={18} /><Text style={styles.tournamentContestText}>Closest to the Pin</Text></View> : null}
+                  {longestDrive ? <View style={styles.tournamentContestRow}><Ionicons color="#d7b768" name="golf-outline" size={18} /><Text style={styles.tournamentContestText}>Longest Drive</Text></View> : null}
+                </View> : null}
               </View>
             ) : null}
           </View>
@@ -1214,7 +1260,23 @@ export default function GroupScreen() {
               {tournamentLeaderboard.length === 0 ? <Text style={styles.body}>Participants will appear here as they join.</Text> : null}
               </View>
             </> : <View style={styles.matchupScoresList}>
-              {matchups.map((matchup) => {
+              {teamScoreboard.length === 2 ? <View style={styles.teamScoreboard}>
+                <Text style={styles.teamScoreboardTitle}>Team scoreboard</Text>
+                <View style={styles.teamScoreboardRow}>
+                  {teamScoreboard.map((team) => <View key={team.id} style={styles.teamScoreboardTeam}>
+                    {team.logoUrl ? <Image source={{ uri: team.logoUrl }} style={styles.teamScoreboardLogo} /> : <Ionicons color="#d7b768" name="shield-outline" size={25} />}
+                    <Text numberOfLines={1} style={styles.teamScoreboardName}>{team.name || 'Team'}</Text>
+                    <Text style={styles.teamScoreboardPoints}>{team.points}</Text>
+                    <Text style={styles.teamScoreboardLabel}>POINTS</Text>
+                  </View>)}
+                </View>
+              </View> : null}
+              {matchupsByDay.map(([day, dayMatchups], dayIndex) => <View key={day} style={styles.matchupDaySection}>
+                <View style={styles.matchupDayHeader}>
+                  <Text style={styles.matchupDayTitle}>Day {dayIndex + 1}</Text>
+                  <Text style={styles.matchupDayDate}>{day === 'Unscheduled' ? 'Schedule pending' : new Date(`${day}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</Text>
+                </View>
+              {dayMatchups.map((matchup) => {
                 const left = participantById.get(matchup.leftUserId)
                 const right = participantById.get(matchup.rightUserId)
                 const winner = getMatchupWinner(matchup)
@@ -1230,6 +1292,7 @@ export default function GroupScreen() {
                   {isEditingMatchupScores ? <PrimaryButton label={savingMatchupId === matchup.id ? 'Saving...' : 'Save Result'} loading={savingMatchupId === matchup.id} onPress={() => void handleSaveMatchupScore(matchup.id)} /> : winner ? <Text style={styles.matchupWinnerText}>{winner === 'left' ? left.name : right.name} wins</Text> : <Text style={styles.matchupTypeFooter}>{matchup.format || group?.tournament_format || 'Match Play'}</Text>}
                 </View>
               })}
+              </View>)}
               {!matchups.length ? <Text style={styles.body}>The tournament admin has not added matchups yet.</Text> : null}
               {isOwner ? <Pressable accessibilityLabel={isEditingMatchupScores ? 'Finish editing matchup scores' : 'Edit matchup scores'} onPress={() => setIsEditingMatchupScores((current) => !current)} style={styles.matchupSettingsButton}><Ionicons color="#ffffff" name={isEditingMatchupScores ? 'close' : 'settings-outline'} size={21} /></Pressable> : null}
             </View>}
@@ -1778,7 +1841,7 @@ const styles = StyleSheet.create({
   },
   tabRow: {
     flexDirection: 'row',
-    gap: 10
+    gap: 6
   },
   tabChip: {
     alignItems: 'center',
@@ -1789,7 +1852,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     minHeight: 48,
-    paddingHorizontal: 16
+    minWidth: 0,
+    paddingHorizontal: 4
   },
   tabChipActive: {
     backgroundColor: 'rgba(103,232,249,0.14)',
@@ -1797,7 +1861,7 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     color: palette.textMuted,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700'
   },
   tabLabelActive: {
@@ -1897,6 +1961,62 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginLeft: 20,
     textAlign: 'right'
+  },
+  tournamentContestsEditor: {
+    backgroundColor: 'rgba(215,183,104,0.06)',
+    borderColor: 'rgba(215,183,104,0.18)',
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 8,
+    padding: 12
+  },
+  contestChoices: {
+    flexDirection: 'row',
+    gap: 8
+  },
+  contestChoice: {
+    alignItems: 'center',
+    backgroundColor: palette.cardSoft,
+    borderColor: palette.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    flex: 1,
+    flexDirection: 'row',
+    gap: 6,
+    justifyContent: 'center',
+    minWidth: 0,
+    paddingHorizontal: 8,
+    paddingVertical: 10
+  },
+  contestChoiceActive: {
+    backgroundColor: 'rgba(215,183,104,0.13)',
+    borderColor: 'rgba(215,183,104,0.38)'
+  },
+  contestChoiceText: {
+    color: palette.textMuted,
+    flexShrink: 1,
+    fontSize: 12,
+    fontWeight: '700'
+  },
+  contestChoiceTextActive: {
+    color: '#f2d991'
+  },
+  tournamentContestsDisplay: {
+    borderTopColor: 'rgba(215,183,104,0.18)',
+    borderTopWidth: 1,
+    gap: 8,
+    marginTop: 2,
+    paddingTop: 12
+  },
+  tournamentContestRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8
+  },
+  tournamentContestText: {
+    color: palette.text,
+    fontSize: 14,
+    fontWeight: '700'
   },
   matchupsBlock: {
     gap: 6
@@ -2350,6 +2470,74 @@ const styles = StyleSheet.create({
   matchupScoresList: {
     gap: 12,
     position: 'relative'
+  },
+  teamScoreboard: {
+    backgroundColor: 'rgba(215,183,104,0.09)',
+    borderColor: 'rgba(215,183,104,0.28)',
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 10,
+    padding: 14
+  },
+  teamScoreboardTitle: {
+    color: '#f2d991',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 1.1,
+    textAlign: 'center',
+    textTransform: 'uppercase'
+  },
+  teamScoreboardRow: {
+    flexDirection: 'row',
+    gap: 12
+  },
+  teamScoreboardTeam: {
+    alignItems: 'center',
+    flex: 1,
+    gap: 3,
+    minWidth: 0
+  },
+  teamScoreboardLogo: {
+    borderRadius: 14,
+    height: 36,
+    width: 36
+  },
+  teamScoreboardName: {
+    color: palette.text,
+    fontSize: 13,
+    fontWeight: '800',
+    textAlign: 'center'
+  },
+  teamScoreboardPoints: {
+    color: '#ffffff',
+    fontSize: 30,
+    fontWeight: '900',
+    lineHeight: 34
+  },
+  teamScoreboardLabel: {
+    color: palette.textMuted,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8
+  },
+  matchupDaySection: {
+    gap: 8
+  },
+  matchupDayHeader: {
+    alignItems: 'baseline',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 2
+  },
+  matchupDayTitle: {
+    color: palette.text,
+    fontSize: 17,
+    fontWeight: '800'
+  },
+  matchupDayDate: {
+    color: palette.textMuted,
+    fontSize: 12,
+    fontWeight: '700'
   },
   matchupScoreCard: {
     backgroundColor: 'rgba(255,255,255,0.035)',
