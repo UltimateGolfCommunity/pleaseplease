@@ -1578,30 +1578,30 @@ const styles = StyleSheet.create({
   clubhouseMasthead: {
     alignItems: 'center',
     justifyContent: 'flex-start',
-    minHeight: 108,
+    minHeight: 122,
     overflow: 'hidden',
     paddingHorizontal: 20,
-    paddingTop: 36,
+    paddingTop: 42,
     position: 'relative'
   },
   clubhouseRoofBackdrop: {
     bottom: -2,
-    height: 114,
-    left: -30,
+    height: 128,
+    left: -42,
     position: 'absolute',
-    right: -30
+    right: -42
   },
   clubhouseRoofGable: {
     alignSelf: 'center',
     borderBottomColor: 'rgba(232,216,178,0.12)',
-    borderBottomWidth: 62,
+    borderBottomWidth: 70,
     borderLeftColor: 'transparent',
-    borderLeftWidth: 190,
+    borderLeftWidth: 220,
     borderRightColor: 'transparent',
-    borderRightWidth: 190,
+    borderRightWidth: 220,
     height: 0,
     position: 'absolute',
-    top: 2,
+    top: 0,
     width: 0
   },
   clubhouseFacade: {
@@ -1613,25 +1613,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     bottom: 0,
     flexDirection: 'row',
-    height: 54,
+    height: 60,
     justifyContent: 'space-evenly',
     position: 'absolute',
-    width: '82%'
+    width: '92%'
   },
   clubhouseWindow: {
     backgroundColor: 'rgba(4,18,12,0.36)',
     borderColor: 'rgba(232,216,178,0.16)',
     borderWidth: 1,
-    height: 22,
-    width: 22
+    height: 25,
+    width: 25
   },
   clubhouseDoor: {
     alignSelf: 'flex-end',
     backgroundColor: 'rgba(4,18,12,0.48)',
     borderColor: 'rgba(232,216,178,0.16)',
     borderWidth: 1,
-    height: 34,
-    width: 26
+    height: 38,
+    width: 30
   },
   clubhouseEyebrow: {
     color: '#d5b970',
@@ -1644,7 +1644,7 @@ const styles = StyleSheet.create({
   clubhouseTitle: {
     color: '#fffaf0',
     fontFamily: 'Georgia',
-    fontSize: 27,
+    fontSize: 29,
     fontWeight: '700',
     letterSpacing: -0.4,
     textAlign: 'center'

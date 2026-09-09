@@ -323,23 +323,47 @@ async function updateGroupWithFallback(
       // when an older schema lacks slogan). Save tournament fields separately
       // so a successful type conversion never loses its date or format.
       if (group_type === 'tournament') {
-        const tournamentResult = await supabase
-          .from('golf_groups')
-          .update({
+        // Some early production databases were created before optional
+        // tournament columns (notably tournament_end_date) existed. Do not
+        // lose Ryder Cup teams, logos, or matchups just because one optional
+        // field is unavailable: retry with progressively smaller payloads.
+        const tournamentPayloads = [
+          {
             tournament_date: tournament_date || null,
             tournament_end_date: tournament_end_date || null,
             tournament_format: tournament_format || 'Stroke Play',
             tournament_type: tournament_type || null,
             tournament_matchups: tournament_matchups || null
-          })
-          .eq('id', groupId)
-          .select()
-          .single()
+          },
+          {
+            tournament_date: tournament_date || null,
+            tournament_format: tournament_format || 'Stroke Play',
+            tournament_type: tournament_type || null,
+            tournament_matchups: tournament_matchups || null
+          },
+          {
+            tournament_date: tournament_date || null,
+            tournament_format: tournament_format || 'Stroke Play',
+            tournament_matchups: tournament_matchups || null
+          }
+        ]
 
-        if (tournamentResult.error) {
-          return { group: null, error: tournamentResult.error }
+        let tournamentError: any = null
+        for (const tournamentPayload of tournamentPayloads) {
+          const tournamentResult = await supabase
+            .from('golf_groups')
+            .update(tournamentPayload)
+            .eq('id', groupId)
+            .select()
+            .single()
+
+          if (!tournamentResult.error) {
+            return { group: tournamentResult.data, error: null }
+          }
+          tournamentError = tournamentResult.error
         }
-        return { group: tournamentResult.data, error: null }
+
+        return { group: null, error: tournamentError }
       }
 
       return { group: data, error: null }

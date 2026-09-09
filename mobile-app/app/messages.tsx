@@ -134,10 +134,7 @@ export default function MessagesScreen() {
           />
         }
       >
-        <BrandHeader
-          title="Inbox"
-          showBack
-        />
+        <BrandHeader showBack showLogo={false} />
 
         {busy ? <ActivityIndicator color={palette.aqua} /> : null}
         {!busy && conversations.length === 0 ? (
