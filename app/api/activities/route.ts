@@ -251,6 +251,34 @@ export async function GET(request: NextRequest) {
         .in('id', feedUserIds)
 
       const actorMap = new Map((actorProfiles || []).map((profile: any) => [profile.id, profile]))
+      const teeTimesById = new Map((teeTimes || []).map((teeTime: any) => [teeTime.id, teeTime]))
+      const feedTeeTimeIds = Array.from(teeTimesById.keys())
+      const playersByTeeTime = new Map<string, any[]>()
+
+      if (feedTeeTimeIds.length) {
+        const { data: applications } = await supabase
+          .from('tee_time_applications')
+          .select(`
+            tee_time_id,
+            status,
+            applicant:user_profiles!tee_time_applications_applicant_id_fkey(
+              id,
+              first_name,
+              last_name,
+              username,
+              avatar_url
+            )
+          `)
+          .in('tee_time_id', feedTeeTimeIds)
+          .in('status', ['approved', 'accepted'])
+
+        ;(applications || []).forEach((application: any) => {
+          if (!application.tee_time_id || !application.applicant) return
+          const players = playersByTeeTime.get(application.tee_time_id) || []
+          players.push(application.applicant)
+          playersByTeeTime.set(application.tee_time_id, players)
+        })
+      }
 
       const mergedActivities = [...(activities || []), ...syntheticTeeTimes]
         .sort((a: any, b: any) => normalizeActivityDate(b) - normalizeActivityDate(a))
@@ -258,10 +286,20 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        activities: await enrichActivityInteractions(mergedActivities.map((activity: any) => ({
-          ...activity,
-          actor: actorMap.get(activity.user_id) || null
-        })))
+        activities: await enrichActivityInteractions(mergedActivities.map((activity: any) => {
+          const teeTime =
+            activity.related_type === 'tee_time' && typeof activity.related_id === 'string'
+              ? teeTimesById.get(activity.related_id) || null
+              : null
+
+          return {
+            ...activity,
+            actor: actorMap.get(activity.user_id) || null,
+            tee_time: teeTime
+              ? { ...teeTime, accepted_players: playersByTeeTime.get(teeTime.id) || [] }
+              : null
+          }
+        }))
       })
     }
 
@@ -527,5 +565,36 @@ export async function POST(request: NextRequest) {
       { error: 'Internal server error' },
       { status: 500 }
     )
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { activity_id, user_id } = await request.json()
+
+    if (!activity_id || !user_id) {
+      return NextResponse.json({ error: 'activity_id and user_id are required' }, { status: 400 })
+    }
+
+    const supabase = createAdminClient()
+    // Clear engagement first so deletion works whether or not the database
+    // relationship has cascading deletes enabled.
+    await supabase.from('activity_likes').delete().eq('activity_id', activity_id)
+    await supabase.from('activity_comments').delete().eq('activity_id', activity_id)
+
+    const { error } = await supabase
+      .from('user_activities')
+      .delete()
+      .eq('id', activity_id)
+      .eq('user_id', user_id)
+
+    if (error) {
+      return NextResponse.json({ error: error.message || 'Unable to delete activity' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true, message: 'Activity deleted successfully' })
+  } catch (error) {
+    console.error('Error deleting activity:', error)
+    return NextResponse.json({ error: 'Unable to delete activity' }, { status: 500 })
   }
 }

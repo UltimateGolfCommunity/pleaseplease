@@ -10,7 +10,6 @@ import {
   View,
   Pressable
 } from 'react-native'
-import { BrandHeader } from '@/components/BrandHeader'
 import { apiGet, apiPost } from '@/lib/api'
 import { palette } from '@/lib/theme'
 import { useAuth } from '@/providers/AuthProvider'
@@ -190,11 +189,6 @@ export default function NotificationsScreen() {
           />
         }
       >
-        <BrandHeader
-          title="Notifications"
-          showBack
-        />
-
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Pending requests</Text>
@@ -239,13 +233,6 @@ export default function NotificationsScreen() {
         </View>
 
         <View style={styles.sectionCard}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Notifications</Text>
-            <View style={styles.countPill}>
-              <Text style={styles.countPillText}>{notifications.length}</Text>
-            </View>
-          </View>
-
           {busy ? <ActivityIndicator color={palette.aqua} /> : null}
           {!busy && notifications.length === 0 ? (
             <View style={styles.emptyCard}>

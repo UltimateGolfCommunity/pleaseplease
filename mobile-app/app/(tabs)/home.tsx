@@ -19,7 +19,7 @@ import {
 } from 'react-native'
 import { Avatar } from '@/components/Avatar'
 import { PrimaryButton } from '@/components/PrimaryButton'
-import { apiGet, apiPost } from '@/lib/api'
+import { apiDelete, apiGet, apiPost } from '@/lib/api'
 import { fetchNetworkFeed, type NetworkFeedActivity } from '@/lib/feed'
 import { mobileSupabase } from '@/lib/supabase'
 import { palette } from '@/lib/theme'
@@ -38,6 +38,7 @@ type TeeTime = {
   max_players?: number
   available_spots?: number
   visibility_scope?: string
+  join_mode?: 'request' | 'auto'
   creator_id?: string
   accepted_players?: {
     id?: string
@@ -229,7 +230,17 @@ export default function HomeTab() {
   const [unreadNotifications, setUnreadNotifications] = useState(0)
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [weather, setWeather] = useState<WeatherData | null>(null)
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    course_name: string
+    location: string
+    tee_time_date: string
+    tee_time_time: string
+    max_players: string
+    handicap_requirement: string
+    visibility_scope: string
+    join_mode: 'request' | 'auto'
+    group_id: string
+  }>({
     course_name: '',
     location: '',
     tee_time_date: '',
@@ -237,6 +248,7 @@ export default function HomeTab() {
     max_players: '4',
     handicap_requirement: 'Weekend Hack',
     visibility_scope: 'public',
+    join_mode: 'request',
     group_id: ''
   })
 
@@ -411,6 +423,7 @@ export default function HomeTab() {
       max_players: '4',
       handicap_requirement: 'Weekend Hack',
       visibility_scope: 'public',
+      join_mode: 'request',
       group_id: ''
     })
     setSelectedDate(null)
@@ -446,6 +459,7 @@ export default function HomeTab() {
         max_players: Number(form.max_players) || 4,
         handicap_requirement: form.handicap_requirement.trim() || 'any',
         visibility_scope: form.visibility_scope,
+        join_mode: form.join_mode,
         group_id: form.visibility_scope === 'group' ? form.group_id : null
       })
 
@@ -660,6 +674,45 @@ export default function HomeTab() {
     })
   }
 
+  const handleDeleteFeedItem = (activity: Activity) => {
+    if (!user?.id) return
+
+    const isTeeTime = activity.activity_type === 'tee_time_created' && typeof activity.related_id === 'string'
+    Alert.alert(
+      isTeeTime ? 'Delete tee time?' : 'Delete post?',
+      isTeeTime
+        ? 'This will remove the tee time and its post from the Home feed.'
+        : 'This will remove this post from the Home feed.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              try {
+                if (isTeeTime) {
+                  await apiDelete('/api/tee-times', {
+                    action: 'delete',
+                    tee_time_id: activity.related_id,
+                    user_id: user.id
+                  })
+                  setActivityFeed((current) => current.filter((item) => item.related_id !== activity.related_id))
+                  if (nextTeeTime?.id === activity.related_id) setNextTeeTime(null)
+                } else {
+                  await apiDelete('/api/activities', { activity_id: activity.id, user_id: user.id })
+                  setActivityFeed((current) => current.filter((item) => item.id !== activity.id))
+                }
+              } catch (error) {
+                Alert.alert('Unable to delete', error instanceof Error ? error.message : 'Please try again.')
+              }
+            })()
+          }
+        }
+      ]
+    )
+  }
+
   const handleOpenRoundFromFeed = (activity: Activity) => {
     const roundId =
       typeof activity.metadata?.round_id === 'string'
@@ -675,24 +728,23 @@ export default function HomeTab() {
     router.push(`/rounds/${roundId}`)
   }
 
-  const handleJoinTeeTimeFromFeed = async (activity: Activity) => {
+  const handleRequestToJoinTeeTimeFromFeed = async (activity: Activity) => {
     if (!user?.id || typeof activity.related_id !== 'string') return
 
     setJoiningFeedTeeTimeId(activity.id)
 
     try {
-      const response = await apiPost<{ success?: boolean; already_joined?: boolean; message?: string }>(
+      const automaticJoin = activity.tee_time?.join_mode === 'auto'
+      const response = await apiPost<{ success?: boolean; message?: string }>(
         '/api/tee-times',
-        {
-          action: 'join',
-          tee_time_id: activity.related_id,
-          user_id: user.id
-        }
+        automaticJoin
+          ? { action: 'join', tee_time_id: activity.related_id, user_id: user.id }
+          : { action: 'apply', tee_time_id: activity.related_id, applicant_id: user.id }
       )
 
       Alert.alert(
-        response.already_joined ? 'Already joined' : 'Joined tee time',
-        response.message || (response.already_joined ? 'You are already in this round.' : 'You are in for this tee time.')
+        automaticJoin ? 'You are in' : 'Request sent',
+        response.message || (automaticJoin ? 'You have joined this tee time.' : 'The tee time host will review your request.')
       )
       setBusy(true)
       await Promise.all([loadHome(), loadHeaderCounts()])
@@ -750,6 +802,12 @@ export default function HomeTab() {
     const topComment = getTopComment(item)
 
     if (item.activity_type === 'tee_time_created') {
+      const automaticJoin = item.tee_time?.join_mode === 'auto'
+      const acceptedPlayers = item.tee_time?.accepted_players || []
+      const spotsOpen = Math.max(
+        Number(item.tee_time?.max_players || 4) - Number(item.tee_time?.current_players || 1),
+        0
+      )
       const teeDateLabel = teeDate
         ? new Date(`${teeDate}T${teeTime || '12:00:00'}`).toLocaleDateString(undefined, {
             month: 'short',
@@ -781,16 +839,36 @@ export default function HomeTab() {
           <Text style={styles.feedSpecialMeta}>
             {[teeDateLabel, teeTimeLabel, location].filter(Boolean).join(' • ')}
           </Text>
-          {(item.tee_time?.accepted_players || []).length ? <Text style={styles.feedJoinedText}>{(item.tee_time?.accepted_players || []).length} joined</Text> : null}
+          <View style={styles.feedJoinedRow}>
+            {acceptedPlayers.length ? (
+              <View style={styles.feedJoinedAvatars}>
+                {acceptedPlayers.slice(0, 4).map((player, index) => (
+                  <View
+                    key={player.id || `${player.username || 'golfer'}-${index}`}
+                    style={[styles.feedJoinedAvatarWrap, index > 0 && styles.feedJoinedAvatarOverlap]}
+                  >
+                    <Avatar
+                      label={[player.first_name, player.last_name].filter(Boolean).join(' ') || player.username || 'Golfer'}
+                      size={28}
+                      uri={player.avatar_url || undefined}
+                    />
+                  </View>
+                ))}
+              </View>
+            ) : null}
+            <Text style={styles.feedJoinedText}>
+              {automaticJoin ? `${spotsOpen} spot${spotsOpen === 1 ? '' : 's'} open` : `${acceptedPlayers.length} joined`}
+            </Text>
+          </View>
           {item.user_id !== user?.id ? (
             <View style={styles.feedSpecialActions}>
             {item.user_id !== user?.id ? (
               <Pressable
-                onPress={() => void handleJoinTeeTimeFromFeed(item)}
+                onPress={() => void handleRequestToJoinTeeTimeFromFeed(item)}
                 style={styles.feedPrimaryButton}
               >
                 <Text style={styles.feedPrimaryButtonText}>
-                  {joiningFeedTeeTimeId === item.id ? 'Joining...' : 'Join'}
+                  {joiningFeedTeeTimeId === item.id ? (automaticJoin ? 'Joining...' : 'Requesting...') : automaticJoin ? 'Join Tee Time' : 'Request to Join'}
                 </Text>
               </Pressable>
             ) : null}
@@ -1021,7 +1099,9 @@ export default function HomeTab() {
                 </View>
               </View>
               <Text style={styles.clubhouseEyebrow}>Your private golf club</Text>
-              <Text numberOfLines={1} style={styles.clubhouseTitle}>{clubhouseTitle}</Text>
+              <Text adjustsFontSizeToFit minimumFontScale={0.65} numberOfLines={1} style={styles.clubhouseTitle}>
+                {clubhouseTitle}
+              </Text>
             </View>
           </View>
 
@@ -1099,6 +1179,30 @@ export default function HomeTab() {
                 style={styles.input}
                 value={form.location}
               />
+            </View>
+
+            <View style={styles.composerSection}>
+              <View style={styles.formSectionHeader}>
+                <Text style={styles.formSectionLabel}>How golfers join</Text>
+                <Text style={styles.formSectionHint}>Choose whether you approve each golfer</Text>
+              </View>
+              <View style={styles.segmentRow}>
+                {[
+                  { label: 'Request to join', value: 'request' as const },
+                  { label: 'Join automatically', value: 'auto' as const }
+                ].map((option) => {
+                  const active = form.join_mode === option.value
+                  return (
+                    <Pressable
+                      key={option.value}
+                      onPress={() => setForm((current) => ({ ...current, join_mode: option.value }))}
+                      style={[styles.segment, active && styles.segmentActive]}
+                    >
+                      <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>{option.label}</Text>
+                    </Pressable>
+                  )
+                })}
+              </View>
             </View>
 
             <View style={styles.composerSection}>
@@ -1288,7 +1392,7 @@ export default function HomeTab() {
             <View style={styles.emptyCard}>
               <Text style={styles.emptyTitle}>No fresh movement yet</Text>
               <Text style={styles.body}>
-                Tee times, rounds, joins, posts, and the rest of your connections&apos; activity will show up here.
+                Tee times, scores, and shared photos from your golf network will show up here.
               </Text>
             </View>
           ) : null}
@@ -1311,6 +1415,12 @@ export default function HomeTab() {
                       <Ionicons color={palette.aqua} name="chatbubble-outline" size={16} />
                       <Text style={styles.feedActionText}>{item.comment_count || 0}</Text>
                     </Pressable>
+                    {item.user_id === user?.id ? (
+                      <Pressable onPress={() => handleDeleteFeedItem(item)} style={styles.feedActionButton}>
+                        <Ionicons color={palette.textMuted} name="trash-outline" size={16} />
+                        <Text style={styles.feedActionText}>Delete</Text>
+                      </Pressable>
+                    ) : null}
                   </View>
                   {item.like_count ? (
                     <Pressable onPress={() => setSelectedLikesActivityId(item.id)}>
@@ -1470,7 +1580,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     minHeight: 108,
     overflow: 'hidden',
-    paddingHorizontal: 52,
+    paddingHorizontal: 20,
     paddingTop: 36,
     position: 'relative'
   },
@@ -2006,12 +2116,8 @@ const styles = StyleSheet.create({
     flex: 1
   },
   feedItem: {
-    backgroundColor: palette.cardSoft,
-    borderColor: palette.border,
-    borderRadius: 18,
-    borderWidth: 1,
     gap: 6,
-    padding: 12
+    paddingHorizontal: 0
   },
   feedSpecialCard: {
     backgroundColor: 'rgba(6,20,16,0.28)',

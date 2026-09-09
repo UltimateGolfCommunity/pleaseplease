@@ -4,6 +4,7 @@ import { Redirect, router } from 'expo-router'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
+  Alert,
   ActivityIndicator,
   Pressable,
   ScrollView,
@@ -13,8 +14,8 @@ import {
   View
 } from 'react-native'
 import { Avatar } from '@/components/Avatar'
-import { BrandHeader } from '@/components/BrandHeader'
 import { apiGet } from '@/lib/api'
+import { apiPost } from '@/lib/api'
 import { palette } from '@/lib/theme'
 import { useAuth } from '@/providers/AuthProvider'
 
@@ -40,6 +41,7 @@ type SearchGroup = {
   logo_url?: string | null
   image_url?: string | null
   is_member?: boolean
+  is_private?: boolean | null
 }
 
 type SearchTeeTime = {
@@ -92,6 +94,7 @@ export default function SearchTab() {
   const [groups, setGroups] = useState<SearchGroup[]>([])
   const [teeTimes, setTeeTimes] = useState<SearchTeeTime[]>([])
   const [courses, setCourses] = useState<SearchCourse[]>([])
+  const [joiningGroupId, setJoiningGroupId] = useState<string | null>(null)
 
   const hasResults = useMemo(
     () => users.length > 0 || groups.length > 0 || teeTimes.length > 0 || courses.length > 0,
@@ -231,6 +234,23 @@ export default function SearchTab() {
     }
   }, [clearResults, persistRecentSearch, query, user?.id])
 
+  const handleJoinSearchGroup = async (group: SearchGroup) => {
+    if (!user?.id || group.is_member) return
+    setJoiningGroupId(group.id)
+    try {
+      const response = await apiPost<{ pending?: boolean; message?: string }>(`/api/groups/${encodeURIComponent(group.id)}`, {
+        action: 'join',
+        user_id: user.id
+      })
+      setGroups((current) => current.map((item) => item.id === group.id ? { ...item, is_member: !response.pending } : item))
+      Alert.alert(response.pending ? 'Request sent' : 'You joined', response.message || (response.pending ? 'The tournament admin will review your request.' : `Welcome to ${group.name}.`))
+    } catch (error) {
+      Alert.alert('Unable to join', error instanceof Error ? error.message : 'Please try again.')
+    } finally {
+      setJoiningGroupId(null)
+    }
+  }
+
   useEffect(() => {
     const trimmedQuery = query.trim()
 
@@ -297,8 +317,6 @@ export default function SearchTab() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.content}>
-        <BrandHeader largeLogo />
-
         <View style={styles.searchCard}>
           <View style={styles.searchTopRow}>
             <View style={styles.searchInputWrap}>
@@ -446,9 +464,18 @@ export default function SearchTab() {
                     <Text style={styles.name}>{result.name}</Text>
                     <Text style={styles.meta}>
                       {(result.group_type || 'community').replace(/^./, (char) => char.toUpperCase())} •{' '}
-                      {result.member_count || 0} members
+                      {result.member_count || 0} {(result.group_type || '').toLowerCase() === 'tournament' ? 'people' : 'members'}
                     </Text>
                     {result.location ? <Text style={styles.meta}>{result.location}</Text> : null}
+                    {(result.group_type || '').toLowerCase() === 'tournament' ? (
+                      <Pressable
+                        disabled={Boolean(result.is_member) || joiningGroupId === result.id}
+                        onPress={() => void handleJoinSearchGroup(result)}
+                        style={[styles.tournamentJoinButton, (result.is_member || joiningGroupId === result.id) && styles.tournamentJoinButtonDisabled]}
+                      >
+                        {joiningGroupId === result.id ? <ActivityIndicator color={palette.bg} size="small" /> : <Text style={styles.tournamentJoinButtonText}>{result.is_member ? 'Joined' : result.is_private ? 'Request to Join' : 'Join Tournament'}</Text>}
+                      </Pressable>
+                    ) : null}
                   </View>
                 </View>
               </Pressable>
@@ -647,6 +674,24 @@ const styles = StyleSheet.create({
     color: palette.textMuted,
     fontSize: 14,
     lineHeight: 20
+  },
+  tournamentJoinButton: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: palette.aqua,
+    borderRadius: 999,
+    justifyContent: 'center',
+    marginTop: 9,
+    minHeight: 34,
+    paddingHorizontal: 13
+  },
+  tournamentJoinButtonDisabled: {
+    opacity: 0.55
+  },
+  tournamentJoinButtonText: {
+    color: palette.bg,
+    fontSize: 12,
+    fontWeight: '800'
   },
   mutualRow: {
     flexDirection: 'row',

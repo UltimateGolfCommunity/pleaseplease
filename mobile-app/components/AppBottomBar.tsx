@@ -56,12 +56,20 @@ export function AppBottomBar() {
   const [photoBusy, setPhotoBusy] = useState(false)
   const [teeTimeBusy, setTeeTimeBusy] = useState(false)
   const [scoreBusy, setScoreBusy] = useState(false)
-  const [teeTimeForm, setTeeTimeForm] = useState({
+  const [teeTimeForm, setTeeTimeForm] = useState<{
+    course_name: string
+    location: string
+    tee_time_date: string
+    tee_time_time: string
+    max_players: string
+    join_mode: 'request' | 'auto'
+  }>({
     course_name: '',
     location: '',
     tee_time_date: '',
     tee_time_time: '',
-    max_players: '4'
+    max_players: '4',
+    join_mode: 'request'
   })
   const [holesPlayed, setHolesPlayed] = useState<9 | 18>(18)
   const [scoreMode, setScoreMode] = useState<'total' | 'holes'>('total')
@@ -114,7 +122,8 @@ export function AppBottomBar() {
       location: '',
       tee_time_date: '',
       tee_time_time: '',
-      max_players: '4'
+      max_players: '4',
+      join_mode: 'request'
     })
   }
 
@@ -211,7 +220,8 @@ export function AppBottomBar() {
         max_players: Number(teeTimeForm.max_players) || 4,
         handicap_requirement: 'Weekend Hack',
         visibility_scope: 'public',
-        group_id: null
+        group_id: null,
+        join_mode: teeTimeForm.join_mode
       })
 
       resetTeeTimeComposer()
@@ -444,6 +454,24 @@ export function AppBottomBar() {
                   style={styles.composeInput}
                   value={teeTimeForm.max_players}
                 />
+                <Text style={styles.composeFieldLabel}>Joining</Text>
+                <View style={styles.segmentRow}>
+                  {[
+                    { label: 'Request', value: 'request' as const },
+                    { label: 'Automatic', value: 'auto' as const }
+                  ].map((option) => {
+                    const active = teeTimeForm.join_mode === option.value
+                    return (
+                      <Pressable
+                        key={option.value}
+                        onPress={() => setTeeTimeForm((current) => ({ ...current, join_mode: option.value }))}
+                        style={[styles.segment, active && styles.segmentActive]}
+                      >
+                        <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>{option.label}</Text>
+                      </Pressable>
+                    )
+                  })}
+                </View>
                 <PrimaryButton label="Post Tee Time" loading={teeTimeBusy} onPress={publishTeeTime} />
               </ScrollView>
             ) : null}
@@ -764,6 +792,14 @@ const styles = StyleSheet.create({
   segmentRow: {
     flexDirection: 'row',
     gap: 10
+  },
+  composeFieldLabel: {
+    color: palette.textMuted,
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    marginTop: 2,
+    textTransform: 'uppercase'
   },
   segment: {
     alignItems: 'center',

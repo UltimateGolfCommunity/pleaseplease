@@ -35,7 +35,7 @@
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/ugc-android-foreground.png",
-        "backgroundColor": "#07140f"
+        "backgroundColor": "#8BCDF0"
       },
       "intentFilters": [
         {

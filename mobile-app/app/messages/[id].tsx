@@ -134,6 +134,7 @@ export default function ConversationScreen() {
       >
         <ScrollView
           contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -223,7 +224,7 @@ const styles = StyleSheet.create({
   content: {
     gap: 18,
     padding: 20,
-    paddingBottom: 120
+    paddingBottom: 24
   },
   headerCard: {
     alignItems: 'center',

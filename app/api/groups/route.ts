@@ -76,6 +76,7 @@ async function createGroupWithFallback(
     maxMembers,
     is_private,
     tournament_date,
+    tournament_end_date,
     tournament_format,
     tournament_type,
     tournament_matchups,
@@ -91,6 +92,7 @@ async function createGroupWithFallback(
     maxMembers?: number
     is_private?: boolean
     tournament_date?: string | null
+    tournament_end_date?: string | null
     tournament_format?: string | null
     tournament_type?: string | null
     tournament_matchups?: string | null
@@ -109,6 +111,7 @@ async function createGroupWithFallback(
       max_members: maxMembers || 10,
       is_private: Boolean(is_private),
       tournament_date: tournament_date || null,
+      tournament_end_date: tournament_end_date || null,
       tournament_format: tournament_format || null,
       tournament_type: tournament_type || null,
       tournament_matchups: tournament_matchups || null,
@@ -161,9 +164,7 @@ async function createGroupWithFallback(
       .select()
       .single()
 
-    if (!error) {
-      return { group: data, error: null }
-    }
+    if (!error) return { group: data, error: null }
 
     lastError = error
     console.warn('⚠️ GROUPS POST: Group insert attempt failed, trying fallback payload:', {
@@ -190,6 +191,7 @@ async function updateGroupWithFallback(
     image_url,
     is_private,
     tournament_date,
+    tournament_end_date,
     tournament_format,
     tournament_type,
     tournament_matchups
@@ -204,6 +206,7 @@ async function updateGroupWithFallback(
     image_url?: string | null
     is_private?: boolean
     tournament_date?: string | null
+    tournament_end_date?: string | null
     tournament_format?: string | null
     tournament_type?: string | null
     tournament_matchups?: string | null
@@ -221,6 +224,7 @@ async function updateGroupWithFallback(
       image_url,
       is_private,
       tournament_date,
+      tournament_end_date,
       tournament_format,
       tournament_type,
       tournament_matchups
@@ -246,6 +250,11 @@ async function updateGroupWithFallback(
       location,
       group_type,
       image_url
+    },
+    // Tournament detail columns may be absent in older schemas. Keep the
+    // requested group type even when optional tournament fields are rejected.
+    {
+      group_type
     },
     {
       name,
@@ -296,6 +305,12 @@ async function updateGroupWithFallback(
       continue
     }
 
+    // Never "succeed" by dropping the requested group type. That made a
+    // tournament conversion look saved while leaving the group a community.
+    if (group_type !== undefined && payload.group_type === undefined) {
+      continue
+    }
+
     const { data, error } = await supabase
       .from('golf_groups')
       .update(payload)
@@ -304,6 +319,29 @@ async function updateGroupWithFallback(
       .single()
 
     if (!error) {
+      // A base fallback may omit optional tournament columns (for example
+      // when an older schema lacks slogan). Save tournament fields separately
+      // so a successful type conversion never loses its date or format.
+      if (group_type === 'tournament') {
+        const tournamentResult = await supabase
+          .from('golf_groups')
+          .update({
+            tournament_date: tournament_date || null,
+            tournament_end_date: tournament_end_date || null,
+            tournament_format: tournament_format || 'Stroke Play',
+            tournament_type: tournament_type || null,
+            tournament_matchups: tournament_matchups || null
+          })
+          .eq('id', groupId)
+          .select()
+          .single()
+
+        if (tournamentResult.error) {
+          return { group: null, error: tournamentResult.error }
+        }
+        return { group: tournamentResult.data, error: null }
+      }
+
       return { group: data, error: null }
     }
 
@@ -399,6 +437,7 @@ export async function POST(request: NextRequest) {
       maxMembers,
       group_type,
       tournament_date,
+      tournament_end_date,
       tournament_format,
       tournament_type,
       tournament_matchups,
@@ -625,6 +664,7 @@ export async function POST(request: NextRequest) {
         image_url,
         is_private,
         tournament_date,
+        tournament_end_date,
         tournament_format,
         tournament_type,
         tournament_matchups
@@ -767,6 +807,7 @@ export async function POST(request: NextRequest) {
         group_type,
         is_private,
         tournament_date,
+        tournament_end_date,
         tournament_format,
         tournament_type,
         tournament_matchups,

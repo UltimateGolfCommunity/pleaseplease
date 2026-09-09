@@ -20,6 +20,10 @@ function getTeeTimeVisibility(teeTime: any) {
   return teeTime.visibility_scope || teeTime.visibility || 'public'
 }
 
+function getTeeTimeJoinMode(teeTime: any) {
+  return teeTime.join_mode === 'auto' ? 'auto' : 'request'
+}
+
 function isMissingColumnError(error: any, columnName: string) {
   if (!error) return false
   const message = `${error.message || ''} ${error.details || ''}`.toLowerCase()
@@ -784,6 +788,24 @@ export async function DELETE(request: NextRequest) {
         }, { status: 403 })
       }
 
+      // Remove feed records for this tee time as part of the same delete so
+      // an expired card cannot remain on Home after the round is removed.
+      const { data: relatedActivities } = await supabase
+        .from('user_activities')
+        .select('id')
+        .eq('user_id', user_id)
+        .eq('related_id', tee_time_id)
+        .in('activity_type', ['tee_time_created', 'tee_time_updated'])
+
+      const activityIds = (relatedActivities || []).map((activity: any) => activity.id).filter(Boolean)
+      if (activityIds.length) {
+        await Promise.all([
+          supabase.from('activity_likes').delete().in('activity_id', activityIds),
+          supabase.from('activity_comments').delete().in('activity_id', activityIds)
+        ])
+        await supabase.from('user_activities').delete().in('id', activityIds).eq('user_id', user_id)
+      }
+
       // Delete the tee time
       const { error: deleteError } = await supabase
         .from('tee_times')
@@ -955,6 +977,7 @@ export async function POST(request: NextRequest) {
       
       const creatorId = data.creator_id
       const visibilityScope = data.visibility_scope || 'public'
+      const joinMode = data.join_mode === 'auto' ? 'auto' : 'request'
       const groupId = visibilityScope === 'group' ? data.group_id || null : null
       
       if (!data.tee_time_date) {
@@ -1135,7 +1158,8 @@ export async function POST(request: NextRequest) {
       const extendedInsertData = {
         ...insertData,
         visibility_scope: visibilityScope,
-        group_id: groupId
+        group_id: groupId,
+        join_mode: joinMode
       }
       
       console.log('🔍 Creating tee time with data:', extendedInsertData)
@@ -1146,7 +1170,7 @@ export async function POST(request: NextRequest) {
         .select()
         .single()
 
-      if (error && (isMissingColumnError(error, 'visibility_scope') || isMissingColumnError(error, 'group_id'))) {
+      if (error && (isMissingColumnError(error, 'visibility_scope') || isMissingColumnError(error, 'group_id') || isMissingColumnError(error, 'join_mode'))) {
         console.log('⚠️ Tee time visibility columns are missing, retrying with legacy schema')
         const legacyResult = await supabase
           .from('tee_times')
@@ -1215,7 +1239,8 @@ export async function POST(request: NextRequest) {
             location: data.location || '',
             tee_time_date: data.tee_time_date,
             tee_time_time: formattedTime,
-            visibility_scope: visibilityScope
+            visibility_scope: visibilityScope,
+            join_mode: joinMode
           }
         })
       ])
@@ -1263,7 +1288,8 @@ export async function POST(request: NextRequest) {
         tee_time_time: nextTime,
         max_players: Number(data.max_players) || 4,
         handicap_requirement: data.handicap_requirement || 'Weekend Hack',
-        visibility_scope: data.visibility_scope || 'public'
+        visibility_scope: data.visibility_scope || 'public',
+        join_mode: data.join_mode === 'auto' ? 'auto' : 'request'
       }
 
       const { data: updatedTeeTime, error: updateError } = await supabase
@@ -1273,8 +1299,9 @@ export async function POST(request: NextRequest) {
         .select()
         .single()
 
-      if (updateError && isMissingColumnError(updateError, 'visibility_scope')) {
+      if (updateError && (isMissingColumnError(updateError, 'visibility_scope') || isMissingColumnError(updateError, 'join_mode'))) {
         delete updatePayload.visibility_scope
+        delete updatePayload.join_mode
         const legacyResult = await supabase
           .from('tee_times')
           .update(updatePayload)
@@ -1556,7 +1583,7 @@ export async function POST(request: NextRequest) {
           .from('tee_time_applications')
           .select(`
             *,
-            tee_times(id, creator_id, tee_time_date, tee_time_time, course_name, current_players),
+            tee_times(id, creator_id, tee_time_date, tee_time_time, course_name, current_players, max_players),
             applicant:user_profiles!tee_time_applications_applicant_id_fkey(first_name, last_name, username)
           `)
           .eq('id', application_id)
@@ -1575,6 +1602,17 @@ export async function POST(request: NextRequest) {
           error: 'Unauthorized',
           details: 'You can only manage applications for your own tee times'
         }, { status: 403 })
+      }
+
+      if (
+        action_type === 'accept' &&
+        applicationDetails?.tee_times &&
+        Number(applicationDetails.tee_times.current_players || 1) >= Number(applicationDetails.tee_times.max_players || 4)
+      ) {
+        return NextResponse.json({
+          error: 'Tee time is full',
+          details: 'There are no remaining spots for this round.'
+        }, { status: 409 })
       }
       
       // Update application status across older/newer schema variants
@@ -1667,13 +1705,28 @@ export async function POST(request: NextRequest) {
       try {
         const { data: teeTime } = await supabase
           .from('tee_times')
-          .select('id, creator_id, tee_time_date, tee_time_time, course_name, current_players, max_players')
+          .select('*')
           .eq('id', data.tee_time_id)
           .single()
 
         teeTimeDetails = teeTime
       } catch (fetchError) {
         console.log('⚠️ Could not fetch tee time details before join:', fetchError)
+      }
+
+      if (!teeTimeDetails) {
+        return NextResponse.json({ error: 'Tee time not found' }, { status: 404 })
+      }
+
+      if (getTeeTimeJoinMode(teeTimeDetails) !== 'auto') {
+        return NextResponse.json({
+          error: 'This tee time requires a request to join',
+          details: 'The host will review requests before adding golfers to this round.'
+        }, { status: 400 })
+      }
+
+      if (Number(teeTimeDetails.current_players || 1) >= Number(teeTimeDetails.max_players || 4)) {
+        return NextResponse.json({ error: 'Tee time is full' }, { status: 409 })
       }
 
       try {
@@ -1708,11 +1761,23 @@ export async function POST(request: NextRequest) {
 
         throw error
       }
+
+      // Keep the existing participant display consistent for automatic and
+      // host-approved joins. Older schemas may not support this table shape,
+      // so the tee_time_players record remains the authoritative join.
+      await supabase
+        .from('tee_time_applications')
+        .insert({
+          tee_time_id: data.tee_time_id,
+          applicant_id: data.user_id,
+          status: 'accepted',
+          message: null
+        })
       
       // Update current players count
       await supabase
         .from('tee_times')
-        .update({ current_players: supabase.rpc('increment', { row_id: data.tee_time_id, x: 1 }) })
+        .update({ current_players: Number(teeTimeDetails.current_players || 1) + 1 })
         .eq('id', data.tee_time_id)
 
       const joiningUserName =

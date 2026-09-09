@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Redirect, router } from 'expo-router'
+import { Redirect, router, useFocusEffect } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons'
@@ -473,12 +473,13 @@ export default function ProfileTab() {
     }
   }, [refreshProfile, user?.id])
 
-  useEffect(() => {
-    if (user?.id) {
+  useFocusEffect(
+    useCallback(() => {
+      if (!user?.id) return
       setBusy(true)
-      loadProfile()
-    }
-  }, [loadProfile, user?.id])
+      void loadProfile()
+    }, [loadProfile, user?.id])
+  )
 
   useEffect(() => {
     const nextAce = normalizeAceDetails(profile?.ace_details)

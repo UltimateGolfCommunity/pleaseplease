@@ -1,4 +1,5 @@
 import { mobileSupabase } from '@/lib/supabase'
+import { apiGet } from '@/lib/api'
 
 export type NetworkFeedActivity = {
   id: string
@@ -53,6 +54,9 @@ export type NetworkFeedActivity = {
   }[]
   tee_time?: {
     id: string
+    current_players?: number
+    max_players?: number
+    join_mode?: 'request' | 'auto'
     accepted_players?: {
       id?: string
       first_name?: string | null
@@ -63,23 +67,24 @@ export type NetworkFeedActivity = {
   } | null
 }
 
-const FEED_ACTIVITY_TYPES = [
-  'bag_updated',
-  'profile_updated',
-  'profile_photo_updated',
-  'profile_cover_updated',
-  'tee_time_created',
-  'tee_time_updated',
-  'round_logged',
-  'photo_posted',
-  'connection_added',
-  'group_joined',
-  'group_created',
-  'group_board_post',
-  'group_thread_reply'
-]
+// Home is the golf feed: rounds, shared photos, and tee times. Profile and
+// network updates remain visible on the golfer's own profile instead.
+const FEED_ACTIVITY_TYPES = ['tee_time_created', 'round_logged', 'photo_posted']
 
 export async function fetchNetworkFeed(userId: string, limit = 20): Promise<NetworkFeedActivity[]> {
+  // Use the server feed first so connection visibility is evaluated with the
+  // same accepted-connection rules as the backend, regardless of mobile RLS.
+  try {
+    const response = await apiGet<{ success: boolean; activities: NetworkFeedActivity[] }>(
+      `/api/activities?action=feed&user_id=${encodeURIComponent(userId)}&limit=${limit}`
+    )
+    return (response.activities || []).filter((activity) =>
+      FEED_ACTIVITY_TYPES.includes(activity.activity_type || '')
+    )
+  } catch {
+    // Fall back to the direct query below while offline or during a server outage.
+  }
+
   const { data: connections, error: connectionsError } = await mobileSupabase
     .from('user_connections')
     .select('requester_id, recipient_id')
@@ -215,7 +220,7 @@ export async function fetchNetworkFeed(userId: string, limit = 20): Promise<Netw
             .in('id', connectedUserIds)
         : Promise.resolve({ data: [], error: null } as any),
       teeTimeIds.length
-        ? mobileSupabase.from('tee_times').select('id').in('id', teeTimeIds)
+        ? mobileSupabase.from('tee_times').select('id, current_players, max_players, join_mode').in('id', teeTimeIds)
         : Promise.resolve({ data: [], error: null } as any),
       teeTimeIds.length
         ? mobileSupabase

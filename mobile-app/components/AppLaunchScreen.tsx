@@ -1,108 +1,58 @@
 import { useEffect, useRef } from 'react'
-import { Animated, Easing, Image, StyleSheet, Text, View } from 'react-native'
-import { palette } from '@/lib/theme'
+import { Animated, Easing, StyleSheet, View } from 'react-native'
 
 export function AppLaunchScreen() {
   const ballTravel = useRef(new Animated.Value(0)).current
-  const ballSink = useRef(new Animated.Value(0)).current
-  const shimmer = useRef(new Animated.Value(0)).current
+  const flagSway = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(ballTravel, {
-          toValue: 1,
-          duration: 1600,
-          easing: Easing.inOut(Easing.cubic),
-          useNativeDriver: true
-        }),
-        Animated.timing(ballTravel, {
-          toValue: 0,
-          duration: 0,
-          useNativeDriver: true
-        })
-      ])
-    ).start()
+    const ballLoop = Animated.loop(Animated.sequence([
+      Animated.delay(350),
+      Animated.timing(ballTravel, { toValue: 1, duration: 2100, easing: Easing.inOut(Easing.cubic), useNativeDriver: true }),
+      Animated.delay(260),
+      Animated.timing(ballTravel, { toValue: 0, duration: 0, useNativeDriver: true })
+    ]))
+    const flagLoop = Animated.loop(Animated.sequence([
+      Animated.timing(flagSway, { toValue: 1, duration: 900, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      Animated.timing(flagSway, { toValue: 0, duration: 900, easing: Easing.inOut(Easing.sin), useNativeDriver: true })
+    ]))
 
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(ballSink, {
-          toValue: 1,
-          duration: 250,
-          delay: 1280,
-          easing: Easing.in(Easing.quad),
-          useNativeDriver: true
-        }),
-        Animated.timing(ballSink, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true
-        })
-      ])
-    ).start()
+    ballLoop.start()
+    flagLoop.start()
+    return () => {
+      ballLoop.stop()
+      flagLoop.stop()
+    }
+  }, [ballTravel, flagSway])
 
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(shimmer, {
-          toValue: 1,
-          duration: 1800,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true
-        }),
-        Animated.timing(shimmer, {
-          toValue: 0,
-          duration: 0,
-          useNativeDriver: true
-        })
-      ])
-    ).start()
-  }, [ballSink, ballTravel, shimmer])
-
-  const ballTranslateX = ballTravel.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-120, 108]
-  })
-
-  const ballTranslateY = ballSink.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 18]
-  })
-
-  const ballScale = ballSink.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 0.35]
-  })
-
-  const shimmerOpacity = shimmer.interpolate({
-    inputRange: [0, 0.4, 1],
-    outputRange: [0.16, 0.4, 0.16]
-  })
+  const ballTranslateX = ballTravel.interpolate({ inputRange: [0, 1], outputRange: [-103, 103] })
+  const ballTranslateY = ballTravel.interpolate({ inputRange: [0, 0.55, 0.88, 1], outputRange: [5, -7, -2, 9] })
+  const ballScale = ballTravel.interpolate({ inputRange: [0, 0.88, 1], outputRange: [1, 1, 0.3] })
+  const flagRotate = flagSway.interpolate({ inputRange: [0, 1], outputRange: ['-3deg', '3deg'] })
 
   return (
     <View style={styles.overlay}>
-      <View style={styles.glowOne} />
-      <View style={styles.glowTwo} />
-      <Animated.View style={[styles.shimmerBand, { opacity: shimmerOpacity }]} />
+      <View style={styles.sky} />
+      <View style={styles.cloudOne} />
+      <View style={styles.cloudTwo} />
+      <View style={styles.horizonGlow} />
+      <View style={styles.green} />
+      <View style={styles.mowStripeOne} />
+      <View style={styles.mowStripeTwo} />
 
       <View style={styles.content}>
-        <Image source={require('@/assets/ugc-logo.png')} resizeMode="contain" style={styles.logo} />
-        <Text style={styles.title}>The tee sheet is warming up</Text>
-        <Text style={styles.subtitle}>Rolling your next round into place.</Text>
-
-        <View style={styles.animationStage}>
-          <View style={styles.track} />
-          <Animated.View
-            style={[
-              styles.ball,
-              {
-                transform: [{ translateX: ballTranslateX }, { translateY: ballTranslateY }, { scale: ballScale }]
-              }
-            ]}
-          />
-          <View style={styles.holeShadow} />
-          <View style={styles.hole} />
-          <View style={styles.flagStem} />
-          <View style={styles.flag} />
+        <View style={styles.puttStage}>
+          <View style={styles.puttLine} />
+          <View style={styles.puttLineHighlight} />
+          <View style={styles.cupShadow} />
+          <View style={styles.cup} />
+          <View style={styles.flagPole} />
+          <Animated.View style={[styles.flag, { transform: [{ rotate: flagRotate }] }]} />
+          <Animated.View style={[styles.ball, { transform: [{ translateX: ballTranslateX }, { translateY: ballTranslateY }, { scale: ballScale }] }]}>
+            <View style={styles.ballDimpleOne} />
+            <View style={styles.ballDimpleTwo} />
+            <View style={styles.ballDimpleThree} />
+          </Animated.View>
         </View>
       </View>
     </View>
@@ -110,115 +60,24 @@ export function AppLaunchScreen() {
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    backgroundColor: palette.bg,
-    justifyContent: 'center'
-  },
-  glowOne: {
-    backgroundColor: 'rgba(103,232,249,0.12)',
-    borderRadius: 220,
-    height: 240,
-    left: -60,
-    position: 'absolute',
-    top: 110,
-    width: 240
-  },
-  glowTwo: {
-    backgroundColor: 'rgba(34,197,94,0.12)',
-    borderRadius: 260,
-    bottom: 120,
-    height: 280,
-    position: 'absolute',
-    right: -80,
-    width: 280
-  },
-  shimmerBand: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    height: 220,
-    position: 'absolute',
-    transform: [{ rotate: '-22deg' }],
-    width: 420
-  },
-  content: {
-    alignItems: 'center',
-    gap: 14,
-    paddingHorizontal: 28
-  },
-  logo: {
-    height: 108,
-    width: 260
-  },
-  title: {
-    color: palette.text,
-    fontSize: 28,
-    fontWeight: '800',
-    textAlign: 'center'
-  },
-  subtitle: {
-    color: palette.textMuted,
-    fontSize: 15,
-    lineHeight: 22,
-    textAlign: 'center'
-  },
-  animationStage: {
-    height: 120,
-    justifyContent: 'center',
-    marginTop: 24,
-    width: 280
-  },
-  track: {
-    alignSelf: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 999,
-    height: 6,
-    width: 236
-  },
-  ball: {
-    backgroundColor: palette.white,
-    borderColor: 'rgba(0,0,0,0.12)',
-    borderRadius: 999,
-    borderWidth: 1,
-    height: 22,
-    left: 136,
-    position: 'absolute',
-    top: 49,
-    width: 22
-  },
-  holeShadow: {
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    borderRadius: 999,
-    height: 16,
-    position: 'absolute',
-    right: 18,
-    top: 51,
-    width: 20
-  },
-  hole: {
-    backgroundColor: '#020705',
-    borderRadius: 999,
-    height: 12,
-    position: 'absolute',
-    right: 20,
-    top: 53,
-    width: 16
-  },
-  flagStem: {
-    backgroundColor: 'rgba(255,255,255,0.66)',
-    height: 38,
-    position: 'absolute',
-    right: 26,
-    top: 16,
-    width: 2
-  },
-  flag: {
-    backgroundColor: palette.aqua,
-    borderRadius: 3,
-    height: 12,
-    position: 'absolute',
-    right: 28,
-    top: 18,
-    width: 20
-  }
+  overlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', backgroundColor: '#8bcdf0', justifyContent: 'center', overflow: 'hidden' },
+  sky: { ...StyleSheet.absoluteFillObject, backgroundColor: '#73bce1' },
+  cloudOne: { backgroundColor: 'rgba(255,255,255,0.17)', borderRadius: 160, height: 190, left: -74, position: 'absolute', top: 112, width: 300 },
+  cloudTwo: { backgroundColor: 'rgba(255,255,255,0.13)', borderRadius: 160, height: 210, position: 'absolute', right: -108, top: 230, width: 280 },
+  horizonGlow: { backgroundColor: 'rgba(255,246,207,0.38)', borderRadius: 999, height: 230, position: 'absolute', top: '37%', width: 360 },
+  green: { backgroundColor: '#367e58', borderRadius: 999, bottom: -180, height: 460, position: 'absolute', width: '150%' },
+  mowStripeOne: { backgroundColor: 'rgba(158,220,110,0.15)', bottom: 52, height: 66, position: 'absolute', transform: [{ rotate: '-8deg' }], width: '150%' },
+  mowStripeTwo: { backgroundColor: 'rgba(15,81,48,0.2)', bottom: 164, height: 52, position: 'absolute', transform: [{ rotate: '-8deg' }], width: '150%' },
+  content: { alignItems: 'center', width: '100%' },
+  puttStage: { height: 116, position: 'relative', width: 286 },
+  puttLine: { alignSelf: 'center', backgroundColor: 'rgba(247,255,243,0.25)', borderRadius: 99, height: 8, position: 'absolute', top: 52, width: 246 },
+  puttLineHighlight: { alignSelf: 'center', backgroundColor: 'rgba(210,247,206,0.42)', borderRadius: 99, height: 2, position: 'absolute', top: 55, width: 225 },
+  cupShadow: { backgroundColor: 'rgba(6,45,28,0.42)', borderRadius: 99, height: 18, position: 'absolute', right: 15, top: 47, width: 23 },
+  cup: { backgroundColor: '#123b2b', borderColor: 'rgba(255,255,255,0.28)', borderRadius: 99, borderWidth: 1, height: 12, position: 'absolute', right: 18, top: 50, width: 17 },
+  flagPole: { backgroundColor: 'rgba(250,255,248,0.86)', height: 40, position: 'absolute', right: 25, top: 12, width: 2 },
+  flag: { backgroundColor: '#f8d477', borderBottomRightRadius: 4, borderTopRightRadius: 4, height: 13, position: 'absolute', right: 26, top: 14, width: 22 },
+  ball: { alignItems: 'center', backgroundColor: '#fffef8', borderColor: 'rgba(31,68,52,0.28)', borderRadius: 99, borderWidth: 1, height: 24, justifyContent: 'center', left: 131, overflow: 'hidden', position: 'absolute', top: 44, width: 24 },
+  ballDimpleOne: { backgroundColor: 'rgba(29,74,53,0.12)', borderRadius: 99, height: 4, left: 6, position: 'absolute', top: 6, width: 4 },
+  ballDimpleTwo: { backgroundColor: 'rgba(29,74,53,0.12)', borderRadius: 99, height: 4, right: 5, top: 9, width: 4 },
+  ballDimpleThree: { backgroundColor: 'rgba(29,74,53,0.12)', borderRadius: 99, bottom: 5, height: 4, left: 9, position: 'absolute', width: 4 }
 })

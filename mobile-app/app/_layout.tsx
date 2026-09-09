@@ -26,7 +26,10 @@ function RootNavigator() {
 
   const showLaunch = !forceHideLaunch && (loading || holdLaunch)
   const authRoutes = new Set(['/welcome', '/login', '/signup'])
-  const showBottomBar = Boolean(user) && !showLaunch && !authRoutes.has(pathname)
+  // A conversation needs the full lower safe area for its composer and the
+  // keyboard. Keeping the persistent tab bar there clips the send controls.
+  const isConversationRoute = pathname.startsWith('/messages/')
+  const showBottomBar = Boolean(user) && !showLaunch && !authRoutes.has(pathname) && !isConversationRoute
   const statusBarStyle: StatusBarStyle = authRoutes.has(pathname) ? 'dark' : 'light'
 
   return (

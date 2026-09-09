@@ -20,6 +20,6 @@ BEGIN
   ) THEN
     ALTER TABLE golf_groups
     ADD CONSTRAINT golf_groups_group_type_check
-    CHECK (group_type IN ('community', 'course'));
+    CHECK (group_type IN ('community', 'course', 'tournament'));
   END IF;
 END $$;

@@ -10,6 +10,16 @@ const connectionSelect = `
   recipient:user_profiles!user_connections_recipient_id_fkey(${connectionProfileFields})
 `
 
+async function getConnectionDisplayName(supabase: any, userId: string) {
+  const { data } = await supabase
+    .from('user_profiles')
+    .select('first_name, last_name, username')
+    .eq('id', userId)
+    .maybeSingle()
+
+  return [data?.first_name, data?.last_name].filter(Boolean).join(' ') || data?.username || 'A golfer'
+}
+
 async function logUserActivity(
   supabase: any,
   {
@@ -351,10 +361,35 @@ export async function GET(request: NextRequest) {
         }, { status: 500 })
       }
 
-      console.log('✅ Found connections:', connections?.length || 0)
+      // Supabase relationship results can be an object or a one-item array,
+      // depending on the deployed relationship metadata. Normalize them and
+      // backfill profiles by id so accepted golfers are always inviteable.
+      const connectionUserIds = Array.from(
+        new Set(
+          (connections || []).flatMap((connection: any) => [connection.requester_id, connection.recipient_id]).filter(Boolean)
+        )
+      )
+      const { data: connectionProfiles } = connectionUserIds.length
+        ? await supabase
+            .from('user_profiles')
+            .select(connectionProfileFields)
+            .in('id', connectionUserIds)
+        : { data: [] as any[] }
+      const profilesById = new Map((connectionProfiles || []).map((profile: any) => [profile.id, profile]))
+      const normalizedConnections = (connections || []).map((connection: any) => {
+        const requester = Array.isArray(connection.requester) ? connection.requester[0] : connection.requester
+        const recipient = Array.isArray(connection.recipient) ? connection.recipient[0] : connection.recipient
+        return {
+          ...connection,
+          requester: requester || profilesById.get(connection.requester_id) || null,
+          recipient: recipient || profilesById.get(connection.recipient_id) || null
+        }
+      })
+
+      console.log('✅ Found connections:', normalizedConnections.length)
       return NextResponse.json({
         success: true,
-        connections: connections || []
+        connections: normalizedConnections
       })
     }
 
@@ -394,11 +429,12 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ success: true, status: 'none' })
       }
 
-      const { data: connection, error } = await supabase
+      const { data: connectionRows, error } = await supabase
         .from('user_connections')
         .select('*')
         .or(`and(requester_id.eq.${viewerId},recipient_id.eq.${userId}),and(requester_id.eq.${userId},recipient_id.eq.${viewerId})`)
-        .maybeSingle()
+        .order('created_at', { ascending: false })
+        .limit(8)
 
       if (error) {
         console.error('❌ Status fetch error:', error)
@@ -409,6 +445,7 @@ export async function GET(request: NextRequest) {
         }, { status: 500 })
       }
 
+      const connection = (connectionRows || []).find((row: any) => row.status === 'accepted') || connectionRows?.[0]
       let status = 'none'
 
       if (connection?.status === 'accepted') {
@@ -635,11 +672,12 @@ export async function POST(request: NextRequest) {
         console.log('🔗 USERS POST: Creating connection between:', data.user_id, 'and', data.connected_user_id)
         
         // First check if connection already exists
-        const { data: existingConnection, error: checkError } = await supabase
+        const { data: existingConnections, error: checkError } = await supabase
           .from('user_connections')
           .select('*')
           .or(`and(requester_id.eq.${data.user_id},recipient_id.eq.${data.connected_user_id}),and(requester_id.eq.${data.connected_user_id},recipient_id.eq.${data.user_id})`)
-          .maybeSingle()
+          .order('created_at', { ascending: false })
+          .limit(8)
 
         if (checkError) {
           console.error('❌ Error checking existing connection:', checkError)
@@ -649,8 +687,26 @@ export async function POST(request: NextRequest) {
           }, { status: 400 })
         }
 
+        const existingConnection =
+          (existingConnections || []).find((connection: any) => connection.status === 'accepted') ||
+          (existingConnections || []).find(
+            (connection: any) =>
+              connection.status === 'pending' &&
+              connection.requester_id === data.connected_user_id &&
+              connection.recipient_id === data.user_id
+          ) ||
+          (existingConnections || [])[0]
+
         if (existingConnection) {
           console.log('⚠️ Connection already exists:', existingConnection)
+
+          if (existingConnection.status === 'accepted') {
+            return NextResponse.json({
+              success: true,
+              message: 'You are already connected',
+              connection: existingConnection
+            })
+          }
 
           if (
             existingConnection.status === 'pending' &&
@@ -700,7 +756,7 @@ export async function POST(request: NextRequest) {
               userId: data.connected_user_id,
               type: 'connection_accepted',
               title: 'Connection accepted',
-              message: 'You are now connected with a golfer in the community.',
+              message: `${await getConnectionDisplayName(supabase, data.user_id)} accepted your connection request.`,
               relatedId: acceptedConnection.id,
               notificationData: {
                 connection_id: acceptedConnection.id,
@@ -834,7 +890,7 @@ export async function POST(request: NextRequest) {
             userId: connection.requester_id,
             type: 'connection_accepted',
             title: 'Connection accepted',
-            message: 'You are now connected with a golfer in the community.',
+            message: `${await getConnectionDisplayName(supabase, user_id)} accepted your connection request.`,
             relatedId: updatedConnection.id,
             notificationData: {
               connection_id: updatedConnection.id,

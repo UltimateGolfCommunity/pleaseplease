@@ -142,6 +142,7 @@ export default function GroupsTab() {
     maxMembers: '10',
     is_private: false,
     tournament_date: '',
+    tournament_end_date: '',
     tournament_format: 'Stroke Play',
     tournament_type: '',
     tournament_matchups: ''
@@ -247,6 +248,7 @@ export default function GroupsTab() {
         group_type: form.group_type.trim() || 'community',
         is_private: form.is_private,
         tournament_date: form.group_type === 'tournament' ? form.tournament_date.trim() || null : null,
+        tournament_end_date: form.group_type === 'tournament' ? form.tournament_end_date.trim() || null : null,
         tournament_format: form.group_type === 'tournament' ? form.tournament_format.trim() || null : null,
         tournament_type: form.group_type === 'tournament' ? form.tournament_type.trim() || null : null,
         tournament_matchups: form.group_type === 'tournament' ? form.tournament_matchups.trim() || null : null,
@@ -266,6 +268,7 @@ export default function GroupsTab() {
         maxMembers: '10',
         is_private: false,
         tournament_date: '',
+        tournament_end_date: '',
         tournament_format: 'Stroke Play',
         tournament_type: '',
         tournament_matchups: ''
@@ -400,7 +403,8 @@ export default function GroupsTab() {
             </View>
             {form.group_type === 'tournament' ? (
               <View style={styles.tournamentFields}>
-                <TextInput onChangeText={(value) => setForm((current) => ({ ...current, tournament_date: value }))} placeholder="Tournament date (YYYY-MM-DD)" placeholderTextColor={palette.textMuted} style={styles.input} value={form.tournament_date} />
+                <TextInput onChangeText={(value) => setForm((current) => ({ ...current, tournament_date: value }))} placeholder="Tournament start date (YYYY-MM-DD)" placeholderTextColor={palette.textMuted} style={styles.input} value={form.tournament_date} />
+                <TextInput onChangeText={(value) => setForm((current) => ({ ...current, tournament_end_date: value }))} placeholder="Tournament end date (optional)" placeholderTextColor={palette.textMuted} style={styles.input} value={form.tournament_end_date} />
                 <View style={styles.segmentRow}>
                   {['Stroke Play', 'Match Play', 'Ryder Cup'].map((format) => (
                     <Pressable key={format} onPress={() => setForm((current) => ({ ...current, tournament_format: format }))} style={[styles.segment, form.tournament_format === format && styles.segmentActive]}>
@@ -413,11 +417,11 @@ export default function GroupsTab() {
               </View>
             ) : null}
             <View style={styles.visibilitySection}>
-              <Text style={styles.visibilityTitle}>Who can join?</Text>
+              <Text style={styles.visibilityTitle}>{form.group_type === 'tournament' ? 'Tournament access' : 'Who can join?'}</Text>
               <View style={styles.visibilityRow}>
                 {[
-                  { label: 'Public', value: false, detail: 'Anyone can join' },
-                  { label: 'Private', value: true, detail: 'Admin approval required' }
+                  { label: 'Public', value: false, detail: 'People join immediately' },
+                  { label: 'Private', value: true, detail: 'People must request to join' }
                 ].map((option) => {
                   const active = form.is_private === option.value
                   return (

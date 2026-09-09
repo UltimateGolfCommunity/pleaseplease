@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Redirect, router } from 'expo-router'
+import { useCallback, useMemo, useState } from 'react'
+import { Redirect, router, useFocusEffect } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   ActivityIndicator,
@@ -94,12 +94,13 @@ export default function ConnectionsScreen() {
     }
   }, [user?.id])
 
-  useEffect(() => {
-    if (user?.id) {
+  useFocusEffect(
+    useCallback(() => {
+      if (!user?.id) return
       setBusy(true)
-      loadConnections()
-    }
-  }, [loadConnections, user?.id])
+      void loadConnections()
+    }, [loadConnections, user?.id])
+  )
 
   if (!loading && !user) {
     return <Redirect href="/welcome" />
