@@ -99,7 +99,9 @@ function getGroupActivityTitle(item: GroupActivity) {
     case 'group_created':
       return `${actorName} created this group`
     default:
-      return item.title || `${actorName} shared an update`
+      return item.title && !/^(group\s+)?activity$/i.test(item.title.trim())
+        ? item.title
+        : `${actorName} shared an update`
   }
 }
 
