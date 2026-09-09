@@ -1421,12 +1421,12 @@ export default function GroupScreen() {
             ) : null}
 
             {messages.map((message) => (
-              <View key={message.id} style={styles.messageCard}>
+              <View key={message.id} style={[styles.messageCard, isTournament && styles.compactMessageCard]}>
                 <View style={styles.messageTop}>
                   <View style={styles.memberIdentity}>
                     <Avatar
                       label={formatAuthor(message)}
-                      size={38}
+                      size={isTournament ? 32 : 38}
                       uri={message.user_profiles?.avatar_url}
                     />
                     <Text style={styles.memberName}>{formatAuthor(message)}</Text>
@@ -1435,15 +1435,13 @@ export default function GroupScreen() {
                     {message.created_at ? new Date(message.created_at).toLocaleDateString() : 'Now'}
                   </Text>
                 </View>
-                <Text style={styles.body}>{message.message_content || ''}</Text>
+                <Text numberOfLines={isTournament ? 3 : undefined} style={[styles.body, isTournament && styles.compactMessageBody]}>{message.message_content || ''}</Text>
                 <View style={styles.messageActions}>
                   <Pressable onPress={() => void handleToggleLike(message.id, !!message.liked_by_user)}>
-                    <Text style={styles.messageAction}>
-                      {message.liked_by_user ? 'Unlike' : 'Like'}{message.like_count ? ` (${message.like_count})` : ''}
-                    </Text>
+                    {isTournament ? <View style={styles.compactMessageAction}><Ionicons color={palette.aqua} name={message.liked_by_user ? 'heart' : 'heart-outline'} size={16} />{message.like_count ? <Text style={styles.messageAction}>{message.like_count}</Text> : null}</View> : <Text style={styles.messageAction}>{message.liked_by_user ? 'Unlike' : 'Like'}{message.like_count ? ` (${message.like_count})` : ''}</Text>}
                   </Pressable>
                   <Pressable onPress={() => { setReplyingTo(message.id); setComposerOpen(true) }}>
-                    <Text style={styles.messageAction}>Reply</Text>
+                    {isTournament ? <Ionicons color={palette.aqua} name="chatbubble-outline" size={16} /> : <Text style={styles.messageAction}>Reply</Text>}
                   </Pressable>
                 </View>
                 {message.replies?.length ? (
@@ -2685,6 +2683,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 12
   },
+  compactMessageCard: {
+    borderRadius: 16,
+    gap: 7,
+    paddingHorizontal: 11,
+    paddingVertical: 9,
+    shadowOpacity: 0,
+    shadowRadius: 0
+  },
   messageTop: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -2695,13 +2701,23 @@ const styles = StyleSheet.create({
     fontSize: 12
   },
   messageActions: {
+    alignItems: 'center',
     flexDirection: 'row',
     gap: 16
+  },
+  compactMessageAction: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 4
   },
   messageAction: {
     color: palette.aqua,
     fontSize: 13,
     fontWeight: '700'
+  },
+  compactMessageBody: {
+    fontSize: 14,
+    lineHeight: 19
   },
   replies: {
     gap: 8
