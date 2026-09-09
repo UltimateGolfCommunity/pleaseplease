@@ -2074,15 +2074,18 @@ const styles = StyleSheet.create({
   },
   activityCopy: {
     flex: 1,
-    gap: 5
+    gap: 5,
+    minWidth: 0
   },
   activityTitleRow: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
     flexDirection: 'row',
     gap: 8
   },
   activityTitle: {
     color: palette.text,
+    flex: 1,
+    flexShrink: 1,
     fontSize: 14,
     fontWeight: '600',
     lineHeight: 19
@@ -2095,9 +2098,10 @@ const styles = StyleSheet.create({
   },
   activityTime: {
     color: palette.textMuted,
+    flexShrink: 0,
     fontSize: 12,
     lineHeight: 18,
-    marginLeft: 'auto'
+    marginLeft: 0
   },
   bagRow: {
     backgroundColor: 'rgba(255,255,255,0.08)',
