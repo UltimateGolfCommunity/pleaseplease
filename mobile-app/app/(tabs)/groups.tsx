@@ -86,21 +86,32 @@ function formatRelativeTime(value?: string) {
 
 function getGroupActivityTitle(item: GroupActivity) {
   const actorName = item.actor?.first_name || item.actor?.username || 'A member'
-  const groupName = item.group?.name || 'group'
 
   switch (item.activity_type) {
     case 'group_joined':
-      return `${actorName} joined ${groupName}`
+      return `${actorName} joined the group`
     case 'group_logo_updated':
-      return `${actorName} refreshed the logo`
+      return `${actorName} updated the group logo`
     case 'group_cover_updated':
       return `${actorName} updated the cover photo`
     case 'group_details_updated':
-      return `${actorName} updated ${groupName}`
+      return `${actorName} refreshed group details`
     case 'group_created':
-      return `${actorName} started ${groupName}`
+      return `${actorName} created this group`
     default:
-      return item.title || `${groupName} activity`
+      return item.title || `${actorName} shared an update`
+  }
+}
+
+function getGroupActivityDetail(item: GroupActivity) {
+  if (item.description && item.description.trim() && item.description.trim() !== item.title?.trim()) return item.description
+  switch (item.activity_type) {
+    case 'group_joined': return 'Welcome to the club.'
+    case 'group_logo_updated': return 'A fresh look for the community.'
+    case 'group_cover_updated': return 'The clubhouse view has been refreshed.'
+    case 'group_details_updated': return 'Club information has been updated.'
+    case 'group_created': return 'A new place for golfers to connect.'
+    default: return 'Group activity'
   }
 }
 
@@ -463,17 +474,21 @@ export default function GroupsTab() {
               style={styles.feedCard}
             >
               <View style={styles.feedCardTop}>
-                {item.group?.logo_url || item.group?.image_url ? (
-                  <Avatar label={item.group?.name || 'Group'} shape="circle" size={42} uri={item.group.logo_url || item.group.image_url} />
-                ) : (
-                  <View style={styles.feedIconWrap}>
-                    <Ionicons color={palette.aqua} name={getGroupActivityIcon(item.activity_type)} size={18} />
+                <View style={styles.feedActorWrap}>
+                  <Avatar label={item.actor?.first_name || item.actor?.username || 'G'} shape="circle" size={44} uri={item.actor?.avatar_url} />
+                  <View style={styles.feedEventIcon}>
+                    <Ionicons color={palette.bg} name={getGroupActivityIcon(item.activity_type)} size={13} />
                   </View>
-                )}
+                </View>
                 <View style={styles.feedCopy}>
                   <View style={styles.feedMetaRow}>
                     <Text style={styles.feedHeadline}>{getGroupActivityTitle(item)}</Text>
                     <Text style={styles.feedTime}>{formatRelativeTime(item.created_at)}</Text>
+                  </View>
+                  <Text numberOfLines={1} style={styles.feedDetail}>{getGroupActivityDetail(item)}</Text>
+                  <View style={styles.feedGroupBadge}>
+                    {item.group?.logo_url || item.group?.image_url ? <Avatar label={item.group?.name || 'Group'} shape="circle" size={18} uri={item.group.logo_url || item.group.image_url} /> : <Ionicons color={palette.aqua} name="people-outline" size={14} />}
+                    <Text numberOfLines={1} style={styles.feedGroupName}>{item.group?.name || 'Golf community'}</Text>
                   </View>
                 </View>
               </View>
@@ -766,20 +781,36 @@ const styles = StyleSheet.create({
     lineHeight: 20
   },
   feedCard: {
-    backgroundColor: palette.card,
-    borderColor: 'rgba(103,232,249,0.12)',
-    borderRadius: 24,
+    backgroundColor: 'rgba(9, 44, 33, 0.84)',
+    borderColor: 'rgba(103,232,249,0.16)',
+    borderRadius: 20,
     borderWidth: 1,
-    padding: 13,
+    padding: 12,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.12,
     shadowRadius: 18
   },
   feedCardTop: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
     flexDirection: 'row',
-    gap: 14
+    gap: 12
+  },
+  feedActorWrap: {
+    position: 'relative'
+  },
+  feedEventIcon: {
+    alignItems: 'center',
+    backgroundColor: palette.aqua,
+    borderColor: palette.bg,
+    borderRadius: 999,
+    borderWidth: 2,
+    bottom: -2,
+    height: 22,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: -4,
+    width: 22
   },
   feedIconWrap: {
     alignItems: 'center',
@@ -793,6 +824,7 @@ const styles = StyleSheet.create({
   },
   feedCopy: {
     flex: 1,
+    gap: 5,
   },
   feedMetaRow: {
     alignItems: 'center',
@@ -802,10 +834,9 @@ const styles = StyleSheet.create({
   feedGroupName: {
     color: palette.aqua,
     flex: 1,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
-    letterSpacing: 1,
-    textTransform: 'uppercase'
+    letterSpacing: 0.4
   },
   feedTime: {
     color: palette.textMuted,
@@ -819,6 +850,22 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
     lineHeight: 20
+  },
+  feedDetail: {
+    color: palette.textMuted,
+    fontSize: 12,
+    lineHeight: 17
+  },
+  feedGroupBadge: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(103,232,249,0.08)',
+    borderRadius: 999,
+    flexDirection: 'row',
+    gap: 5,
+    maxWidth: '100%',
+    paddingHorizontal: 7,
+    paddingVertical: 4
   },
   card: {
     backgroundColor: palette.card,
