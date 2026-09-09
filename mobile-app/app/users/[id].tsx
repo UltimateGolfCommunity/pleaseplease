@@ -210,6 +210,18 @@ function formatActivityLabel(activity: ActivityItem) {
   }
 }
 
+function getActivityIcon(activityType: string): keyof typeof Ionicons.glyphMap {
+  switch (activityType) {
+    case 'tee_time_created': case 'tee_time_updated': case 'tee_time_joined': return 'golf-outline'
+    case 'round_logged': return 'trophy-outline'
+    case 'profile_photo_updated': case 'profile_cover_updated': return 'image-outline'
+    case 'connection_added': return 'people-outline'
+    case 'group_joined': case 'group_created': case 'group_board_post': return 'people-circle-outline'
+    case 'bag_updated': return 'briefcase-outline'
+    default: return 'create-outline'
+  }
+}
+
 function formatRelativeTime(value?: string) {
   if (!value) return 'Just now'
   const date = new Date(value)
@@ -532,15 +544,13 @@ export default function PublicUserScreen() {
 
               return (
                 <View key={activity.id} style={styles.activityRow}>
-                  <View style={styles.activityDot} />
-                  <View style={styles.activityCopy}>
-                    <Text style={styles.activityTitle}>{formatActivityLabel(activity)}</Text>
-                    {activity.description ? <Text style={styles.activityDescription}>{activity.description}</Text> : null}
+                  <View style={styles.activityActorWrap}>
+                    <Avatar label={displayName} size={42} uri={profile?.avatar_url} />
+                    <View style={styles.activityEventIcon}><Ionicons color={palette.bg} name={getActivityIcon(activity.activity_type)} size={13} /></View>
                   </View>
-                  <Text style={styles.activityTime}>{formatRelativeTime(activity.created_at)}</Text>
-                  <View style={styles.activityActions}>
-                    <Text style={styles.activityActionText}>Like</Text>
-                    <Text style={styles.activityActionText}>Comment</Text>
+                  <View style={styles.activityCopy}>
+                    <View style={styles.activityTitleRow}><Text numberOfLines={1} style={styles.activityTitle}>{displayName.split(' ')[0]} • {formatActivityLabel(activity)}</Text><Text style={styles.activityTime}>{formatRelativeTime(activity.created_at)}</Text></View>
+                    {activity.description ? <Text style={styles.activityDescription}>{activity.description}</Text> : null}
                   </View>
                 </View>
               )
@@ -972,26 +982,38 @@ const styles = StyleSheet.create({
   },
   activityRow: {
     alignItems: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 18,
+    backgroundColor: 'rgba(9, 44, 33, 0.84)',
+    borderColor: 'rgba(103,232,249,0.16)',
+    borderRadius: 20,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: 10,
-    padding: 12,
-    paddingBottom: 34,
+    gap: 12,
+    padding: 12
+  },
+  activityActorWrap: {
     position: 'relative'
   },
-  activityDot: {
+  activityEventIcon: {
+    alignItems: 'center',
     backgroundColor: palette.aqua,
+    borderColor: palette.bg,
     borderRadius: 999,
-    height: 8,
-    marginTop: 7,
-    width: 8
+    borderWidth: 2,
+    bottom: -2,
+    height: 21,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: -4,
+    width: 21
   },
   activityCopy: {
     flex: 1,
-    gap: 2
+    gap: 5
+  },
+  activityTitleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8
   },
   activityTitle: {
     color: palette.text,

@@ -277,6 +277,18 @@ function getActivityLabel(activity: ActivityItem) {
   }
 }
 
+function getActivityIcon(activityType: string): keyof typeof Ionicons.glyphMap {
+  switch (activityType) {
+    case 'tee_time_created': case 'tee_time_updated': case 'tee_time_joined': return 'golf-outline'
+    case 'round_logged': return 'trophy-outline'
+    case 'photo_posted': case 'profile_photo_updated': case 'profile_cover_updated': return 'image-outline'
+    case 'connection_added': return 'people-outline'
+    case 'group_joined': case 'group_created': return 'people-circle-outline'
+    case 'bag_updated': return 'briefcase-outline'
+    default: return 'create-outline'
+  }
+}
+
 function getActivityRoundId(activity: ActivityItem) {
   const metadataRoundId = typeof activity.metadata?.round_id === 'string' ? activity.metadata.round_id : null
   return metadataRoundId || activity.related_id || null
@@ -923,12 +935,14 @@ export default function ProfileTab() {
 
                 return (
                   <View key={activity.id} style={styles.activityRow}>
-                    <View style={styles.activityDot} />
+                    <View style={styles.activityActorWrap}>
+                      <Avatar label={displayName} size={42} uri={profile?.avatar_url} />
+                      <View style={styles.activityEventIcon}><Ionicons color={palette.bg} name={getActivityIcon(activity.activity_type)} size={13} /></View>
+                    </View>
                     <View style={styles.activityCopy}>
-                      <Text style={styles.activityTitle}>{getActivityLabel(activity)}</Text>
+                      <View style={styles.activityTitleRow}><Text numberOfLines={1} style={styles.activityTitle}>You • {getActivityLabel(activity)}</Text><Text style={styles.activityTime}>{formatActivityTime(activity.created_at)}</Text></View>
                       {activityImageUrl ? <Image source={{ uri: activityImageUrl }} style={styles.activityImage} /> : null}
                     </View>
-                    <Text style={styles.activityTime}>{formatActivityTime(activity.created_at)}</Text>
                   </View>
                 )
               })}
@@ -2021,24 +2035,38 @@ const styles = StyleSheet.create({
   },
   activityRow: {
     alignItems: 'flex-start',
-    backgroundColor: '#3b7e65',
-    borderColor: 'rgba(234,246,216,0.24)',
-    borderRadius: 16,
+    backgroundColor: 'rgba(9, 44, 33, 0.84)',
+    borderColor: 'rgba(103,232,249,0.16)',
+    borderRadius: 20,
     borderWidth: 1,
     flexDirection: 'row',
-    gap: 8,
-    padding: 10
+    gap: 12,
+    padding: 12
   },
-  activityDot: {
-    backgroundColor: '#d5b970',
+  activityActorWrap: {
+    position: 'relative'
+  },
+  activityEventIcon: {
+    alignItems: 'center',
+    backgroundColor: palette.aqua,
+    borderColor: palette.bg,
     borderRadius: 999,
-    height: 8,
-    marginTop: 7,
-    width: 8
+    borderWidth: 2,
+    bottom: -2,
+    height: 21,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: -4,
+    width: 21
   },
   activityCopy: {
     flex: 1,
-    gap: 2
+    gap: 5
+  },
+  activityTitleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8
   },
   activityTitle: {
     color: palette.text,
