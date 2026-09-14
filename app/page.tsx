@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { DM_Sans, Playfair_Display } from 'next/font/google'
-import { ArrowRight, Check, ChevronDown, CirclePlay, Medal, Sparkles, Trophy, Users } from 'lucide-react'
+import { ArrowRight, Check, ChevronDown, CirclePlay, Medal, Trophy, Users } from 'lucide-react'
 import Logo from '@/app/components/Logo'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -43,9 +43,9 @@ export default function HomePage() {
         </div>
       </nav>
 
-      <section className="relative z-10 mx-auto max-w-7xl px-5 pb-20 pt-14 sm:px-8 sm:pt-20 lg:grid lg:grid-cols-[1.02fr_0.98fr] lg:items-center lg:gap-8 lg:px-10 lg:pb-28">
+      <section className="relative z-10 mx-auto max-w-7xl px-5 pb-20 pt-7 sm:px-8 sm:pt-10 lg:grid lg:grid-cols-[1.02fr_0.98fr] lg:items-center lg:gap-8 lg:px-8 lg:pb-28">
         <div className="max-w-2xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#0d5235]/15 bg-white/65 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-[#126045] shadow-sm backdrop-blur"><Sparkles className="h-4 w-4 text-[#d4a744]" />The modern golf community</div>
+          <div className="inline-flex rounded-full border border-[#0d5235]/15 bg-white/65 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-[#126045] shadow-sm backdrop-blur">The modern golf community</div>
           <h1 className={`mt-6 text-5xl leading-[0.96] tracking-[-0.055em] text-[#0c3021] sm:text-6xl lg:text-[5.45rem] ${displayFont.className}`}>Your golf life,<span className="block text-[#126045]">beautifully connected.</span></h1>
           <p className="mt-6 max-w-xl text-lg leading-8 text-[#335c4d] sm:text-xl">Bring the benefits of a private club to every course you play. Build your own local golf community, meet the right people, and make every round more social.</p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center"><AppStoreButton /><a href="#inside-the-app" className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#123c2b]/15 bg-white/55 px-5 py-4 font-semibold text-[#174432] transition hover:bg-white"><CirclePlay className="h-5 w-5 text-[#238066]" />Explore the experience</a></div>
