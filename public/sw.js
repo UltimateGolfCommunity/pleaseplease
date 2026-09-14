@@ -1,5 +1,5 @@
 // Service Worker for Ultimate Golf Community PWA
-const CACHE_NAME = 'ugc-golf-v4-fixed-installation';
+const CACHE_NAME = 'ugc-golf-v5-clubhouse-brand';
 const STATIC_CACHE_URLS = [
   '/',
   '/dashboard',
