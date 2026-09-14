@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     siteName: 'Ultimate Golf Community',
     images: [
       {
-        url: '/thereallogo.png',
+        url: '/ugc-app-icon.png',
         width: 1200,
         height: 630,
         alt: 'Ultimate Golf Community Logo',
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Ultimate Golf Community - Connect, Play, Improve',
     description: 'Connect with golfers, book tee times, track your game, and join the ultimate golf community.',
-    images: ['/thereallogo.png'],
+    images: ['/ugc-app-icon.png'],
     creator: '@UltimateGolfCommunity',
     site: '@UltimateGolfCommunity',
   },
@@ -78,12 +78,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/thereallogo.png?v=2" type="image/png" />
-        <link rel="apple-touch-icon" href="/thereallogo.png?v=2" />
-        <link rel="shortcut icon" href="/thereallogo.png?v=2" />
+        <link rel="icon" href="/ugc-app-icon.png?v=3" type="image/png" />
+        <link rel="apple-touch-icon" href="/ugc-app-icon.png?v=3" />
+        <link rel="shortcut icon" href="/ugc-app-icon.png?v=3" />
         <meta name="theme-color" content="#10b981" />
         <meta name="msapplication-TileColor" content="#10b981" />
-        <meta name="msapplication-TileImage" content="/thereallogo.png?v=2" />
+        <meta name="msapplication-TileImage" content="/ugc-app-icon.png?v=3" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:image:type" content="image/png" />
@@ -100,23 +100,23 @@ export default function RootLayout({
         <meta name="msapplication-config" content="/browserconfig.xml" />
         
         {/* iOS PWA Support */}
-        <link rel="apple-touch-icon" sizes="180x180" href="/thereallogo.png?v=2" />
-        <link rel="apple-touch-icon" sizes="152x152" href="/thereallogo.png?v=2" />
-        <link rel="apple-touch-icon" sizes="144x144" href="/thereallogo.png?v=2" />
-        <link rel="apple-touch-icon" sizes="120x120" href="/thereallogo.png?v=2" />
-        <link rel="apple-touch-icon" sizes="114x114" href="/thereallogo.png?v=2" />
-        <link rel="apple-touch-icon" sizes="76x76" href="/thereallogo.png?v=2" />
-        <link rel="apple-touch-icon" sizes="72x72" href="/thereallogo.png?v=2" />
-        <link rel="apple-touch-icon" sizes="60x60" href="/thereallogo.png?v=2" />
-        <link rel="apple-touch-icon" sizes="57x57" href="/thereallogo.png?v=2" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/ugc-app-icon.png?v=3" />
+        <link rel="apple-touch-icon" sizes="152x152" href="/ugc-app-icon.png?v=3" />
+        <link rel="apple-touch-icon" sizes="144x144" href="/ugc-app-icon.png?v=3" />
+        <link rel="apple-touch-icon" sizes="120x120" href="/ugc-app-icon.png?v=3" />
+        <link rel="apple-touch-icon" sizes="114x114" href="/ugc-app-icon.png?v=3" />
+        <link rel="apple-touch-icon" sizes="76x76" href="/ugc-app-icon.png?v=3" />
+        <link rel="apple-touch-icon" sizes="72x72" href="/ugc-app-icon.png?v=3" />
+        <link rel="apple-touch-icon" sizes="60x60" href="/ugc-app-icon.png?v=3" />
+        <link rel="apple-touch-icon" sizes="57x57" href="/ugc-app-icon.png?v=3" />
         
         {/* Android PWA Support */}
-        <link rel="icon" type="image/png" sizes="192x192" href="/thereallogo.png?v=2" />
-        <link rel="icon" type="image/png" sizes="512x512" href="/thereallogo.png?v=2" />
-        <link rel="icon" type="image/png" sizes="144x144" href="/thereallogo.png?v=2" />
-        <link rel="icon" type="image/png" sizes="96x96" href="/thereallogo.png?v=2" />
-        <link rel="icon" type="image/png" sizes="72x72" href="/thereallogo.png?v=2" />
-        <link rel="icon" type="image/png" sizes="48x48" href="/thereallogo.png?v=2" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/ugc-app-icon.png?v=3" />
+        <link rel="icon" type="image/png" sizes="512x512" href="/ugc-app-icon.png?v=3" />
+        <link rel="icon" type="image/png" sizes="144x144" href="/ugc-app-icon.png?v=3" />
+        <link rel="icon" type="image/png" sizes="96x96" href="/ugc-app-icon.png?v=3" />
+        <link rel="icon" type="image/png" sizes="72x72" href="/ugc-app-icon.png?v=3" />
+        <link rel="icon" type="image/png" sizes="48x48" href="/ugc-app-icon.png?v=3" />
       </head>
       <body className={`${inter.className} bg-theme-gradient text-theme-primary transition-colors duration-300`}>
         <ThemeProvider>

@@ -440,9 +440,9 @@ export default function ProfilePage() {
 
             <div className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 justify-center">
               <img
-                src="/UGClogonew.png"
+                src="/ugc-app-icon.png"
                 alt="UGC"
-                className="h-16 w-[144px] object-contain sm:h-20 sm:w-[180px]"
+                className="h-12 w-12 rounded-2xl object-contain sm:h-14 sm:w-14"
               />
             </div>
 

@@ -1141,9 +1141,9 @@ export default function Dashboard() {
 
             <div className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 justify-center">
               <img
-                src="/UGClogonew.png"
+                src="/ugc-app-icon.png"
                 alt="UGC"
-                className="h-24 w-[198px] object-contain sm:h-24 sm:w-[210px] md:h-24 md:w-auto"
+                className="h-14 w-14 rounded-2xl object-contain sm:h-16 sm:w-16"
               />
             </div>
 

@@ -30,7 +30,7 @@ export default function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) 
         {/* Site Logo with Enhanced Animation */}
         <div className="mb-20 animate-logo-entrance">
           <img
-            src="/thereallogo.png"
+            src="/ugc-app-icon.png"
             alt="Ultimate Golf Community"
             className="w-72 h-72 mx-auto object-contain filter drop-shadow-2xl"
           />

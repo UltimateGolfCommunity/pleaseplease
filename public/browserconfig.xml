@@ -2,7 +2,7 @@
 <browserconfig>
   <msapplication>
     <tile>
-      <square150x150logo src="/thereallogo.png?v=2" />
+      <square150x150logo src="/ugc-app-icon.png?v=3" />
       <TileColor>#10b981</TileColor>
     </tile>
   </msapplication>

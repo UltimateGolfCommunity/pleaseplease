@@ -174,8 +174,8 @@ self.addEventListener('push', (event) => {
   
   const options = {
     body: event.data ? event.data.text() : 'New update from Ultimate Golf Community',
-    icon: '/logos/NEWLOGOREAL.png',
-    badge: '/logos/NEWLOGOREAL.png',
+    icon: '/ugc-app-icon.png',
+    badge: '/ugc-app-icon.png',
     vibrate: [100, 50, 100],
     data: {
       dateOfArrival: Date.now(),
@@ -185,12 +185,12 @@ self.addEventListener('push', (event) => {
       {
         action: 'explore',
         title: 'View Dashboard',
-        icon: '/logos/NEWLOGOREAL.png'
+        icon: '/ugc-app-icon.png'
       },
       {
         action: 'close',
         title: 'Close',
-        icon: '/logos/NEWLOGOREAL.png'
+        icon: '/ugc-app-icon.png'
       }
     ]
   };

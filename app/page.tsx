@@ -20,9 +20,9 @@ const screens = [
 
 function AppStoreButton({ compact = false }: { compact?: boolean }) {
   return (
-    <a href={appStoreUrl} target="_blank" rel="noreferrer" className={`group inline-flex items-center justify-center rounded-2xl bg-[#081711] text-white shadow-xl shadow-[#06110d]/20 transition hover:-translate-y-0.5 hover:bg-[#102c1f] ${compact ? 'px-4 py-2.5' : 'px-5 py-3.5'}`}>
-      <span className="mr-3 flex h-7 w-6 items-center justify-center text-xl leading-none"></span>
-      <span className="text-left leading-none"><span className="block text-[9px] font-medium tracking-[0.08em] text-white/72">DOWNLOAD ON THE</span><span className="mt-1 block text-base font-semibold">App Store</span></span>
+    <a href={appStoreUrl} target="_blank" rel="noreferrer" aria-label="Download Ultimate Golf Community on the App Store" className={`group inline-flex items-center justify-center rounded-xl border border-white/25 bg-[linear-gradient(145deg,#202020,#050505)] text-white shadow-[0_12px_24px_rgba(4,24,16,0.28)] transition hover:-translate-y-0.5 hover:border-white/50 hover:shadow-[0_16px_30px_rgba(4,24,16,0.34)] ${compact ? 'min-h-11 px-3.5 py-2' : 'min-h-16 px-5 py-3'}`}>
+      <span className={`mr-3 font-sans font-light leading-none ${compact ? 'text-2xl' : 'text-[2.15rem]'}`}></span>
+      <span className="text-left leading-none"><span className={`block font-medium tracking-[0.06em] text-white/80 ${compact ? 'text-[7px]' : 'text-[10px]'}`}>DOWNLOAD ON THE</span><span className={`mt-1 block font-semibold tracking-[-0.025em] ${compact ? 'text-sm' : 'text-[1.28rem]'}`}>App Store</span></span>
     </a>
   )
 }
@@ -35,7 +35,7 @@ export default function HomePage() {
       <div className="absolute inset-x-0 top-0 h-[42rem] bg-[radial-gradient(circle_at_80%_10%,rgba(172,213,230,0.9),transparent_27rem),radial-gradient(circle_at_13%_3%,rgba(242,221,158,0.72),transparent_25rem),linear-gradient(180deg,#e8f5f6_0%,#f5f1e8_95%)]" />
 
       <nav className="relative z-20 mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8 lg:px-10">
-        <Link href="/" className="flex items-center gap-3" aria-label="Ultimate Golf Community home"><Logo size="md" className="origin-left scale-110" /></Link>
+        <Link href="/" className="flex items-center gap-3" aria-label="Ultimate Golf Community home"><Logo size="sm" /><span className={`hidden text-lg font-semibold tracking-[-0.035em] text-[#113d2b] sm:block ${displayFont.className}`}>Ultimate Golf Community</span></Link>
         <div className="flex items-center gap-3">
           <a href="#inside-the-app" className="hidden text-sm font-semibold text-[#123c2b]/70 transition hover:text-[#123c2b] sm:block">Inside the app</a>
           <Link href={user ? '/dashboard' : '/auth/login'} className="hidden rounded-full border border-[#123c2b]/15 px-4 py-2 text-sm font-semibold text-[#123c2b] transition hover:bg-white/60 sm:inline-flex">{user ? 'Open app' : 'Sign in'}</Link>
