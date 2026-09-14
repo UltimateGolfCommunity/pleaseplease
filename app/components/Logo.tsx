@@ -18,11 +18,11 @@ export default function Logo({ size = 'xl', showText = true, className = '' }: L
   return (
     <div className={`flex items-center ${className}`}>
       {/* Logo Image */}
-      <div className={`relative ${sizeClasses[size]}`}>
+      <div className={`relative overflow-hidden rounded-full shadow-[0_7px_18px_rgba(9,45,29,0.18)] ${sizeClasses[size]}`}>
         <img
           src="/ugc-app-icon.png"
           alt="Ultimate Golf Community clubhouse logo"
-          className="w-full h-full object-contain"
+          className="h-full w-full scale-[1.06] object-cover"
         />
       </div>
     </div>
