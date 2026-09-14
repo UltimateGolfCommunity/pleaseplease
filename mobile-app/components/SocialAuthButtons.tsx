@@ -4,6 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import * as AppleAuthentication from 'expo-apple-authentication'
 import * as Google from 'expo-auth-session/providers/google'
 import * as WebBrowser from 'expo-web-browser'
+import * as Crypto from 'expo-crypto'
 import { palette } from '@/lib/theme'
 import { mobileSupabase } from '@/lib/supabase'
 import { useAuth } from '@/providers/AuthProvider'
@@ -19,6 +20,41 @@ const googleConfigured =
     : Platform.OS === 'android'
       ? Boolean(googleAndroidClientId)
       : Boolean(googleExpoClientId)
+
+// Keep optional platform client IDs out of Expo's request configuration. Passing
+// an undefined web client ID causes the Google request to be rejected on iOS,
+// even when a valid native iOS client ID is present.
+const googleAuthRequestConfig = {
+  ...(googleIOSClientId ? { iosClientId: googleIOSClientId } : {}),
+  ...(googleAndroidClientId ? { androidClientId: googleAndroidClientId } : {}),
+  ...(googleExpoClientId ? { webClientId: googleExpoClientId } : {}),
+  ...(googleIOSClientId
+    ? {
+        redirectUri: `com.googleusercontent.apps.${googleIOSClientId.replace('.apps.googleusercontent.com', '')}:/oauthredirect`
+      }
+    : {})
+}
+
+async function getAppleCredentialWithNonce() {
+  // Apple signs the SHA-256 hash into its identity token. Supabase receives the
+  // original nonce to verify that token belongs to this sign-in request.
+  const nonceBytes = await Crypto.getRandomBytesAsync(32)
+  const nonce = Array.from(nonceBytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
+  const hashedNonce = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, nonce)
+  const credential = await AppleAuthentication.signInAsync({
+    requestedScopes: [
+      AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+      AppleAuthentication.AppleAuthenticationScope.EMAIL
+    ],
+    nonce: hashedNonce
+  })
+
+  if (!credential.identityToken) {
+    throw new Error('Apple did not return an identity token.')
+  }
+
+  return { identityToken: credential.identityToken, nonce }
+}
 
 type AuthIconButtonProps = {
   label: string
@@ -77,20 +113,12 @@ function SocialAuthButtonsWithoutGoogle({ onSuccess }: { onSuccess?: () => void 
     setAppleBusy(true)
 
     try {
-      const credential = await AppleAuthentication.signInAsync({
-        requestedScopes: [
-          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-          AppleAuthentication.AppleAuthenticationScope.EMAIL
-        ]
-      })
-
-      if (!credential.identityToken) {
-        throw new Error('Apple did not return an identity token.')
-      }
+      const { identityToken, nonce } = await getAppleCredentialWithNonce()
 
       const { error } = await mobileSupabase.auth.signInWithIdToken({
         provider: 'apple',
-        token: credential.identityToken
+        token: identityToken,
+        nonce
       })
 
       if (error) {
@@ -136,11 +164,7 @@ function SocialAuthButtonsWithGoogle({ onSuccess }: { onSuccess?: () => void }) 
   const [appleBusy, setAppleBusy] = useState(false)
   const [appleAvailable, setAppleAvailable] = useState(false)
 
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    iosClientId: googleIOSClientId!,
-    androidClientId: googleAndroidClientId!,
-    webClientId: googleExpoClientId!
-  })
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest(googleAuthRequestConfig)
 
   useEffect(() => {
     AppleAuthentication.isAvailableAsync()
@@ -204,20 +228,12 @@ function SocialAuthButtonsWithGoogle({ onSuccess }: { onSuccess?: () => void }) 
     setAppleBusy(true)
 
     try {
-      const credential = await AppleAuthentication.signInAsync({
-        requestedScopes: [
-          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-          AppleAuthentication.AppleAuthenticationScope.EMAIL
-        ]
-      })
-
-      if (!credential.identityToken) {
-        throw new Error('Apple did not return an identity token.')
-      }
+      const { identityToken, nonce } = await getAppleCredentialWithNonce()
 
       const { error } = await mobileSupabase.auth.signInWithIdToken({
         provider: 'apple',
-        token: credential.identityToken
+        token: identityToken,
+        nonce
       })
 
       if (error) {

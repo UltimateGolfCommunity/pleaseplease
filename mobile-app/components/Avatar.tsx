@@ -39,7 +39,9 @@ export function Avatar({ uri, label, size = 96, shape = 'circle' }: AvatarProps)
     >
       {uri ? (
         <Image
-          source={{ uri }}
+          // Avatars appear throughout the feed. Keep an already-downloaded
+          // image on-device instead of re-requesting it whenever a card mounts.
+          source={{ uri, cache: 'force-cache' }}
           style={{
             borderRadius: radius,
             height: size,

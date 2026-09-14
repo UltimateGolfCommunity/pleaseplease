@@ -1,35 +1,19 @@
-import { useEffect, useState } from 'react'
 import { Stack, usePathname } from 'expo-router'
 import { StatusBar, type StatusBarStyle } from 'expo-status-bar'
 import { View } from 'react-native'
 import { AppBottomBar } from '@/components/AppBottomBar'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
-import { AppLaunchScreen } from '@/components/AppLaunchScreen'
 import { RootErrorBoundary } from '@/components/RootErrorBoundary'
 import { AuthProvider, useAuth } from '@/providers/AuthProvider'
 
 function RootNavigator() {
-  const { loading, user } = useAuth()
-  const [holdLaunch, setHoldLaunch] = useState(true)
-  const [forceHideLaunch, setForceHideLaunch] = useState(false)
+  const { user } = useAuth()
   const pathname = usePathname()
-
-  useEffect(() => {
-    const timer = setTimeout(() => setHoldLaunch(false), 1800)
-    return () => clearTimeout(timer)
-  }, [])
-
-  useEffect(() => {
-    const failsafeTimer = setTimeout(() => setForceHideLaunch(true), 4500)
-    return () => clearTimeout(failsafeTimer)
-  }, [])
-
-  const showLaunch = !forceHideLaunch && (loading || holdLaunch)
   const authRoutes = new Set(['/welcome', '/login', '/signup'])
   // A conversation needs the full lower safe area for its composer and the
   // keyboard. Keeping the persistent tab bar there clips the send controls.
   const isConversationRoute = pathname.startsWith('/messages/')
-  const showBottomBar = Boolean(user) && !showLaunch && !authRoutes.has(pathname) && !isConversationRoute
+  const showBottomBar = Boolean(user) && !authRoutes.has(pathname) && !isConversationRoute
   const statusBarStyle: StatusBarStyle = authRoutes.has(pathname) ? 'dark' : 'light'
 
   return (
@@ -37,7 +21,6 @@ function RootNavigator() {
       <StatusBar style={statusBarStyle} />
       <Stack screenOptions={{ headerShown: false }} />
       {showBottomBar ? <AppBottomBar /> : null}
-      {showLaunch ? <AppLaunchScreen /> : null}
     </View>
   )
 }

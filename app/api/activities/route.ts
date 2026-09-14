@@ -22,12 +22,15 @@ async function notifyConnectedGolfersOfPost(supabase: any, activity: any) {
 
   if (connectionsError || !connections?.length) return
 
+  const taggedUserIds = new Set(
+    Array.isArray(activity.metadata?.tagged_user_ids) ? activity.metadata.tagged_user_ids.filter(isUuid) : []
+  )
   const recipientIds = Array.from(new Set<string>(
     connections
       .map((connection: any): unknown =>
         connection.requester_id === activity.user_id ? connection.recipient_id : connection.requester_id
       )
-      .filter((userId: unknown): userId is string => typeof userId === 'string' && userId.length > 0)
+      .filter((userId: unknown): userId is string => typeof userId === 'string' && userId.length > 0 && !taggedUserIds.has(userId))
   ))
   const actorName = [actor?.first_name, actor?.last_name].filter(Boolean).join(' ') || actor?.username || 'A connection'
 
@@ -53,6 +56,30 @@ function normalizeActivityDate(activity: any) {
 
 function isUuid(value: unknown) {
   return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+}
+
+async function notifyTaggedGolfersOfPhoto(supabase: any, activity: any) {
+  if (activity.activity_type !== 'photo_posted' || !activity.user_id) return
+  const taggedUserIds: string[] = Array.isArray(activity.metadata?.tagged_user_ids)
+    ? Array.from(new Set<string>(activity.metadata.tagged_user_ids.filter((value: unknown): value is string => isUuid(value))))
+    : []
+  if (!taggedUserIds.length) return
+  const [{ data: connections }, { data: actor }] = await Promise.all([
+    supabase.from('user_connections').select('requester_id, recipient_id').or(`requester_id.eq.${activity.user_id},recipient_id.eq.${activity.user_id}`).eq('status', 'accepted'),
+    supabase.from('user_profiles').select('first_name, last_name, username').eq('id', activity.user_id).maybeSingle()
+  ])
+  const connectedIds = new Set((connections || []).map((connection: any) => connection.requester_id === activity.user_id ? connection.recipient_id : connection.requester_id))
+  const actorName = [actor?.first_name, actor?.last_name].filter(Boolean).join(' ') || actor?.username || 'A golfer'
+  await Promise.allSettled(taggedUserIds.filter((userId) => connectedIds.has(userId)).map((userId) =>
+    createNotificationAndDeliverPush(supabase, {
+      userId,
+      type: 'photo_tag',
+      title: `${actorName} tagged you in a photo`,
+      message: activity.description || 'Open the photo to see it.',
+      relatedId: activity.id,
+      notificationData: { activity_id: activity.id, actor_id: activity.user_id, activity_type: activity.activity_type }
+    })
+  ))
 }
 
 function buildSyntheticTeeTimeActivity(teeTime: any) {
@@ -215,7 +242,8 @@ export async function GET(request: NextRequest) {
           'group_joined',
           'group_created',
           'group_board_post',
-          'group_thread_reply'
+          'group_thread_reply',
+          'tournament_live_leaderboard'
         ])
         .order('created_at', { ascending: false })
         .limit(limit)
@@ -224,8 +252,27 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ success: true, activities: [] })
       }
 
+      // A live tournament board belongs in every participant's home feed,
+      // even when the tournament admin is not a direct connection.
+      const { data: tournamentMemberships } = await supabase
+        .from('group_members')
+        .select('group_id')
+        .eq('user_id', user_id)
+        .eq('status', 'active')
+      const tournamentGroupIds = Array.from(new Set((tournamentMemberships || []).map((membership: any) => membership.group_id).filter(Boolean)))
+      const { data: tournamentLiveActivities } = tournamentGroupIds.length
+        ? await supabase
+            .from('user_activities')
+            .select('*')
+            .in('related_id', tournamentGroupIds)
+            .eq('activity_type', 'tournament_live_leaderboard')
+        : { data: [] as any[] }
+      const feedActivities = Array.from(
+        new Map([...(activities || []), ...(tournamentLiveActivities || [])].map((activity: any) => [activity.id, activity])).values()
+      )
+
       const existingTeeTimeIds = new Set(
-        (activities || [])
+        feedActivities
           .filter((activity: any) => activity.related_type === 'tee_time' && activity.related_id)
           .map((activity: any) => activity.related_id)
       )
@@ -245,10 +292,11 @@ export async function GET(request: NextRequest) {
           .map(buildSyntheticTeeTimeActivity)
       }
 
+      const activityActorIds = Array.from(new Set(feedActivities.map((activity: any) => activity.user_id).filter(Boolean)))
       const { data: actorProfiles } = await supabase
         .from('user_profiles')
         .select('id, first_name, last_name, username, avatar_url')
-        .in('id', feedUserIds)
+        .in('id', Array.from(new Set([...feedUserIds, ...activityActorIds])))
 
       const actorMap = new Map((actorProfiles || []).map((profile: any) => [profile.id, profile]))
       const teeTimesById = new Map((teeTimes || []).map((teeTime: any) => [teeTime.id, teeTime]))
@@ -280,7 +328,7 @@ export async function GET(request: NextRequest) {
         })
       }
 
-      const mergedActivities = [...(activities || []), ...syntheticTeeTimes]
+      const mergedActivities = [...feedActivities, ...syntheticTeeTimes]
         .sort((a: any, b: any) => normalizeActivityDate(b) - normalizeActivityDate(a))
         .slice(0, limit)
 
@@ -551,6 +599,9 @@ export async function POST(request: NextRequest) {
 
     await notifyConnectedGolfersOfPost(supabase, data).catch((notificationError) => {
       console.warn('Unable to notify connected golfers of a post:', notificationError)
+    })
+    await notifyTaggedGolfersOfPhoto(supabase, data).catch((notificationError) => {
+      console.warn('Unable to notify tagged golfers of a photo:', notificationError)
     })
 
     return NextResponse.json({ 

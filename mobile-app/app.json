@@ -2,15 +2,16 @@
   "expo": {
     "name": "Ultimate Golf Community",
     "slug": "ultimate-golf-community",
-    "scheme": "ugcapp",
+    "scheme": [
+      "ugcapp",
+      "com.googleusercontent.apps.929553124087-0uqofmgjp4qs3musorb9j6fmc36v56dh"
+    ],
     "version": "1.0.5",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "icon": "./assets/ugc-app-icon.png",
     "splash": {
-      "image": "./assets/ugc-splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#07140f"
+      "backgroundColor": "#3d748b"
     },
     "assetBundlePatterns": [
       "**/*"

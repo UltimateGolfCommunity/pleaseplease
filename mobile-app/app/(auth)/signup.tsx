@@ -2,7 +2,7 @@ import { Link, Redirect, router } from 'expo-router'
 import { useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Alert, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
-import { BrandHeader } from '@/components/BrandHeader'
+import Ionicons from '@expo/vector-icons/Ionicons'
 import { PrimaryButton } from '@/components/PrimaryButton'
 import { SocialAuthButtons } from '@/components/SocialAuthButtons'
 import { palette } from '@/lib/theme'
@@ -43,19 +43,16 @@ export default function SignupScreen() {
         behavior={Platform.select({ ios: 'padding', default: undefined })}
         style={styles.keyboardWrap}
       >
-        <ScrollView contentContainerStyle={styles.content}>
-          <BrandHeader
-            largeLogo
-            logoScale={1.18}
-          />
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <View style={styles.hero}>
+            <View style={styles.heroCrest}>
+              <Ionicons color={palette.gold} name="golf-outline" size={26} />
+            </View>
+            <Text style={styles.eyebrow}>ULTIMATE GOLF COMMUNITY</Text>
+            <Text style={styles.heroTitle}>Join the club.</Text>
+          </View>
 
           <View style={styles.formCard}>
-            <View style={styles.formIntro}>
-              <Text style={styles.formTitle}>Build your golfer profile</Text>
-              <Text style={styles.formBody}>
-                Start with the basics now and we can keep layering in home course, handicap, and your golf story next.
-              </Text>
-            </View>
             <TextInput
               onChangeText={setFirstName}
               placeholder="First name"
@@ -88,14 +85,13 @@ export default function SignupScreen() {
               value={password}
             />
             <PrimaryButton
-              label="Join Ultimate Golf Community"
+              label="Create My Profile"
               loading={authBusy}
               onPress={handleSignup}
             />
+            <View style={styles.orRow}><View style={styles.orLine} /><Text style={styles.orText}>OR CONTINUE WITH</Text><View style={styles.orLine} /></View>
             <SocialAuthButtons onSuccess={() => router.replace('/home')} />
-            <Text style={styles.helper}>
-              Your same Supabase account powers both the mobile app and the live web experience.
-            </Text>
+            <Text style={styles.helper}>By joining, you agree to build a respectful golf community around you.</Text>
             <View style={styles.legalRow}>
               <Pressable onPress={() => void Linking.openURL(process.env.EXPO_PUBLIC_PRIVACY_URL || 'https://www.ultimategolfcommunity.com/privacy')}>
                 <Text style={styles.legalLink}>Privacy Policy</Text>
@@ -124,8 +120,46 @@ const styles = StyleSheet.create({
     flex: 1
   },
   content: {
-    gap: 24,
-    padding: 24
+    gap: 20,
+    padding: 24,
+    paddingBottom: 42
+  },
+  hero: {
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingTop: 18
+  },
+  heroCrest: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(7,39,28,0.54)',
+    borderColor: 'rgba(246,196,95,0.38)',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 54,
+    justifyContent: 'center',
+    width: 54
+  },
+  eyebrow: {
+    color: palette.gold,
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 2.6
+  },
+  heroTitle: {
+    color: palette.text,
+    fontFamily: 'Georgia',
+    fontSize: 38,
+    fontWeight: '700',
+    letterSpacing: -1,
+    lineHeight: 43
+  },
+  heroBody: {
+    color: palette.textMuted,
+    fontSize: 15,
+    lineHeight: 22,
+    maxWidth: 330,
+    textAlign: 'center'
   },
   formCard: {
     backgroundColor: palette.card,
@@ -140,7 +174,8 @@ const styles = StyleSheet.create({
   },
   formTitle: {
     color: palette.text,
-    fontSize: 24,
+    fontFamily: 'Georgia',
+    fontSize: 25,
     fontWeight: '700'
   },
   formBody: {
@@ -161,6 +196,23 @@ const styles = StyleSheet.create({
     color: palette.textMuted,
     fontSize: 13,
     lineHeight: 18
+  },
+  orRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 2
+  },
+  orLine: {
+    backgroundColor: palette.border,
+    flex: 1,
+    height: 1
+  },
+  orText: {
+    color: palette.textMuted,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1
   },
   legalRow: {
     flexDirection: 'row',

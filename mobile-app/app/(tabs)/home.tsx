@@ -230,6 +230,8 @@ export default function HomeTab() {
   const [unreadNotifications, setUnreadNotifications] = useState(0)
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [weather, setWeather] = useState<WeatherData | null>(null)
+  const [weatherLocationLabel, setWeatherLocationLabel] = useState('Finding your location...')
+  const [locationAccessDenied, setLocationAccessDenied] = useState(false)
   const [form, setForm] = useState<{
     course_name: string
     location: string
@@ -254,7 +256,7 @@ export default function HomeTab() {
 
   const weatherQuery = useMemo(() => {
     const locationText = profile?.location || nextTeeTime?.location || ''
-    return locationText.trim() || 'Monterey, CA'
+    return locationText.trim()
   }, [nextTeeTime?.location, profile?.location])
 
   const loadHome = useCallback(async () => {
@@ -318,38 +320,63 @@ export default function HomeTab() {
   const loadWeather = useCallback(async () => {
     try {
       setWeatherLoading(true)
-      const permissions = await Location.requestForegroundPermissionsAsync()
+      setLocationAccessDenied(false)
+      const existingPermissions = await Location.getForegroundPermissionsAsync()
+      const permissions =
+        existingPermissions.status === 'granted'
+          ? existingPermissions
+          : await Location.requestForegroundPermissionsAsync()
       let response: WeatherData
 
       if (permissions.status === 'granted') {
-        const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
+        // A recent position makes the weather card feel immediate after login.
+        // We still obtain a fresh position when none is available.
+        const position =
+          (await Location.getLastKnownPositionAsync({
+            maxAge: 10 * 60 * 1000,
+            requiredAccuracy: 5000
+          })) ??
+          (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }))
         const places = await Location.reverseGeocodeAsync(position.coords).catch(() => [])
         const place = places[0]
-        const currentLocationLabel = [place?.city, place?.region].filter(Boolean).join(', ') || weatherQuery
+        const currentLocationLabel =
+          [place?.city, place?.region].filter(Boolean).join(', ') || weatherQuery || 'Your location'
+        setWeatherLocationLabel(currentLocationLabel)
 
         response = await getMobileWeatherAtCoordinates(
           position.coords.latitude,
           position.coords.longitude,
           currentLocationLabel
         )
-      } else {
+      } else if (weatherQuery) {
+        setWeatherLocationLabel(weatherQuery)
         response = await getMobileWeather(weatherQuery)
+      } else {
+        setLocationAccessDenied(true)
+        setWeather(null)
+        setWeatherLocationLabel('Location access needed')
+        return
       }
 
       setWeather(response)
     } catch {
-      setWeather(null)
+      // A saved profile or tee-time location still gives the member useful
+      // conditions if iOS cannot produce a fresh GPS reading right away.
+      if (weatherQuery) {
+        try {
+          setWeatherLocationLabel(weatherQuery)
+          setWeather(await getMobileWeather(weatherQuery))
+        } catch {
+          setWeather(null)
+        }
+      } else {
+        setWeather(null)
+        setWeatherLocationLabel('Location unavailable')
+      }
     } finally {
       setWeatherLoading(false)
     }
   }, [weatherQuery])
-
-  useEffect(() => {
-    if (user?.id) {
-      setBusy(true)
-      loadHome()
-    }
-  }, [loadHome, user?.id])
 
   useFocusEffect(
     useCallback(() => {
@@ -363,15 +390,11 @@ export default function HomeTab() {
   }, [loadWeather])
 
   useEffect(() => {
-    void loadHeaderCounts()
-  }, [loadHeaderCounts])
-
-  useEffect(() => {
     if (!user?.id) return
 
     const interval = setInterval(() => {
       void loadHeaderCounts()
-    }, 15000)
+    }, 60000)
 
     return () => clearInterval(interval)
   }, [loadHeaderCounts, user?.id])
@@ -799,6 +822,11 @@ export default function HomeTab() {
           : ''
     const imageUrl =
       typeof item.metadata?.image_url === 'string' ? item.metadata.image_url : ''
+    const taggedGolferNames = Array.isArray(item.metadata?.tagged_golfers)
+      ? item.metadata.tagged_golfers
+          .map((golfer: any) => typeof golfer?.name === 'string' ? golfer.name : '')
+          .filter(Boolean)
+      : []
     const topComment = getTopComment(item)
 
     if (item.activity_type === 'tee_time_created') {
@@ -899,6 +927,7 @@ export default function HomeTab() {
             </Pressable>
           ) : null}
           {caption ? <Text style={styles.feedPhotoCaption}>{caption}</Text> : null}
+          {taggedGolferNames.length ? <Text style={styles.feedPhotoTags}>With {taggedGolferNames.join(', ')}</Text> : null}
         </>
       )
     }
@@ -1111,7 +1140,7 @@ export default function HomeTab() {
               <View>
                 <Text style={styles.weatherKicker}>Course conditions</Text>
                 <Text numberOfLines={1} style={styles.weatherLocation}>
-                  {weather?.location || weatherQuery}
+                  {weather?.location || weatherLocationLabel}
                 </Text>
               </View>
               <View style={styles.weatherIconOrb}>
@@ -1147,7 +1176,9 @@ export default function HomeTab() {
               <Text style={styles.weatherFallback}>
                 {weatherLoading
                   ? 'Loading local golf conditions...'
-                  : 'Weather is unavailable right now.'}
+                  : locationAccessDenied
+                    ? 'Allow location access to show nearby conditions.'
+                    : 'Weather is unavailable right now.'}
               </Text>
             ) : null}
           </View>
@@ -2308,6 +2339,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 19,
     marginTop: 2
+  },
+  feedPhotoTags: {
+    color: palette.aqua,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 5
   },
   scoreHeroRow: {
     alignItems: 'stretch',

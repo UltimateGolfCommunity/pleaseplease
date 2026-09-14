@@ -122,6 +122,7 @@ type TournamentMatchup = {
   rightUserId: string
   format?: string
   day?: string | null
+  throughHole?: number | null
   leftScore?: number | null
   rightScore?: number | null
 }
@@ -146,6 +147,7 @@ type TournamentSetup = {
   manualParticipants: ManualTournamentParticipant[]
   closestToPin?: boolean
   longestDrive?: boolean
+  liveScoring?: boolean
 }
 
 function parseTournamentMatchups(value?: string | null): TournamentMatchup[] {
@@ -153,7 +155,7 @@ function parseTournamentMatchups(value?: string | null): TournamentMatchup[] {
 }
 
 function parseTournamentSetup(value?: string | null): TournamentSetup {
-  const empty = { matchups: [], teams: [], manualParticipants: [], closestToPin: false, longestDrive: false } as TournamentSetup
+  const empty = { matchups: [], teams: [], manualParticipants: [], closestToPin: false, longestDrive: false, liveScoring: false } as TournamentSetup
   if (!value) return empty
   try {
     const parsed = JSON.parse(value)
@@ -163,7 +165,8 @@ function parseTournamentSetup(value?: string | null): TournamentSetup {
       teams: Array.isArray(parsed?.teams) ? parsed.teams.filter((team: TournamentTeam) => team?.id) : [],
       manualParticipants: Array.isArray(parsed?.manualParticipants) ? parsed.manualParticipants.filter((participant: ManualTournamentParticipant) => participant?.id && participant?.name) : [],
       closestToPin: Boolean(parsed?.closestToPin),
-      longestDrive: Boolean(parsed?.longestDrive)
+      longestDrive: Boolean(parsed?.longestDrive),
+      liveScoring: Boolean(parsed?.liveScoring)
     }
   } catch {
     return empty
@@ -216,6 +219,8 @@ export default function GroupScreen() {
   const [scoreSaving, setScoreSaving] = useState(false)
   const [savingMatchupId, setSavingMatchupId] = useState<string | null>(null)
   const [isEditingMatchupScores, setIsEditingMatchupScores] = useState(false)
+  const [liveScoring, setLiveScoring] = useState(false)
+  const [savingLiveScoring, setSavingLiveScoring] = useState(false)
   const [matchups, setMatchups] = useState<TournamentMatchup[]>([])
   const [leftMatchupUserId, setLeftMatchupUserId] = useState('')
   const [rightMatchupUserId, setRightMatchupUserId] = useState('')
@@ -252,66 +257,45 @@ export default function GroupScreen() {
     if (!id) return
 
     try {
-      const [response, connectionsResponse, directConnections] = await Promise.all([
-        apiGet<{ success: boolean; group: GroupDetail; members: Member[]; pending_members?: Member[] }>(
-          `/api/groups/${encodeURIComponent(id)}${user?.id ? `?user_id=${encodeURIComponent(user.id)}` : ''}`
-        ),
-        user?.id
-          ? apiGet<{ success: boolean; connections: ConnectionRecord[] }>(
-              `/api/users?action=connections&id=${encodeURIComponent(user.id)}`
-            ).catch(() => ({ success: true, connections: [] }))
-          : Promise.resolve({ success: true, connections: [] as ConnectionRecord[] })
-        ,
-        user?.id
-          ? (async () => {
-              const { data: edges } = await mobileSupabase
-                .from('user_connections')
-                .select('id, requester_id, recipient_id, status')
-                .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`)
-                .in('status', ['accepted', 'active'])
-              const counterpartIds = Array.from(new Set((edges || []).map((edge: any) => edge.requester_id === user.id ? edge.recipient_id : edge.requester_id).filter(Boolean)))
-              const { data: profiles } = counterpartIds.length
-                ? await mobileSupabase.from('user_profiles').select('id, first_name, last_name, username, avatar_url, location, handicap').in('id', counterpartIds)
-                : { data: [] as UserCard[] }
-              const profileById = new Map((profiles || []).map((profile: UserCard) => [profile.id, profile]))
-              return (edges || []).map((edge: any) => ({
-                ...edge,
-                requester: edge.requester_id === user.id ? null : profileById.get(edge.requester_id) || null,
-                recipient: edge.recipient_id === user.id ? null : profileById.get(edge.recipient_id) || null
-              })) as ConnectionRecord[]
-            })().catch(() => [] as ConnectionRecord[])
-          : Promise.resolve([] as ConnectionRecord[])
-      ])
+      const response = await apiGet<{ success: boolean; group: GroupDetail; members: Member[]; pending_members?: Member[] }>(
+        `/api/groups/${encodeURIComponent(id)}${user?.id ? `?user_id=${encodeURIComponent(user.id)}` : ''}`
+      )
       setGroup(response.group)
       setMembers(response.members || [])
       setPendingMembers(response.pending_members || [])
-      const mergedConnections = [...(connectionsResponse.connections || []), ...directConnections]
-      setConnections(Array.from(new Map(mergedConnections.map((connection) => [connection.id, connection])).values()))
+      setBusy(false)
+      setRefreshing(false)
 
-      if ((response.group.group_type || '').toLowerCase() === 'tournament') {
-        const scores = await apiGet<{ success: boolean; scores: TournamentScore[] }>(
-          `/api/groups/scores?group_id=${encodeURIComponent(id)}`
-        ).catch(() => ({ success: true, scores: [] as TournamentScore[] }))
-        setTournamentScores(scores.scores || [])
-      } else {
-        setTournamentScores([])
-      }
+      void (async () => {
+        const [connectionsResponse, directConnections] = await Promise.all([
+          user?.id
+            ? apiGet<{ success: boolean; connections: ConnectionRecord[] }>(`/api/users?action=connections&id=${encodeURIComponent(user.id)}`).catch(() => ({ success: true, connections: [] }))
+            : Promise.resolve({ success: true, connections: [] as ConnectionRecord[] }),
+          user?.id
+            ? (async () => {
+                const { data: edges } = await mobileSupabase.from('user_connections').select('id, requester_id, recipient_id, status').or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`).in('status', ['accepted', 'active'])
+                const counterpartIds = Array.from(new Set((edges || []).map((edge: any) => edge.requester_id === user.id ? edge.recipient_id : edge.requester_id).filter(Boolean)))
+                const { data: profiles } = counterpartIds.length ? await mobileSupabase.from('user_profiles').select('id, first_name, last_name, username, avatar_url, location, handicap').in('id', counterpartIds) : { data: [] as UserCard[] }
+                const profileById = new Map((profiles || []).map((profile: UserCard) => [profile.id, profile]))
+                return (edges || []).map((edge: any) => ({ ...edge, requester: edge.requester_id === user.id ? null : profileById.get(edge.requester_id) || null, recipient: edge.recipient_id === user.id ? null : profileById.get(edge.recipient_id) || null })) as ConnectionRecord[]
+              })().catch(() => [] as ConnectionRecord[])
+            : Promise.resolve([] as ConnectionRecord[])
+        ])
+        const mergedConnections = [...(connectionsResponse.connections || []), ...directConnections]
+        setConnections(Array.from(new Map(mergedConnections.map((connection) => [connection.id, connection])).values()))
+      })()
 
-      if (user?.id) {
-        try {
-          const board = await apiGet<{ success: boolean; messages: GroupMessage[] }>(
-            `/api/groups/message?group_id=${encodeURIComponent(id)}&user_id=${encodeURIComponent(user.id)}`
-          )
-          setMessages(board.messages || [])
-          const feed = await apiGet<{ success: boolean; activities: GroupActivity[] }>(
-            `/api/activities?action=group_detail&group_id=${encodeURIComponent(id)}&user_id=${encodeURIComponent(user.id)}&limit=8`
-          ).catch(() => ({ success: true, activities: [] }))
-          setGroupFeed(feed.activities || [])
-        } catch {
-          setMessages([])
-          setGroupFeed([])
-        }
-      }
+      void Promise.all([
+        (response.group.group_type || '').toLowerCase() === 'tournament'
+          ? apiGet<{ success: boolean; scores: TournamentScore[] }>(`/api/groups/scores?group_id=${encodeURIComponent(id)}`).then((scores) => setTournamentScores(scores.scores || [])).catch(() => setTournamentScores([]))
+          : Promise.resolve(setTournamentScores([])),
+        user?.id
+          ? Promise.all([
+              apiGet<{ success: boolean; messages: GroupMessage[] }>(`/api/groups/message?group_id=${encodeURIComponent(id)}&user_id=${encodeURIComponent(user.id)}`).then((board) => setMessages(board.messages || [])),
+              apiGet<{ success: boolean; activities: GroupActivity[] }>(`/api/activities?action=group_detail&group_id=${encodeURIComponent(id)}&user_id=${encodeURIComponent(user.id)}&limit=8`).then((feed) => setGroupFeed(feed.activities || []))
+            ]).catch(() => { setMessages([]); setGroupFeed([]) })
+          : Promise.resolve()
+      ])
     } finally {
       setBusy(false)
       setRefreshing(false)
@@ -357,11 +341,8 @@ export default function GroupScreen() {
     setRightMatchupUserId('')
     setMatchupFormat('Match Play')
     setMatchupDay(group.tournament_date || '')
+    setLiveScoring(Boolean(setup.liveScoring))
   }, [group])
-
-  if (!loading && !user) {
-    return <Redirect href="/welcome" />
-  }
 
   const founder = members.find((member) => member.user_id === group?.creator_id)?.user_profiles
   const founderName =
@@ -419,9 +400,9 @@ export default function GroupScreen() {
     ...team,
     points: matchups.reduce((total, matchup) => {
       const hasResult = matchup.leftScore !== null && matchup.leftScore !== undefined && matchup.rightScore !== null && matchup.rightScore !== undefined && matchup.leftScore !== matchup.rightScore
-      const leftWins = matchup.format === 'Stroke Play'
-        ? (matchup.leftScore || 0) < (matchup.rightScore || 0)
-        : (matchup.leftScore || 0) > (matchup.rightScore || 0)
+      // Scores are entered as strokes in every matchup format, so the lower
+      // score is the current winner before that result is assigned to a team.
+      const leftWins = (matchup.leftScore || 0) < (matchup.rightScore || 0)
       const winnerId = hasResult ? (leftWins ? matchup.leftUserId : matchup.rightUserId) : null
       return total + (winnerId && team.memberIds.includes(winnerId) ? 1 : 0)
     }, 0)
@@ -434,6 +415,10 @@ export default function GroupScreen() {
     })
     return Array.from(grouped.entries())
   }, [group?.tournament_date, matchups])
+
+  if (!loading && !user) {
+    return <Redirect href="/welcome" />
+  }
   const acceptedConnections = connections
     .map((connection) =>
       connection.requester_id === user?.id ? connection.recipient : connection.requester
@@ -541,6 +526,19 @@ export default function GroupScreen() {
     return leftAdjusted < rightAdjusted ? 'left' : 'right'
   }
 
+  const getMatchPlayStatus = (matchup: TournamentMatchup) => {
+    const left = participantById.get(matchup.leftUserId)
+    const right = participantById.get(matchup.rightUserId)
+    const leftAdjusted = getAdjustedTournamentScore(matchup.leftScore, left?.handicap)
+    const rightAdjusted = getAdjustedTournamentScore(matchup.rightScore, right?.handicap)
+
+    if (leftAdjusted === null || rightAdjusted === null) return null
+    if (leftAdjusted === rightAdjusted) return { leader: null, label: 'EVEN' }
+
+    const leader = leftAdjusted < rightAdjusted ? 'left' : 'right'
+    return { leader, label: `${Math.abs(leftAdjusted - rightAdjusted)} UP` }
+  }
+
   const handleSaveMatchupScore = async (matchupId: string) => {
     if (!user?.id || !group?.id || !isOwner) return
     const nextMatchups = matchups.map((matchup) => ({ ...matchup }))
@@ -560,9 +558,10 @@ export default function GroupScreen() {
         tournament_end_date: group.tournament_end_date || null,
         tournament_format: group.tournament_format || 'Match Play',
         tournament_type: group.tournament_type || null,
-        tournament_matchups: JSON.stringify({ matchups: nextMatchups, teams, manualParticipants, closestToPin, longestDrive })
+        tournament_matchups: JSON.stringify({ matchups: nextMatchups, teams, manualParticipants, closestToPin, longestDrive, liveScoring })
       })
       if (response.group) setGroup((current) => current ? { ...current, ...response.group } : current)
+      if (liveScoring) await apiPost('/api/groups/live-leaderboard', { group_id: group.id, user_id: user.id, live_scoring: true })
       await loadGroup()
     } catch (error) {
       Alert.alert('Unable to save matchup score', error instanceof Error ? error.message : 'Please try again.')
@@ -762,8 +761,8 @@ export default function GroupScreen() {
         tournament_end_date: editForm.tournament_end_date.trim() || null,
         tournament_format: editForm.tournament_format.trim() || null,
         tournament_type: editForm.tournament_type.trim() || null,
-        tournament_matchups: matchups.length || manualParticipants.length || teams.some((team) => team.memberIds.length || team.logoUrl || team.name.trim()) || closestToPin || longestDrive
-          ? JSON.stringify({ matchups, teams, manualParticipants, closestToPin, longestDrive })
+        tournament_matchups: matchups.length || manualParticipants.length || teams.some((team) => team.memberIds.length || team.logoUrl || team.name.trim()) || closestToPin || longestDrive || liveScoring
+          ? JSON.stringify({ matchups, teams, manualParticipants, closestToPin, longestDrive, liveScoring })
           : null
       })
 
@@ -805,12 +804,36 @@ export default function GroupScreen() {
     setScoreSaving(true)
     try {
       await apiPost('/api/groups/scores', { group_id: group.id, user_id: user.id, total_score: totalScore })
+      if (liveScoring) await apiPost('/api/groups/live-leaderboard', { group_id: group.id, user_id: user.id, live_scoring: true })
       setScoreDraft('')
       await loadGroup()
     } catch (error) {
       Alert.alert('Unable to save score', error instanceof Error ? error.message : 'Please try again.')
     } finally {
       setScoreSaving(false)
+    }
+  }
+
+  const handleToggleLiveScoring = async () => {
+    if (!group?.id || !user?.id || !isOwner) return
+    const nextLiveScoring = !liveScoring
+    setSavingLiveScoring(true)
+    try {
+      const response = await apiPost<{ group?: GroupDetail }>('/api/groups', {
+        action: 'update', group_id: group.id, user_id: user.id, name: group.name,
+        description: group.description || '', slogan: group.slogan || '', location: group.location || '',
+        group_type: 'tournament', is_private: Boolean(group.is_private),
+        tournament_date: group.tournament_date || null, tournament_end_date: group.tournament_end_date || null,
+        tournament_format: group.tournament_format || 'Stroke Play', tournament_type: group.tournament_type || null,
+        tournament_matchups: JSON.stringify({ matchups, teams, manualParticipants, closestToPin, longestDrive, liveScoring: nextLiveScoring })
+      })
+      if (response.group) setGroup((current) => current ? { ...current, ...response.group } : current)
+      setLiveScoring(nextLiveScoring)
+      await apiPost('/api/groups/live-leaderboard', { group_id: group.id, user_id: user.id, live_scoring: nextLiveScoring })
+    } catch (error) {
+      Alert.alert('Unable to update live scoring', error instanceof Error ? error.message : 'Please try again.')
+    } finally {
+      setSavingLiveScoring(false)
     }
   }
 
@@ -1260,15 +1283,35 @@ export default function GroupScreen() {
           </View>
         ) : activeSection === 'scores' && isTournament ? (
           <View style={styles.scoresFeed}>
+            {isOwner ? (
+              <View style={styles.liveScoringControl}>
+                <View style={styles.liveScoringSettings}>
+                  <View style={styles.liveScoringCopy}>
+                    <View style={styles.liveScoringControlTitle}>
+                      <Ionicons color={liveScoring ? '#f06b5d' : palette.aqua} name={liveScoring ? 'radio' : 'radio-outline'} size={20} />
+                      <Text style={styles.liveScoringSettingTitle}>Live scoring</Text>
+                    </View>
+                  </View>
+                  <Pressable accessibilityRole="switch" accessibilityState={{ checked: liveScoring }} disabled={savingLiveScoring} onPress={() => void handleToggleLiveScoring()} style={[styles.liveScoringSwitch, liveScoring && styles.liveScoringSwitchOn]}>
+                    <View style={[styles.liveScoringKnob, liveScoring && styles.liveScoringKnobOn]} />
+                  </Pressable>
+                </View>
+              </View>
+            ) : liveScoring ? (
+              <View style={styles.liveScoringAudienceStatus}>
+                <Ionicons color="#f06b5d" name="radio" size={17} />
+                <Text style={styles.liveScoringAudienceText}>Live scoring is on</Text>
+              </View>
+            ) : null}
             {(group?.tournament_format || 'Stroke Play') === 'Stroke Play' ? <>
               {isMember ? <View style={styles.scoreEntry}><TextInput keyboardType="number-pad" onChangeText={setScoreDraft} placeholder="Your total score" placeholderTextColor={palette.textMuted} style={styles.scoreInput} value={scoreDraft} /><PrimaryButton label={scoreSaving ? 'Saving...' : 'Post Score'} loading={scoreSaving} onPress={handleSaveTournamentScore} /></View> : <Text style={styles.body}>Join this tournament to post your score.</Text>}
               <View style={styles.leaderboardCard}>
               <View style={styles.leaderboardHeader}>
                 <View style={styles.leaderboardTitleRow}>
                   <Ionicons color="#d7b768" name="trophy" size={19} />
-                  <Text style={styles.leaderboardTitle}>Leaderboard</Text>
+                  <Text style={styles.leaderboardTitle}>{liveScoring ? 'Live leaderboard' : 'Leaderboard'}</Text>
                 </View>
-                <Text style={styles.leaderboardMeta}>{tournamentLeaderboard.length} people</Text>
+                <Text style={styles.leaderboardMeta}>{liveScoring ? 'LIVE' : `${tournamentLeaderboard.length} people`}</Text>
               </View>
               {tournamentLeaderboard.map((entry, index) => (
                 <View key={entry.member.id} style={styles.leaderboardRow}>
@@ -1313,15 +1356,36 @@ export default function GroupScreen() {
                 if (!left || !right) return null
                 const leftAdjustedScore = getAdjustedTournamentScore(matchup.leftScore, left.handicap)
                 const rightAdjustedScore = getAdjustedTournamentScore(matchup.rightScore, right.handicap)
+                const isMatchPlay = (matchup.format || group?.tournament_format || '').toLowerCase().includes('match play')
+                const matchPlayStatus = isMatchPlay ? getMatchPlayStatus(matchup) : null
                 return <View key={matchup.id} style={styles.matchupScoreCard}>
                   <Text style={styles.matchupFormatBadge}>{matchup.format || group?.tournament_format || 'Match Play'}</Text>
                   {matchup.day ? <Text style={styles.matchupDayBadge}>{new Date(`${matchup.day}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</Text> : null}
+                  {liveScoring ? <View style={styles.liveMatchProgress}>
+                    <Ionicons color="#f06b5d" name="radio" size={14} />
+                    {isEditingMatchupScores ? <View style={styles.liveHoleEditor}>
+                      <Text style={styles.liveHoleLabel}>Through hole</Text>
+                      <TextInput
+                        keyboardType="number-pad"
+                        maxLength={2}
+                        onChangeText={(value) => setMatchups((current) => current.map((item) => {
+                          if (item.id !== matchup.id) return item
+                          const numericHole = Math.round(Number(value))
+                          return { ...item, throughHole: value.trim() && Number.isFinite(numericHole) ? Math.min(18, Math.max(1, numericHole)) : null }
+                        }))}
+                        placeholder="—"
+                        placeholderTextColor={palette.textMuted}
+                        style={styles.liveHoleInput}
+                        value={matchup.throughHole?.toString() || ''}
+                      />
+                    </View> : <Text style={styles.liveMatchProgressText}>{matchup.throughHole ? `Through ${matchup.throughHole} ${matchup.throughHole === 1 ? 'hole' : 'holes'}` : 'Live — not started'}</Text>}
+                  </View> : null}
                   <View style={styles.matchupScoreRow}>
                     <View style={[styles.matchupScoreGolfer, winner === 'left' && styles.matchupWinner]}><Avatar label={left.name} size={42} uri={left.avatarUrl} /><Text numberOfLines={1} style={styles.matchupGolferName}>{left.name}</Text>{isEditingMatchupScores ? <TextInput keyboardType="number-pad" onChangeText={(value) => setMatchups((current) => current.map((item) => item.id === matchup.id ? { ...item, leftScore: value.trim() ? Number(value) : null } : item))} placeholder="—" placeholderTextColor={palette.textMuted} style={styles.matchupScoreInput} value={matchup.leftScore?.toString() || ''} /> : <View style={styles.matchupScoreReadout}><Text style={styles.matchupScoreValue}>{matchup.leftScore ?? '—'}</Text>{leftAdjustedScore !== null ? <Text style={styles.matchupAdjustedScore}>({leftAdjustedScore})</Text> : null}</View>}</View>
                     <Text style={styles.matchupVs}>VS.</Text>
                     <View style={[styles.matchupScoreGolfer, winner === 'right' && styles.matchupWinner]}><Avatar label={right.name} size={42} uri={right.avatarUrl} /><Text numberOfLines={1} style={styles.matchupGolferName}>{right.name}</Text>{isEditingMatchupScores ? <TextInput keyboardType="number-pad" onChangeText={(value) => setMatchups((current) => current.map((item) => item.id === matchup.id ? { ...item, rightScore: value.trim() ? Number(value) : null } : item))} placeholder="—" placeholderTextColor={palette.textMuted} style={styles.matchupScoreInput} value={matchup.rightScore?.toString() || ''} /> : <View style={styles.matchupScoreReadout}><Text style={styles.matchupScoreValue}>{matchup.rightScore ?? '—'}</Text>{rightAdjustedScore !== null ? <Text style={styles.matchupAdjustedScore}>({rightAdjustedScore})</Text> : null}</View>}</View>
                   </View>
-                  {isEditingMatchupScores ? <PrimaryButton label={savingMatchupId === matchup.id ? 'Saving...' : 'Save Result'} loading={savingMatchupId === matchup.id} onPress={() => void handleSaveMatchupScore(matchup.id)} /> : winner ? <Text style={styles.matchupWinnerText}>{winner === 'left' ? left.name : right.name} wins</Text> : <Text style={styles.matchupTypeFooter}>{matchup.format || group?.tournament_format || 'Match Play'}</Text>}
+                  {isEditingMatchupScores ? <PrimaryButton label={savingMatchupId === matchup.id ? 'Saving...' : liveScoring ? 'Update live score' : 'Save Result'} loading={savingMatchupId === matchup.id} onPress={() => void handleSaveMatchupScore(matchup.id)} /> : matchPlayStatus ? <Text style={styles.matchupWinnerText}>{matchPlayStatus.label}</Text> : winner ? <Text style={styles.matchupWinnerText}>{liveScoring && matchup.throughHole && matchup.throughHole < 18 ? `${winner === 'left' ? left.name : right.name} is ahead` : `${winner === 'left' ? left.name : right.name} wins`}</Text> : <Text style={styles.matchupTypeFooter}>{matchup.format || group?.tournament_format || 'Match Play'}</Text>}
                 </View>
               })}
               </View>)}
@@ -2471,6 +2535,22 @@ const styles = StyleSheet.create({
   scoresFeed: {
     gap: 12
   },
+  liveScoringControl: { backgroundColor: 'rgba(8, 57, 45, 0.78)', borderColor: 'rgba(130, 223, 239, 0.22)', borderRadius: 18, borderWidth: 1, overflow: 'hidden' },
+  liveScoringControlTitle: { alignItems: 'center', flexDirection: 'row', gap: 9 },
+  liveScoringSettings: { alignItems: 'center', flexDirection: 'row', gap: 14, padding: 15 },
+  liveScoringCopy: { flex: 1, gap: 3 },
+  liveScoringSettingTitle: { color: palette.text, fontSize: 14, fontWeight: '800' },
+  liveScoringSwitch: { backgroundColor: 'rgba(255,255,255,0.16)', borderRadius: 999, height: 30, justifyContent: 'center', padding: 3, width: 52 },
+  liveScoringSwitchOn: { backgroundColor: '#e76658' },
+  liveScoringKnob: { backgroundColor: '#ffffff', borderRadius: 999, height: 24, width: 24 },
+  liveScoringKnobOn: { alignSelf: 'flex-end' },
+  liveScoringAudienceStatus: { alignItems: 'center', alignSelf: 'flex-start', backgroundColor: 'rgba(240, 107, 93, 0.14)', borderColor: 'rgba(240, 107, 93, 0.4)', borderRadius: 999, borderWidth: 1, flexDirection: 'row', gap: 7, paddingHorizontal: 12, paddingVertical: 8 },
+  liveScoringAudienceText: { color: '#ffd5cf', fontSize: 12, fontWeight: '800' },
+  liveMatchProgress: { alignItems: 'center', alignSelf: 'center', flexDirection: 'row', gap: 6, marginBottom: 10 },
+  liveMatchProgressText: { color: '#ffd5cf', fontSize: 12, fontWeight: '800' },
+  liveHoleEditor: { alignItems: 'center', flexDirection: 'row', gap: 8 },
+  liveHoleLabel: { color: '#ffd5cf', fontSize: 12, fontWeight: '800' },
+  liveHoleInput: { backgroundColor: 'rgba(255,255,255,0.1)', borderColor: 'rgba(240, 107, 93, 0.42)', borderRadius: 8, borderWidth: 1, color: palette.text, fontSize: 13, fontWeight: '800', minWidth: 38, paddingHorizontal: 8, paddingVertical: 5, textAlign: 'center' },
   scoreEntry: {
     flexDirection: 'row',
     gap: 10

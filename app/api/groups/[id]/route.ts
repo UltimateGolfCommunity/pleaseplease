@@ -23,7 +23,7 @@ export async function GET(
       return NextResponse.json({ error: 'Group not found' }, { status: 404 })
     }
 
-    const { data: members, error: membersError } = await supabase
+    const activeMembersQuery = supabase
       .from('group_members')
       .select(`
         *,
@@ -40,24 +40,28 @@ export async function GET(
       .eq('group_id', id)
       .eq('status', 'active')
 
+    const viewerIsCreator = viewerId && group.creator_id === viewerId
+    const viewerMembershipQuery = viewerId && !viewerIsCreator
+      ? supabase
+          .from('group_members')
+          .select('role, status')
+          .eq('group_id', id)
+          .eq('user_id', viewerId)
+          .eq('status', 'active')
+          .maybeSingle()
+      : Promise.resolve({ data: null })
+
+    const [{ data: members, error: membersError }, { data: viewerMembership }] = await Promise.all([
+      activeMembersQuery,
+      viewerMembershipQuery
+    ])
+
     if (membersError) {
       console.error('Error fetching group members:', membersError)
     }
 
     let pendingMembers: any[] = []
-    const viewerIsCreator = viewerId && group.creator_id === viewerId
-    let viewerIsAdmin = false
-
-    if (viewerId && !viewerIsCreator) {
-      const { data: viewerMembership } = await supabase
-        .from('group_members')
-        .select('role, status')
-        .eq('group_id', id)
-        .eq('user_id', viewerId)
-        .eq('status', 'active')
-        .maybeSingle()
-      viewerIsAdmin = ['admin', 'owner', 'creator'].includes((viewerMembership?.role || '').toLowerCase())
-    }
+    const viewerIsAdmin = ['admin', 'owner', 'creator'].includes((viewerMembership?.role || '').toLowerCase())
 
     if (viewerIsCreator || viewerIsAdmin) {
       const { data } = await supabase

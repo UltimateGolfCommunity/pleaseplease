@@ -898,6 +898,67 @@ export default function ProfileTab() {
             </Pressable>
           </View>
 
+          {showEditModal ? (
+            <View style={styles.inlineProfileEditor}>
+              <View style={styles.inlineEditorHeading}>
+                <View>
+                  <Text style={[styles.inlineEditorTitle, styles.inlineEditorTitleAqua]}>Edit Your Golfer Profile</Text>
+                </View>
+                <Pressable accessibilityLabel="Close profile editor" onPress={() => setShowEditModal(false)} style={styles.inlineEditorClose}>
+                  <Ionicons color={palette.text} name="close" size={20} />
+                </Pressable>
+              </View>
+
+              <View style={styles.editMediaRow}>
+                <PrimaryButton label={uploadingAvatar ? 'Updating Photo...' : 'Profile Photo'} variant="ghost" loading={uploadingAvatar} onPress={() => void handlePickImage('avatar')} />
+                <PrimaryButton label={uploadingCover ? 'Updating Cover...' : 'Cover Photo'} variant="ghost" loading={uploadingCover} onPress={() => void handlePickImage('cover')} />
+              </View>
+
+              <Text style={styles.inlineEditorLabel}>Identity</Text>
+              <View style={styles.editRow}>
+                <TextInput onChangeText={(value) => setForm((current) => ({ ...current, first_name: value }))} placeholder="First name" placeholderTextColor={palette.textMuted} style={[styles.input, styles.flexInput]} value={form.first_name} />
+                <TextInput onChangeText={(value) => setForm((current) => ({ ...current, last_name: value }))} placeholder="Last name" placeholderTextColor={palette.textMuted} style={[styles.input, styles.flexInput]} value={form.last_name} />
+              </View>
+              <TextInput onChangeText={(value) => setForm((current) => ({ ...current, username: value }))} placeholder="Username" placeholderTextColor={palette.textMuted} style={styles.input} value={form.username} />
+
+              <Text style={styles.inlineEditorLabel}>Your game</Text>
+              <TextInput onChangeText={(value) => setForm((current) => ({ ...current, home_course: value }))} placeholder="Home course" placeholderTextColor={palette.textMuted} style={styles.input} value={form.home_course} />
+              <View style={styles.editRow}>
+                <TextInput keyboardType="decimal-pad" onChangeText={(value) => setForm((current) => ({ ...current, handicap: value }))} placeholder="Handicap" placeholderTextColor={palette.textMuted} style={[styles.input, styles.flexInput]} value={form.handicap} />
+                <TextInput onChangeText={(value) => setForm((current) => ({ ...current, location: value }))} placeholder="Location" placeholderTextColor={palette.textMuted} style={[styles.input, styles.flexInput]} value={form.location} />
+              </View>
+
+              <Text style={styles.inlineEditorLabel}>Social</Text>
+              <TextInput autoCapitalize="none" autoCorrect={false} onChangeText={(value) => setForm((current) => ({ ...current, linkedin_url: value }))} placeholder="LinkedIn URL" placeholderTextColor={palette.textMuted} style={styles.input} value={form.linkedin_url} />
+              <TextInput autoCapitalize="none" autoCorrect={false} onChangeText={(value) => setForm((current) => ({ ...current, instagram_url: value }))} placeholder="Instagram URL" placeholderTextColor={palette.textMuted} style={styles.input} value={form.instagram_url} />
+              <TextInput autoCapitalize="none" autoCorrect={false} onChangeText={(value) => setForm((current) => ({ ...current, facebook_url: value }))} placeholder="Facebook URL" placeholderTextColor={palette.textMuted} style={styles.input} value={form.facebook_url} />
+              <TextInput autoCapitalize="none" autoCorrect={false} onChangeText={(value) => setForm((current) => ({ ...current, x_url: value }))} placeholder="X URL" placeholderTextColor={palette.textMuted} style={styles.input} value={form.x_url} />
+
+              <Text style={styles.inlineEditorLabel}>About you</Text>
+              <View style={styles.editRow}>
+                <TextInput onChangeText={(value) => setForm((current) => ({ ...current, ace_course: value }))} placeholder="Hole-in-one course" placeholderTextColor={palette.textMuted} style={[styles.input, styles.flexInput]} value={form.ace_course} />
+                <TextInput onChangeText={(value) => setForm((current) => ({ ...current, ace_hole: value }))} placeholder="Ace hole" placeholderTextColor={palette.textMuted} style={[styles.input, styles.flexInput]} value={form.ace_hole} />
+              </View>
+              <TextInput onChangeText={(value) => setForm((current) => ({ ...current, ace_date: value }))} placeholder="Hole-in-one date" placeholderTextColor={palette.textMuted} style={styles.input} value={form.ace_date} />
+              <TextInput multiline onChangeText={(value) => setForm((current) => ({ ...current, bio: value }))} placeholder="A little about your game" placeholderTextColor={palette.textMuted} style={[styles.input, styles.bioInput]} value={form.bio} />
+              <View style={styles.inlineBagEditor}>
+                <View style={styles.inlineBagEditorHeading}>
+                  <View style={styles.aboutSectionHeading}>
+                    <MaterialCommunityIcons color="#d8bd76" name="golf" size={18} />
+                    <Text style={styles.aboutSectionTitle}>What&apos;s In The Bag</Text>
+                  </View>
+                  <Pressable accessibilityLabel="Edit what's in the bag" onPress={() => setShowBagModal(true)} style={styles.bagEditButton}>
+                    <Ionicons color={palette.aqua} name="pencil" size={13} />
+                    <Text style={styles.bagEditText}>Edit</Text>
+                  </Pressable>
+                </View>
+                <Text style={styles.inlineBagEditorCopy}>Add or update your clubs before saving your profile.</Text>
+              </View>
+              <PrimaryButton label="Save Profile" loading={saving} onPress={handleSave} />
+            </View>
+          ) : null}
+
+          {!showEditModal ? <>
           <View style={styles.profileTabRow}>
             <Pressable
               onPress={() => setActiveProfileTab('activity')}
@@ -1059,6 +1120,14 @@ export default function ProfileTab() {
               <View style={styles.aboutSectionHeading}>
                 <MaterialCommunityIcons color="#d8bd76" name="golf" size={18} />
                 <Text style={styles.aboutSectionTitle}>What&apos;s In The Bag</Text>
+                <Pressable
+                  accessibilityLabel="Edit what's in the bag"
+                  onPress={() => setShowBagModal(true)}
+                  style={styles.bagEditButton}
+                >
+                  <Ionicons color={palette.aqua} name="pencil" size={13} />
+                  <Text style={styles.bagEditText}>Edit</Text>
+                </Pressable>
               </View>
               <View style={styles.bagGrid}>
               {bagFields.map((field) => {
@@ -1090,6 +1159,7 @@ export default function ProfileTab() {
               </View>
             </View>
           )}
+          </> : null}
         </View>
 
         <Modal
@@ -1336,7 +1406,9 @@ export default function ProfileTab() {
         <Modal
           animationType="fade"
           transparent
-          visible={showEditModal}
+          // Editing now happens inline above the profile tabs. Keep this legacy
+          // dialog inert until its markup can be removed in a future cleanup.
+          visible={false}
           onRequestClose={() => setShowEditModal(false)}
         >
           <Pressable style={styles.modalBackdrop} onPress={() => setShowEditModal(false)}>
@@ -1495,6 +1567,65 @@ const styles = StyleSheet.create({
     paddingBottom: 156,
     paddingHorizontal: 0,
     paddingTop: 0
+  },
+  inlineProfileEditor: {
+    backgroundColor: 'rgba(13,54,43,0.96)',
+    borderColor: 'rgba(232,216,178,0.34)',
+    borderRadius: 22,
+    borderWidth: 1,
+    gap: 12,
+    marginHorizontal: 20,
+    marginTop: 16,
+    padding: 16
+  },
+  inlineEditorHeading: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between'
+  },
+  inlineBagEditor: {
+    backgroundColor: 'rgba(7,39,28,0.3)',
+    borderColor: 'rgba(255,255,255,0.14)',
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 6,
+    padding: 13
+  },
+  inlineBagEditorHeading: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between'
+  },
+  inlineBagEditorCopy: {
+    color: palette.textMuted,
+    fontSize: 12,
+    lineHeight: 17
+  },
+  inlineEditorTitle: {
+    color: palette.text,
+    fontFamily: 'Georgia',
+    fontSize: 24,
+    fontWeight: '800',
+    marginTop: 2
+  },
+  inlineEditorTitleAqua: {
+    color: palette.aqua
+  },
+  inlineEditorClose: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 999,
+    height: 36,
+    justifyContent: 'center',
+    width: 36
+  },
+  inlineEditorLabel: {
+    color: '#d8bd76',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 1.4,
+    marginTop: 6,
+    textTransform: 'uppercase'
   },
   profileTopActions: {
     alignItems: 'flex-start',
