@@ -13,8 +13,11 @@ const appStoreUrl = 'https://apps.apple.com/app/id6762129049'
 
 const screens = [
   { src: '/app-screens/home.png', alt: 'Ultimate Golf Community home feed', title: 'Your private golf club', description: 'The people, rounds, and moments around your game—always in one place.' },
+  { src: '/app-screens/discover-golfers.png', alt: 'Discover golfers in the Ultimate Golf Community app', title: 'Find golfers worth knowing', description: 'Discover players near you, see their game at a glance, and grow a golf network that feels personal.' },
+  { src: '/app-screens/golf-groups.png', alt: 'Golf groups in the Ultimate Golf Community app', title: 'Your groups, beautifully organized', description: 'Give every weekly game, private club, and local scene a home that people actually want to open.' },
   { src: '/app-screens/profile.png', alt: 'Ultimate Golf Community golfer profile', title: 'A profile built for golf', description: 'Show your game, build your network, and keep your golf identity all your own.' },
   { src: '/app-screens/tournament.png', alt: 'Ultimate Golf Community tournament scoreboard', title: 'Tournaments made social', description: 'Create teams, track matchups, and keep everyone following the competition live.' },
+  { src: '/app-screens/live-tournament.png', alt: 'Live tournament scoreboard in the Ultimate Golf Community app', title: 'Follow every match live', description: 'See team points, match status, handicaps, and the moments that decide the day.' },
   { src: '/app-screens/member-card.png', alt: 'Ultimate Golf Community member QR card', title: 'Share your golf identity', description: 'Your member card is ready to scan, share, and take to the next tee box.' },
 ]
 
