@@ -1,15 +1,24 @@
-import { useEffect, useRef } from 'react'
-import { Animated, Easing, StyleSheet, View } from 'react-native'
+import { useEffect, useRef, useState } from 'react'
+import { AccessibilityInfo, Animated, Easing, StyleSheet, View } from 'react-native'
 
 export function AppLaunchScreen() {
+  const [reduceMotion, setReduceMotion] = useState(false)
   const ballTravel = useRef(new Animated.Value(0)).current
   const flagSway = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
+    let mounted = true
+    void AccessibilityInfo.isReduceMotionEnabled().then(value => { if (mounted) setReduceMotion(value) })
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion)
+    return () => { mounted = false; subscription.remove() }
+  }, [])
+
+  useEffect(() => {
+    if (reduceMotion) { ballTravel.setValue(0.5); flagSway.setValue(0); return }
     const ballLoop = Animated.loop(Animated.sequence([
       Animated.delay(350),
-      Animated.timing(ballTravel, { toValue: 1, duration: 2100, easing: Easing.inOut(Easing.cubic), useNativeDriver: true }),
-      Animated.delay(260),
+      Animated.timing(ballTravel, { toValue: 1, duration: 3400, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.delay(650),
       Animated.timing(ballTravel, { toValue: 0, duration: 0, useNativeDriver: true })
     ]))
     const flagLoop = Animated.loop(Animated.sequence([
@@ -23,7 +32,7 @@ export function AppLaunchScreen() {
       ballLoop.stop()
       flagLoop.stop()
     }
-  }, [ballTravel, flagSway])
+  }, [ballTravel, flagSway, reduceMotion])
 
   const ballTranslateX = ballTravel.interpolate({ inputRange: [0, 1], outputRange: [-103, 103] })
   const ballTranslateY = ballTravel.interpolate({ inputRange: [0, 0.55, 0.88, 1], outputRange: [5, -7, -2, 9] })
@@ -31,7 +40,7 @@ export function AppLaunchScreen() {
   const flagRotate = flagSway.interpolate({ inputRange: [0, 1], outputRange: ['-3deg', '3deg'] })
 
   return (
-    <View style={styles.overlay}>
+    <View style={styles.overlay} accessibilityLabel="Opening your clubhouse" accessibilityRole="progressbar">
       <View style={styles.sky} />
       <View style={styles.cloudOne} />
       <View style={styles.cloudTwo} />
@@ -48,10 +57,8 @@ export function AppLaunchScreen() {
           <View style={styles.cup} />
           <View style={styles.flagPole} />
           <Animated.View style={[styles.flag, { transform: [{ rotate: flagRotate }] }]} />
-          <Animated.View style={[styles.ball, { transform: [{ translateX: ballTranslateX }, { translateY: ballTranslateY }, { scale: ballScale }] }]}>
-            <View style={styles.ballDimpleOne} />
-            <View style={styles.ballDimpleTwo} />
-            <View style={styles.ballDimpleThree} />
+          <Animated.View style={[styles.ball, { transform: [{ translateX: ballTranslateX }, { translateY: ballTranslateY }, { scale: ballScale }, { rotate: ballTravel.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '540deg'] }) }] }]}>
+            {Array.from({ length: 16 }, (_, i) => <View key={i} style={{ position: 'absolute', width: 2.5, height: 2, borderRadius: 2, backgroundColor: '#cad5ce', left: 3 + (i % 4) * 5, top: 3 + Math.floor(i / 4) * 5 }} />)}
           </Animated.View>
         </View>
       </View>
@@ -61,7 +68,7 @@ export function AppLaunchScreen() {
 
 const styles = StyleSheet.create({
   overlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', backgroundColor: '#8bcdf0', justifyContent: 'center', overflow: 'hidden' },
-  sky: { ...StyleSheet.absoluteFillObject, backgroundColor: '#73bce1' },
+  sky: { ...StyleSheet.absoluteFillObject, backgroundColor: '#bddce8' },
   cloudOne: { backgroundColor: 'rgba(255,255,255,0.17)', borderRadius: 160, height: 190, left: -74, position: 'absolute', top: 112, width: 300 },
   cloudTwo: { backgroundColor: 'rgba(255,255,255,0.13)', borderRadius: 160, height: 210, position: 'absolute', right: -108, top: 230, width: 280 },
   horizonGlow: { backgroundColor: 'rgba(255,246,207,0.38)', borderRadius: 999, height: 230, position: 'absolute', top: '37%', width: 360 },
@@ -69,7 +76,7 @@ const styles = StyleSheet.create({
   mowStripeOne: { backgroundColor: 'rgba(158,220,110,0.15)', bottom: 52, height: 66, position: 'absolute', transform: [{ rotate: '-8deg' }], width: '150%' },
   mowStripeTwo: { backgroundColor: 'rgba(15,81,48,0.2)', bottom: 164, height: 52, position: 'absolute', transform: [{ rotate: '-8deg' }], width: '150%' },
   content: { alignItems: 'center', width: '100%' },
-  puttStage: { height: 116, position: 'relative', width: 286 },
+  puttStage: { height: 116, position: 'relative', width: 286, backgroundColor: '#719654', borderRadius: 100, borderWidth: 6, borderColor: '#3f6949', shadowColor: '#214634', shadowOpacity: 0.16, shadowRadius: 24, shadowOffset: { width: 0, height: 12 } },
   puttLine: { alignSelf: 'center', backgroundColor: 'rgba(247,255,243,0.25)', borderRadius: 99, height: 8, position: 'absolute', top: 52, width: 246 },
   puttLineHighlight: { alignSelf: 'center', backgroundColor: 'rgba(210,247,206,0.42)', borderRadius: 99, height: 2, position: 'absolute', top: 55, width: 225 },
   cupShadow: { backgroundColor: 'rgba(6,45,28,0.42)', borderRadius: 99, height: 18, position: 'absolute', right: 15, top: 47, width: 23 },

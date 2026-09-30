@@ -38,13 +38,15 @@ export function PrimaryButton({
 const styles = StyleSheet.create({
   button: {
     alignItems: 'center',
-    borderRadius: 999,
+    borderRadius: 18,
     justifyContent: 'center',
     minHeight: 52,
     paddingHorizontal: 20
   },
   solid: {
-    backgroundColor: palette.white
+    backgroundColor: palette.cream,
+    borderColor: palette.gold,
+    borderWidth: 1
   },
   ghost: {
     backgroundColor: 'rgba(255,255,255,0.06)',
@@ -59,7 +61,7 @@ const styles = StyleSheet.create({
     fontWeight: '700'
   },
   solidLabel: {
-    color: palette.bg
+    color: palette.ink
   },
   ghostLabel: {
     color: palette.text

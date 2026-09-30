@@ -212,6 +212,7 @@ async function updateGroupWithFallback(
     tournament_matchups?: string | null
   }
 ) {
+  const normalizedGroupType = group_type?.trim().toLowerCase()
   const attempts = [
     {
       name,
@@ -322,7 +323,7 @@ async function updateGroupWithFallback(
       // A base fallback may omit optional tournament columns (for example
       // when an older schema lacks slogan). Save tournament fields separately
       // so a successful type conversion never loses its date or format.
-      if (group_type === 'tournament') {
+      if (normalizedGroupType === 'tournament') {
         // Some early production databases were created before optional
         // tournament columns (notably tournament_end_date) existed. Do not
         // lose Ryder Cup teams, logos, or matchups just because one optional

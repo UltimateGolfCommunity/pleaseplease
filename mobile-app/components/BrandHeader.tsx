@@ -46,7 +46,7 @@ export function BrandHeader({
       ) : null}
       {showLogo ? (
         <Image
-          source={require('@/assets/ugc-logo.png')}
+          source={require('@/assets/ugc-app-icon.png')}
           style={[
             styles.logo,
             largeLogo && styles.logoLarge,
@@ -99,9 +99,10 @@ const styles = StyleSheet.create({
   logo: {
     alignSelf: 'center',
     height: 64,
-    marginBottom: -24,
-    marginTop: -12,
-    width: 264
+    marginBottom: 8,
+    marginTop: 0,
+    borderRadius: 16,
+    width: 64
   },
   logoLarge: {
     height: 122,
@@ -111,6 +112,7 @@ const styles = StyleSheet.create({
     width: 360
   },
   title: {
+    fontFamily: 'Georgia',
     color: palette.text,
     fontSize: 30,
     fontWeight: '700',

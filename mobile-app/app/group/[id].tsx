@@ -3,6 +3,7 @@ import { Redirect, router, useLocalSearchParams } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
 import * as Sharing from 'expo-sharing'
 import Ionicons from '@expo/vector-icons/Ionicons'
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker'
 import ViewShot from 'react-native-view-shot'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
@@ -116,15 +117,36 @@ type TournamentScore = {
   user_profiles?: UserCard | null
 }
 
+const dateFromIso = (value?: string | null) => {
+  if (!value) return new Date()
+  const [year, month, day] = value.split('-').map(Number)
+  return Number.isFinite(year) && Number.isFinite(month) && Number.isFinite(day)
+    ? new Date(year, month - 1, day)
+    : new Date()
+}
+
+const isoDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+
+const readableDate = (value?: string | null) => value
+  ? dateFromIso(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+  : 'Select date'
+
 type TournamentMatchup = {
   id: string
   leftUserId: string
   rightUserId: string
+  leftPartnerUserId?: string | null
+  rightPartnerUserId?: string | null
   format?: string
   day?: string | null
+  courseName?: string | null
+  teeTime?: string | null
   throughHole?: number | null
   leftScore?: number | null
   rightScore?: number | null
+  holeWinners?: Record<string, 'left' | 'right' | 'halve'>
+  leftHoleScores?: Record<string, number>
+  rightHoleScores?: Record<string, number>
 }
 
 type TournamentTeam = {
@@ -146,6 +168,7 @@ type TournamentSetup = {
   teams: TournamentTeam[]
   manualParticipants: ManualTournamentParticipant[]
   closestToPin?: boolean
+  closestToPinSetup?: { par3Count: number; distances: string[]; multipleDays: boolean }
   longestDrive?: boolean
   liveScoring?: boolean
 }
@@ -155,7 +178,7 @@ function parseTournamentMatchups(value?: string | null): TournamentMatchup[] {
 }
 
 function parseTournamentSetup(value?: string | null): TournamentSetup {
-  const empty = { matchups: [], teams: [], manualParticipants: [], closestToPin: false, longestDrive: false, liveScoring: false } as TournamentSetup
+  const empty = { matchups: [], teams: [], manualParticipants: [], closestToPin: false, closestToPinSetup: { par3Count: 1, distances: [''], multipleDays: false }, longestDrive: false, liveScoring: false } as TournamentSetup
   if (!value) return empty
   try {
     const parsed = JSON.parse(value)
@@ -165,6 +188,7 @@ function parseTournamentSetup(value?: string | null): TournamentSetup {
       teams: Array.isArray(parsed?.teams) ? parsed.teams.filter((team: TournamentTeam) => team?.id) : [],
       manualParticipants: Array.isArray(parsed?.manualParticipants) ? parsed.manualParticipants.filter((participant: ManualTournamentParticipant) => participant?.id && participant?.name) : [],
       closestToPin: Boolean(parsed?.closestToPin),
+      closestToPinSetup: { par3Count: Math.max(1, Number(parsed?.closestToPinSetup?.par3Count) || 1), distances: Array.isArray(parsed?.closestToPinSetup?.distances) ? parsed.closestToPinSetup.distances : [''], multipleDays: Boolean(parsed?.closestToPinSetup?.multipleDays) },
       longestDrive: Boolean(parsed?.longestDrive),
       liveScoring: Boolean(parsed?.liveScoring)
     }
@@ -219,13 +243,19 @@ export default function GroupScreen() {
   const [scoreSaving, setScoreSaving] = useState(false)
   const [savingMatchupId, setSavingMatchupId] = useState<string | null>(null)
   const [isEditingMatchupScores, setIsEditingMatchupScores] = useState(false)
+  const [scorecardMatchupId, setScorecardMatchupId] = useState<string | null>(null)
+  const [matchupSettingsId, setMatchupSettingsId] = useState<string | null>(null)
   const [liveScoring, setLiveScoring] = useState(false)
   const [savingLiveScoring, setSavingLiveScoring] = useState(false)
   const [matchups, setMatchups] = useState<TournamentMatchup[]>([])
   const [leftMatchupUserId, setLeftMatchupUserId] = useState('')
   const [rightMatchupUserId, setRightMatchupUserId] = useState('')
+  const [leftPartnerUserId, setLeftPartnerUserId] = useState('')
+  const [rightPartnerUserId, setRightPartnerUserId] = useState('')
   const [matchupFormat, setMatchupFormat] = useState('Match Play')
   const [matchupDay, setMatchupDay] = useState('')
+  const [matchupCourseName, setMatchupCourseName] = useState('')
+  const [matchupTeeTime, setMatchupTeeTime] = useState('')
   const [teams, setTeams] = useState<TournamentTeam[]>([
     { id: 'team-a', name: 'Team One', logoUrl: null, memberIds: [] },
     { id: 'team-b', name: 'Team Two', logoUrl: null, memberIds: [] }
@@ -235,7 +265,9 @@ export default function GroupScreen() {
   const [manualParticipantHandicap, setManualParticipantHandicap] = useState('')
   const [manualParticipantPhotoUrl, setManualParticipantPhotoUrl] = useState<string | null>(null)
   const [closestToPin, setClosestToPin] = useState(false)
+  const [closestToPinSetup, setClosestToPinSetup] = useState({ par3Count: 1, distances: [''], multipleDays: false })
   const [longestDrive, setLongestDrive] = useState(false)
+  const [datePickerTarget, setDatePickerTarget] = useState<'start' | 'end' | null>(null)
   const [draft, setDraft] = useState('')
   const [composerOpen, setComposerOpen] = useState(false)
   const [activeSection, setActiveSection] = useState<'board' | 'members' | 'info' | 'scores'>('board')
@@ -252,6 +284,23 @@ export default function GroupScreen() {
     tournament_type: '',
     tournament_matchups: ''
   })
+
+  const handleTournamentDateChange = (_event: DateTimePickerEvent, value?: Date) => {
+    const target = datePickerTarget
+    setDatePickerTarget(null)
+    if (!target || !value) return
+    const nextDate = isoDate(value)
+    setEditForm((current) => {
+      if (target === 'start') {
+        return {
+          ...current,
+          tournament_date: nextDate,
+          tournament_end_date: current.tournament_end_date && current.tournament_end_date < nextDate ? nextDate : current.tournament_end_date
+        }
+      }
+      return { ...current, tournament_end_date: nextDate }
+    })
+  }
 
   const loadGroup = useCallback(async () => {
     if (!id) return
@@ -332,6 +381,7 @@ export default function GroupScreen() {
     setManualParticipantHandicap('')
     setManualParticipantPhotoUrl(null)
     setClosestToPin(Boolean(setup.closestToPin))
+    setClosestToPinSetup(setup.closestToPinSetup || { par3Count: 1, distances: [''], multipleDays: false })
     setLongestDrive(Boolean(setup.longestDrive))
     setTeams(setup.teams.length ? setup.teams : [
       { id: 'team-a', name: 'Team One', logoUrl: null, memberIds: [] },
@@ -339,8 +389,12 @@ export default function GroupScreen() {
     ])
     setLeftMatchupUserId('')
     setRightMatchupUserId('')
+    setLeftPartnerUserId('')
+    setRightPartnerUserId('')
     setMatchupFormat('Match Play')
     setMatchupDay(group.tournament_date || '')
+    setMatchupCourseName('')
+    setMatchupTeeTime('')
     setLiveScoring(Boolean(setup.liveScoring))
   }, [group])
 
@@ -446,6 +500,24 @@ export default function GroupScreen() {
     }))
   ]
   const participantById = new Map(participantOptions.map((participant) => [participant.id, participant]))
+  const scorecardMatchup = scorecardMatchupId ? matchups.find((matchup) => matchup.id === scorecardMatchupId) || null : null
+  const matchupSettings = matchupSettingsId ? matchups.find((matchup) => matchup.id === matchupSettingsId) || null : null
+  const scorecardLeft = scorecardMatchup ? participantById.get(scorecardMatchup.leftUserId) : null
+  const scorecardRight = scorecardMatchup ? participantById.get(scorecardMatchup.rightUserId) : null
+  const scorecardIsMatchPlay = (scorecardMatchup?.format || group?.tournament_format || '').toLowerCase().includes('match play')
+  const scorecardIsTeamFormat = ['scramble', 'best ball', 'alternate shot'].includes((scorecardMatchup?.format || '').toLowerCase())
+  const scorecardLeftPartner = scorecardMatchup?.leftPartnerUserId ? participantById.get(scorecardMatchup.leftPartnerUserId) : null
+  const scorecardRightPartner = scorecardMatchup?.rightPartnerUserId ? participantById.get(scorecardMatchup.rightPartnerUserId) : null
+  const scorecardLeftTeam = scorecardMatchup ? teams.find((team) => team.memberIds.includes(scorecardMatchup.leftUserId)) : null
+  const scorecardRightTeam = scorecardMatchup ? teams.find((team) => team.memberIds.includes(scorecardMatchup.rightUserId)) : null
+  const scorecardLeftLabel = scorecardLeftTeam?.name || [scorecardLeft?.name, scorecardLeftPartner?.name].filter(Boolean).join(' & ')
+  const scorecardRightLabel = scorecardRightTeam?.name || [scorecardRight?.name, scorecardRightPartner?.name].filter(Boolean).join(' & ')
+  const matchupLeftOptions = editForm.tournament_format === 'Ryder Cup'
+    ? participantOptions.filter((participant) => teams[0]?.memberIds.includes(participant.id))
+    : participantOptions
+  const matchupRightOptions = editForm.tournament_format === 'Ryder Cup'
+    ? participantOptions.filter((participant) => teams[1]?.memberIds.includes(participant.id))
+    : participantOptions
 
   const addMatchup = () => {
     if (!leftMatchupUserId || !rightMatchupUserId) {
@@ -457,6 +529,22 @@ export default function GroupScreen() {
       return
     }
 
+    if (editForm.tournament_format === 'Ryder Cup' && (!teams[0]?.memberIds.includes(leftMatchupUserId) || !teams[1]?.memberIds.includes(rightMatchupUserId))) {
+      Alert.alert('Use the team rosters', 'Choose one golfer from each Ryder Cup team.')
+      return
+    }
+
+    const teamFormat = ['scramble', 'best ball'].includes(matchupFormat.toLowerCase())
+    if (teamFormat && (!leftPartnerUserId || !rightPartnerUserId)) {
+      Alert.alert('Add both teams', 'Scramble and Best Ball matchups need two golfers on each side.')
+      return
+    }
+    const selectedPlayers = [leftMatchupUserId, rightMatchupUserId, leftPartnerUserId, rightPartnerUserId].filter(Boolean)
+    if (new Set(selectedPlayers).size !== selectedPlayers.length) {
+      Alert.alert('Choose different golfers', 'A golfer can only be on one side of a matchup.')
+      return
+    }
+
     const alreadyAdded = matchups.some(
       (matchup) =>
         (matchup.leftUserId === leftMatchupUserId && matchup.rightUserId === rightMatchupUserId) ||
@@ -465,11 +553,15 @@ export default function GroupScreen() {
     if (!alreadyAdded) {
       setMatchups((current) => [
         ...current,
-        { id: `matchup-${Date.now()}`, leftUserId: leftMatchupUserId, rightUserId: rightMatchupUserId, format: matchupFormat, day: matchupDay || editForm.tournament_date || null }
+        { id: `matchup-${Date.now()}`, leftUserId: leftMatchupUserId, rightUserId: rightMatchupUserId, leftPartnerUserId: teamFormat ? leftPartnerUserId : null, rightPartnerUserId: teamFormat ? rightPartnerUserId : null, format: matchupFormat, day: matchupDay || editForm.tournament_date || null, courseName: matchupCourseName.trim() || null, teeTime: matchupTeeTime.trim() || null }
       ])
     }
     setLeftMatchupUserId('')
     setRightMatchupUserId('')
+    setLeftPartnerUserId('')
+    setRightPartnerUserId('')
+    setMatchupCourseName('')
+    setMatchupTeeTime('')
   }
 
   const handlePickManualParticipantPhoto = async () => {
@@ -515,6 +607,7 @@ export default function GroupScreen() {
   }
 
   const getMatchupWinner = (matchup: TournamentMatchup) => {
+    if ((matchup.format || '').toLowerCase() === 'match play') return getMatchPlayStatus(matchup)?.leader || null
     if (matchup.leftScore === null || matchup.leftScore === undefined || matchup.rightScore === null || matchup.rightScore === undefined || matchup.leftScore === matchup.rightScore) return null
     const left = participantById.get(matchup.leftUserId)
     const right = participantById.get(matchup.rightUserId)
@@ -527,21 +620,52 @@ export default function GroupScreen() {
   }
 
   const getMatchPlayStatus = (matchup: TournamentMatchup) => {
-    const left = participantById.get(matchup.leftUserId)
-    const right = participantById.get(matchup.rightUserId)
-    const leftAdjusted = getAdjustedTournamentScore(matchup.leftScore, left?.handicap)
-    const rightAdjusted = getAdjustedTournamentScore(matchup.rightScore, right?.handicap)
+    const results = Object.values(matchup.holeWinners || {})
+    if (!results.length) return null
+    const leftWins = results.filter((winner) => winner === 'left').length
+    const rightWins = results.filter((winner) => winner === 'right').length
+    if (leftWins === rightWins) return { leader: null, label: 'EVEN' }
+    const leader = leftWins > rightWins ? 'left' : 'right'
+    return { leader, label: `${Math.abs(leftWins - rightWins)} UP` }
+  }
 
-    if (leftAdjusted === null || rightAdjusted === null) return null
-    if (leftAdjusted === rightAdjusted) return { leader: null, label: 'EVEN' }
+  const setScorecardHoleWinner = (matchupId: string, hole: number, winner: 'left' | 'right' | 'halve') => {
+    setMatchups((current) => current.map((item) => {
+      if (item.id !== matchupId) return item
+      const holeWinners = { ...item.holeWinners }
+      if (holeWinners[String(hole)] === winner) {
+        delete holeWinners[String(hole)]
+      } else {
+        holeWinners[String(hole)] = winner
+      }
+      return { ...item, holeWinners }
+    }))
+  }
 
-    const leader = leftAdjusted < rightAdjusted ? 'left' : 'right'
-    return { leader, label: `${Math.abs(leftAdjusted - rightAdjusted)} UP` }
+  const setScorecardHoleScore = (matchupId: string, hole: number, side: 'left' | 'right', value: string) => {
+    setMatchups((current) => current.map((item) => {
+      if (item.id !== matchupId) return item
+      const key = side === 'left' ? 'leftHoleScores' : 'rightHoleScores'
+      const scores = { ...(item[key] || {}) }
+      const nextScore = Number(value)
+      if (!value.trim() || !Number.isFinite(nextScore)) delete scores[String(hole)]
+      else scores[String(hole)] = nextScore
+      return { ...item, [key]: scores }
+    }))
   }
 
   const handleSaveMatchupScore = async (matchupId: string) => {
     if (!user?.id || !group?.id || !isOwner) return
-    const nextMatchups = matchups.map((matchup) => ({ ...matchup }))
+    const nextMatchups = matchups.map((matchup) => {
+      const next = { ...matchup }
+      if (['scramble', 'best ball', 'alternate shot'].includes((next.format || '').toLowerCase())) {
+        const leftScores = Object.values(next.leftHoleScores || {})
+        const rightScores = Object.values(next.rightHoleScores || {})
+        next.leftScore = leftScores.length ? leftScores.reduce((total, score) => total + score, 0) : null
+        next.rightScore = rightScores.length ? rightScores.reduce((total, score) => total + score, 0) : null
+      }
+      return next
+    })
     setSavingMatchupId(matchupId)
     try {
       const response = await apiPost<{ success?: boolean; group?: GroupDetail }>('/api/groups', {
@@ -558,7 +682,7 @@ export default function GroupScreen() {
         tournament_end_date: group.tournament_end_date || null,
         tournament_format: group.tournament_format || 'Match Play',
         tournament_type: group.tournament_type || null,
-        tournament_matchups: JSON.stringify({ matchups: nextMatchups, teams, manualParticipants, closestToPin, longestDrive, liveScoring })
+        tournament_matchups: JSON.stringify({ matchups: nextMatchups, teams, manualParticipants, closestToPin, closestToPinSetup, longestDrive, liveScoring })
       })
       if (response.group) setGroup((current) => current ? { ...current, ...response.group } : current)
       if (liveScoring) await apiPost('/api/groups/live-leaderboard', { group_id: group.id, user_id: user.id, live_scoring: true })
@@ -755,31 +879,54 @@ export default function GroupScreen() {
         description: editForm.description.trim(),
         slogan: editForm.slogan.trim(),
         location: editForm.location.trim(),
-        group_type: editForm.group_type,
+        group_type: editForm.group_type.toLowerCase(),
         is_private: editForm.is_private,
         tournament_date: editForm.tournament_date.trim() || null,
         tournament_end_date: editForm.tournament_end_date.trim() || null,
         tournament_format: editForm.tournament_format.trim() || null,
         tournament_type: editForm.tournament_type.trim() || null,
         tournament_matchups: matchups.length || manualParticipants.length || teams.some((team) => team.memberIds.length || team.logoUrl || team.name.trim()) || closestToPin || longestDrive || liveScoring
-          ? JSON.stringify({ matchups, teams, manualParticipants, closestToPin, longestDrive, liveScoring })
+          ? JSON.stringify({ matchups, teams, manualParticipants, closestToPin, closestToPinSetup, longestDrive, liveScoring })
           : null
       })
 
-      if (response.group) {
-        if ((response.group.group_type || 'community') !== editForm.group_type) {
+      let savedGroup = response.group
+      const expectedStartDate = editForm.tournament_date.trim() || null
+      const expectedEndDate = editForm.tournament_end_date.trim() || null
+
+      // Some legacy API fallbacks successfully save the group shell but omit
+      // optional tournament fields. As the owner, make one direct, scoped
+      // retry so the submitted date range cannot be silently discarded.
+      if (editForm.group_type.toLowerCase() === 'tournament' && (!savedGroup || savedGroup.tournament_date !== expectedStartDate || savedGroup.tournament_end_date !== expectedEndDate)) {
+        const { data, error } = await mobileSupabase
+          .from('golf_groups')
+          .update({
+            tournament_date: expectedStartDate,
+            tournament_end_date: expectedEndDate,
+            tournament_format: editForm.tournament_format.trim() || 'Stroke Play',
+            tournament_type: editForm.tournament_type.trim() || null
+          })
+          .eq('id', group.id)
+          .select()
+          .single()
+        if (error) throw new Error(error.message)
+        savedGroup = data as GroupDetail
+      }
+
+      if (savedGroup) {
+        if ((savedGroup.group_type || 'community').toLowerCase() !== editForm.group_type.toLowerCase()) {
           throw new Error('The group type was not saved. Please update the tournament database setup and try again.')
         }
         setGroup((current) =>
           current
             ? {
                 ...current,
-                ...response.group,
-                logo_url: response.group.logo_url || current.logo_url,
-                header_image_url: response.group.header_image_url || current.header_image_url,
-                image_url: response.group.image_url || current.image_url
+                ...savedGroup,
+                logo_url: savedGroup.logo_url || current.logo_url,
+                header_image_url: savedGroup.header_image_url || current.header_image_url,
+                image_url: savedGroup.image_url || current.image_url
               }
-            : response.group
+            : savedGroup
         )
       }
 
@@ -825,7 +972,7 @@ export default function GroupScreen() {
         group_type: 'tournament', is_private: Boolean(group.is_private),
         tournament_date: group.tournament_date || null, tournament_end_date: group.tournament_end_date || null,
         tournament_format: group.tournament_format || 'Stroke Play', tournament_type: group.tournament_type || null,
-        tournament_matchups: JSON.stringify({ matchups, teams, manualParticipants, closestToPin, longestDrive, liveScoring: nextLiveScoring })
+        tournament_matchups: JSON.stringify({ matchups, teams, manualParticipants, closestToPin, closestToPinSetup, longestDrive, liveScoring: nextLiveScoring })
       })
       if (response.group) setGroup((current) => current ? { ...current, ...response.group } : current)
       setLiveScoring(nextLiveScoring)
@@ -1023,15 +1170,11 @@ export default function GroupScreen() {
                 </>
               )}
             </View>
-            {isOwner ? (
+            {isOwner && !isMatchupScoreScreen ? (
               <Pressable
-                accessibilityLabel={isMatchupScoreScreen ? (isEditingMatchupScores ? 'Finish editing matchup scores' : 'Edit matchup scores') : (isEditing ? 'Change group cover photo' : 'Edit group')}
+                accessibilityLabel={isEditing ? 'Change group cover photo' : 'Edit group'}
                 onPress={() => {
-                  // The gear on a tournament's Scores tab is intentionally for
-                  // entering matchup results, not the general tournament editor.
-                  if (isMatchupScoreScreen) {
-                    setIsEditingMatchupScores((current) => !current)
-                  } else if (isEditing) {
+                  if (isEditing) {
                     void handlePickGroupImage('cover')
                   } else {
                     setActiveSection('info')
@@ -1040,7 +1183,19 @@ export default function GroupScreen() {
                 }}
                 style={styles.groupEditButton}
               >
-                <Ionicons color="#ffffff" name={isMatchupScoreScreen && isEditingMatchupScores ? 'close' : (isEditing ? 'camera-outline' : 'settings-outline')} size={19} />
+                <Ionicons color="#ffffff" name={isEditing ? 'camera-outline' : 'settings-outline'} size={19} />
+              </Pressable>
+            ) : null}
+            {isOwner && isTournament && activeSection === 'scores' ? (
+              <Pressable
+                accessibilityLabel={liveScoring ? 'Turn off live scoring' : 'Turn on live scoring'}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: liveScoring }}
+                disabled={savingLiveScoring}
+                onPress={() => void handleToggleLiveScoring()}
+                style={[styles.groupEditButton, styles.coverLiveScoringButton, liveScoring && styles.coverLiveScoringButtonActive]}
+              >
+                <Ionicons color="#ffffff" name={liveScoring ? 'radio' : 'radio-outline'} size={19} />
               </Pressable>
             ) : null}
           </View>
@@ -1109,9 +1264,22 @@ export default function GroupScreen() {
                 {isTournament || editForm.group_type === 'tournament' ? (
                   <View style={styles.tournamentEditFields}>
                     <View style={styles.dateRangeRow}>
-                      <TextInput onChangeText={(value) => setEditForm((current) => ({ ...current, tournament_date: value }))} placeholder="Start date (YYYY-MM-DD)" placeholderTextColor={palette.textMuted} style={[styles.editInput, styles.dateRangeInput]} value={editForm.tournament_date} />
-                      <TextInput onChangeText={(value) => setEditForm((current) => ({ ...current, tournament_end_date: value }))} placeholder="End date (YYYY-MM-DD)" placeholderTextColor={palette.textMuted} style={[styles.editInput, styles.dateRangeInput]} value={editForm.tournament_end_date} />
+                      <Pressable onPress={() => setDatePickerTarget('start')} style={[styles.editInput, styles.dateRangeInput, styles.datePickerButton]}>
+                        <Ionicons color={palette.gold} name="calendar-outline" size={18} />
+                        <View style={styles.datePickerCopy}>
+                          <Text style={styles.datePickerLabel}>Starts</Text>
+                          <Text numberOfLines={1} style={styles.datePickerValue}>{readableDate(editForm.tournament_date)}</Text>
+                        </View>
+                      </Pressable>
+                      <Pressable onPress={() => setDatePickerTarget('end')} style={[styles.editInput, styles.dateRangeInput, styles.datePickerButton]}>
+                        <Ionicons color={palette.gold} name="calendar-outline" size={18} />
+                        <View style={styles.datePickerCopy}>
+                          <Text style={styles.datePickerLabel}>Ends</Text>
+                          <Text numberOfLines={1} style={styles.datePickerValue}>{readableDate(editForm.tournament_end_date)}</Text>
+                        </View>
+                      </Pressable>
                     </View>
+                    {datePickerTarget ? <DateTimePicker display="default" minimumDate={datePickerTarget === 'end' && editForm.tournament_date ? dateFromIso(editForm.tournament_date) : undefined} mode="date" onChange={handleTournamentDateChange} value={dateFromIso(datePickerTarget === 'start' ? editForm.tournament_date : editForm.tournament_end_date || editForm.tournament_date)} /> : null}
                     {tournamentDays.length ? <Text style={styles.matchupHint}>{tournamentDays.length} tournament day{tournamentDays.length === 1 ? '' : 's'}</Text> : null}
                     <View style={styles.typeRow}>
                       {['Stroke Play', 'Match Play', 'Ryder Cup'].map((format) => (
@@ -1126,19 +1294,24 @@ export default function GroupScreen() {
                         <Text style={styles.infoLabel}>Teams</Text>
                         {teams.slice(0, 2).map((team, teamIndex) => (
                           <View key={team.id} style={styles.teamEditor}>
-                            <Pressable onPress={() => void handlePickTeamLogo(team.id)} style={styles.teamLogoPicker}>
-                              {team.logoUrl ? <Image source={{ uri: team.logoUrl }} style={styles.teamLogoImage} /> : <Ionicons color={palette.aqua} name="image-outline" size={22} />}
-                            </Pressable>
-                            <View style={styles.teamEditorCopy}>
-                              <Text style={styles.teamNameLabel}>Team {teamIndex + 1} name</Text>
-                              <TextInput onChangeText={(value) => setTeams((current) => current.map((item) => item.id === team.id ? { ...item, name: value } : item))} placeholder={`Team ${teamIndex + 1}`} placeholderTextColor={palette.textMuted} style={styles.teamNameInput} value={team.name} />
-                              <Text style={styles.matchupSideLabel}>Tap golfers to add or remove</Text>
-                              <View style={styles.teamMemberChoices}>
-                                {participantOptions.map((participant) => {
-                                  const selected = team.memberIds.includes(participant.id)
-                                  return <Pressable key={participant.id} onPress={() => setTeams((current) => current.map((item) => item.id === team.id ? { ...item, memberIds: selected ? item.memberIds.filter((id) => id !== participant.id) : [...item.memberIds, participant.id] } : item))} style={[styles.teamMemberChoice, selected && styles.teamMemberChoiceActive]}><Text style={[styles.teamMemberChoiceText, selected && styles.teamMemberChoiceTextActive]}>{participant.name}</Text></Pressable>
-                                })}
+                            <View style={styles.teamEditorHeader}>
+                              <Pressable onPress={() => void handlePickTeamLogo(team.id)} style={styles.teamLogoPicker}>
+                                {team.logoUrl ? <Image source={{ uri: team.logoUrl }} style={styles.teamLogoImage} /> : <Ionicons color={palette.aqua} name="image-outline" size={22} />}
+                              </Pressable>
+                              <View style={styles.teamEditorCopy}>
+                                <Text style={styles.teamNameLabel}>Team {teamIndex + 1} name</Text>
+                                <TextInput onChangeText={(value) => setTeams((current) => current.map((item) => item.id === team.id ? { ...item, name: value } : item))} placeholder={`Team ${teamIndex + 1}`} placeholderTextColor={palette.textMuted} style={styles.teamNameInput} value={team.name} />
                               </View>
+                            </View>
+                            <Text style={styles.matchupSideLabel}>Roster · tap to remove</Text>
+                            <View style={styles.teamGolferGrid}>
+                              {participantOptions.filter((participant) => team.memberIds.includes(participant.id)).map((participant) => <Pressable key={participant.id} onPress={() => setTeams((current) => current.map((item) => item.id === team.id ? { ...item, memberIds: item.memberIds.filter((memberId) => memberId !== participant.id) } : item))} style={styles.teamGolfer}><Avatar label={participant.name} size={44} uri={participant.avatarUrl} /><Text numberOfLines={1} style={styles.teamGolferName}>{participant.name.split(' ')[0]}</Text></Pressable>)}
+                              {!team.memberIds.length ? <Text style={styles.matchupHint}>No golfers added yet.</Text> : null}
+                            </View>
+                            <Text style={styles.matchupSideLabel}>Available golfers</Text>
+                            <View style={styles.teamGolferGrid}>
+                              {participantOptions.filter((participant) => !teams.some((otherTeam) => otherTeam.memberIds.includes(participant.id))).map((participant) => <Pressable key={participant.id} onPress={() => setTeams((current) => current.map((item) => item.id === team.id ? { ...item, memberIds: [...item.memberIds, participant.id] } : item))} style={styles.teamGolfer}><Avatar label={participant.name} size={44} uri={participant.avatarUrl} /><Text numberOfLines={1} style={styles.teamGolferName}>{participant.name.split(' ')[0]}</Text></Pressable>)}
+                              {!participantOptions.some((participant) => !teams.some((otherTeam) => otherTeam.memberIds.includes(participant.id))) ? <Text style={styles.matchupHint}>All golfers are assigned.</Text> : null}
                             </View>
                           </View>
                         ))}
@@ -1157,6 +1330,13 @@ export default function GroupScreen() {
                           <Text style={[styles.contestChoiceText, longestDrive && styles.contestChoiceTextActive]}>Longest drive</Text>
                         </Pressable>
                       </View>
+                      {closestToPin ? <View style={styles.ctpSetupCard}>
+                        <Text style={styles.matchupSideLabel}>Closest to the Pin setup</Text>
+                        <Text style={styles.matchupHint}>Set each par-3 distance for the tournament.</Text>
+                        <View style={styles.ctpCountRow}><Text style={styles.ctpCountLabel}>Number of par 3s</Text><View style={styles.ctpCountControls}><Pressable onPress={() => setClosestToPinSetup((current) => { const count = Math.max(1, current.par3Count - 1); return { ...current, par3Count: count, distances: current.distances.slice(0, count) } })} style={styles.ctpCountButton}><Ionicons color={palette.text} name="remove" size={16} /></Pressable><Text style={styles.ctpCountValue}>{closestToPinSetup.par3Count}</Text><Pressable onPress={() => setClosestToPinSetup((current) => ({ ...current, par3Count: current.par3Count + 1, distances: [...current.distances, ''] }))} style={styles.ctpCountButton}><Ionicons color={palette.text} name="add" size={16} /></Pressable></View></View>
+                        {Array.from({ length: closestToPinSetup.par3Count }, (_, index) => <View key={index} style={styles.ctpDistanceRow}><Text style={styles.ctpHoleLabel}>Par 3 #{index + 1}</Text><TextInput keyboardType="number-pad" onChangeText={(value) => setClosestToPinSetup((current) => ({ ...current, distances: current.distances.map((distance, distanceIndex) => distanceIndex === index ? value : distance) }))} placeholder="Yards" placeholderTextColor={palette.textMuted} style={styles.ctpDistanceInput} value={closestToPinSetup.distances[index] || ''} /><Text style={styles.ctpYards}>yds</Text></View>)}
+                        {tournamentDays.length > 1 ? <Pressable onPress={() => setClosestToPinSetup((current) => ({ ...current, multipleDays: !current.multipleDays }))} style={[styles.contestChoice, closestToPinSetup.multipleDays && styles.contestChoiceActive]}><Ionicons color={closestToPinSetup.multipleDays ? '#d7b768' : palette.textMuted} name="calendar-outline" size={18} /><Text style={[styles.contestChoiceText, closestToPinSetup.multipleDays && styles.contestChoiceTextActive]}>Run CTP on every tournament day</Text></Pressable> : null}
+                      </View> : null}
                     </View>
                     {editForm.tournament_format === 'Stroke Play' ? (
                       <View style={styles.matchupBuilder}>
@@ -1172,10 +1352,11 @@ export default function GroupScreen() {
                           </View>
                         </View>
                         <Pressable onPress={addManualParticipant} style={styles.addMatchupButton}><Text style={styles.addMatchupButtonText}>Add golfer to roster</Text></Pressable>
-                        {manualParticipants.map((participant) => <View key={participant.id} style={styles.editMatchupRow}><View style={styles.manualParticipantAdded}><Avatar label={participant.name} size={28} uri={participant.avatarUrl} /><Text style={styles.editMatchupName}>{participant.name}{participant.handicap !== null && participant.handicap !== undefined ? ` · HCP ${participant.handicap}` : ''}</Text></View><Pressable onPress={() => setManualParticipants((current) => current.filter((item) => item.id !== participant.id))}><Ionicons color={palette.textMuted} name="close-circle-outline" size={21} /></Pressable></View>)}
+                        {manualParticipants.length ? <ScrollView horizontal contentContainerStyle={styles.manualRosterStrip} showsHorizontalScrollIndicator={false}>{manualParticipants.map((participant) => <Pressable key={participant.id} onPress={() => setManualParticipants((current) => current.filter((item) => item.id !== participant.id))} style={styles.manualRosterGolfer}><Avatar label={participant.name} size={42} uri={participant.avatarUrl} /><Text numberOfLines={1} style={styles.manualRosterName}>{participant.name.split(' ')[0]}</Text><Ionicons color={palette.textMuted} name="close-circle" size={14} style={styles.manualRosterRemove} /></Pressable>)}</ScrollView> : null}
                       </View>
                     ) : null}
                     {editForm.tournament_format !== 'Stroke Play' ? (
+                      <>
                       <View style={styles.matchupBuilder}>
                         <Text style={styles.infoLabel}>Add a golfer manually</Text>
                         <Text style={styles.matchupHint}>Use this for a golfer who is not yet in the tournament roster.</Text>
@@ -1189,18 +1370,35 @@ export default function GroupScreen() {
                           </View>
                         </View>
                         <Pressable onPress={addManualParticipant} style={styles.addMatchupButton}><Text style={styles.addMatchupButtonText}>Add golfer to matchup list</Text></Pressable>
-                        {manualParticipants.map((participant) => <View key={participant.id} style={styles.editMatchupRow}><View style={styles.manualParticipantAdded}><Avatar label={participant.name} size={28} uri={participant.avatarUrl} /><Text style={styles.editMatchupName}>{participant.name}{participant.handicap !== null && participant.handicap !== undefined ? ` · HCP ${participant.handicap}` : ''}</Text></View><Pressable onPress={() => setManualParticipants((current) => current.filter((item) => item.id !== participant.id))}><Ionicons color={palette.textMuted} name="close-circle-outline" size={21} /></Pressable></View>)}
+                        {manualParticipants.length ? <ScrollView horizontal contentContainerStyle={styles.manualRosterStrip} showsHorizontalScrollIndicator={false}>{manualParticipants.map((participant) => <Pressable key={participant.id} onPress={() => setManualParticipants((current) => current.filter((item) => item.id !== participant.id))} style={styles.manualRosterGolfer}><Avatar label={participant.name} size={42} uri={participant.avatarUrl} /><Text numberOfLines={1} style={styles.manualRosterName}>{participant.name.split(' ')[0]}</Text><Ionicons color={palette.textMuted} name="close-circle" size={14} style={styles.manualRosterRemove} /></Pressable>)}</ScrollView> : null}
+                      </View>
+                      <View style={styles.matchupSetupCard}>
+                        <View style={styles.matchupSetupHeader}><Ionicons color={palette.gold} name="git-compare-outline" size={18} /><Text style={styles.infoLabel}>Matchup builder</Text></View>
+                        <Text style={styles.matchupHint}>Set the format, day, and pairing for each match.</Text>
                         <Text style={styles.infoLabel}>Match type</Text>
                         <View style={styles.matchTypeChoices}>
-                          {['Stroke Play', 'Match Play', 'Scramble', 'Alternate Shot', 'Other'].map((format) => <Pressable key={format} onPress={() => setMatchupFormat(format)} style={[styles.matchTypeChoice, matchupFormat === format && styles.matchTypeChoiceActive]}><Text style={[styles.matchTypeChoiceText, matchupFormat === format && styles.matchTypeChoiceTextActive]}>{format}</Text></Pressable>)}
+                          {['Stroke Play', 'Match Play', 'Scramble', 'Best Ball', 'Alternate Shot', 'Other'].map((format) => <Pressable key={format} onPress={() => setMatchupFormat(format)} style={[styles.matchTypeChoice, matchupFormat === format && styles.matchTypeChoiceActive]}><Text style={[styles.matchTypeChoiceText, matchupFormat === format && styles.matchTypeChoiceTextActive]}>{format}</Text></Pressable>)}
                         </View>
                         {tournamentDays.length ? <><Text style={styles.infoLabel}>Tournament day</Text><View style={styles.matchTypeChoices}>{tournamentDays.map((day, index) => <Pressable key={day} onPress={() => setMatchupDay(day)} style={[styles.matchTypeChoice, (matchupDay || tournamentDays[0]) === day && styles.matchTypeChoiceActive]}><Text style={[styles.matchTypeChoiceText, (matchupDay || tournamentDays[0]) === day && styles.matchTypeChoiceTextActive]}>Day {index + 1}</Text></Pressable>)}</View></> : null}
+                        <View style={styles.matchupScheduleFields}>
+                          <TextInput onChangeText={setMatchupCourseName} placeholder="Course name" placeholderTextColor={palette.textMuted} style={styles.matchupScheduleInput} value={matchupCourseName} />
+                          <TextInput onChangeText={setMatchupTeeTime} placeholder="Tee time" placeholderTextColor={palette.textMuted} style={styles.matchupScheduleInput} value={matchupTeeTime} />
+                        </View>
                         <Text style={styles.infoLabel}>Build matchups</Text>
-                        <Text style={styles.matchupHint}>Choose two people, then add their pairing.</Text>
+                        <Text style={styles.matchupHint}>Choose—or drag—a golfer into each side, then add the pairing.</Text>
+                        <View style={styles.matchupSelectedRow}>
+                          <Pressable onPress={() => setLeftMatchupUserId('')} style={[styles.matchupSelectedSlot, !leftMatchupUserId && styles.matchupSelectedSlotEmpty]}>
+                            {leftMatchupUserId && participantById.get(leftMatchupUserId) ? <><Avatar label={participantById.get(leftMatchupUserId)?.name || 'Golfer'} size={40} uri={participantById.get(leftMatchupUserId)?.avatarUrl} /><Text numberOfLines={1} style={styles.matchupSelectedName}>{participantById.get(leftMatchupUserId)?.name.split(' ')[0]}</Text><Ionicons color={palette.textMuted} name="close-circle" size={15} style={styles.matchupSelectedRemove} /></> : <Text style={styles.matchupSlotHint}>{editForm.tournament_format === 'Ryder Cup' ? teams[0]?.name || 'Team one' : 'Player one'}</Text>}
+                          </Pressable>
+                          <Text style={styles.matchupVs}>VS.</Text>
+                          <Pressable onPress={() => setRightMatchupUserId('')} style={[styles.matchupSelectedSlot, !rightMatchupUserId && styles.matchupSelectedSlotEmpty]}>
+                            {rightMatchupUserId && participantById.get(rightMatchupUserId) ? <><Avatar label={participantById.get(rightMatchupUserId)?.name || 'Golfer'} size={40} uri={participantById.get(rightMatchupUserId)?.avatarUrl} /><Text numberOfLines={1} style={styles.matchupSelectedName}>{participantById.get(rightMatchupUserId)?.name.split(' ')[0]}</Text><Ionicons color={palette.textMuted} name="close-circle" size={15} style={styles.matchupSelectedRemove} /></> : <Text style={styles.matchupSlotHint}>{editForm.tournament_format === 'Ryder Cup' ? teams[1]?.name || 'Team two' : 'Player two'}</Text>}
+                          </Pressable>
+                        </View>
                         <View style={styles.matchupChooserRow}>
                           <View style={styles.matchupChoiceColumn}>
-                            <Text style={styles.matchupSideLabel}>Player one</Text>
-                            {participantOptions.map((participant) => {
+                            <Text style={styles.matchupSideLabel}>{editForm.tournament_format === 'Ryder Cup' ? teams[0]?.name || 'Team one' : 'Player one'}</Text>
+                            {matchupLeftOptions.map((participant) => {
                               const active = leftMatchupUserId === participant.id
                               return (
                                 <Pressable key={participant.id} onPress={() => setLeftMatchupUserId(participant.id)} style={[styles.matchupPersonChoice, active && styles.matchupPersonChoiceActive]}>
@@ -1212,8 +1410,8 @@ export default function GroupScreen() {
                           </View>
                           <Text style={styles.matchupVs}>VS.</Text>
                           <View style={styles.matchupChoiceColumn}>
-                            <Text style={styles.matchupSideLabel}>Player two</Text>
-                            {participantOptions.map((participant) => {
+                            <Text style={styles.matchupSideLabel}>{editForm.tournament_format === 'Ryder Cup' ? teams[1]?.name || 'Team two' : 'Player two'}</Text>
+                            {matchupRightOptions.map((participant) => {
                               const active = rightMatchupUserId === participant.id
                               return (
                                 <Pressable key={participant.id} onPress={() => setRightMatchupUserId(participant.id)} style={[styles.matchupPersonChoice, active && styles.matchupPersonChoiceActive]}>
@@ -1224,20 +1422,41 @@ export default function GroupScreen() {
                             })}
                           </View>
                         </View>
-                        {participantOptions.length < 2 ? <Text style={styles.matchupHint}>Add at least two people to create matchups.</Text> : null}
-                        <Pressable onPress={addMatchup} style={styles.addMatchupButton}><Text style={styles.addMatchupButtonText}>Add matchup</Text></Pressable>
-                        {matchups.map((matchup) => {
-                          const left = participantById.get(matchup.leftUserId)
-                          const right = participantById.get(matchup.rightUserId)
-                          if (!left || !right) return null
-                          return (
-                            <View key={matchup.id} style={styles.editMatchupRow}>
-                              <Text numberOfLines={1} style={styles.editMatchupName}>{left.name} vs. {right.name}{matchup.format ? ` · ${matchup.format}` : ''}</Text>
-                              <Pressable onPress={() => setMatchups((current) => current.filter((item) => item.id !== matchup.id))}><Ionicons color={palette.textMuted} name="close-circle-outline" size={21} /></Pressable>
+                        {['scramble', 'best ball'].includes(matchupFormat.toLowerCase()) ? <View style={styles.teamPartnerChooser}>
+                          <Text style={styles.matchupHint}>Choose a teammate for each side.</Text>
+                          <View style={styles.matchupChooserRow}>
+                            <View style={styles.matchupChoiceColumn}>
+                              <Text style={styles.matchupSideLabel}>Side one teammate</Text>
+                              {participantOptions.filter((participant) => participant.id !== leftMatchupUserId).map((participant) => <Pressable key={participant.id} onPress={() => setLeftPartnerUserId(participant.id)} style={[styles.matchupPersonChoice, leftPartnerUserId === participant.id && styles.matchupPersonChoiceActive]}><Avatar label={participant.name} size={30} uri={participant.avatarUrl} /><Text numberOfLines={1} style={styles.matchupPersonChoiceText}>{participant.name}</Text></Pressable>)}
                             </View>
-                          )
-                        })}
+                            <Text style={styles.matchupVs}>VS.</Text>
+                            <View style={styles.matchupChoiceColumn}>
+                              <Text style={styles.matchupSideLabel}>Side two teammate</Text>
+                              {participantOptions.filter((participant) => participant.id !== rightMatchupUserId).map((participant) => <Pressable key={participant.id} onPress={() => setRightPartnerUserId(participant.id)} style={[styles.matchupPersonChoice, rightPartnerUserId === participant.id && styles.matchupPersonChoiceActive]}><Avatar label={participant.name} size={30} uri={participant.avatarUrl} /><Text numberOfLines={1} style={styles.matchupPersonChoiceText}>{participant.name}</Text></Pressable>)}
+                            </View>
+                          </View>
+                        </View> : null}
+                        {editForm.tournament_format === 'Ryder Cup' && (!matchupLeftOptions.length || !matchupRightOptions.length) ? <Text style={styles.matchupHint}>Add golfers to both team rosters before building matchups.</Text> : null}
+                        {editForm.tournament_format !== 'Ryder Cup' && participantOptions.length < 2 ? <Text style={styles.matchupHint}>Add at least two people to create matchups.</Text> : null}
+                        <Pressable onPress={addMatchup} style={styles.addMatchupButton}><Text style={styles.addMatchupButtonText}>Add matchup</Text></Pressable>
+                        {matchupsByDay.map(([day, dayMatchups], dayIndex) => <View key={day} style={styles.savedMatchupDay}>
+                          <View style={styles.savedMatchupDayHeader}><Text style={styles.savedMatchupDayTitle}>Day {dayIndex + 1}</Text><Text style={styles.savedMatchupDayDate}>{day === 'Unscheduled' ? 'Unscheduled' : readableDate(day)}</Text></View>
+                          {dayMatchups.map((matchup) => {
+                            const left = participantById.get(matchup.leftUserId)
+                            const right = participantById.get(matchup.rightUserId)
+                            if (!left || !right) return null
+                            const leftSide = [left, matchup.leftPartnerUserId ? participantById.get(matchup.leftPartnerUserId) : null].filter(Boolean) as typeof left[]
+                            const rightSide = [right, matchup.rightPartnerUserId ? participantById.get(matchup.rightPartnerUserId) : null].filter(Boolean) as typeof right[]
+                            return <View key={matchup.id} style={styles.savedMatchupCard}>
+                              <View style={styles.savedMatchupSide}>{leftSide.map((player) => <View key={player.id} style={styles.savedMatchupGolfer}><Avatar label={player.name} size={34} uri={player.avatarUrl} /><Text numberOfLines={1} style={styles.savedMatchupName}>{player.name.split(' ')[0]}</Text></View>)}</View>
+                              <View style={styles.savedMatchupMiddle}><Text style={styles.savedMatchupVs}>VS.</Text><Text numberOfLines={1} style={styles.savedMatchupFormat}>{matchup.format || 'Match Play'}</Text></View>
+                              <View style={styles.savedMatchupSide}>{rightSide.map((player) => <View key={player.id} style={styles.savedMatchupGolfer}><Avatar label={player.name} size={34} uri={player.avatarUrl} /><Text numberOfLines={1} style={styles.savedMatchupName}>{player.name.split(' ')[0]}</Text></View>)}</View>
+                              <Pressable accessibilityLabel="Delete matchup" onPress={() => setMatchups((current) => current.filter((item) => item.id !== matchup.id))} style={styles.savedMatchupDelete}><Ionicons color={palette.textMuted} name="close" size={16} /></Pressable>
+                            </View>
+                          })}
+                        </View>)}
                       </View>
+                      </>
                     ) : null}
                   </View>
                 ) : null}
@@ -1275,7 +1494,7 @@ export default function GroupScreen() {
                 {group?.tournament_type ? <View style={styles.tournamentInfoRow}><Text style={styles.infoLabel}>Type</Text><Text style={styles.tournamentInfoValue}>{group.tournament_type}</Text></View> : null}
                 {(closestToPin || longestDrive) ? <View style={styles.tournamentContestsDisplay}>
                   <Text style={styles.infoLabel}>On-course contests</Text>
-                  {closestToPin ? <View style={styles.tournamentContestRow}><Ionicons color="#d7b768" name="flag-outline" size={18} /><Text style={styles.tournamentContestText}>Closest to the Pin</Text></View> : null}
+                  {closestToPin ? <View style={styles.tournamentContestRow}><Ionicons color="#d7b768" name="flag-outline" size={18} /><View><Text style={styles.tournamentContestText}>Closest to the Pin{closestToPinSetup.multipleDays ? ' · Every day' : ''}</Text><Text style={styles.tournamentContestDetail}>{closestToPinSetup.distances.filter(Boolean).map((distance, index) => `Par 3 #${index + 1}: ${distance} yds`).join(' · ') || 'Par-3 distances to be set'}</Text></View></View> : null}
                   {longestDrive ? <View style={styles.tournamentContestRow}><Ionicons color="#d7b768" name="golf-outline" size={18} /><Text style={styles.tournamentContestText}>Longest Drive</Text></View> : null}
                 </View> : null}
               </View>
@@ -1283,21 +1502,7 @@ export default function GroupScreen() {
           </View>
         ) : activeSection === 'scores' && isTournament ? (
           <View style={styles.scoresFeed}>
-            {isOwner ? (
-              <View style={styles.liveScoringControl}>
-                <View style={styles.liveScoringSettings}>
-                  <View style={styles.liveScoringCopy}>
-                    <View style={styles.liveScoringControlTitle}>
-                      <Ionicons color={liveScoring ? '#f06b5d' : palette.aqua} name={liveScoring ? 'radio' : 'radio-outline'} size={20} />
-                      <Text style={styles.liveScoringSettingTitle}>Live scoring</Text>
-                    </View>
-                  </View>
-                  <Pressable accessibilityRole="switch" accessibilityState={{ checked: liveScoring }} disabled={savingLiveScoring} onPress={() => void handleToggleLiveScoring()} style={[styles.liveScoringSwitch, liveScoring && styles.liveScoringSwitchOn]}>
-                    <View style={[styles.liveScoringKnob, liveScoring && styles.liveScoringKnobOn]} />
-                  </Pressable>
-                </View>
-              </View>
-            ) : liveScoring ? (
+            {!isOwner && liveScoring ? (
               <View style={styles.liveScoringAudienceStatus}>
                 <Ionicons color="#f06b5d" name="radio" size={17} />
                 <Text style={styles.liveScoringAudienceText}>Live scoring is on</Text>
@@ -1354,13 +1559,17 @@ export default function GroupScreen() {
                 const right = participantById.get(matchup.rightUserId)
                 const winner = getMatchupWinner(matchup)
                 if (!left || !right) return null
+                const leftPartner = matchup.leftPartnerUserId ? participantById.get(matchup.leftPartnerUserId) : null
+                const rightPartner = matchup.rightPartnerUserId ? participantById.get(matchup.rightPartnerUserId) : null
+                const leftLabel = leftPartner ? `${left.name} & ${leftPartner.name}` : left.name
+                const rightLabel = rightPartner ? `${right.name} & ${rightPartner.name}` : right.name
                 const leftAdjustedScore = getAdjustedTournamentScore(matchup.leftScore, left.handicap)
                 const rightAdjustedScore = getAdjustedTournamentScore(matchup.rightScore, right.handicap)
                 const isMatchPlay = (matchup.format || group?.tournament_format || '').toLowerCase().includes('match play')
                 const matchPlayStatus = isMatchPlay ? getMatchPlayStatus(matchup) : null
                 return <View key={matchup.id} style={styles.matchupScoreCard}>
-                  <Text style={styles.matchupFormatBadge}>{matchup.format || group?.tournament_format || 'Match Play'}</Text>
-                  {matchup.day ? <Text style={styles.matchupDayBadge}>{new Date(`${matchup.day}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</Text> : null}
+                  {matchup.courseName ? <Text numberOfLines={1} style={styles.matchupCourseBadge}>{matchup.courseName}</Text> : null}
+                  {matchup.teeTime ? <Text style={styles.matchupFormatBadge}>{matchup.teeTime}</Text> : null}
                   {liveScoring ? <View style={styles.liveMatchProgress}>
                     <Ionicons color="#f06b5d" name="radio" size={14} />
                     {isEditingMatchupScores ? <View style={styles.liveHoleEditor}>
@@ -1381,16 +1590,24 @@ export default function GroupScreen() {
                     </View> : <Text style={styles.liveMatchProgressText}>{matchup.throughHole ? `Through ${matchup.throughHole} ${matchup.throughHole === 1 ? 'hole' : 'holes'}` : 'Live — not started'}</Text>}
                   </View> : null}
                   <View style={styles.matchupScoreRow}>
-                    <View style={[styles.matchupScoreGolfer, winner === 'left' && styles.matchupWinner]}><Avatar label={left.name} size={42} uri={left.avatarUrl} /><Text numberOfLines={1} style={styles.matchupGolferName}>{left.name}</Text>{isEditingMatchupScores ? <TextInput keyboardType="number-pad" onChangeText={(value) => setMatchups((current) => current.map((item) => item.id === matchup.id ? { ...item, leftScore: value.trim() ? Number(value) : null } : item))} placeholder="—" placeholderTextColor={palette.textMuted} style={styles.matchupScoreInput} value={matchup.leftScore?.toString() || ''} /> : <View style={styles.matchupScoreReadout}><Text style={styles.matchupScoreValue}>{matchup.leftScore ?? '—'}</Text>{leftAdjustedScore !== null ? <Text style={styles.matchupAdjustedScore}>({leftAdjustedScore})</Text> : null}</View>}</View>
-                    <Text style={styles.matchupVs}>VS.</Text>
-                    <View style={[styles.matchupScoreGolfer, winner === 'right' && styles.matchupWinner]}><Avatar label={right.name} size={42} uri={right.avatarUrl} /><Text numberOfLines={1} style={styles.matchupGolferName}>{right.name}</Text>{isEditingMatchupScores ? <TextInput keyboardType="number-pad" onChangeText={(value) => setMatchups((current) => current.map((item) => item.id === matchup.id ? { ...item, rightScore: value.trim() ? Number(value) : null } : item))} placeholder="—" placeholderTextColor={palette.textMuted} style={styles.matchupScoreInput} value={matchup.rightScore?.toString() || ''} /> : <View style={styles.matchupScoreReadout}><Text style={styles.matchupScoreValue}>{matchup.rightScore ?? '—'}</Text>{rightAdjustedScore !== null ? <Text style={styles.matchupAdjustedScore}>({rightAdjustedScore})</Text> : null}</View>}</View>
+                    <View style={[styles.matchupScoreGolfer, winner === 'left' && styles.matchupWinner]}><View style={styles.matchupTeamAvatars}><Avatar label={left.name} size={42} uri={left.avatarUrl} />{leftPartner ? <Avatar label={leftPartner.name} size={42} uri={leftPartner.avatarUrl} /> : null}</View><Text numberOfLines={2} style={styles.matchupGolferName}>{leftLabel}</Text>{isEditingMatchupScores && !isMatchPlay ? <TextInput keyboardType="number-pad" onChangeText={(value) => setMatchups((current) => current.map((item) => item.id === matchup.id ? { ...item, leftScore: value.trim() ? Number(value) : null } : item))} placeholder="—" placeholderTextColor={palette.textMuted} style={styles.matchupScoreInput} value={matchup.leftScore?.toString() || ''} /> : !isMatchPlay ? <View style={styles.matchupScoreReadout}><Text style={styles.matchupScoreValue}>{matchup.leftScore ?? '—'}</Text>{leftAdjustedScore !== null ? <Text style={styles.matchupAdjustedScore}>({leftAdjustedScore})</Text> : null}</View> : null}</View>
+                    <View style={styles.matchupScheduleCenter}><Text style={styles.matchupVs}>VS.</Text><Text numberOfLines={1} style={styles.matchupFormatUnderVs}>{matchup.format || group?.tournament_format || 'Match Play'}</Text></View>
+                    <View style={[styles.matchupScoreGolfer, winner === 'right' && styles.matchupWinner]}><View style={styles.matchupTeamAvatars}><Avatar label={right.name} size={42} uri={right.avatarUrl} />{rightPartner ? <Avatar label={rightPartner.name} size={42} uri={rightPartner.avatarUrl} /> : null}</View><Text numberOfLines={2} style={styles.matchupGolferName}>{rightLabel}</Text>{isEditingMatchupScores && !isMatchPlay ? <TextInput keyboardType="number-pad" onChangeText={(value) => setMatchups((current) => current.map((item) => item.id === matchup.id ? { ...item, rightScore: value.trim() ? Number(value) : null } : item))} placeholder="—" placeholderTextColor={palette.textMuted} style={styles.matchupScoreInput} value={matchup.rightScore?.toString() || ''} /> : !isMatchPlay ? <View style={styles.matchupScoreReadout}><Text style={styles.matchupScoreValue}>{matchup.rightScore ?? '—'}</Text>{rightAdjustedScore !== null ? <Text style={styles.matchupAdjustedScore}>({rightAdjustedScore})</Text> : null}</View> : null}</View>
                   </View>
-                  {isEditingMatchupScores ? <PrimaryButton label={savingMatchupId === matchup.id ? 'Saving...' : liveScoring ? 'Update live score' : 'Save Result'} loading={savingMatchupId === matchup.id} onPress={() => void handleSaveMatchupScore(matchup.id)} /> : matchPlayStatus ? <Text style={styles.matchupWinnerText}>{matchPlayStatus.label}</Text> : winner ? <Text style={styles.matchupWinnerText}>{liveScoring && matchup.throughHole && matchup.throughHole < 18 ? `${winner === 'left' ? left.name : right.name} is ahead` : `${winner === 'left' ? left.name : right.name} wins`}</Text> : <Text style={styles.matchupTypeFooter}>{matchup.format || group?.tournament_format || 'Match Play'}</Text>}
+                  {isEditingMatchupScores && isMatchPlay ? <View style={styles.holeWinnerEditor}>
+                    <Text style={styles.holeWinnerTitle}>Hole-by-hole result</Text>
+                    {Array.from({ length: 18 }, (_, index) => index + 1).map((hole) => {
+                      const selected = matchup.holeWinners?.[String(hole)]
+                      return <View key={hole} style={styles.holeWinnerRow}><Text style={styles.holeNumber}>#{hole}</Text><Pressable onPress={() => setMatchups((current) => current.map((item) => item.id === matchup.id ? { ...item, holeWinners: { ...item.holeWinners, [hole]: 'left' } } : item))} style={[styles.holeWinnerChoice, selected === 'left' && styles.holeWinnerChoiceActive]}><Text numberOfLines={1} style={styles.holeWinnerText}>{left.name}</Text></Pressable><Pressable onPress={() => setMatchups((current) => current.map((item) => item.id === matchup.id ? { ...item, holeWinners: { ...item.holeWinners, [hole]: 'halve' } } : item))} style={[styles.holeWinnerChoice, selected === 'halve' && styles.holeWinnerChoiceActive]}><Text style={styles.holeWinnerText}>Half</Text></Pressable><Pressable onPress={() => setMatchups((current) => current.map((item) => item.id === matchup.id ? { ...item, holeWinners: { ...item.holeWinners, [hole]: 'right' } } : item))} style={[styles.holeWinnerChoice, selected === 'right' && styles.holeWinnerChoiceActive]}><Text numberOfLines={1} style={styles.holeWinnerText}>{right.name}</Text></Pressable></View>
+                    })}
+                  </View> : null}
+                  {isOwner ? <Pressable accessibilityLabel="Edit matchup details" onPress={() => setMatchupSettingsId(matchup.id)} style={styles.matchupDetailsButton}><Ionicons color="rgba(255,255,255,0.64)" name="settings-outline" size={19} /></Pressable> : null}
+                  {isOwner ? <Pressable accessibilityLabel="Open matchup scorecard" onPress={() => setScorecardMatchupId(matchup.id)} style={styles.matchupScorecardButton}><Ionicons color="rgba(255,255,255,0.64)" name="reader-outline" size={20} /></Pressable> : null}
+                  {isEditingMatchupScores ? <PrimaryButton label={savingMatchupId === matchup.id ? 'Saving...' : liveScoring ? 'Update live score' : 'Save Result'} loading={savingMatchupId === matchup.id} onPress={() => void handleSaveMatchupScore(matchup.id)} /> : matchPlayStatus ? <Text style={styles.matchupWinnerText}>{matchPlayStatus.label}</Text> : winner ? <Text style={styles.matchupWinnerText}>{liveScoring && matchup.throughHole && matchup.throughHole < 18 ? `${winner === 'left' ? left.name : right.name} is ahead` : `${winner === 'left' ? left.name : right.name} wins`}</Text> : <Text style={styles.matchupTypeFooter}>{matchup.teeTime || 'Tee time TBD'}</Text>}
                 </View>
               })}
               </View>)}
               {!matchups.length ? <Text style={styles.body}>The tournament admin has not added matchups yet.</Text> : null}
-              {isOwner ? <Pressable accessibilityLabel={isEditingMatchupScores ? 'Finish editing matchup scores' : 'Edit matchup scores'} onPress={() => setIsEditingMatchupScores((current) => !current)} style={styles.matchupSettingsButton}><Ionicons color="#ffffff" name={isEditingMatchupScores ? 'close' : 'settings-outline'} size={21} /></Pressable> : null}
             </View>}
           </View>
         ) : activeSection === 'members' ? (
@@ -1558,6 +1775,33 @@ export default function GroupScreen() {
       <Pressable accessibilityLabel="Share group QR code" onPress={() => setShowShareModal(true)} style={styles.floatingQrButton}>
         <Ionicons color={palette.text} name="qr-code-outline" size={25} />
       </Pressable>
+      <Modal animationType="slide" transparent visible={!!matchupSettings} onRequestClose={() => setMatchupSettingsId(null)}>
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, styles.matchupDetailsModal]}>
+            <View style={styles.matchupDetailsHeader}><Text style={styles.matchupDetailsTitle}>Match settings</Text><Pressable accessibilityLabel="Close match settings" hitSlop={12} onPress={() => setMatchupSettingsId(null)} style={styles.scorecardClose}><Ionicons color={palette.ink} name="close" size={21} /></Pressable></View>
+            {matchupSettings ? <ScrollView contentContainerStyle={styles.matchupDetailsContent} showsVerticalScrollIndicator={false}>
+              <TextInput onChangeText={(value) => setMatchups((current) => current.map((item) => item.id === matchupSettings.id ? { ...item, courseName: value } : item))} placeholder="Course name" placeholderTextColor="#80958c" style={styles.matchupDetailsInput} value={matchupSettings.courseName || ''} />
+              <TextInput onChangeText={(value) => setMatchups((current) => current.map((item) => item.id === matchupSettings.id ? { ...item, teeTime: value } : item))} placeholder="Tee time" placeholderTextColor="#80958c" style={styles.matchupDetailsInput} value={matchupSettings.teeTime || ''} />
+              <Text style={styles.scorecardSectionTitle}>{editForm.tournament_format === 'Ryder Cup' ? teams[0]?.name || 'Team one' : 'Left side'}</Text><ScrollView horizontal contentContainerStyle={styles.matchupDetailsPeople} showsHorizontalScrollIndicator={false}>{matchupLeftOptions.map((participant) => <Pressable key={participant.id} onPress={() => setMatchups((current) => current.map((item) => item.id === matchupSettings.id ? { ...item, leftUserId: participant.id } : item))} style={[styles.matchupDetailsPerson, matchupSettings.leftUserId === participant.id && styles.matchupDetailsPersonActive]}><Avatar label={participant.name} size={42} uri={participant.avatarUrl} /><Text numberOfLines={1} style={styles.matchupDetailsPersonName}>{participant.name.split(' ')[0]}</Text></Pressable>)}</ScrollView>
+              <Text style={styles.scorecardSectionTitle}>{editForm.tournament_format === 'Ryder Cup' ? teams[1]?.name || 'Team two' : 'Right side'}</Text><ScrollView horizontal contentContainerStyle={styles.matchupDetailsPeople} showsHorizontalScrollIndicator={false}>{matchupRightOptions.map((participant) => <Pressable key={participant.id} onPress={() => setMatchups((current) => current.map((item) => item.id === matchupSettings.id ? { ...item, rightUserId: participant.id } : item))} style={[styles.matchupDetailsPerson, matchupSettings.rightUserId === participant.id && styles.matchupDetailsPersonActive]}><Avatar label={participant.name} size={42} uri={participant.avatarUrl} /><Text numberOfLines={1} style={styles.matchupDetailsPersonName}>{participant.name.split(' ')[0]}</Text></Pressable>)}</ScrollView>
+              <PrimaryButton label={savingMatchupId === matchupSettings.id ? 'Saving...' : 'Save matchup'} loading={savingMatchupId === matchupSettings.id} onPress={() => void handleSaveMatchupScore(matchupSettings.id)} />
+            </ScrollView> : null}
+          </View>
+        </View>
+      </Modal>
+      <Modal animationType="slide" transparent visible={!!scorecardMatchup} onRequestClose={() => setScorecardMatchupId(null)}>
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, styles.scorecardModalCard]}>
+            <View style={styles.scorecardModalHeader}><View /><Pressable accessibilityLabel="Close scorecard" hitSlop={12} onPress={() => setScorecardMatchupId(null)} style={styles.scorecardClose}><Ionicons color={palette.ink} name="close" size={21} /></Pressable></View>
+            {scorecardMatchup && scorecardLeft && scorecardRight ? <ScrollView contentContainerStyle={styles.scorecardModalContent} showsVerticalScrollIndicator={false}>
+              <View style={styles.scorecardPlayers}><View style={styles.scorecardPlayer}><Avatar label={scorecardLeft.name} size={68} uri={scorecardLeft.avatarUrl} /><Text numberOfLines={2} style={styles.scorecardPlayerName}>{scorecardLeftLabel}</Text></View><View style={styles.scorecardVsMark}><Text style={styles.scorecardVsText}>VS</Text></View><View style={styles.scorecardPlayer}><Avatar label={scorecardRight.name} size={68} uri={scorecardRight.avatarUrl} /><Text numberOfLines={2} style={styles.scorecardPlayerName}>{scorecardRightLabel}</Text></View></View>
+              {scorecardIsMatchPlay ? <><Text style={styles.scorecardSectionTitle}>Hole results</Text>{Array.from({ length: 18 }, (_, index) => index + 1).map((hole) => { const selected = scorecardMatchup.holeWinners?.[String(hole)]; return <View key={hole} style={styles.scorecardHoleRow}><Text style={styles.scorecardHoleNumber}>{hole}</Text><Pressable onPress={() => setScorecardHoleWinner(scorecardMatchup.id, hole, 'left')} style={[styles.scorecardHoleChoice, selected === 'left' && styles.scorecardHoleChoiceActive]}><Text numberOfLines={1} style={styles.scorecardHoleChoiceText}>{scorecardLeft.name.split(' ')[0]}</Text></Pressable><Pressable onPress={() => setScorecardHoleWinner(scorecardMatchup.id, hole, 'halve')} style={[styles.scorecardHoleChoice, selected === 'halve' && styles.scorecardHoleChoiceActive]}><Text style={styles.scorecardHoleChoiceText}>Half</Text></Pressable><Pressable onPress={() => setScorecardHoleWinner(scorecardMatchup.id, hole, 'right')} style={[styles.scorecardHoleChoice, selected === 'right' && styles.scorecardHoleChoiceActive]}><Text numberOfLines={1} style={styles.scorecardHoleChoiceText}>{scorecardRight.name.split(' ')[0]}</Text></Pressable></View>})}</> : scorecardIsTeamFormat ? <><Text style={styles.scorecardSectionTitle}>Team score by hole</Text>{Array.from({ length: 18 }, (_, index) => index + 1).map((hole) => <View key={hole} style={styles.scorecardTeamHoleRow}><Text style={styles.scorecardHoleNumber}>{hole}</Text><TextInput keyboardType="number-pad" onChangeText={(value) => setScorecardHoleScore(scorecardMatchup.id, hole, 'left', value)} placeholder="—" placeholderTextColor={palette.textMuted} style={styles.scorecardTeamHoleInput} value={scorecardMatchup.leftHoleScores?.[String(hole)]?.toString() || ''} /><TextInput keyboardType="number-pad" onChangeText={(value) => setScorecardHoleScore(scorecardMatchup.id, hole, 'right', value)} placeholder="—" placeholderTextColor={palette.textMuted} style={styles.scorecardTeamHoleInput} value={scorecardMatchup.rightHoleScores?.[String(hole)]?.toString() || ''} /></View>)}</> : <View style={styles.scorecardTotalRow}><View style={styles.scorecardTotalField}><Text style={styles.scorecardSectionTitle}>{scorecardLeft.name.split(' ')[0]} total</Text><TextInput keyboardType="number-pad" onChangeText={(value) => setMatchups((current) => current.map((item) => item.id === scorecardMatchup.id ? { ...item, leftScore: value.trim() ? Number(value) : null } : item))} placeholder="—" placeholderTextColor={palette.textMuted} style={styles.scorecardTotalInput} value={scorecardMatchup.leftScore?.toString() || ''} /></View><View style={styles.scorecardTotalField}><Text style={styles.scorecardSectionTitle}>{scorecardRight.name.split(' ')[0]} total</Text><TextInput keyboardType="number-pad" onChangeText={(value) => setMatchups((current) => current.map((item) => item.id === scorecardMatchup.id ? { ...item, rightScore: value.trim() ? Number(value) : null } : item))} placeholder="—" placeholderTextColor={palette.textMuted} style={styles.scorecardTotalInput} value={scorecardMatchup.rightScore?.toString() || ''} /></View></View>}
+              {liveScoring ? <View style={styles.scorecardProgressRow}><Text style={styles.scorecardSectionTitle}>Through hole</Text><TextInput keyboardType="number-pad" maxLength={2} onChangeText={(value) => setMatchups((current) => current.map((item) => item.id === scorecardMatchup.id ? { ...item, throughHole: value.trim() ? Math.min(18, Math.max(1, Number(value))) : null } : item))} placeholder="18" placeholderTextColor={palette.textMuted} style={styles.scorecardThroughInput} value={scorecardMatchup.throughHole?.toString() || ''} /></View> : null}
+              <PrimaryButton label={savingMatchupId === scorecardMatchup.id ? 'Saving...' : liveScoring ? 'Update live score' : 'Save scorecard'} loading={savingMatchupId === scorecardMatchup.id} onPress={() => void handleSaveMatchupScore(scorecardMatchup.id)} />
+            </ScrollView> : null}
+          </View>
+        </View>
+      </Modal>
       <Modal
         animationType="slide"
         transparent
@@ -1625,6 +1869,214 @@ const styles = StyleSheet.create({
     backgroundColor: palette.bg,
     flex: 1
   },
+  scorecardModalCard: {
+    backgroundColor: '#f7f3e9',
+    borderColor: 'rgba(25,73,56,0.18)',
+    gap: 8,
+    maxHeight: '84%',
+    padding: 18
+  },
+  matchupDetailsModal: {
+    backgroundColor: '#f7f3e9',
+    gap: 14,
+    maxHeight: '76%',
+    padding: 18
+  },
+  matchupDetailsHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between'
+  },
+  matchupDetailsTitle: {
+    color: palette.ink,
+    fontFamily: 'Georgia',
+    fontSize: 23,
+    fontWeight: '700'
+  },
+  matchupDetailsContent: {
+    gap: 12,
+    paddingBottom: 4
+  },
+  matchupDetailsInput: {
+    backgroundColor: '#eef3ed',
+    borderColor: '#d1dfd2',
+    borderRadius: 13,
+    borderWidth: 1,
+    color: palette.ink,
+    minHeight: 48,
+    paddingHorizontal: 13
+  },
+  matchupDetailsPeople: {
+    gap: 10,
+    paddingVertical: 3
+  },
+  matchupDetailsPerson: {
+    alignItems: 'center',
+    borderColor: 'transparent',
+    borderRadius: 12,
+    borderWidth: 2,
+    gap: 4,
+    padding: 4,
+    width: 56
+  },
+  matchupDetailsPersonActive: {
+    backgroundColor: '#d9eee0',
+    borderColor: '#4a9368'
+  },
+  matchupDetailsPersonName: {
+    color: palette.ink,
+    fontSize: 10,
+    fontWeight: '700',
+    textAlign: 'center',
+    width: '100%'
+  },
+  scorecardModalHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    position: 'absolute',
+    right: 10,
+    top: 10,
+    zIndex: 2
+  },
+  scorecardClose: {
+    alignItems: 'center',
+    backgroundColor: '#e4eee5',
+    borderRadius: 18,
+    height: 36,
+    justifyContent: 'center',
+    width: 36
+  },
+  scorecardModalContent: {
+    gap: 14,
+    paddingBottom: 4,
+    paddingTop: 0
+  },
+  scorecardPlayers: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 24,
+    paddingTop: 2
+  },
+  scorecardPlayer: {
+    alignItems: 'center',
+    gap: 4,
+    flex: 1,
+    maxWidth: 130
+  },
+  scorecardPlayerName: {
+    color: palette.ink,
+    fontSize: 15,
+    fontWeight: '800',
+    textAlign: 'center'
+  },
+  scorecardVsMark: {
+    alignItems: 'center',
+    backgroundColor: '#e8dcc0',
+    borderRadius: 17,
+    height: 34,
+    justifyContent: 'center',
+    width: 34
+  },
+  scorecardVsText: {
+    color: palette.gold,
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.7
+  },
+  scorecardSectionTitle: {
+    color: '#557267',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.7,
+    textTransform: 'uppercase'
+  },
+  scorecardHoleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6
+  },
+  scorecardHoleNumber: {
+    color: palette.gold,
+    fontSize: 12,
+    fontWeight: '800',
+    width: 20
+  },
+  scorecardHoleChoice: {
+    alignItems: 'center',
+    backgroundColor: '#eef3ed',
+    borderColor: '#d1dfd2',
+    borderRadius: 12,
+    borderWidth: 1,
+    flex: 1,
+    minHeight: 38,
+    justifyContent: 'center',
+    paddingHorizontal: 5
+  },
+  scorecardHoleChoiceActive: {
+    backgroundColor: '#cdebd6',
+    borderColor: '#4a9368',
+    borderWidth: 1.5
+  },
+  scorecardHoleChoiceText: {
+    color: palette.ink,
+    fontSize: 10,
+    fontWeight: '700'
+  },
+  scorecardTeamHoleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8
+  },
+  scorecardTeamHoleInput: {
+    backgroundColor: '#eef3ed',
+    borderColor: '#d1dfd2',
+    borderRadius: 12,
+    borderWidth: 1,
+    color: palette.ink,
+    flex: 1,
+    fontSize: 17,
+    fontWeight: '800',
+    minHeight: 40,
+    textAlign: 'center'
+  },
+  scorecardTotalRow: {
+    flexDirection: 'row',
+    gap: 10
+  },
+  scorecardTotalField: {
+    flex: 1,
+    gap: 6
+  },
+  scorecardTotalInput: {
+    backgroundColor: '#eef3ed',
+    borderColor: '#d1dfd2',
+    borderRadius: 12,
+    borderWidth: 1,
+    color: palette.ink,
+    fontSize: 26,
+    fontWeight: '800',
+    minHeight: 58,
+    textAlign: 'center'
+  },
+  scorecardProgressRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between'
+  },
+  scorecardThroughInput: {
+    backgroundColor: '#eef3ed',
+    borderColor: '#d1dfd2',
+    borderRadius: 10,
+    borderWidth: 1,
+    color: palette.ink,
+    fontSize: 16,
+    fontWeight: '800',
+    minHeight: 36,
+    textAlign: 'center',
+    width: 58
+  },
   content: {
     gap: 20,
     paddingBottom: 150,
@@ -1646,8 +2098,29 @@ const styles = StyleSheet.create({
   },
   dateRangeInput: {
     flex: 1,
-    fontSize: 12,
     paddingHorizontal: 10
+  },
+  datePickerButton: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 8
+  },
+  datePickerCopy: {
+    flex: 1
+  },
+  datePickerLabel: {
+    color: palette.textMuted,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase'
+  },
+  datePickerValue: {
+    color: palette.text,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 2
   },
   editTextarea: {
     minHeight: 110,
@@ -2101,6 +2574,74 @@ const styles = StyleSheet.create({
   contestChoiceTextActive: {
     color: '#f2d991'
   },
+  ctpSetupCard: {
+    backgroundColor: 'rgba(8,45,34,0.44)',
+    borderColor: 'rgba(215,183,104,0.24)',
+    borderRadius: 13,
+    borderWidth: 1,
+    gap: 9,
+    padding: 10
+  },
+  ctpCountRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between'
+  },
+  ctpCountLabel: {
+    color: palette.text,
+    fontSize: 12,
+    fontWeight: '700'
+  },
+  ctpCountControls: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 9
+  },
+  ctpCountButton: {
+    alignItems: 'center',
+    backgroundColor: palette.cardSoft,
+    borderColor: palette.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    height: 28,
+    justifyContent: 'center',
+    width: 28
+  },
+  ctpCountValue: {
+    color: palette.gold,
+    fontSize: 16,
+    fontWeight: '800',
+    minWidth: 14,
+    textAlign: 'center'
+  },
+  ctpDistanceRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8
+  },
+  ctpHoleLabel: {
+    color: palette.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+    width: 70
+  },
+  ctpDistanceInput: {
+    backgroundColor: palette.cardSoft,
+    borderColor: palette.border,
+    borderRadius: 10,
+    borderWidth: 1,
+    color: palette.text,
+    flex: 1,
+    fontSize: 13,
+    minHeight: 36,
+    paddingHorizontal: 10
+  },
+  ctpYards: {
+    color: palette.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+    width: 24
+  },
   tournamentContestsDisplay: {
     borderTopColor: 'rgba(215,183,104,0.18)',
     borderTopWidth: 1,
@@ -2118,6 +2659,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700'
   },
+  tournamentContestDetail: {
+    color: palette.textMuted,
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 2
+  },
   matchupsBlock: {
     gap: 6
   },
@@ -2128,6 +2675,156 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 10,
     padding: 12
+  },
+  matchupSetupCard: {
+    backgroundColor: 'rgba(12,49,38,0.46)',
+    borderColor: 'rgba(232,204,135,0.35)',
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 10,
+    marginTop: 12,
+    padding: 13
+  },
+  matchupSetupHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 7
+  },
+  matchupScheduleFields: {
+    flexDirection: 'row',
+    gap: 8
+  },
+  matchupScheduleInput: {
+    backgroundColor: palette.cardSoft,
+    borderColor: palette.border,
+    borderRadius: 11,
+    borderWidth: 1,
+    color: palette.text,
+    flex: 1,
+    fontSize: 12,
+    minHeight: 42,
+    paddingHorizontal: 11
+  },
+  savedMatchupDay: {
+    borderTopColor: 'rgba(232,204,135,0.17)',
+    borderTopWidth: 1,
+    gap: 8,
+    marginTop: 4,
+    paddingTop: 11
+  },
+  savedMatchupDayHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between'
+  },
+  savedMatchupDayTitle: {
+    color: palette.gold,
+    fontSize: 12,
+    fontWeight: '800'
+  },
+  savedMatchupDayDate: {
+    color: palette.textMuted,
+    fontSize: 11,
+    fontWeight: '700'
+  },
+  savedMatchupCard: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.045)',
+    borderColor: 'rgba(232,204,135,0.18)',
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 74,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    position: 'relative'
+  },
+  savedMatchupSide: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center'
+  },
+  savedMatchupGolfer: {
+    alignItems: 'center',
+    maxWidth: 48,
+    width: 48
+  },
+  savedMatchupName: {
+    color: palette.text,
+    fontSize: 9,
+    fontWeight: '700',
+    marginTop: 3,
+    textAlign: 'center',
+    width: '100%'
+  },
+  savedMatchupMiddle: {
+    alignItems: 'center',
+    minWidth: 48
+  },
+  savedMatchupVs: {
+    color: palette.gold,
+    fontSize: 12,
+    fontWeight: '900'
+  },
+  savedMatchupFormat: {
+    color: palette.textMuted,
+    fontSize: 8,
+    fontWeight: '700',
+    marginTop: 3,
+    maxWidth: 55,
+    textAlign: 'center',
+    textTransform: 'uppercase'
+  },
+  savedMatchupDelete: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.16)',
+    borderRadius: 12,
+    height: 24,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 5,
+    top: 5,
+    width: 24
+  },
+  matchupSelectedRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8
+  },
+  matchupSelectedSlot: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderColor: 'rgba(232,204,135,0.32)',
+    borderRadius: 14,
+    borderWidth: 1,
+    flex: 1,
+    minHeight: 70,
+    paddingHorizontal: 8,
+    paddingVertical: 7,
+    position: 'relative'
+  },
+  matchupSelectedSlotEmpty: {
+    borderStyle: 'dashed'
+  },
+  matchupSelectedName: {
+    color: palette.text,
+    fontSize: 11,
+    fontWeight: '800',
+    marginTop: 3,
+    maxWidth: 90,
+    textAlign: 'center'
+  },
+  matchupSelectedRemove: {
+    position: 'absolute',
+    right: 5,
+    top: 5
+  },
+  matchupSlotHint: {
+    color: palette.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+    textAlign: 'center'
   },
   manualParticipantRow: {
     alignItems: 'center',
@@ -2162,6 +2859,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8
   },
+  manualRosterStrip: {
+    gap: 12,
+    paddingVertical: 3
+  },
+  manualRosterGolfer: {
+    alignItems: 'center',
+    gap: 4,
+    position: 'relative',
+    width: 52
+  },
+  manualRosterName: {
+    color: palette.text,
+    fontSize: 10,
+    fontWeight: '700',
+    textAlign: 'center',
+    width: '100%'
+  },
+  manualRosterRemove: {
+    position: 'absolute',
+    right: 1,
+    top: -2
+  },
   matchTypeChoices: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -2195,7 +2914,13 @@ const styles = StyleSheet.create({
     padding: 12
   },
   teamEditor: {
-    alignItems: 'flex-start',
+    borderTopColor: 'rgba(215,183,104,0.14)',
+    borderTopWidth: 1,
+    gap: 9,
+    paddingTop: 10
+  },
+  teamEditorHeader: {
+    alignItems: 'center',
     flexDirection: 'row',
     gap: 10
   },
@@ -2256,6 +2981,24 @@ const styles = StyleSheet.create({
   },
   teamMemberChoiceTextActive: {
     color: palette.aqua
+  },
+  teamGolferGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10
+  },
+  teamGolfer: {
+    alignItems: 'center',
+    gap: 4,
+    maxWidth: 52,
+    width: 52
+  },
+  teamGolferName: {
+    color: palette.text,
+    fontSize: 10,
+    fontWeight: '700',
+    textAlign: 'center',
+    width: '100%'
   },
   matchupHint: {
     color: palette.textMuted,
@@ -2321,6 +3064,54 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800'
   },
+  teamPartnerChooser: {
+    gap: 8
+  },
+  holeWinnerEditor: {
+    borderTopColor: 'rgba(215,183,104,0.18)',
+    borderTopWidth: 1,
+    gap: 7,
+    marginTop: 10,
+    paddingTop: 12
+  },
+  holeWinnerTitle: {
+    color: palette.textMuted,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase'
+  },
+  holeWinnerRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 5
+  },
+  holeNumber: {
+    color: palette.textMuted,
+    fontSize: 11,
+    fontWeight: '800',
+    width: 27
+  },
+  holeWinnerChoice: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderColor: palette.border,
+    borderRadius: 9,
+    borderWidth: 1,
+    flex: 1,
+    minHeight: 30,
+    justifyContent: 'center',
+    paddingHorizontal: 5
+  },
+  holeWinnerChoiceActive: {
+    backgroundColor: 'rgba(123,224,161,0.2)',
+    borderColor: palette.emerald
+  },
+  holeWinnerText: {
+    color: palette.text,
+    fontSize: 10,
+    fontWeight: '700'
+  },
   editMatchupRow: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -2357,6 +3148,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 7,
     textTransform: 'uppercase'
+  },
+  matchupCourseBadge: {
+    color: '#f2d991',
+    fontSize: 11,
+    fontWeight: '800',
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    textAlign: 'center',
+    top: 8
   },
   matchupDayBadge: {
     color: palette.textMuted,
@@ -2664,11 +3465,72 @@ const styles = StyleSheet.create({
     padding: 12,
     position: 'relative'
   },
+  matchupScorecardButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(7,38,27,0.16)',
+    borderColor: 'rgba(255,255,255,0.10)',
+    borderRadius: 23,
+    borderWidth: 1,
+    bottom: 8,
+    height: 46,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 8,
+    width: 46
+  },
+  matchupDetailsButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(7,38,27,0.16)',
+    borderColor: 'rgba(255,255,255,0.10)',
+    borderRadius: 18,
+    borderWidth: 1,
+    bottom: 8,
+    height: 36,
+    justifyContent: 'center',
+    left: 8,
+    position: 'absolute',
+    width: 36
+  },
+  coverLiveScoringButton: {
+    backgroundColor: 'rgba(7,38,27,0.82)'
+  },
+  coverLiveScoringButtonActive: {
+    backgroundColor: 'rgba(192,56,50,0.88)',
+    borderColor: 'rgba(255,255,255,0.5)'
+  },
   matchupScoreRow: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: 8,
     justifyContent: 'space-between'
+  },
+  matchupScheduleCenter: {
+    alignItems: 'center',
+    flexShrink: 1,
+    minWidth: 52
+  },
+  matchupFormatUnderVs: {
+    color: palette.textMuted,
+    fontSize: 8,
+    fontWeight: '800',
+    marginTop: 2,
+    maxWidth: 76,
+    textAlign: 'center',
+    textTransform: 'uppercase'
+  },
+  matchupCourseLabel: {
+    color: palette.gold,
+    fontSize: 9,
+    fontWeight: '800',
+    maxWidth: 72,
+    textAlign: 'center'
+  },
+  matchupTeeTimeLabel: {
+    color: palette.textMuted,
+    fontSize: 9,
+    fontWeight: '700',
+    maxWidth: 72,
+    textAlign: 'center'
   },
   matchupScoreGolfer: {
     alignItems: 'center',
@@ -2676,6 +3538,11 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 4,
     padding: 6
+  },
+  matchupTeamAvatars: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center'
   },
   matchupWinner: {
     backgroundColor: 'rgba(103,232,249,0.12)',

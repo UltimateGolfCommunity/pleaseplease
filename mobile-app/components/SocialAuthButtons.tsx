@@ -73,11 +73,11 @@ function AuthIconButton({ label, icon, onPress, disabled = false, loading = fals
       style={[styles.authButton, (disabled || loading) && styles.authButtonDisabled]}
     >
       {loading ? (
-        <ActivityIndicator color={palette.text} />
+        <ActivityIndicator color={palette.ink} />
       ) : (
         <>
           <View style={styles.authIconWrap}>
-            <Ionicons color={palette.text} name={icon} size={18} />
+            <Ionicons color={palette.ink} name={icon} size={18} />
           </View>
           <Text style={styles.authButtonLabel}>{label}</Text>
         </>
@@ -281,14 +281,14 @@ const styles = StyleSheet.create({
   },
   authButton: {
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderColor: 'rgba(255,255,255,0.12)',
-    borderRadius: 22,
+    backgroundColor: '#fffdf5',
+    borderColor: 'rgba(31,70,49,0.18)',
+    borderRadius: 16,
     borderWidth: 1,
     flex: 1,
     gap: 10,
     justifyContent: 'center',
-    minHeight: 72,
+    minHeight: 58,
     paddingHorizontal: 12,
     paddingVertical: 14
   },
@@ -297,14 +297,14 @@ const styles = StyleSheet.create({
   },
   authIconWrap: {
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#edf2e7',
     borderRadius: 999,
     height: 32,
     justifyContent: 'center',
     width: 32
   },
   authButtonLabel: {
-    color: palette.text,
+    color: palette.ink,
     fontSize: 13,
     fontWeight: '700'
   }

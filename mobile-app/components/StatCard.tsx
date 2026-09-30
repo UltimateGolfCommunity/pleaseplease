@@ -25,7 +25,7 @@ export function StatCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: palette.card,
+    backgroundColor: palette.cream,
     borderColor: palette.border,
     borderRadius: 24,
     borderWidth: 1,
@@ -34,19 +34,20 @@ const styles = StyleSheet.create({
     padding: 18
   },
   label: {
-    color: palette.textMuted,
+    color: '#577063',
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 1.4,
     textTransform: 'uppercase'
   },
   value: {
-    color: palette.text,
+    color: palette.ink,
+    fontFamily: 'Georgia',
     fontSize: 24,
     fontWeight: '700'
   },
   detail: {
-    color: palette.textMuted,
+    color: '#577063',
     fontSize: 14,
     lineHeight: 20
   }

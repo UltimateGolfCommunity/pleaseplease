@@ -578,12 +578,12 @@ export function AppBottomBar() {
 
 const styles = StyleSheet.create({
   shell: {
-    backgroundColor: '#18472b',
+    backgroundColor: '#163f31',
     bottom: 0,
     left: 0,
     paddingBottom: 7,
     paddingHorizontal: 9,
-    paddingTop: 9,
+    paddingTop: 5,
     position: 'absolute',
     right: 0,
     shadowColor: '#0a2517',
@@ -592,30 +592,30 @@ const styles = StyleSheet.create({
     shadowRadius: 10
   },
   greenFringe: {
-    backgroundColor: '#0e3921',
-    borderColor: '#2d7040',
+    backgroundColor: '#163f31',
+    borderColor: '#163f31',
     borderRadius: 32,
     borderTopLeftRadius: 42,
     borderTopRightRadius: 28,
     borderWidth: 1,
-    padding: 6
+    padding: 3
   },
   bar: {
     alignItems: 'flex-start',
-    backgroundColor: '#78b95f',
+    backgroundColor: '#285747',
     borderRadius: 26,
     borderBottomLeftRadius: 22,
     borderBottomRightRadius: 31,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 21,
     flexDirection: 'row',
-    height: 84,
+    height: 60,
     justifyContent: 'space-around',
-    paddingBottom: 12,
-    paddingTop: 10
+    paddingBottom: 4,
+    paddingTop: 4
   },
   turfStripeLight: {
-    backgroundColor: 'rgba(224,244,183,0.16)',
+    backgroundColor: 'rgba(224,244,183,0.035)',
     height: 22,
     left: 0,
     position: 'absolute',
@@ -633,18 +633,19 @@ const styles = StyleSheet.create({
   tabButton: {
     alignItems: 'center',
     flex: 1,
+    minHeight: 44,
     justifyContent: 'center'
   },
   composeTabButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -20,
+    marginTop: -12,
     width: 76
   },
   composeButton: {
     alignItems: 'center',
     backgroundColor: '#fffef7',
-    borderColor: '#315065',
+    borderColor: '#163f31',
     borderRadius: 999,
     borderWidth: 3,
     height: 58,
@@ -653,7 +654,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.34,
     shadowRadius: 14,
-    transform: [{ scale: 1.12 }],
+    transform: [{ scale: 1 }],
     width: 58
   },
   ballDimple: {

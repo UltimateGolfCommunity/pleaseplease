@@ -93,19 +93,6 @@ function toApiTime(date: Date) {
   return `${hours}:${minutes}`
 }
 
-function estimatePrecipitationRisk(weather: WeatherData) {
-  const description = weather.description.toLowerCase()
-  const humidityBump = Math.max(0, Math.round((weather.humidity - 55) * 0.6))
-
-  if (description.includes('thunder') || description.includes('storm')) return 90
-  if (description.includes('rain') || description.includes('drizzle') || description.includes('shower')) return 80
-  if (description.includes('snow') || description.includes('sleet')) return 85
-  if (description.includes('mist') || description.includes('fog') || description.includes('haze')) return 45
-  if (description.includes('cloud')) return Math.min(60, 20 + humidityBump)
-
-  return Math.max(5, Math.min(35, 5 + Math.round(humidityBump / 2)))
-}
-
 function getWeatherIconName(description?: string): keyof typeof Ionicons.glyphMap {
   const value = description?.toLowerCase() || ''
   if (value.includes('thunder')) return 'thunderstorm-outline'
@@ -1118,6 +1105,7 @@ export default function HomeTab() {
 
             <View style={styles.clubhouseMasthead}>
               <View pointerEvents="none" style={styles.clubhouseRoofBackdrop}>
+                <View style={styles.clubhouseCupola}><View style={styles.clubhouseCupolaWindow} /></View>
                 <View style={styles.clubhouseRoofGable} />
                 <View style={styles.clubhouseFacade}>
                   <View style={styles.clubhouseWindow} />
@@ -1126,8 +1114,8 @@ export default function HomeTab() {
                   <View style={styles.clubhouseWindow} />
                   <View style={styles.clubhouseWindow} />
                 </View>
+                <View style={styles.clubhouseLawn} />
               </View>
-              <Text style={styles.clubhouseEyebrow}>Your private golf club</Text>
               <Text adjustsFontSizeToFit minimumFontScale={0.65} numberOfLines={1} style={styles.clubhouseTitle}>
                 {clubhouseTitle}
               </Text>
@@ -1158,8 +1146,8 @@ export default function HomeTab() {
               {weather ? (
                 <View style={styles.weatherMetricsCompact}>
                   <View style={styles.weatherMetricCompact}>
-                    <Text style={styles.weatherMetricValue}>{estimatePrecipitationRisk(weather)}%</Text>
-                    <Text style={styles.weatherMetricLabel}>Rain</Text>
+                    <Text style={styles.weatherMetricValue}>{weather.rainLast24Hours.toFixed(2)}&quot;</Text>
+                    <Text style={styles.weatherMetricLabel}>Rain 24h</Text>
                   </View>
                   <View style={styles.weatherMetricCompact}>
                     <Text style={styles.weatherMetricValue}>{weather.windSpeed} mph</Text>
@@ -1609,37 +1597,40 @@ const styles = StyleSheet.create({
   clubhouseMasthead: {
     alignItems: 'center',
     justifyContent: 'flex-start',
-    minHeight: 122,
+    minHeight: 222,
     overflow: 'hidden',
     paddingHorizontal: 20,
-    paddingTop: 42,
+    paddingTop: 10,
     position: 'relative'
   },
   clubhouseRoofBackdrop: {
-    bottom: -2,
-    height: 128,
-    left: -42,
+    top: 54,
+    height: 142,
+    left: 0,
     position: 'absolute',
-    right: -42
+    right: 0
   },
+  clubhouseCupola: { position: 'absolute', alignSelf: 'center', top: 0, width: 28, height: 42, backgroundColor: '#fffaf0', borderTopLeftRadius: 14, borderTopRightRadius: 14, borderTopWidth: 8, borderColor: '#263e3a', alignItems: 'center', zIndex: 1 },
+  clubhouseCupolaWindow: { width: 10, height: 19, marginTop: 5, borderTopLeftRadius: 5, borderTopRightRadius: 5, backgroundColor: '#244a46' },
+  clubhouseLawn: { position: 'absolute', bottom: -7, left: 0, right: 0, height: 18, borderRadius: 100, backgroundColor: '#688c50', borderTopWidth: 4, borderColor: '#8fac6c' },
   clubhouseRoofGable: {
     alignSelf: 'center',
-    borderBottomColor: 'rgba(232,216,178,0.12)',
-    borderBottomWidth: 70,
+    borderBottomColor: '#2c4541',
+    borderBottomWidth: 57,
     borderLeftColor: 'transparent',
-    borderLeftWidth: 220,
+    borderLeftWidth: 175,
     borderRightColor: 'transparent',
-    borderRightWidth: 220,
+    borderRightWidth: 175,
     height: 0,
     position: 'absolute',
-    top: 0,
+    top: 24,
     width: 0
   },
   clubhouseFacade: {
     alignItems: 'center',
     alignSelf: 'center',
-    backgroundColor: 'rgba(232,216,178,0.08)',
-    borderColor: 'rgba(232,216,178,0.17)',
+    backgroundColor: '#f6f0df',
+    borderColor: '#d5ccb4',
     borderTopWidth: 2,
     borderWidth: 1,
     bottom: 0,
@@ -1650,35 +1641,32 @@ const styles = StyleSheet.create({
     width: '92%'
   },
   clubhouseWindow: {
-    backgroundColor: 'rgba(4,18,12,0.36)',
-    borderColor: 'rgba(232,216,178,0.16)',
-    borderWidth: 1,
+    backgroundColor: '#345952',
+    borderColor: '#ffffff',
+    borderWidth: 3,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
     height: 25,
     width: 25
   },
   clubhouseDoor: {
     alignSelf: 'flex-end',
-    backgroundColor: 'rgba(4,18,12,0.48)',
-    borderColor: 'rgba(232,216,178,0.16)',
+    backgroundColor: '#785938',
+    borderColor: '#dfd4b8',
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
     borderWidth: 1,
     height: 38,
     width: 30
   },
-  clubhouseEyebrow: {
-    color: '#d5b970',
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-    marginBottom: 5,
-    textTransform: 'uppercase'
-  },
   clubhouseTitle: {
     color: '#fffaf0',
     fontFamily: 'Georgia',
-    fontSize: 29,
+    fontSize: 25,
     fontWeight: '700',
     letterSpacing: -0.4,
-    textAlign: 'center'
+    textAlign: 'center',
+    width: '66%'
   },
   headerActions: {
     bottom: 0,
@@ -1734,7 +1722,8 @@ const styles = StyleSheet.create({
   dashboardTopRow: {
     alignItems: 'stretch',
     flexDirection: 'column',
-    marginTop: -12
+    marginTop: -42,
+    zIndex: 6
   },
   dashboardHalfCard: {
     flex: 1,

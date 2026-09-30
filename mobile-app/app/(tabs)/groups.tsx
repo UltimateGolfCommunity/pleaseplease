@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Redirect, router, useLocalSearchParams } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
 import Ionicons from '@expo/vector-icons/Ionicons'
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   ActivityIndicator,
@@ -65,6 +66,17 @@ type GroupActivity = {
     image_url?: string | null
   } | null
 }
+
+const dateFromIso = (value?: string | null) => {
+  if (!value) return new Date()
+  const [year, month, day] = value.split('-').map(Number)
+  return Number.isFinite(year) && Number.isFinite(month) && Number.isFinite(day)
+    ? new Date(year, month - 1, day)
+    : new Date()
+}
+
+const isoDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+const readableDate = (value?: string | null) => value ? dateFromIso(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Select date'
 
 function formatRelativeTime(value?: string) {
   if (!value) return 'Just now'
@@ -142,6 +154,7 @@ export default function GroupsTab() {
   const [uploadingImage, setUploadingImage] = useState(false)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [showMyGroupsMenu, setShowMyGroupsMenu] = useState(false)
+  const [datePickerTarget, setDatePickerTarget] = useState<'start' | 'end' | null>(null)
   const [myGroups, setMyGroups] = useState<Group[]>([])
   const [groupActivity, setGroupActivity] = useState<GroupActivity[]>([])
   const [form, setForm] = useState({
@@ -160,6 +173,16 @@ export default function GroupsTab() {
     tournament_type: '',
     tournament_matchups: ''
   })
+
+  const handleTournamentDateChange = (_event: DateTimePickerEvent, value?: Date) => {
+    const target = datePickerTarget
+    setDatePickerTarget(null)
+    if (!target || !value) return
+    const nextDate = isoDate(value)
+    setForm((current) => target === 'start'
+      ? { ...current, tournament_date: nextDate, tournament_end_date: current.tournament_end_date && current.tournament_end_date < nextDate ? nextDate : current.tournament_end_date }
+      : { ...current, tournament_end_date: nextDate })
+  }
 
   const loadGroups = useCallback(async () => {
     if (!user?.id) return
@@ -416,8 +439,17 @@ export default function GroupsTab() {
             </View>
             {form.group_type === 'tournament' ? (
               <View style={styles.tournamentFields}>
-                <TextInput onChangeText={(value) => setForm((current) => ({ ...current, tournament_date: value }))} placeholder="Tournament start date (YYYY-MM-DD)" placeholderTextColor={palette.textMuted} style={styles.input} value={form.tournament_date} />
-                <TextInput onChangeText={(value) => setForm((current) => ({ ...current, tournament_end_date: value }))} placeholder="Tournament end date (optional)" placeholderTextColor={palette.textMuted} style={styles.input} value={form.tournament_end_date} />
+                <View style={styles.tournamentDateRow}>
+                  <Pressable onPress={() => setDatePickerTarget('start')} style={styles.tournamentDateButton}>
+                    <Ionicons color={palette.gold} name="calendar-outline" size={18} />
+                    <View style={styles.tournamentDateCopy}><Text style={styles.tournamentDateLabel}>Starts</Text><Text numberOfLines={1} style={styles.tournamentDateValue}>{readableDate(form.tournament_date)}</Text></View>
+                  </Pressable>
+                  <Pressable onPress={() => setDatePickerTarget('end')} style={styles.tournamentDateButton}>
+                    <Ionicons color={palette.gold} name="calendar-outline" size={18} />
+                    <View style={styles.tournamentDateCopy}><Text style={styles.tournamentDateLabel}>Ends</Text><Text numberOfLines={1} style={styles.tournamentDateValue}>{readableDate(form.tournament_end_date)}</Text></View>
+                  </Pressable>
+                </View>
+                {datePickerTarget ? <DateTimePicker display="default" minimumDate={datePickerTarget === 'end' && form.tournament_date ? dateFromIso(form.tournament_date) : undefined} mode="date" onChange={handleTournamentDateChange} value={dateFromIso(datePickerTarget === 'start' ? form.tournament_date : form.tournament_end_date || form.tournament_date)} /> : null}
                 <View style={styles.segmentRow}>
                   {['Stroke Play', 'Match Play', 'Ryder Cup'].map((format) => (
                     <Pressable key={format} onPress={() => setForm((current) => ({ ...current, tournament_format: format }))} style={[styles.segment, form.tournament_format === format && styles.segmentActive]}>
@@ -700,6 +732,38 @@ const styles = StyleSheet.create({
   },
   tournamentFields: {
     gap: 10
+  },
+  tournamentDateRow: {
+    flexDirection: 'row',
+    gap: 10
+  },
+  tournamentDateButton: {
+    alignItems: 'center',
+    backgroundColor: palette.cardSoft,
+    borderColor: palette.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    flex: 1,
+    flexDirection: 'row',
+    gap: 8,
+    minHeight: 60,
+    paddingHorizontal: 12
+  },
+  tournamentDateCopy: {
+    flex: 1
+  },
+  tournamentDateLabel: {
+    color: palette.textMuted,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase'
+  },
+  tournamentDateValue: {
+    color: palette.text,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 2
   },
   visibilitySection: {
     gap: 8

@@ -6,6 +6,7 @@ export type MobileWeatherData = {
   humidity: number
   windSpeed: number
   feelsLike: number
+  rainLast24Hours: number
 }
 
 const WEATHER_GOV_HEADERS = {
@@ -87,14 +88,21 @@ export async function getMobileWeatherAtCoordinates(
   fallbackLocation = 'Current location'
 ): Promise<MobileWeatherData> {
   const currentResponse = await fetch(
-    `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&temperature_unit=fahrenheit&wind_speed_unit=mph`
+    `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&hourly=precipitation&past_days=1&forecast_days=1&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timeformat=unixtime`
   )
 
   if (currentResponse.ok) {
-    const current = (await currentResponse.json())?.current
+    const weatherData = await currentResponse.json()
+    const current = weatherData?.current
 
     if (typeof current?.temperature_2m === 'number') {
       const description = mapWeatherCode(current.weather_code)
+      const cutoff = Math.floor(Date.now() / 1000) - 24 * 60 * 60
+      const rainLast24Hours = (weatherData?.hourly?.time || []).reduce(
+        (total: number, time: number, index: number) =>
+          time >= cutoff ? total + Number(weatherData?.hourly?.precipitation?.[index] || 0) : total,
+        0
+      )
       return {
         location: fallbackLocation,
         temperature: Math.round(current.temperature_2m),
@@ -102,7 +110,8 @@ export async function getMobileWeatherAtCoordinates(
         icon: mapForecastToIcon(description),
         humidity: Math.round(current.relative_humidity_2m ?? 0),
         windSpeed: Math.round(current.wind_speed_10m ?? 0),
-        feelsLike: Math.round(current.apparent_temperature ?? current.temperature_2m)
+        feelsLike: Math.round(current.apparent_temperature ?? current.temperature_2m),
+        rainLast24Hours: Math.round(rainLast24Hours * 100) / 100
       }
     }
   }
@@ -152,7 +161,8 @@ export async function getMobileWeatherAtCoordinates(
     icon: mapForecastToIcon(period.shortForecast || ''),
     humidity: Math.round(period.relativeHumidity?.value ?? 60),
     windSpeed: parseWindSpeed(period.windSpeed),
-    feelsLike: Math.round(period.temperature ?? 72)
+    feelsLike: Math.round(period.temperature ?? 72),
+    rainLast24Hours: 0
   } satisfies MobileWeatherData
 }
 
