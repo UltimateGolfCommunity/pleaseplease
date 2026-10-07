@@ -1,0 +1,15 @@
+# EAS packages this repository from its Git root. Dependencies and Pods are
+# restored in the build environment from their respective lockfiles.
+/node_modules
+/.next
+/mobile-app/node_modules
+/mobile-app/.expo
+/mobile-app/app-store-screenshots
+/mobile-app/ios/Pods
+/mobile-app/ios/build
+
+# Local deliverables and caches are not application source.
+*.mov
+*.mp4
+*.log
+**/.DS_Store
