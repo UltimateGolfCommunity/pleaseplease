@@ -242,8 +242,7 @@ export async function GET(request: NextRequest) {
           'group_joined',
           'group_created',
           'group_board_post',
-          'group_thread_reply',
-          'tournament_live_leaderboard'
+          'group_thread_reply'
         ])
         .order('created_at', { ascending: false })
         .limit(limit)
@@ -252,24 +251,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ success: true, activities: [] })
       }
 
-      // A live tournament board belongs in every participant's home feed,
-      // even when the tournament admin is not a direct connection.
-      const { data: tournamentMemberships } = await supabase
-        .from('group_members')
-        .select('group_id')
-        .eq('user_id', user_id)
-        .eq('status', 'active')
-      const tournamentGroupIds = Array.from(new Set((tournamentMemberships || []).map((membership: any) => membership.group_id).filter(Boolean)))
-      const { data: tournamentLiveActivities } = tournamentGroupIds.length
-        ? await supabase
-            .from('user_activities')
-            .select('*')
-            .in('related_id', tournamentGroupIds)
-            .eq('activity_type', 'tournament_live_leaderboard')
-        : { data: [] as any[] }
-      const feedActivities = Array.from(
-        new Map([...(activities || []), ...(tournamentLiveActivities || [])].map((activity: any) => [activity.id, activity])).values()
-      )
+      const feedActivities = activities || []
 
       const existingTeeTimeIds = new Set(
         feedActivities

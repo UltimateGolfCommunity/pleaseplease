@@ -32,8 +32,6 @@ export default function SignupScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View pointerEvents="none" style={styles.sunGlow} />
-      <View pointerEvents="none" style={styles.hill} />
       <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', default: undefined })} style={styles.keyboardWrap}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <Pressable accessibilityRole="button" onPress={() => router.replace('/welcome')} style={styles.backButton}>
@@ -42,9 +40,7 @@ export default function SignupScreen() {
           </Pressable>
 
           <View style={styles.hero}>
-            <Text style={styles.eyebrow}>JOIN THE CLUB</Text>
-          <Text style={styles.title}>Create your{`\n`}account.</Text>
-          <Text style={styles.subtitle}>A few details and you’re in.</Text>
+            <Text style={styles.title}>Create account</Text>
           </View>
 
           <View style={styles.formCard}>
@@ -68,18 +64,14 @@ export default function SignupScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { backgroundColor: '#c1e0ea', flex: 1 },
+  safeArea: { backgroundColor: '#e7f1ef', flex: 1 },
   keyboardWrap: { flex: 1 },
-  sunGlow: { backgroundColor: 'rgba(255,240,182,0.72)', borderRadius: 999, height: 250, position: 'absolute', right: -98, top: 0, width: 250 },
-  hill: { backgroundColor: 'rgba(78,129,83,0.22)', borderRadius: 999, bottom: -205, height: 420, left: -120, position: 'absolute', width: '150%' },
   content: { flexGrow: 1, padding: 22, paddingBottom: 32 },
   backButton: { alignItems: 'center', alignSelf: 'flex-start', flexDirection: 'row', gap: 2, minHeight: 38 },
   backLabel: { color: palette.ink, fontSize: 14, fontWeight: '700' },
-  hero: { marginTop: 23, paddingHorizontal: 5 },
-  eyebrow: { color: '#926927', fontSize: 10, fontWeight: '800', letterSpacing: 1.9 },
-  title: { color: palette.ink, fontFamily: 'Georgia', fontSize: 35, fontWeight: '700', letterSpacing: -0.8, lineHeight: 39, marginTop: 10 },
-  subtitle: { color: '#456a60', fontSize: 15, lineHeight: 22, marginTop: 11, maxWidth: 325 },
-  formCard: { backgroundColor: '#fffdf5', borderColor: 'rgba(27,70,51,0.10)', borderRadius: 27, borderWidth: 1, gap: 15, marginTop: 25, padding: 20, shadowColor: '#1a4b37', shadowOffset: { width: 0, height: 14 }, shadowOpacity: 0.16, shadowRadius: 26 },
+  hero: { marginTop: 30, paddingHorizontal: 2 },
+  title: { color: palette.ink, fontFamily: 'Georgia', fontSize: 31, fontWeight: '700', letterSpacing: -0.5 },
+  formCard: { backgroundColor: '#ffffff', borderColor: 'rgba(27,70,51,0.12)', borderRadius: 20, borderWidth: 1, gap: 15, marginTop: 22, padding: 18 },
   nameRow: { flexDirection: 'row', gap: 10 },
   halfField: { flex: 1, gap: 7 },
   field: { gap: 7 },

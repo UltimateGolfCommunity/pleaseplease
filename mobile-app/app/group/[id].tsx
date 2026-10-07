@@ -79,6 +79,25 @@ type GroupMessage = {
   } | null
 }
 
+type GroupPostPhoto = Pick<ImagePicker.ImagePickerAsset, 'uri' | 'fileName' | 'mimeType'>
+
+const GROUP_POST_PHOTO_PREFIX = '[[ugc-photo:'
+const TOURNAMENT_UPDATE_POST_PREFIX = '[[ugc-tournament-update:'
+
+function unpackGroupPost(value?: string) {
+  const content = value || ''
+  if (content.startsWith(TOURNAMENT_UPDATE_POST_PREFIX)) {
+    const end = content.indexOf(']]')
+    const kind = content.slice(TOURNAMENT_UPDATE_POST_PREFIX.length, end < 0 ? undefined : end).trim()
+    return { text: end < 0 ? content : content.slice(end + 2).trim(), imageUrl: null as string | null, tournamentUpdate: kind || null }
+  }
+  if (!content.startsWith(GROUP_POST_PHOTO_PREFIX)) return { text: content, imageUrl: null as string | null, tournamentUpdate: null as string | null }
+  const end = content.indexOf(']]')
+  if (end < 0) return { text: content, imageUrl: null as string | null, tournamentUpdate: null as string | null }
+  const imageUrl = content.slice(GROUP_POST_PHOTO_PREFIX.length, end).trim()
+  return { imageUrl: imageUrl || null, text: content.slice(end + 2).trim(), tournamentUpdate: null as string | null }
+}
+
 type UserCard = {
   id: string
   first_name?: string | null
@@ -149,6 +168,21 @@ type TournamentMatchup = {
   rightHoleScores?: Record<string, number>
 }
 
+const isTournamentMatchComplete = (matchup: TournamentMatchup) => {
+  const format = (matchup.format || '').toLowerCase()
+  const allHolesRecorded = (scores?: Record<string, unknown>) =>
+    Array.from({ length: 18 }, (_, index) => String(index + 1)).every((hole) => scores?.[hole] !== undefined && scores?.[hole] !== null)
+
+  if (format.includes('match play')) return allHolesRecorded(matchup.holeWinners)
+  if (['scramble', 'best ball', 'alternate shot'].includes(format)) {
+    return allHolesRecorded(matchup.leftHoleScores) && allHolesRecorded(matchup.rightHoleScores)
+  }
+
+  // Individual stroke-play matchups currently use final totals rather than
+  // hole-by-hole entry, so both recorded totals are the completed card.
+  return matchup.leftScore !== null && matchup.leftScore !== undefined && matchup.rightScore !== null && matchup.rightScore !== undefined
+}
+
 type TournamentTeam = {
   id: string
   name: string
@@ -163,14 +197,30 @@ type ManualTournamentParticipant = {
   handicap?: number | null
 }
 
+type ClosestToPinDay = {
+  day: string
+  distances: string[]
+  holeNumbers?: string[]
+  courseName?: string
+}
+
+type ClosestToPinSetup = {
+  par3Count: number
+  distances: string[]
+  holeNumbers?: string[]
+  courseName?: string
+  multipleDays: boolean
+  days?: ClosestToPinDay[]
+}
+
 type TournamentSetup = {
   matchups: TournamentMatchup[]
   teams: TournamentTeam[]
   manualParticipants: ManualTournamentParticipant[]
   closestToPin?: boolean
-  closestToPinSetup?: { par3Count: number; distances: string[]; multipleDays: boolean }
+  closestToPinSetup?: ClosestToPinSetup
+  closestToPinWinners?: Record<string, string>
   longestDrive?: boolean
-  liveScoring?: boolean
 }
 
 function parseTournamentMatchups(value?: string | null): TournamentMatchup[] {
@@ -178,7 +228,7 @@ function parseTournamentMatchups(value?: string | null): TournamentMatchup[] {
 }
 
 function parseTournamentSetup(value?: string | null): TournamentSetup {
-  const empty = { matchups: [], teams: [], manualParticipants: [], closestToPin: false, closestToPinSetup: { par3Count: 1, distances: [''], multipleDays: false }, longestDrive: false, liveScoring: false } as TournamentSetup
+  const empty = { matchups: [], teams: [], manualParticipants: [], closestToPin: false, closestToPinSetup: { par3Count: 1, distances: [''], holeNumbers: ['1'], courseName: '', multipleDays: false }, closestToPinWinners: {}, longestDrive: false } as TournamentSetup
   if (!value) return empty
   try {
     const parsed = JSON.parse(value)
@@ -188,9 +238,18 @@ function parseTournamentSetup(value?: string | null): TournamentSetup {
       teams: Array.isArray(parsed?.teams) ? parsed.teams.filter((team: TournamentTeam) => team?.id) : [],
       manualParticipants: Array.isArray(parsed?.manualParticipants) ? parsed.manualParticipants.filter((participant: ManualTournamentParticipant) => participant?.id && participant?.name) : [],
       closestToPin: Boolean(parsed?.closestToPin),
-      closestToPinSetup: { par3Count: Math.max(1, Number(parsed?.closestToPinSetup?.par3Count) || 1), distances: Array.isArray(parsed?.closestToPinSetup?.distances) ? parsed.closestToPinSetup.distances : [''], multipleDays: Boolean(parsed?.closestToPinSetup?.multipleDays) },
-      longestDrive: Boolean(parsed?.longestDrive),
-      liveScoring: Boolean(parsed?.liveScoring)
+      closestToPinSetup: {
+        par3Count: Math.max(1, Number(parsed?.closestToPinSetup?.par3Count) || 1),
+        distances: Array.isArray(parsed?.closestToPinSetup?.distances) ? parsed.closestToPinSetup.distances : [''],
+        holeNumbers: Array.isArray(parsed?.closestToPinSetup?.holeNumbers) ? parsed.closestToPinSetup.holeNumbers : [],
+        courseName: typeof parsed?.closestToPinSetup?.courseName === 'string' ? parsed.closestToPinSetup.courseName : '',
+        multipleDays: Boolean(parsed?.closestToPinSetup?.multipleDays),
+        days: Array.isArray(parsed?.closestToPinSetup?.days)
+          ? parsed.closestToPinSetup.days.filter((item: ClosestToPinDay) => item?.day && Array.isArray(item.distances)).map((item: ClosestToPinDay) => ({ day: item.day, distances: item.distances, holeNumbers: Array.isArray(item.holeNumbers) ? item.holeNumbers : [], courseName: typeof item.courseName === 'string' ? item.courseName : '' }))
+          : []
+      },
+      closestToPinWinners: parsed?.closestToPinWinners && typeof parsed.closestToPinWinners === 'object' ? parsed.closestToPinWinners : {},
+      longestDrive: Boolean(parsed?.longestDrive)
     }
   } catch {
     return empty
@@ -229,6 +288,7 @@ export default function GroupScreen() {
   const [invitingId, setInvitingId] = useState<string | null>(null)
   const [pendingInviteUserIds, setPendingInviteUserIds] = useState<Set<string>>(new Set())
   const [isEditing, setIsEditing] = useState(false)
+  const [isEditingMatchups, setIsEditingMatchups] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
   const qrCardRef = useRef<ViewShot>(null)
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
@@ -245,8 +305,6 @@ export default function GroupScreen() {
   const [isEditingMatchupScores, setIsEditingMatchupScores] = useState(false)
   const [scorecardMatchupId, setScorecardMatchupId] = useState<string | null>(null)
   const [matchupSettingsId, setMatchupSettingsId] = useState<string | null>(null)
-  const [liveScoring, setLiveScoring] = useState(false)
-  const [savingLiveScoring, setSavingLiveScoring] = useState(false)
   const [matchups, setMatchups] = useState<TournamentMatchup[]>([])
   const [leftMatchupUserId, setLeftMatchupUserId] = useState('')
   const [rightMatchupUserId, setRightMatchupUserId] = useState('')
@@ -265,10 +323,13 @@ export default function GroupScreen() {
   const [manualParticipantHandicap, setManualParticipantHandicap] = useState('')
   const [manualParticipantPhotoUrl, setManualParticipantPhotoUrl] = useState<string | null>(null)
   const [closestToPin, setClosestToPin] = useState(false)
-  const [closestToPinSetup, setClosestToPinSetup] = useState({ par3Count: 1, distances: [''], multipleDays: false })
+  const [closestToPinSetup, setClosestToPinSetup] = useState<ClosestToPinSetup>({ par3Count: 1, distances: [''], holeNumbers: ['1'], courseName: '', multipleDays: false, days: [] })
+  const [closestToPinWinners, setClosestToPinWinners] = useState<Record<string, string>>({})
+  const [closestToPinPickerKey, setClosestToPinPickerKey] = useState<string | null>(null)
   const [longestDrive, setLongestDrive] = useState(false)
   const [datePickerTarget, setDatePickerTarget] = useState<'start' | 'end' | null>(null)
   const [draft, setDraft] = useState('')
+  const [postPhoto, setPostPhoto] = useState<GroupPostPhoto | null>(null)
   const [composerOpen, setComposerOpen] = useState(false)
   const [activeSection, setActiveSection] = useState<'board' | 'members' | 'info' | 'scores'>('board')
   const [editForm, setEditForm] = useState({
@@ -312,6 +373,11 @@ export default function GroupScreen() {
       setGroup(response.group)
       setMembers(response.members || [])
       setPendingMembers(response.pending_members || [])
+      // Start fetching the hero art before React reaches the image render.
+      // Cached images make repeated tournament visits feel substantially faster.
+      const coverUrl = response.group.header_image_url || response.group.image_url
+      if (coverUrl) void Image.prefetch(coverUrl)
+      if (response.group.logo_url) void Image.prefetch(response.group.logo_url)
       setBusy(false)
       setRefreshing(false)
 
@@ -382,6 +448,7 @@ export default function GroupScreen() {
     setManualParticipantPhotoUrl(null)
     setClosestToPin(Boolean(setup.closestToPin))
     setClosestToPinSetup(setup.closestToPinSetup || { par3Count: 1, distances: [''], multipleDays: false })
+    setClosestToPinWinners(setup.closestToPinWinners || {})
     setLongestDrive(Boolean(setup.longestDrive))
     setTeams(setup.teams.length ? setup.teams : [
       { id: 'team-a', name: 'Team One', logoUrl: null, memberIds: [] },
@@ -395,7 +462,6 @@ export default function GroupScreen() {
     setMatchupDay(group.tournament_date || '')
     setMatchupCourseName('')
     setMatchupTeeTime('')
-    setLiveScoring(Boolean(setup.liveScoring))
   }, [group])
 
   const founder = members.find((member) => member.user_id === group?.creator_id)?.user_profiles
@@ -427,7 +493,6 @@ export default function GroupScreen() {
     group?.creator_id === user?.id ||
     ['admin', 'owner', 'creator'].includes((myMembership?.role || '').toLowerCase())
   const isTournament = (group?.group_type || '').toLowerCase() === 'tournament'
-  const isMatchupScoreScreen = isTournament && activeSection === 'scores' && (group?.tournament_format || 'Stroke Play') !== 'Stroke Play'
   const tournamentDays = getTournamentDays(editForm.tournament_date, editForm.tournament_end_date)
   const heroStory = [group?.description, group?.slogan]
     .find((value) => value?.trim() && value.trim().toLowerCase() !== (group?.name || '').trim().toLowerCase())
@@ -453,11 +518,17 @@ export default function GroupScreen() {
   const teamScoreboard = useMemo(() => teams.slice(0, 2).map((team) => ({
     ...team,
     points: matchups.reduce((total, matchup) => {
-      const hasResult = matchup.leftScore !== null && matchup.leftScore !== undefined && matchup.rightScore !== null && matchup.rightScore !== undefined && matchup.leftScore !== matchup.rightScore
-      // Scores are entered as strokes in every matchup format, so the lower
-      // score is the current winner before that result is assigned to a team.
-      const leftWins = (matchup.leftScore || 0) < (matchup.rightScore || 0)
-      const winnerId = hasResult ? (leftWins ? matchup.leftUserId : matchup.rightUserId) : null
+      if (!isTournamentMatchComplete(matchup)) return total
+      const isMatchPlay = (matchup.format || '').toLowerCase() === 'match play'
+      const holeResults = Object.values(matchup.holeWinners || {})
+      const leftHoleWins = holeResults.filter((winner) => winner === 'left').length
+      const rightHoleWins = holeResults.filter((winner) => winner === 'right').length
+      const resultExists = isMatchPlay
+        ? leftHoleWins !== rightHoleWins
+        : matchup.leftScore !== null && matchup.leftScore !== undefined && matchup.rightScore !== null && matchup.rightScore !== undefined && matchup.leftScore !== matchup.rightScore
+      const winnerId = resultExists
+        ? (isMatchPlay ? (leftHoleWins > rightHoleWins ? matchup.leftUserId : matchup.rightUserId) : (matchup.leftScore! < matchup.rightScore! ? matchup.leftUserId : matchup.rightUserId))
+        : null
       return total + (winnerId && team.memberIds.includes(winnerId) ? 1 : 0)
     }, 0)
   })), [matchups, teams])
@@ -500,6 +571,35 @@ export default function GroupScreen() {
     }))
   ]
   const participantById = new Map(participantOptions.map((participant) => [participant.id, participant]))
+  const closestToPinEntries = useMemo(() => {
+    if (!closestToPin) return []
+    const contestDays = closestToPinSetup.multipleDays && tournamentDays.length
+      ? tournamentDays
+      : [tournamentDays[0] || group?.tournament_date || '']
+    return contestDays.flatMap((day, dayIndex) => {
+      const daySetup = closestToPinSetup.days?.find((item) => item.day === day)
+      const distances = closestToPinSetup.multipleDays
+        ? daySetup?.distances || closestToPinSetup.distances
+        : closestToPinSetup.distances
+      const holeNumbers = closestToPinSetup.multipleDays
+        ? daySetup?.holeNumbers || closestToPinSetup.holeNumbers || []
+        : closestToPinSetup.holeNumbers || []
+      return distances.map((distance, index) => ({
+      key: `${day || 'tournament'}-ctp-${index + 1}`,
+      day,
+      dayIndex,
+      holeNumber: holeNumbers[index]?.trim() || String(index + 1),
+      courseName: daySetup?.courseName || closestToPinSetup.courseName || '',
+      distance: distance || ''
+      }))
+    })
+  }, [closestToPin, closestToPinSetup, group?.tournament_date, tournamentDays])
+  const closestToPinEntriesByDay = useMemo(() => {
+    const grouped = new Map<string, typeof closestToPinEntries>()
+    closestToPinEntries.forEach((entry) => grouped.set(entry.day || 'tournament', [...(grouped.get(entry.day || 'tournament') || []), entry]))
+    return Array.from(grouped.values())
+  }, [closestToPinEntries])
+  const closestToPinPickerEntry = closestToPinPickerKey ? closestToPinEntries.find((entry) => entry.key === closestToPinPickerKey) || null : null
   const scorecardMatchup = scorecardMatchupId ? matchups.find((matchup) => matchup.id === scorecardMatchupId) || null : null
   const matchupSettings = matchupSettingsId ? matchups.find((matchup) => matchup.id === matchupSettingsId) || null : null
   const scorecardLeft = scorecardMatchup ? participantById.get(scorecardMatchup.leftUserId) : null
@@ -518,6 +618,55 @@ export default function GroupScreen() {
   const matchupRightOptions = editForm.tournament_format === 'Ryder Cup'
     ? participantOptions.filter((participant) => teams[1]?.memberIds.includes(participant.id))
     : participantOptions
+
+  const getClosestToPinDayDistances = (day: string) =>
+    closestToPinSetup.days?.find((item) => item.day === day)?.distances || closestToPinSetup.distances
+
+  const updateClosestToPinDayDistances = (day: string, update: (distances: string[]) => string[]) => {
+    setClosestToPinSetup((current) => {
+      const currentDays = current.days || []
+      const existing = currentDays.find((item) => item.day === day)
+      const nextDistances = update(existing?.distances || current.distances)
+      const nextDays = [
+        ...currentDays.filter((item) => item.day !== day),
+        { day, distances: nextDistances, holeNumbers: existing?.holeNumbers || current.holeNumbers || [], courseName: existing?.courseName || current.courseName || '' }
+      ]
+      return { ...current, days: nextDays }
+    })
+  }
+
+  const updateClosestToPinHoleNumber = (day: string, index: number, value: string) => {
+    setClosestToPinSetup((current) => {
+      if (!day) {
+        const holeNumbers = [...(current.holeNumbers || [])]
+        holeNumbers[index] = value
+        return { ...current, holeNumbers }
+      }
+      const existing = current.days?.find((item) => item.day === day)
+      const holeNumbers = [...(existing?.holeNumbers || current.holeNumbers || [])]
+      holeNumbers[index] = value
+      return {
+        ...current,
+        days: [...(current.days || []).filter((item) => item.day !== day), { day, distances: existing?.distances || current.distances, holeNumbers, courseName: existing?.courseName || current.courseName || '' }]
+      }
+    })
+  }
+
+  const updateClosestToPinCourse = (day: string, courseName: string) => {
+    setClosestToPinSetup((current) => {
+      if (!day) return { ...current, courseName }
+      const existing = current.days?.find((item) => item.day === day)
+      return {
+        ...current,
+        days: [...(current.days || []).filter((item) => item.day !== day), {
+          day,
+          distances: existing?.distances || current.distances,
+          holeNumbers: existing?.holeNumbers || current.holeNumbers || [],
+          courseName
+        }]
+      }
+    })
+  }
 
   const addMatchup = () => {
     if (!leftMatchupUserId || !rightMatchupUserId) {
@@ -607,8 +756,13 @@ export default function GroupScreen() {
   }
 
   const getMatchupWinner = (matchup: TournamentMatchup) => {
+    if (!isTournamentMatchComplete(matchup)) return null
     if ((matchup.format || '').toLowerCase() === 'match play') return getMatchPlayStatus(matchup)?.leader || null
     if (matchup.leftScore === null || matchup.leftScore === undefined || matchup.rightScore === null || matchup.rightScore === undefined || matchup.leftScore === matchup.rightScore) return null
+    const teamFormat = ['scramble', 'best ball', 'alternate shot'].includes((matchup.format || '').toLowerCase())
+    // A side's team score is already the comparison score. Never apply an
+    // individual player's handicap to a two-person team result.
+    if (teamFormat) return matchup.leftScore < matchup.rightScore ? 'left' : 'right'
     const left = participantById.get(matchup.leftUserId)
     const right = participantById.get(matchup.rightUserId)
     const leftAdjusted = getAdjustedTournamentScore(matchup.leftScore, left?.handicap)
@@ -620,13 +774,17 @@ export default function GroupScreen() {
   }
 
   const getMatchPlayStatus = (matchup: TournamentMatchup) => {
-    const results = Object.values(matchup.holeWinners || {})
+    const holeEntries = Object.entries(matchup.holeWinners || {})
+    const results = holeEntries.map(([, winner]) => winner)
     if (!results.length) return null
     const leftWins = results.filter((winner) => winner === 'left').length
     const rightWins = results.filter((winner) => winner === 'right').length
     if (leftWins === rightWins) return { leader: null, label: 'EVEN' }
     const leader = leftWins > rightWins ? 'left' : 'right'
-    return { leader, label: `${Math.abs(leftWins - rightWins)} UP` }
+    const margin = Math.abs(leftWins - rightWins)
+    // Matches are intentionally not completed early. A leader can be shown
+    // during play, but it becomes a result only after all 18 holes are scored.
+    return { leader, label: `${margin} UP` }
   }
 
   const setScorecardHoleWinner = (matchupId: string, hole: number, winner: 'left' | 'right' | 'halve') => {
@@ -682,15 +840,47 @@ export default function GroupScreen() {
         tournament_end_date: group.tournament_end_date || null,
         tournament_format: group.tournament_format || 'Match Play',
         tournament_type: group.tournament_type || null,
-        tournament_matchups: JSON.stringify({ matchups: nextMatchups, teams, manualParticipants, closestToPin, closestToPinSetup, longestDrive, liveScoring })
+        tournament_matchups: JSON.stringify({ matchups: nextMatchups, teams, manualParticipants, closestToPin, closestToPinSetup, closestToPinWinners, longestDrive })
       })
       if (response.group) setGroup((current) => current ? { ...current, ...response.group } : current)
-      if (liveScoring) await apiPost('/api/groups/live-leaderboard', { group_id: group.id, user_id: user.id, live_scoring: true })
       await loadGroup()
     } catch (error) {
       Alert.alert('Unable to save matchup score', error instanceof Error ? error.message : 'Please try again.')
     } finally {
       setSavingMatchupId(null)
+    }
+  }
+
+  const handleSelectClosestToPinWinner = async (entryKey: string, winnerId?: string) => {
+    if (!group?.id || !user?.id || !isOwner) return
+    const previousWinners = closestToPinWinners
+    const nextWinners = { ...previousWinners }
+    if (winnerId) nextWinners[entryKey] = winnerId
+    else delete nextWinners[entryKey]
+    setClosestToPinWinners(nextWinners)
+    setClosestToPinPickerKey(null)
+    try {
+      const response = await apiPost<{ group?: GroupDetail }>('/api/groups', {
+        action: 'update',
+        group_id: group.id,
+        user_id: user.id,
+        name: group.name,
+        description: group.description || '',
+        slogan: group.slogan || '',
+        location: group.location || '',
+        group_type: 'tournament',
+        is_private: Boolean(group.is_private),
+        tournament_date: group.tournament_date || null,
+        tournament_end_date: group.tournament_end_date || null,
+        tournament_format: group.tournament_format || 'Stroke Play',
+        tournament_type: group.tournament_type || null,
+        tournament_matchups: JSON.stringify({ matchups, teams, manualParticipants, closestToPin, closestToPinSetup, closestToPinWinners: nextWinners, longestDrive })
+      })
+      if (response.group) setGroup((current) => current ? { ...current, ...response.group } : current)
+      await loadGroup()
+    } catch (error) {
+      setClosestToPinWinners(previousWinners)
+      Alert.alert('Unable to save winner', error instanceof Error ? error.message : 'Please try again.')
     }
   }
 
@@ -885,8 +1075,8 @@ export default function GroupScreen() {
         tournament_end_date: editForm.tournament_end_date.trim() || null,
         tournament_format: editForm.tournament_format.trim() || null,
         tournament_type: editForm.tournament_type.trim() || null,
-        tournament_matchups: matchups.length || manualParticipants.length || teams.some((team) => team.memberIds.length || team.logoUrl || team.name.trim()) || closestToPin || longestDrive || liveScoring
-          ? JSON.stringify({ matchups, teams, manualParticipants, closestToPin, closestToPinSetup, longestDrive, liveScoring })
+        tournament_matchups: matchups.length || manualParticipants.length || teams.some((team) => team.memberIds.length || team.logoUrl || team.name.trim()) || closestToPin || longestDrive
+          ? JSON.stringify({ matchups, teams, manualParticipants, closestToPin, closestToPinSetup, closestToPinWinners, longestDrive })
           : null
       })
 
@@ -934,6 +1124,7 @@ export default function GroupScreen() {
       // reflect what Supabase actually stored.
       await loadGroup()
       setIsEditing(false)
+      setIsEditingMatchups(false)
     } catch (error) {
       Alert.alert('Unable to update group', error instanceof Error ? error.message : 'Please try again.')
     } finally {
@@ -951,36 +1142,12 @@ export default function GroupScreen() {
     setScoreSaving(true)
     try {
       await apiPost('/api/groups/scores', { group_id: group.id, user_id: user.id, total_score: totalScore })
-      if (liveScoring) await apiPost('/api/groups/live-leaderboard', { group_id: group.id, user_id: user.id, live_scoring: true })
       setScoreDraft('')
       await loadGroup()
     } catch (error) {
       Alert.alert('Unable to save score', error instanceof Error ? error.message : 'Please try again.')
     } finally {
       setScoreSaving(false)
-    }
-  }
-
-  const handleToggleLiveScoring = async () => {
-    if (!group?.id || !user?.id || !isOwner) return
-    const nextLiveScoring = !liveScoring
-    setSavingLiveScoring(true)
-    try {
-      const response = await apiPost<{ group?: GroupDetail }>('/api/groups', {
-        action: 'update', group_id: group.id, user_id: user.id, name: group.name,
-        description: group.description || '', slogan: group.slogan || '', location: group.location || '',
-        group_type: 'tournament', is_private: Boolean(group.is_private),
-        tournament_date: group.tournament_date || null, tournament_end_date: group.tournament_end_date || null,
-        tournament_format: group.tournament_format || 'Stroke Play', tournament_type: group.tournament_type || null,
-        tournament_matchups: JSON.stringify({ matchups, teams, manualParticipants, closestToPin, closestToPinSetup, longestDrive, liveScoring: nextLiveScoring })
-      })
-      if (response.group) setGroup((current) => current ? { ...current, ...response.group } : current)
-      setLiveScoring(nextLiveScoring)
-      await apiPost('/api/groups/live-leaderboard', { group_id: group.id, user_id: user.id, live_scoring: nextLiveScoring })
-    } catch (error) {
-      Alert.alert('Unable to update live scoring', error instanceof Error ? error.message : 'Please try again.')
-    } finally {
-      setSavingLiveScoring(false)
     }
   }
 
@@ -1001,6 +1168,24 @@ export default function GroupScreen() {
     }
   }
 
+  const handlePickPostPhoto = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (!permission.granted) {
+      Alert.alert('Photo access needed', 'Allow photo access to add a golf photo to your post.')
+      return
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      aspect: [4, 5],
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.88
+    })
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0]
+      setPostPhoto({ uri: asset.uri, fileName: asset.fileName, mimeType: asset.mimeType })
+    }
+  }
+
   const handlePostMessage = async () => {
     if (!user?.id || !group?.id) return
 
@@ -1009,21 +1194,32 @@ export default function GroupScreen() {
       return
     }
 
-    if (!draft.trim()) {
-      Alert.alert('Write something first', 'Add a post, score note, photo caption, or update before posting.')
+    if (!draft.trim() && !postPhoto) {
+      Alert.alert('Add a post', 'Write an update or add a golf photo before posting.')
       return
     }
 
     setPosting(true)
     try {
+      let message = draft.trim()
+      if (postPhoto) {
+        const upload = await uploadImageToStorage({
+          folder: 'group-posts',
+          fileName: postPhoto.fileName || `group-post-${Date.now()}.jpg`,
+          mimeType: postPhoto.mimeType || 'image/jpeg',
+          uri: postPhoto.uri
+        })
+        message = `${GROUP_POST_PHOTO_PREFIX}${upload.publicUrl}]]${message ? `\n${message}` : ''}`
+      }
       const response = await apiPost<{ success: boolean; messages: GroupMessage[] }>('/api/groups/message', {
         group_id: group.id,
         user_id: user.id,
-        message: draft.trim(),
+        message,
         parent_message_id: replyingTo
       })
       setMessages(response.messages || [])
       setDraft('')
+      setPostPhoto(null)
       setReplyingTo(null)
       setComposerOpen(false)
       Keyboard.dismiss()
@@ -1037,6 +1233,7 @@ export default function GroupScreen() {
   const handleCancelComposer = () => {
     Keyboard.dismiss()
     setDraft('')
+    setPostPhoto(null)
     setReplyingTo(null)
     setComposerOpen(false)
   }
@@ -1156,7 +1353,7 @@ export default function GroupScreen() {
             <View style={styles.heroCenteredContent}>
               <Avatar label={group?.name || 'Group'} shape="rounded" size={88} uri={group?.logo_url || group?.image_url} />
               {busy ? <ActivityIndicator color={palette.aqua} /> : null}
-              {isEditing ? (
+              {isEditing && !isEditingMatchups ? (
                 <TextInput onChangeText={(value) => setEditForm((current) => ({ ...current, name: value }))} placeholder="Group name" placeholderTextColor="rgba(255,255,255,0.65)" style={styles.inlineNameInput} value={editForm.name} />
               ) : (
                 <>
@@ -1170,32 +1367,41 @@ export default function GroupScreen() {
                 </>
               )}
             </View>
-            {isOwner && !isMatchupScoreScreen ? (
+            {isOwner && activeSection !== 'scores' ? (
               <Pressable
-                accessibilityLabel={isEditing ? 'Change group cover photo' : 'Edit group'}
+                accessibilityLabel={isEditing ? 'Close editor' : 'Edit group'}
                 onPress={() => {
                   if (isEditing) {
-                    void handlePickGroupImage('cover')
+                    setIsEditing(false)
+                    setIsEditingMatchups(false)
+                    void loadGroup()
                   } else {
+                    setIsEditingMatchups(false)
                     setActiveSection('info')
                     setIsEditing(true)
                   }
                 }}
                 style={styles.groupEditButton}
               >
-                <Ionicons color="#ffffff" name={isEditing ? 'camera-outline' : 'settings-outline'} size={19} />
+                <Ionicons color="#ffffff" name={isEditing ? 'close' : 'settings-outline'} size={isEditing ? 24 : 19} />
               </Pressable>
             ) : null}
             {isOwner && isTournament && activeSection === 'scores' ? (
               <Pressable
-                accessibilityLabel={liveScoring ? 'Turn off live scoring' : 'Turn on live scoring'}
-                accessibilityRole="switch"
-                accessibilityState={{ checked: liveScoring }}
-                disabled={savingLiveScoring}
-                onPress={() => void handleToggleLiveScoring()}
-                style={[styles.groupEditButton, styles.coverLiveScoringButton, liveScoring && styles.coverLiveScoringButtonActive]}
+                accessibilityLabel={isEditingMatchups ? 'Close matchup editor' : 'Edit tournament matchups'}
+                onPress={() => {
+                  if (isEditingMatchups) {
+                    setIsEditing(false)
+                    setIsEditingMatchups(false)
+                    void loadGroup()
+                  } else {
+                    setIsEditingMatchups(true)
+                    setIsEditing(true)
+                  }
+                }}
+                style={styles.groupEditButton}
               >
-                <Ionicons color="#ffffff" name={liveScoring ? 'radio' : 'radio-outline'} size={19} />
+                <Ionicons color="#ffffff" name={isEditingMatchups ? 'close' : 'settings-outline'} size={isEditingMatchups ? 24 : 19} />
               </Pressable>
             ) : null}
           </View>
@@ -1223,10 +1429,11 @@ export default function GroupScreen() {
           })}
         </View>
 
-        {activeSection === 'info' ? (
+        {activeSection === 'info' || (activeSection === 'scores' && isEditing && isEditingMatchups) ? (
           <View style={styles.aboutFeed}>
             {isEditing ? (
               <>
+                {!isEditingMatchups ? <>
                 <TextInput
                   multiline
                   onChangeText={(value) => setEditForm((current) => ({ ...current, description: value }))}
@@ -1261,8 +1468,10 @@ export default function GroupScreen() {
                     )
                   })}
                 </View>
+                </> : null}
                 {isTournament || editForm.group_type === 'tournament' ? (
                   <View style={styles.tournamentEditFields}>
+                    {!isEditingMatchups ? <>
                     <View style={styles.dateRangeRow}>
                       <Pressable onPress={() => setDatePickerTarget('start')} style={[styles.editInput, styles.dateRangeInput, styles.datePickerButton]}>
                         <Ionicons color={palette.gold} name="calendar-outline" size={18} />
@@ -1332,13 +1541,24 @@ export default function GroupScreen() {
                       </View>
                       {closestToPin ? <View style={styles.ctpSetupCard}>
                         <Text style={styles.matchupSideLabel}>Closest to the Pin setup</Text>
-                        <Text style={styles.matchupHint}>Set each par-3 distance for the tournament.</Text>
-                        <View style={styles.ctpCountRow}><Text style={styles.ctpCountLabel}>Number of par 3s</Text><View style={styles.ctpCountControls}><Pressable onPress={() => setClosestToPinSetup((current) => { const count = Math.max(1, current.par3Count - 1); return { ...current, par3Count: count, distances: current.distances.slice(0, count) } })} style={styles.ctpCountButton}><Ionicons color={palette.text} name="remove" size={16} /></Pressable><Text style={styles.ctpCountValue}>{closestToPinSetup.par3Count}</Text><Pressable onPress={() => setClosestToPinSetup((current) => ({ ...current, par3Count: current.par3Count + 1, distances: [...current.distances, ''] }))} style={styles.ctpCountButton}><Ionicons color={palette.text} name="add" size={16} /></Pressable></View></View>
-                        {Array.from({ length: closestToPinSetup.par3Count }, (_, index) => <View key={index} style={styles.ctpDistanceRow}><Text style={styles.ctpHoleLabel}>Par 3 #{index + 1}</Text><TextInput keyboardType="number-pad" onChangeText={(value) => setClosestToPinSetup((current) => ({ ...current, distances: current.distances.map((distance, distanceIndex) => distanceIndex === index ? value : distance) }))} placeholder="Yards" placeholderTextColor={palette.textMuted} style={styles.ctpDistanceInput} value={closestToPinSetup.distances[index] || ''} /><Text style={styles.ctpYards}>yds</Text></View>)}
-                        {tournamentDays.length > 1 ? <Pressable onPress={() => setClosestToPinSetup((current) => ({ ...current, multipleDays: !current.multipleDays }))} style={[styles.contestChoice, closestToPinSetup.multipleDays && styles.contestChoiceActive]}><Ionicons color={closestToPinSetup.multipleDays ? '#d7b768' : palette.textMuted} name="calendar-outline" size={18} /><Text style={[styles.contestChoiceText, closestToPinSetup.multipleDays && styles.contestChoiceTextActive]}>Run CTP on every tournament day</Text></Pressable> : null}
+                        <Text style={styles.matchupHint}>{closestToPinSetup.multipleDays ? 'Set the par 3s and yardages separately for each day.' : 'Set each par-3 distance for the tournament.'}</Text>
+                        {tournamentDays.length > 1 ? <Pressable onPress={() => setClosestToPinSetup((current) => ({ ...current, multipleDays: !current.multipleDays, days: !current.multipleDays ? tournamentDays.map((day) => ({ day, distances: current.days?.find((item) => item.day === day)?.distances || current.distances, holeNumbers: current.days?.find((item) => item.day === day)?.holeNumbers || current.holeNumbers || [], courseName: current.days?.find((item) => item.day === day)?.courseName || current.courseName || '' })) : current.days }))} style={[styles.contestChoice, closestToPinSetup.multipleDays && styles.contestChoiceActive]}><Ionicons color={closestToPinSetup.multipleDays ? '#d7b768' : palette.textMuted} name="calendar-outline" size={18} /><Text style={[styles.contestChoiceText, closestToPinSetup.multipleDays && styles.contestChoiceTextActive]}>Configure par 3s by day</Text></Pressable> : null}
+                        {(closestToPinSetup.multipleDays && tournamentDays.length ? tournamentDays : ['']).map((day, dayIndex) => {
+                          const distances = day ? getClosestToPinDayDistances(day) : closestToPinSetup.distances
+                          const holeNumbers = day ? closestToPinSetup.days?.find((item) => item.day === day)?.holeNumbers || closestToPinSetup.holeNumbers || [] : closestToPinSetup.holeNumbers || []
+                          const courseName = day ? closestToPinSetup.days?.find((item) => item.day === day)?.courseName || closestToPinSetup.courseName || '' : closestToPinSetup.courseName || ''
+                          const updateDistances = (update: (items: string[]) => string[]) => day ? updateClosestToPinDayDistances(day, update) : setClosestToPinSetup((current) => { const nextDistances = update(current.distances); return { ...current, distances: nextDistances, par3Count: nextDistances.length } })
+                          return <View key={day || 'tournament'} style={styles.ctpDaySetup}>
+                            {closestToPinSetup.multipleDays ? <Text style={styles.ctpDayTitle}>Day {dayIndex + 1} · {readableDate(day)}</Text> : null}
+                            <TextInput onChangeText={(value) => updateClosestToPinCourse(day, value)} placeholder="Course for this day" placeholderTextColor={palette.textMuted} style={styles.ctpCourseInput} value={courseName} />
+                            <View style={styles.ctpCountRow}><Text style={styles.ctpCountLabel}>Par 3s</Text><View style={styles.ctpCountControls}><Pressable onPress={() => updateDistances((items) => items.length > 1 ? items.slice(0, -1) : items)} style={styles.ctpCountButton}><Ionicons color={palette.text} name="remove" size={16} /></Pressable><Text style={styles.ctpCountValue}>{distances.length}</Text><Pressable onPress={() => updateDistances((items) => [...items, ''])} style={styles.ctpCountButton}><Ionicons color={palette.text} name="add" size={16} /></Pressable></View></View>
+                            {distances.map((distance, index) => <View key={index} style={styles.ctpDistanceRow}><Text style={styles.ctpHoleLabel}>Hole</Text><TextInput keyboardType="number-pad" maxLength={2} onChangeText={(value) => updateClosestToPinHoleNumber(day, index, value)} placeholder={String(index + 1)} placeholderTextColor={palette.textMuted} style={styles.ctpHoleNumberInput} value={holeNumbers[index] || ''} /><Text style={styles.ctpHoleLabel}>Yards</Text><TextInput keyboardType="number-pad" onChangeText={(value) => updateDistances((items) => items.map((item, itemIndex) => itemIndex === index ? value : item))} placeholder="—" placeholderTextColor={palette.textMuted} style={styles.ctpDistanceInput} value={distance || ''} /><Text style={styles.ctpYards}>yds</Text></View>)}
+                          </View>
+                        })}
                       </View> : null}
                     </View>
-                    {editForm.tournament_format === 'Stroke Play' ? (
+                    </> : null}
+                    {isEditingMatchups && editForm.tournament_format === 'Stroke Play' ? (
                       <View style={styles.matchupBuilder}>
                         <Text style={styles.infoLabel}>Add a golfer manually</Text>
                         <Text style={styles.matchupHint}>Add golfers who are playing but have not joined the tournament in the app.</Text>
@@ -1355,7 +1575,7 @@ export default function GroupScreen() {
                         {manualParticipants.length ? <ScrollView horizontal contentContainerStyle={styles.manualRosterStrip} showsHorizontalScrollIndicator={false}>{manualParticipants.map((participant) => <Pressable key={participant.id} onPress={() => setManualParticipants((current) => current.filter((item) => item.id !== participant.id))} style={styles.manualRosterGolfer}><Avatar label={participant.name} size={42} uri={participant.avatarUrl} /><Text numberOfLines={1} style={styles.manualRosterName}>{participant.name.split(' ')[0]}</Text><Ionicons color={palette.textMuted} name="close-circle" size={14} style={styles.manualRosterRemove} /></Pressable>)}</ScrollView> : null}
                       </View>
                     ) : null}
-                    {editForm.tournament_format !== 'Stroke Play' ? (
+                    {isEditingMatchups && editForm.tournament_format !== 'Stroke Play' ? (
                       <>
                       <View style={styles.matchupBuilder}>
                         <Text style={styles.infoLabel}>Add a golfer manually</Text>
@@ -1460,8 +1680,8 @@ export default function GroupScreen() {
                     ) : null}
                   </View>
                 ) : null}
-                {(isTournament || editForm.group_type === 'tournament') ? <View style={styles.accessHeading}><Text style={styles.infoLabel}>Tournament access</Text><Text style={styles.matchupHint}>Public lets people join immediately. Private requires your approval.</Text></View> : null}
-                <View style={styles.typeRow}>
+                {!isEditingMatchups && (isTournament || editForm.group_type === 'tournament') ? <View style={styles.accessHeading}><Text style={styles.infoLabel}>Tournament access</Text><Text style={styles.matchupHint}>Public lets people join immediately. Private requires your approval.</Text></View> : null}
+                {!isEditingMatchups ? <View style={styles.typeRow}>
                   {[
                     { label: 'Public', value: false, icon: 'globe-outline' as const },
                     { label: 'Private', value: true, icon: 'lock-closed-outline' as const }
@@ -1471,52 +1691,61 @@ export default function GroupScreen() {
                       <Text style={[styles.typeLabel, editForm.is_private === option.value && styles.typeLabelActive]}>{option.label}</Text>
                     </Pressable>
                   ))}
-                </View>
+                </View> : null}
                 <View style={styles.editActions}>
-                  <PrimaryButton label="Cancel" variant="ghost" onPress={() => setIsEditing(false)} />
+                  <PrimaryButton label="Cancel" variant="ghost" onPress={() => { setIsEditing(false); setIsEditingMatchups(false) }} />
                   <PrimaryButton
-                    label={savingEdit ? 'Saving...' : 'Save Group'}
+                    label={savingEdit ? 'Saving...' : isEditingMatchups ? 'Save Matchups' : 'Save Group'}
                     loading={savingEdit}
                     onPress={handleSaveEdit}
                   />
                 </View>
               </>
             ) : (
-              <Text style={styles.body}>
-                {group?.description ||
-                  'Add what this group is for, who it serves, and why golfers should join.'}
-              </Text>
+              group?.description?.trim() && group.description.trim().toLowerCase() !== group.name.trim().toLowerCase()
+                ? <Text style={styles.body}>{group.description}</Text>
+                : null
             )}
             {isTournament && !isEditing ? (
+              <>
               <View style={styles.tournamentInfoCard}>
-                <View style={styles.tournamentInfoRow}><Text style={styles.infoLabel}>Dates</Text><Text style={styles.tournamentInfoValue}>{group?.tournament_date ? `${new Date(`${group.tournament_date}T12:00:00`).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}${group?.tournament_end_date && group.tournament_end_date !== group.tournament_date ? ` – ${new Date(`${group.tournament_end_date}T12:00:00`).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}` : `, ${new Date(`${group.tournament_date}T12:00:00`).getFullYear()}`}` : 'To be announced'}</Text></View>
-                <View style={styles.tournamentInfoRow}><Text style={styles.infoLabel}>Format</Text><Text style={styles.tournamentInfoValue}>{group?.tournament_format || 'Stroke Play'}</Text></View>
-                {group?.tournament_type ? <View style={styles.tournamentInfoRow}><Text style={styles.infoLabel}>Type</Text><Text style={styles.tournamentInfoValue}>{group.tournament_type}</Text></View> : null}
-                {(closestToPin || longestDrive) ? <View style={styles.tournamentContestsDisplay}>
-                  <Text style={styles.infoLabel}>On-course contests</Text>
-                  {closestToPin ? <View style={styles.tournamentContestRow}><Ionicons color="#d7b768" name="flag-outline" size={18} /><View><Text style={styles.tournamentContestText}>Closest to the Pin{closestToPinSetup.multipleDays ? ' · Every day' : ''}</Text><Text style={styles.tournamentContestDetail}>{closestToPinSetup.distances.filter(Boolean).map((distance, index) => `Par 3 #${index + 1}: ${distance} yds`).join(' · ') || 'Par-3 distances to be set'}</Text></View></View> : null}
-                  {longestDrive ? <View style={styles.tournamentContestRow}><Ionicons color="#d7b768" name="golf-outline" size={18} /><Text style={styles.tournamentContestText}>Longest Drive</Text></View> : null}
-                </View> : null}
+                <View style={styles.tournamentInfoLead}><View style={styles.tournamentInfoIcon}><Ionicons color="#d7b768" name="trophy-outline" size={21} /></View><Text style={styles.infoLabel}>Tournament details</Text></View>
+                <View style={styles.tournamentInfoGrid}>
+                  <View style={[styles.tournamentInfoTile, styles.tournamentInfoDateTile]}><Ionicons color="#d7b768" name="calendar-outline" size={17} /><View style={styles.tournamentInfoTileCopy}><Text style={styles.tournamentInfoTileLabel}>Dates</Text><Text style={styles.tournamentInfoTileValue}>{group?.tournament_date ? `${new Date(`${group.tournament_date}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}${group?.tournament_end_date && group.tournament_end_date !== group.tournament_date ? ` – ${new Date(`${group.tournament_end_date}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}` : `, ${new Date(`${group.tournament_date}T12:00:00`).getFullYear()}`}` : 'To be announced'}</Text></View></View>
+                  <View style={styles.tournamentInfoTile}><Ionicons color="#8be9f7" name="golf-outline" size={17} /><View style={styles.tournamentInfoTileCopy}><Text style={styles.tournamentInfoTileLabel}>Format</Text><Text style={styles.tournamentInfoTileValue}>{group?.tournament_format || 'Stroke Play'}</Text></View></View>
+                  {group?.tournament_type && group.tournament_type.trim().toLowerCase() !== (group.tournament_format || '').trim().toLowerCase() ? <View style={styles.tournamentInfoTile}><Ionicons color="#8be9f7" name="flag-outline" size={17} /><View style={styles.tournamentInfoTileCopy}><Text style={styles.tournamentInfoTileLabel}>Division</Text><Text style={styles.tournamentInfoTileValue}>{group.tournament_type}</Text></View></View> : null}
+                </View>
               </View>
+                {closestToPin ? <View style={styles.tournamentContestCard}>
+                  {closestToPin ? <View style={styles.ctpResultsBlock}>
+                    <View style={styles.tournamentContestRow}><Ionicons color="#d7b768" name="flag-outline" size={18} /><Text style={styles.tournamentContestText}>Closest to the Pin</Text></View>
+                    {closestToPinEntriesByDay.map((dayEntries) => <View key={dayEntries[0]?.day || 'tournament'} style={styles.ctpDisplayDay}>
+                      {closestToPinSetup.multipleDays ? <Text style={styles.ctpDisplayDayTitle}>Day {dayEntries[0]?.dayIndex + 1}{dayEntries[0]?.courseName ? ` · ${dayEntries[0].courseName}` : ''}</Text> : dayEntries[0]?.courseName ? <Text style={styles.ctpDisplayDayTitle}>{dayEntries[0].courseName}</Text> : null}
+                      {dayEntries.map((entry) => {
+                        const winner = closestToPinWinners[entry.key] ? participantById.get(closestToPinWinners[entry.key]) : null
+                        return <Pressable disabled={!isOwner} key={entry.key} onPress={() => setClosestToPinPickerKey(entry.key)} style={styles.ctpResultRow}>
+                          <View style={styles.ctpResultDetails}><View style={styles.ctpResultFlag}><Ionicons color="#d7b768" name="flag" size={14} /></View><View><Text style={styles.ctpResultTitle}>Hole {entry.holeNumber}</Text><Text style={styles.ctpResultMeta}>{entry.distance ? `${entry.distance} yds` : 'Distance TBD'}</Text></View></View>
+                          {winner ? <View style={styles.ctpWinner}><Avatar label={winner.name} size={28} uri={winner.avatarUrl} /><Text numberOfLines={1} style={styles.ctpWinnerName}>{winner.name}</Text>{isOwner ? <Ionicons color={palette.aqua} name="pencil" size={13} /> : null}</View> : <Text style={styles.ctpSelectWinner}>{isOwner ? 'Select winner' : 'Winner TBD'}</Text>}
+                        </Pressable>
+                      })}
+                    </View>)}
+                  </View> : null}
+                </View> : null}
+                {longestDrive ? <View style={styles.tournamentContestCard}><View style={styles.tournamentContestRow}><Ionicons color="#d7b768" name="golf-outline" size={18} /><Text style={styles.tournamentContestText}>Longest Drive</Text></View></View> : null}
+              </>
             ) : null}
           </View>
         ) : activeSection === 'scores' && isTournament ? (
           <View style={styles.scoresFeed}>
-            {!isOwner && liveScoring ? (
-              <View style={styles.liveScoringAudienceStatus}>
-                <Ionicons color="#f06b5d" name="radio" size={17} />
-                <Text style={styles.liveScoringAudienceText}>Live scoring is on</Text>
-              </View>
-            ) : null}
             {(group?.tournament_format || 'Stroke Play') === 'Stroke Play' ? <>
               {isMember ? <View style={styles.scoreEntry}><TextInput keyboardType="number-pad" onChangeText={setScoreDraft} placeholder="Your total score" placeholderTextColor={palette.textMuted} style={styles.scoreInput} value={scoreDraft} /><PrimaryButton label={scoreSaving ? 'Saving...' : 'Post Score'} loading={scoreSaving} onPress={handleSaveTournamentScore} /></View> : <Text style={styles.body}>Join this tournament to post your score.</Text>}
               <View style={styles.leaderboardCard}>
               <View style={styles.leaderboardHeader}>
                 <View style={styles.leaderboardTitleRow}>
                   <Ionicons color="#d7b768" name="trophy" size={19} />
-                  <Text style={styles.leaderboardTitle}>{liveScoring ? 'Live leaderboard' : 'Leaderboard'}</Text>
+                  <Text style={styles.leaderboardTitle}>Leaderboard</Text>
                 </View>
-                <Text style={styles.leaderboardMeta}>{liveScoring ? 'LIVE' : `${tournamentLeaderboard.length} people`}</Text>
+                <Text style={styles.leaderboardMeta}>{`${tournamentLeaderboard.length} people`}</Text>
               </View>
               {tournamentLeaderboard.map((entry, index) => (
                 <View key={entry.member.id} style={styles.leaderboardRow}>
@@ -1563,36 +1792,25 @@ export default function GroupScreen() {
                 const rightPartner = matchup.rightPartnerUserId ? participantById.get(matchup.rightPartnerUserId) : null
                 const leftLabel = leftPartner ? `${left.name} & ${leftPartner.name}` : left.name
                 const rightLabel = rightPartner ? `${right.name} & ${rightPartner.name}` : right.name
-                const leftAdjustedScore = getAdjustedTournamentScore(matchup.leftScore, left.handicap)
-                const rightAdjustedScore = getAdjustedTournamentScore(matchup.rightScore, right.handicap)
                 const isMatchPlay = (matchup.format || group?.tournament_format || '').toLowerCase().includes('match play')
+                const isTeamFormat = ['scramble', 'best ball', 'alternate shot'].includes((matchup.format || '').toLowerCase())
+                const leftTeam = isTeamFormat ? teams.find((team) => team.memberIds.includes(matchup.leftUserId)) : null
+                const rightTeam = isTeamFormat ? teams.find((team) => team.memberIds.includes(matchup.rightUserId)) : null
+                const leftDisplayLabel = leftLabel
+                const rightDisplayLabel = rightLabel
+                const leftWinnerName = leftTeam?.name ? (leftTeam.name.toLowerCase().startsWith('team ') ? leftTeam.name : `Team ${leftTeam.name}`) : leftLabel
+                const rightWinnerName = rightTeam?.name ? (rightTeam.name.toLowerCase().startsWith('team ') ? rightTeam.name : `Team ${rightTeam.name}`) : rightLabel
+                const leftAdjustedScore = isTeamFormat ? null : getAdjustedTournamentScore(matchup.leftScore, left.handicap)
+                const rightAdjustedScore = isTeamFormat ? null : getAdjustedTournamentScore(matchup.rightScore, right.handicap)
                 const matchPlayStatus = isMatchPlay ? getMatchPlayStatus(matchup) : null
+                const strokeMargin = !isMatchPlay && matchup.leftScore !== null && matchup.leftScore !== undefined && matchup.rightScore !== null && matchup.rightScore !== undefined && matchup.leftScore !== matchup.rightScore ? Math.abs(matchup.leftScore - matchup.rightScore) : null
+                const winnerName = winner === 'left' ? leftWinnerName : winner === 'right' ? rightWinnerName : null
                 return <View key={matchup.id} style={styles.matchupScoreCard}>
                   {matchup.courseName ? <Text numberOfLines={1} style={styles.matchupCourseBadge}>{matchup.courseName}</Text> : null}
-                  {matchup.teeTime ? <Text style={styles.matchupFormatBadge}>{matchup.teeTime}</Text> : null}
-                  {liveScoring ? <View style={styles.liveMatchProgress}>
-                    <Ionicons color="#f06b5d" name="radio" size={14} />
-                    {isEditingMatchupScores ? <View style={styles.liveHoleEditor}>
-                      <Text style={styles.liveHoleLabel}>Through hole</Text>
-                      <TextInput
-                        keyboardType="number-pad"
-                        maxLength={2}
-                        onChangeText={(value) => setMatchups((current) => current.map((item) => {
-                          if (item.id !== matchup.id) return item
-                          const numericHole = Math.round(Number(value))
-                          return { ...item, throughHole: value.trim() && Number.isFinite(numericHole) ? Math.min(18, Math.max(1, numericHole)) : null }
-                        }))}
-                        placeholder="—"
-                        placeholderTextColor={palette.textMuted}
-                        style={styles.liveHoleInput}
-                        value={matchup.throughHole?.toString() || ''}
-                      />
-                    </View> : <Text style={styles.liveMatchProgressText}>{matchup.throughHole ? `Through ${matchup.throughHole} ${matchup.throughHole === 1 ? 'hole' : 'holes'}` : 'Live — not started'}</Text>}
-                  </View> : null}
                   <View style={styles.matchupScoreRow}>
-                    <View style={[styles.matchupScoreGolfer, winner === 'left' && styles.matchupWinner]}><View style={styles.matchupTeamAvatars}><Avatar label={left.name} size={42} uri={left.avatarUrl} />{leftPartner ? <Avatar label={leftPartner.name} size={42} uri={leftPartner.avatarUrl} /> : null}</View><Text numberOfLines={2} style={styles.matchupGolferName}>{leftLabel}</Text>{isEditingMatchupScores && !isMatchPlay ? <TextInput keyboardType="number-pad" onChangeText={(value) => setMatchups((current) => current.map((item) => item.id === matchup.id ? { ...item, leftScore: value.trim() ? Number(value) : null } : item))} placeholder="—" placeholderTextColor={palette.textMuted} style={styles.matchupScoreInput} value={matchup.leftScore?.toString() || ''} /> : !isMatchPlay ? <View style={styles.matchupScoreReadout}><Text style={styles.matchupScoreValue}>{matchup.leftScore ?? '—'}</Text>{leftAdjustedScore !== null ? <Text style={styles.matchupAdjustedScore}>({leftAdjustedScore})</Text> : null}</View> : null}</View>
+                    <View style={styles.matchupScoreGolfer}><View style={styles.matchupTeamAvatars}><Avatar label={left.name} size={42} uri={left.avatarUrl} />{leftPartner ? <Avatar label={leftPartner.name} size={42} uri={leftPartner.avatarUrl} /> : null}</View><View style={styles.matchupNameLine}><Text numberOfLines={2} style={styles.matchupGolferName}>{leftDisplayLabel}</Text>{winner === 'left' ? <Ionicons color={palette.gold} name="trophy" size={16} /> : null}</View>{isEditingMatchupScores && !isMatchPlay ? <TextInput keyboardType="number-pad" onChangeText={(value) => setMatchups((current) => current.map((item) => item.id === matchup.id ? { ...item, leftScore: value.trim() ? Number(value) : null } : item))} placeholder="—" placeholderTextColor={palette.textMuted} style={styles.matchupScoreInput} value={matchup.leftScore?.toString() || ''} /> : !isMatchPlay ? <View style={styles.matchupScoreReadout}><Text style={styles.matchupScoreValue}>{matchup.leftScore ?? '—'}</Text>{leftAdjustedScore !== null ? <Text style={styles.matchupAdjustedScore}>({leftAdjustedScore})</Text> : null}</View> : null}</View>
                     <View style={styles.matchupScheduleCenter}><Text style={styles.matchupVs}>VS.</Text><Text numberOfLines={1} style={styles.matchupFormatUnderVs}>{matchup.format || group?.tournament_format || 'Match Play'}</Text></View>
-                    <View style={[styles.matchupScoreGolfer, winner === 'right' && styles.matchupWinner]}><View style={styles.matchupTeamAvatars}><Avatar label={right.name} size={42} uri={right.avatarUrl} />{rightPartner ? <Avatar label={rightPartner.name} size={42} uri={rightPartner.avatarUrl} /> : null}</View><Text numberOfLines={2} style={styles.matchupGolferName}>{rightLabel}</Text>{isEditingMatchupScores && !isMatchPlay ? <TextInput keyboardType="number-pad" onChangeText={(value) => setMatchups((current) => current.map((item) => item.id === matchup.id ? { ...item, rightScore: value.trim() ? Number(value) : null } : item))} placeholder="—" placeholderTextColor={palette.textMuted} style={styles.matchupScoreInput} value={matchup.rightScore?.toString() || ''} /> : !isMatchPlay ? <View style={styles.matchupScoreReadout}><Text style={styles.matchupScoreValue}>{matchup.rightScore ?? '—'}</Text>{rightAdjustedScore !== null ? <Text style={styles.matchupAdjustedScore}>({rightAdjustedScore})</Text> : null}</View> : null}</View>
+                    <View style={styles.matchupScoreGolfer}><View style={styles.matchupTeamAvatars}><Avatar label={right.name} size={42} uri={right.avatarUrl} />{rightPartner ? <Avatar label={rightPartner.name} size={42} uri={rightPartner.avatarUrl} /> : null}</View><View style={styles.matchupNameLine}><Text numberOfLines={2} style={styles.matchupGolferName}>{rightDisplayLabel}</Text>{winner === 'right' ? <Ionicons color={palette.gold} name="trophy" size={16} /> : null}</View>{isEditingMatchupScores && !isMatchPlay ? <TextInput keyboardType="number-pad" onChangeText={(value) => setMatchups((current) => current.map((item) => item.id === matchup.id ? { ...item, rightScore: value.trim() ? Number(value) : null } : item))} placeholder="—" placeholderTextColor={palette.textMuted} style={styles.matchupScoreInput} value={matchup.rightScore?.toString() || ''} /> : !isMatchPlay ? <View style={styles.matchupScoreReadout}><Text style={styles.matchupScoreValue}>{matchup.rightScore ?? '—'}</Text>{rightAdjustedScore !== null ? <Text style={styles.matchupAdjustedScore}>({rightAdjustedScore})</Text> : null}</View> : null}</View>
                   </View>
                   {isEditingMatchupScores && isMatchPlay ? <View style={styles.holeWinnerEditor}>
                     <Text style={styles.holeWinnerTitle}>Hole-by-hole result</Text>
@@ -1603,7 +1821,8 @@ export default function GroupScreen() {
                   </View> : null}
                   {isOwner ? <Pressable accessibilityLabel="Edit matchup details" onPress={() => setMatchupSettingsId(matchup.id)} style={styles.matchupDetailsButton}><Ionicons color="rgba(255,255,255,0.64)" name="settings-outline" size={19} /></Pressable> : null}
                   {isOwner ? <Pressable accessibilityLabel="Open matchup scorecard" onPress={() => setScorecardMatchupId(matchup.id)} style={styles.matchupScorecardButton}><Ionicons color="rgba(255,255,255,0.64)" name="reader-outline" size={20} /></Pressable> : null}
-                  {isEditingMatchupScores ? <PrimaryButton label={savingMatchupId === matchup.id ? 'Saving...' : liveScoring ? 'Update live score' : 'Save Result'} loading={savingMatchupId === matchup.id} onPress={() => void handleSaveMatchupScore(matchup.id)} /> : matchPlayStatus ? <Text style={styles.matchupWinnerText}>{matchPlayStatus.label}</Text> : winner ? <Text style={styles.matchupWinnerText}>{liveScoring && matchup.throughHole && matchup.throughHole < 18 ? `${winner === 'left' ? left.name : right.name} is ahead` : `${winner === 'left' ? left.name : right.name} wins`}</Text> : <Text style={styles.matchupTypeFooter}>{matchup.teeTime || 'Tee time TBD'}</Text>}
+                  {isEditingMatchupScores ? <PrimaryButton label={savingMatchupId === matchup.id ? 'Saving...' : 'Save Result'} loading={savingMatchupId === matchup.id} onPress={() => void handleSaveMatchupScore(matchup.id)} /> : matchPlayStatus ? <Text style={styles.matchupWinnerText}>{matchPlayStatus.leader ? `${matchPlayStatus.label} • ${matchPlayStatus.leader === 'left' ? leftWinnerName : rightWinnerName}` : matchPlayStatus.label}</Text> : winner ? <Text style={styles.matchupWinnerText}>{`${winnerName} wins`}</Text> : <Text style={styles.matchupTypeFooter}>{matchup.format || group?.tournament_format || 'Match format TBD'}</Text>}
+                  {matchup.teeTime ? <View style={styles.matchupTeeTimeFooter}><Ionicons color={palette.textMuted} name="time-outline" size={13} /><Text style={styles.matchupTeeTimeFooterText}>{matchup.teeTime}</Text></View> : null}
                 </View>
               })}
               </View>)}
@@ -1720,12 +1939,13 @@ export default function GroupScreen() {
             <TextInput
               multiline
               onChangeText={setDraft}
-              placeholder="Post to the board: score, photo caption, tee time, or group update"
+              placeholder={isTournament ? 'Share a tournament update…' : 'Share an update with the group…'}
               placeholderTextColor={palette.textMuted}
               style={styles.composeInput}
               value={draft}
             />
-            <PrimaryButton label={posting ? 'Posting...' : 'Post to Group'} loading={posting} onPress={handlePostMessage} />
+            {postPhoto ? <View style={styles.postPhotoPreview}><Image source={{ uri: postPhoto.uri }} style={styles.postPhotoPreviewImage} /><Pressable accessibilityLabel="Remove post photo" onPress={() => setPostPhoto(null)} style={styles.postPhotoRemove}><Ionicons color="#ffffff" name="close" size={17} /></Pressable></View> : null}
+            <View style={styles.composerActions}><Pressable accessibilityLabel="Add a photo" disabled={posting} onPress={() => void handlePickPostPhoto()} style={styles.composerPhotoButton}><Ionicons color={palette.aqua} name="image-outline" size={20} /><Text style={styles.composerPhotoButtonText}>Photo</Text></Pressable><Pressable disabled={posting} onPress={() => void handlePostMessage()} style={[styles.tournamentPostButton, posting && styles.tournamentPostButtonDisabled]}><Ionicons color={palette.ink} name="send" size={17} /><Text style={styles.tournamentPostButtonText}>{posting ? 'Posting…' : isTournament ? 'Post update' : 'Post'}</Text></Pressable></View>
               </View>
             ) : null}
 
@@ -1733,30 +1953,30 @@ export default function GroupScreen() {
               <Text style={styles.body}>No posts yet. Start the conversation for this group.</Text>
             ) : null}
 
-            {messages.map((message) => (
-              <View key={message.id} style={[styles.messageCard, isTournament && styles.compactMessageCard]}>
+            {messages.map((message) => {
+              const post = unpackGroupPost(message.message_content)
+              const isTournamentUpdate = Boolean(post.tournamentUpdate)
+              return (
+              <View key={message.id} style={[styles.messageCard, isTournament && styles.compactMessageCard, isTournamentUpdate && styles.tournamentUpdatePost]}>
                 <View style={styles.messageTop}>
                   <View style={styles.memberIdentity}>
-                    <Avatar
-                      label={formatAuthor(message)}
-                      size={isTournament ? 32 : 38}
-                      uri={message.user_profiles?.avatar_url}
-                    />
-                    <Text style={styles.memberName}>{formatAuthor(message)}</Text>
+                    {isTournamentUpdate ? <View style={styles.tournamentUpdateIcon}><Ionicons color="#d7b768" name={post.tournamentUpdate === 'ctp' ? 'flag-outline' : 'trophy-outline'} size={16} /></View> : <Avatar label={formatAuthor(message)} size={isTournament ? 32 : 38} uri={message.user_profiles?.avatar_url} />}
+                    <Text style={styles.memberName}>{isTournamentUpdate ? 'Tournament update' : formatAuthor(message)}</Text>
                   </View>
                   <Text style={styles.messageMeta}>
                     {message.created_at ? new Date(message.created_at).toLocaleDateString() : 'Now'}
                   </Text>
                 </View>
-                <Text numberOfLines={isTournament ? 3 : undefined} style={[styles.body, isTournament && styles.compactMessageBody]}>{message.message_content || ''}</Text>
-                <View style={styles.messageActions}>
+                {post.imageUrl ? <Image source={{ uri: post.imageUrl || '' }} style={styles.groupPostImage} /> : null}
+                {post.text ? <Text numberOfLines={isTournament ? 3 : undefined} style={[styles.body, isTournament && styles.compactMessageBody]}>{post.text}</Text> : null}
+                {!isTournamentUpdate ? <View style={styles.messageActions}>
                   <Pressable onPress={() => void handleToggleLike(message.id, !!message.liked_by_user)}>
                     {isTournament ? <View style={styles.compactMessageAction}><Ionicons color={palette.aqua} name={message.liked_by_user ? 'heart' : 'heart-outline'} size={16} />{message.like_count ? <Text style={styles.messageAction}>{message.like_count}</Text> : null}</View> : <Text style={styles.messageAction}>{message.liked_by_user ? 'Unlike' : 'Like'}{message.like_count ? ` (${message.like_count})` : ''}</Text>}
                   </Pressable>
                   <Pressable onPress={() => { setReplyingTo(message.id); setComposerOpen(true) }}>
                     {isTournament ? <Ionicons color={palette.aqua} name="chatbubble-outline" size={16} /> : <Text style={styles.messageAction}>Reply</Text>}
                   </Pressable>
-                </View>
+                </View> : null}
                 {message.replies?.length ? (
                   <View style={styles.replies}>
                     {message.replies.map((reply) => (
@@ -1768,11 +1988,11 @@ export default function GroupScreen() {
                   </View>
                 ) : null}
               </View>
-            ))}
+            )})}
           </View>
         )}
       </ScrollView>
-      <Pressable accessibilityLabel="Share group QR code" onPress={() => setShowShareModal(true)} style={styles.floatingQrButton}>
+      <Pressable accessibilityLabel="Share group QR code" onPress={() => setShowShareModal(true)} style={[styles.floatingQrButton, isTournament && styles.floatingQrButtonTournament]}>
         <Ionicons color={palette.text} name="qr-code-outline" size={25} />
       </Pressable>
       <Modal animationType="slide" transparent visible={!!matchupSettings} onRequestClose={() => setMatchupSettingsId(null)}>
@@ -1792,13 +2012,24 @@ export default function GroupScreen() {
       <Modal animationType="slide" transparent visible={!!scorecardMatchup} onRequestClose={() => setScorecardMatchupId(null)}>
         <View style={styles.modalBackdrop}>
           <View style={[styles.modalCard, styles.scorecardModalCard]}>
-            <View style={styles.scorecardModalHeader}><View /><Pressable accessibilityLabel="Close scorecard" hitSlop={12} onPress={() => setScorecardMatchupId(null)} style={styles.scorecardClose}><Ionicons color={palette.ink} name="close" size={21} /></Pressable></View>
+            <View style={styles.scorecardModalHeader}><View /><Pressable accessibilityLabel="Close scorecard" hitSlop={12} onPress={() => setScorecardMatchupId(null)} style={styles.scorecardClose}><Ionicons color="#fffaf0" name="close" size={21} /></Pressable></View>
             {scorecardMatchup && scorecardLeft && scorecardRight ? <ScrollView contentContainerStyle={styles.scorecardModalContent} showsVerticalScrollIndicator={false}>
               <View style={styles.scorecardPlayers}><View style={styles.scorecardPlayer}><Avatar label={scorecardLeft.name} size={68} uri={scorecardLeft.avatarUrl} /><Text numberOfLines={2} style={styles.scorecardPlayerName}>{scorecardLeftLabel}</Text></View><View style={styles.scorecardVsMark}><Text style={styles.scorecardVsText}>VS</Text></View><View style={styles.scorecardPlayer}><Avatar label={scorecardRight.name} size={68} uri={scorecardRight.avatarUrl} /><Text numberOfLines={2} style={styles.scorecardPlayerName}>{scorecardRightLabel}</Text></View></View>
               {scorecardIsMatchPlay ? <><Text style={styles.scorecardSectionTitle}>Hole results</Text>{Array.from({ length: 18 }, (_, index) => index + 1).map((hole) => { const selected = scorecardMatchup.holeWinners?.[String(hole)]; return <View key={hole} style={styles.scorecardHoleRow}><Text style={styles.scorecardHoleNumber}>{hole}</Text><Pressable onPress={() => setScorecardHoleWinner(scorecardMatchup.id, hole, 'left')} style={[styles.scorecardHoleChoice, selected === 'left' && styles.scorecardHoleChoiceActive]}><Text numberOfLines={1} style={styles.scorecardHoleChoiceText}>{scorecardLeft.name.split(' ')[0]}</Text></Pressable><Pressable onPress={() => setScorecardHoleWinner(scorecardMatchup.id, hole, 'halve')} style={[styles.scorecardHoleChoice, selected === 'halve' && styles.scorecardHoleChoiceActive]}><Text style={styles.scorecardHoleChoiceText}>Half</Text></Pressable><Pressable onPress={() => setScorecardHoleWinner(scorecardMatchup.id, hole, 'right')} style={[styles.scorecardHoleChoice, selected === 'right' && styles.scorecardHoleChoiceActive]}><Text numberOfLines={1} style={styles.scorecardHoleChoiceText}>{scorecardRight.name.split(' ')[0]}</Text></Pressable></View>})}</> : scorecardIsTeamFormat ? <><Text style={styles.scorecardSectionTitle}>Team score by hole</Text>{Array.from({ length: 18 }, (_, index) => index + 1).map((hole) => <View key={hole} style={styles.scorecardTeamHoleRow}><Text style={styles.scorecardHoleNumber}>{hole}</Text><TextInput keyboardType="number-pad" onChangeText={(value) => setScorecardHoleScore(scorecardMatchup.id, hole, 'left', value)} placeholder="—" placeholderTextColor={palette.textMuted} style={styles.scorecardTeamHoleInput} value={scorecardMatchup.leftHoleScores?.[String(hole)]?.toString() || ''} /><TextInput keyboardType="number-pad" onChangeText={(value) => setScorecardHoleScore(scorecardMatchup.id, hole, 'right', value)} placeholder="—" placeholderTextColor={palette.textMuted} style={styles.scorecardTeamHoleInput} value={scorecardMatchup.rightHoleScores?.[String(hole)]?.toString() || ''} /></View>)}</> : <View style={styles.scorecardTotalRow}><View style={styles.scorecardTotalField}><Text style={styles.scorecardSectionTitle}>{scorecardLeft.name.split(' ')[0]} total</Text><TextInput keyboardType="number-pad" onChangeText={(value) => setMatchups((current) => current.map((item) => item.id === scorecardMatchup.id ? { ...item, leftScore: value.trim() ? Number(value) : null } : item))} placeholder="—" placeholderTextColor={palette.textMuted} style={styles.scorecardTotalInput} value={scorecardMatchup.leftScore?.toString() || ''} /></View><View style={styles.scorecardTotalField}><Text style={styles.scorecardSectionTitle}>{scorecardRight.name.split(' ')[0]} total</Text><TextInput keyboardType="number-pad" onChangeText={(value) => setMatchups((current) => current.map((item) => item.id === scorecardMatchup.id ? { ...item, rightScore: value.trim() ? Number(value) : null } : item))} placeholder="—" placeholderTextColor={palette.textMuted} style={styles.scorecardTotalInput} value={scorecardMatchup.rightScore?.toString() || ''} /></View></View>}
-              {liveScoring ? <View style={styles.scorecardProgressRow}><Text style={styles.scorecardSectionTitle}>Through hole</Text><TextInput keyboardType="number-pad" maxLength={2} onChangeText={(value) => setMatchups((current) => current.map((item) => item.id === scorecardMatchup.id ? { ...item, throughHole: value.trim() ? Math.min(18, Math.max(1, Number(value))) : null } : item))} placeholder="18" placeholderTextColor={palette.textMuted} style={styles.scorecardThroughInput} value={scorecardMatchup.throughHole?.toString() || ''} /></View> : null}
-              <PrimaryButton label={savingMatchupId === scorecardMatchup.id ? 'Saving...' : liveScoring ? 'Update live score' : 'Save scorecard'} loading={savingMatchupId === scorecardMatchup.id} onPress={() => void handleSaveMatchupScore(scorecardMatchup.id)} />
+              <PrimaryButton label={savingMatchupId === scorecardMatchup.id ? 'Saving...' : 'Save scorecard'} loading={savingMatchupId === scorecardMatchup.id} onPress={() => void handleSaveMatchupScore(scorecardMatchup.id)} />
             </ScrollView> : null}
+          </View>
+        </View>
+      </Modal>
+      <Modal animationType="slide" transparent visible={!!closestToPinPickerEntry} onRequestClose={() => setClosestToPinPickerKey(null)}>
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, styles.ctpWinnerModal]}>
+            <View style={styles.ctpWinnerModalHeader}><View><Text style={styles.ctpWinnerModalTitle}>Closest to the Pin</Text><Text style={styles.ctpWinnerModalSubtitle}>{closestToPinPickerEntry ? `${closestToPinSetup.multipleDays ? `Day ${closestToPinPickerEntry.dayIndex + 1} · ` : ''}Hole ${closestToPinPickerEntry.holeNumber}${closestToPinPickerEntry.distance ? ` · ${closestToPinPickerEntry.distance} yds` : ''}` : ''}</Text></View><Pressable accessibilityLabel="Close winner selection" hitSlop={12} onPress={() => setClosestToPinPickerKey(null)} style={styles.scorecardClose}><Ionicons color={palette.ink} name="close" size={21} /></Pressable></View>
+            <ScrollView contentContainerStyle={styles.ctpWinnerChoices} showsVerticalScrollIndicator={false}>{participantOptions.map((participant) => {
+              const selected = closestToPinPickerEntry ? closestToPinWinners[closestToPinPickerEntry.key] === participant.id : false
+              return <Pressable key={participant.id} onPress={() => closestToPinPickerEntry && void handleSelectClosestToPinWinner(closestToPinPickerEntry.key, participant.id)} style={[styles.ctpWinnerChoice, selected && styles.ctpWinnerChoiceSelected]}><Avatar label={participant.name} size={40} uri={participant.avatarUrl} /><View style={styles.ctpWinnerChoiceDetails}><Text style={styles.ctpWinnerChoiceName}>{participant.name}</Text>{participant.handicap != null ? <Text style={styles.ctpWinnerChoiceMeta}>Handicap {participant.handicap}</Text> : null}</View>{selected ? <Ionicons color={palette.aqua} name="checkmark-circle" size={22} /> : null}</Pressable>
+            })}{participantOptions.length === 0 ? <Text style={styles.body}>Add tournament people before selecting a winner.</Text> : null}</ScrollView>
+            {closestToPinPickerEntry && closestToPinWinners[closestToPinPickerEntry.key] ? <Pressable onPress={() => void handleSelectClosestToPinWinner(closestToPinPickerEntry.key)} style={styles.ctpClearWinner}><Text style={styles.ctpClearWinnerText}>Clear winner</Text></Pressable> : null}
           </View>
         </View>
       </Modal>
@@ -1870,8 +2101,8 @@ const styles = StyleSheet.create({
     flex: 1
   },
   scorecardModalCard: {
-    backgroundColor: '#f7f3e9',
-    borderColor: 'rgba(25,73,56,0.18)',
+    backgroundColor: '#123d2d',
+    borderColor: 'rgba(246,231,186,0.34)',
     gap: 8,
     maxHeight: '84%',
     padding: 18
@@ -1941,7 +2172,7 @@ const styles = StyleSheet.create({
   },
   scorecardClose: {
     alignItems: 'center',
-    backgroundColor: '#e4eee5',
+    backgroundColor: 'rgba(255,255,255,0.12)',
     borderRadius: 18,
     height: 36,
     justifyContent: 'center',
@@ -1966,27 +2197,27 @@ const styles = StyleSheet.create({
     maxWidth: 130
   },
   scorecardPlayerName: {
-    color: palette.ink,
+    color: '#fffaf0',
     fontSize: 15,
     fontWeight: '800',
     textAlign: 'center'
   },
   scorecardVsMark: {
     alignItems: 'center',
-    backgroundColor: '#e8dcc0',
+    backgroundColor: 'rgba(215,183,104,0.18)',
     borderRadius: 17,
     height: 34,
     justifyContent: 'center',
     width: 34
   },
   scorecardVsText: {
-    color: palette.gold,
+    color: '#f6e7ba',
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 0.7
   },
   scorecardSectionTitle: {
-    color: '#557267',
+    color: '#dce8df',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.7,
@@ -1998,15 +2229,15 @@ const styles = StyleSheet.create({
     gap: 6
   },
   scorecardHoleNumber: {
-    color: palette.gold,
+    color: '#f6e7ba',
     fontSize: 12,
     fontWeight: '800',
     width: 20
   },
   scorecardHoleChoice: {
     alignItems: 'center',
-    backgroundColor: '#eef3ed',
-    borderColor: '#d1dfd2',
+    backgroundColor: 'rgba(255,255,255,0.09)',
+    borderColor: 'rgba(255,255,255,0.18)',
     borderRadius: 12,
     borderWidth: 1,
     flex: 1,
@@ -2015,12 +2246,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5
   },
   scorecardHoleChoiceActive: {
-    backgroundColor: '#cdebd6',
-    borderColor: '#4a9368',
+    backgroundColor: '#2d6a4f',
+    borderColor: '#f6e7ba',
     borderWidth: 1.5
   },
   scorecardHoleChoiceText: {
-    color: palette.ink,
+    color: '#fffaf0',
     fontSize: 10,
     fontWeight: '700'
   },
@@ -2030,8 +2261,8 @@ const styles = StyleSheet.create({
     gap: 8
   },
   scorecardTeamHoleInput: {
-    backgroundColor: '#eef3ed',
-    borderColor: '#d1dfd2',
+    backgroundColor: '#f7f3e9',
+    borderColor: '#d7b768',
     borderRadius: 12,
     borderWidth: 1,
     color: palette.ink,
@@ -2050,8 +2281,8 @@ const styles = StyleSheet.create({
     gap: 6
   },
   scorecardTotalInput: {
-    backgroundColor: '#eef3ed',
-    borderColor: '#d1dfd2',
+    backgroundColor: '#f7f3e9',
+    borderColor: '#d7b768',
     borderRadius: 12,
     borderWidth: 1,
     color: palette.ink,
@@ -2213,6 +2444,10 @@ const styles = StyleSheet.create({
     right: 20,
     width: 52,
     zIndex: 10
+  },
+  floatingQrButtonTournament: {
+    left: 20,
+    right: undefined
   },
   coverActionButton: {
     alignItems: 'center',
@@ -2515,12 +2750,67 @@ const styles = StyleSheet.create({
     gap: 10
   },
   tournamentInfoCard: {
-    backgroundColor: 'rgba(215,183,104,0.08)',
-    borderColor: 'rgba(215,183,104,0.2)',
-    borderRadius: 20,
+    backgroundColor: 'rgba(11,53,40,0.48)',
+    borderColor: 'rgba(232,204,135,0.26)',
+    borderRadius: 22,
     borderWidth: 1,
-    gap: 12,
-    padding: 15
+    gap: 13,
+    padding: 16
+  },
+  tournamentInfoLead: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10
+  },
+  tournamentInfoIcon: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(215,183,104,0.14)',
+    borderRadius: 17,
+    height: 34,
+    justifyContent: 'center',
+    width: 34
+  },
+  tournamentInfoLeadValue: {
+    color: palette.text,
+    fontSize: 16,
+    fontWeight: '800',
+    marginTop: 2
+  },
+  tournamentInfoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8
+  },
+  tournamentInfoTile: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(232,216,178,0.15)',
+    borderRadius: 14,
+    borderWidth: 1,
+    flex: 1,
+    flexDirection: 'row',
+    gap: 8,
+    minWidth: '47%',
+    padding: 10
+  },
+  tournamentInfoDateTile: {
+    flexBasis: '100%'
+  },
+  tournamentInfoTileCopy: {
+    flex: 1
+  },
+  tournamentInfoTileLabel: {
+    color: '#bfd2c5',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.7,
+    textTransform: 'uppercase'
+  },
+  tournamentInfoTileValue: {
+    color: palette.text,
+    fontSize: 13,
+    fontWeight: '800',
+    marginTop: 2
   },
   tournamentInfoRow: {
     alignItems: 'center',
@@ -2582,6 +2872,27 @@ const styles = StyleSheet.create({
     gap: 9,
     padding: 10
   },
+  ctpDaySetup: {
+    borderTopColor: 'rgba(215,183,104,0.18)',
+    borderTopWidth: 1,
+    gap: 7,
+    paddingTop: 10
+  },
+  ctpDayTitle: {
+    color: '#f2d991',
+    fontSize: 12,
+    fontWeight: '800'
+  },
+  ctpCourseInput: {
+    backgroundColor: palette.cardSoft,
+    borderColor: palette.border,
+    borderRadius: 10,
+    borderWidth: 1,
+    color: palette.text,
+    fontSize: 13,
+    minHeight: 38,
+    paddingHorizontal: 10
+  },
   ctpCountRow: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -2636,6 +2947,18 @@ const styles = StyleSheet.create({
     minHeight: 36,
     paddingHorizontal: 10
   },
+  ctpHoleNumberInput: {
+    backgroundColor: palette.cardSoft,
+    borderColor: palette.border,
+    borderRadius: 10,
+    borderWidth: 1,
+    color: palette.text,
+    fontSize: 13,
+    minHeight: 36,
+    paddingHorizontal: 8,
+    textAlign: 'center',
+    width: 46
+  },
   ctpYards: {
     color: palette.textMuted,
     fontSize: 11,
@@ -2648,6 +2971,15 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 2,
     paddingTop: 12
+  },
+  tournamentContestCard: {
+    backgroundColor: 'rgba(215,183,104,0.055)',
+    borderColor: 'rgba(215,183,104,0.2)',
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: 10,
+    marginTop: 10,
+    padding: 13
   },
   tournamentContestRow: {
     alignItems: 'center',
@@ -2664,6 +2996,145 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 16,
     marginTop: 2
+  },
+  ctpResultsBlock: {
+    gap: 8
+  },
+  ctpDisplayDay: {
+    borderTopColor: 'rgba(215,183,104,0.18)',
+    borderTopWidth: 1,
+    gap: 7,
+    paddingTop: 10
+  },
+  ctpDisplayDayTitle: {
+    color: '#f2d991',
+    fontSize: 12,
+    fontWeight: '800'
+  },
+  ctpDisplayCourse: {
+    color: palette.text,
+    fontSize: 14,
+    fontWeight: '800'
+  },
+  ctpResultRow: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.045)',
+    borderColor: 'rgba(215,183,104,0.16)',
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 54,
+    paddingHorizontal: 10,
+    paddingVertical: 8
+  },
+  ctpResultDetails: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8
+  },
+  ctpResultFlag: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(215,183,104,0.12)',
+    borderRadius: 13,
+    height: 26,
+    justifyContent: 'center',
+    width: 26
+  },
+  ctpResultTitle: {
+    color: palette.text,
+    fontSize: 12,
+    fontWeight: '800'
+  },
+  ctpResultMeta: {
+    color: palette.textMuted,
+    fontSize: 11,
+    marginTop: 2
+  },
+  ctpWinner: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: 6,
+    justifyContent: 'flex-end',
+    marginLeft: 8
+  },
+  ctpWinnerName: {
+    color: palette.text,
+    flexShrink: 1,
+    fontSize: 12,
+    fontWeight: '800',
+    maxWidth: 100
+  },
+  ctpSelectWinner: {
+    color: palette.aqua,
+    fontSize: 11,
+    fontWeight: '800',
+    marginLeft: 8
+  },
+  ctpWinnerModal: {
+    backgroundColor: '#f6f2e8',
+    borderColor: 'rgba(232,204,135,0.7)',
+    maxHeight: '78%'
+  },
+  ctpWinnerModalHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between'
+  },
+  ctpWinnerModalTitle: {
+    color: palette.ink,
+    fontSize: 20,
+    fontWeight: '800'
+  },
+  ctpWinnerModalSubtitle: {
+    color: palette.textMuted,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 3
+  },
+  ctpWinnerChoices: {
+    gap: 8
+  },
+  ctpWinnerChoice: {
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderColor: 'rgba(21,59,45,0.12)',
+    borderRadius: 15,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    minHeight: 58,
+    padding: 9
+  },
+  ctpWinnerChoiceSelected: {
+    backgroundColor: '#e1f5f3',
+    borderColor: 'rgba(36,150,166,0.65)'
+  },
+  ctpWinnerChoiceDetails: {
+    flex: 1
+  },
+  ctpWinnerChoiceName: {
+    color: palette.ink,
+    fontSize: 14,
+    fontWeight: '800'
+  },
+  ctpWinnerChoiceMeta: {
+    color: '#597064',
+    fontSize: 11,
+    marginTop: 2
+  },
+  ctpClearWinner: {
+    alignItems: 'center',
+    borderColor: 'rgba(196,72,63,0.25)',
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingVertical: 12
+  },
+  ctpClearWinnerText: {
+    color: '#b7443b',
+    fontSize: 13,
+    fontWeight: '800'
   },
   matchupsBlock: {
     gap: 6
@@ -3150,14 +3621,57 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase'
   },
   matchupCourseBadge: {
+    alignSelf: 'center',
     color: '#f2d991',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    textAlign: 'center',
-    top: 8
+    letterSpacing: 0.15
+  },
+  matchupCourseHeader: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(215,183,104,0.08)',
+    borderColor: 'rgba(215,183,104,0.16)',
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 9,
+    minHeight: 37,
+    paddingHorizontal: 10,
+    paddingVertical: 7
+  },
+  matchupCourseIdentity: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: 6,
+    minWidth: 0
+  },
+  matchupTeeTimeChip: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderRadius: 999,
+    flexDirection: 'row',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 5
+  },
+  matchupTeeTimeText: {
+    color: palette.textMuted,
+    fontSize: 11,
+    fontWeight: '800'
+  },
+  matchupTeeTimeFooter: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    gap: 5,
+    marginHorizontal: 48,
+    marginTop: -3
+  },
+  matchupTeeTimeFooterText: {
+    color: palette.textMuted,
+    fontSize: 11,
+    fontWeight: '800'
   },
   matchupDayBadge: {
     color: palette.textMuted,
@@ -3198,8 +3712,9 @@ const styles = StyleSheet.create({
   },
   teamRosterHeader: {
     alignItems: 'center',
-    flexDirection: 'row',
-    gap: 9
+    flexDirection: 'column',
+    gap: 6,
+    justifyContent: 'center'
   },
   teamRosterLogo: {
     borderRadius: 16,
@@ -3209,7 +3724,9 @@ const styles = StyleSheet.create({
   teamRosterTitle: {
     color: palette.text,
     fontSize: 16,
-    fontWeight: '800'
+    fontWeight: '800',
+    textAlign: 'center',
+    width: '100%'
   },
   teamRosterPerson: {
     alignItems: 'center',
@@ -3327,6 +3844,76 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 14
   },
+  composerActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'space-between'
+  },
+  composerPhotoButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(139,233,247,0.09)',
+    borderColor: 'rgba(139,233,247,0.22)',
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
+    minHeight: 42,
+    paddingHorizontal: 13
+  },
+  composerPhotoButtonText: {
+    color: palette.aqua,
+    fontSize: 13,
+    fontWeight: '800'
+  },
+  tournamentPostButton: {
+    alignItems: 'center',
+    backgroundColor: '#d8bd76',
+    borderRadius: 18,
+    flex: 1,
+    flexDirection: 'row',
+    gap: 7,
+    justifyContent: 'center',
+    minHeight: 42,
+    paddingHorizontal: 14
+  },
+  tournamentPostButtonDisabled: {
+    opacity: 0.65
+  },
+  tournamentPostButtonText: {
+    color: palette.ink,
+    fontSize: 13,
+    fontWeight: '900'
+  },
+  postPhotoPreview: {
+    borderColor: 'rgba(255,255,255,0.14)',
+    borderRadius: 16,
+    borderWidth: 1,
+    height: 180,
+    overflow: 'hidden',
+    position: 'relative'
+  },
+  postPhotoPreviewImage: {
+    height: '100%',
+    width: '100%'
+  },
+  postPhotoRemove: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(4,22,16,0.75)',
+    borderRadius: 16,
+    height: 32,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 8,
+    top: 8,
+    width: 32
+  },
+  groupPostImage: {
+    borderRadius: 15,
+    height: 240,
+    marginTop: 2,
+    width: '100%'
+  },
   postsFeed: {
     gap: 12
   },
@@ -3336,17 +3923,6 @@ const styles = StyleSheet.create({
   scoresFeed: {
     gap: 12
   },
-  liveScoringControl: { backgroundColor: 'rgba(8, 57, 45, 0.78)', borderColor: 'rgba(130, 223, 239, 0.22)', borderRadius: 18, borderWidth: 1, overflow: 'hidden' },
-  liveScoringControlTitle: { alignItems: 'center', flexDirection: 'row', gap: 9 },
-  liveScoringSettings: { alignItems: 'center', flexDirection: 'row', gap: 14, padding: 15 },
-  liveScoringCopy: { flex: 1, gap: 3 },
-  liveScoringSettingTitle: { color: palette.text, fontSize: 14, fontWeight: '800' },
-  liveScoringSwitch: { backgroundColor: 'rgba(255,255,255,0.16)', borderRadius: 999, height: 30, justifyContent: 'center', padding: 3, width: 52 },
-  liveScoringSwitchOn: { backgroundColor: '#e76658' },
-  liveScoringKnob: { backgroundColor: '#ffffff', borderRadius: 999, height: 24, width: 24 },
-  liveScoringKnobOn: { alignSelf: 'flex-end' },
-  liveScoringAudienceStatus: { alignItems: 'center', alignSelf: 'flex-start', backgroundColor: 'rgba(240, 107, 93, 0.14)', borderColor: 'rgba(240, 107, 93, 0.4)', borderRadius: 999, borderWidth: 1, flexDirection: 'row', gap: 7, paddingHorizontal: 12, paddingVertical: 8 },
-  liveScoringAudienceText: { color: '#ffd5cf', fontSize: 12, fontWeight: '800' },
   liveMatchProgress: { alignItems: 'center', alignSelf: 'center', flexDirection: 'row', gap: 6, marginBottom: 10 },
   liveMatchProgressText: { color: '#ffd5cf', fontSize: 12, fontWeight: '800' },
   liveHoleEditor: { alignItems: 'center', flexDirection: 'row', gap: 8 },
@@ -3454,15 +4030,16 @@ const styles = StyleSheet.create({
   matchupDayDate: {
     color: palette.textMuted,
     fontSize: 12,
-    fontWeight: '700'
+    fontWeight: '700',
+    textAlign: 'right'
   },
   matchupScoreCard: {
     backgroundColor: 'rgba(255,255,255,0.035)',
     borderColor: palette.border,
     borderRadius: 18,
     borderWidth: 1,
-    gap: 10,
-    padding: 12,
+    gap: 12,
+    padding: 14,
     position: 'relative'
   },
   matchupScorecardButton: {
@@ -3501,8 +4078,9 @@ const styles = StyleSheet.create({
   matchupScoreRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 8,
-    justifyContent: 'space-between'
+    gap: 10,
+    justifyContent: 'space-between',
+    marginTop: 7
   },
   matchupScheduleCenter: {
     alignItems: 'center',
@@ -3534,15 +4112,23 @@ const styles = StyleSheet.create({
   },
   matchupScoreGolfer: {
     alignItems: 'center',
-    borderRadius: 14,
     flex: 1,
     gap: 4,
-    padding: 6
+    minWidth: 0,
+    paddingHorizontal: 2,
+    paddingVertical: 4
   },
   matchupTeamAvatars: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center'
+  },
+  matchupNameLine: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 4,
+    justifyContent: 'center',
+    maxWidth: '100%'
   },
   matchupWinner: {
     backgroundColor: 'rgba(103,232,249,0.12)',
@@ -3686,6 +4272,18 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     shadowOpacity: 0,
     shadowRadius: 0
+  },
+  tournamentUpdatePost: {
+    backgroundColor: 'rgba(215,183,104,0.12)',
+    borderColor: 'rgba(215,183,104,0.36)'
+  },
+  tournamentUpdateIcon: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(215,183,104,0.13)',
+    borderRadius: 999,
+    height: 32,
+    justifyContent: 'center',
+    width: 32
   },
   messageTop: {
     alignItems: 'center',

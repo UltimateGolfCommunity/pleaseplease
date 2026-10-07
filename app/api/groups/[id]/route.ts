@@ -13,17 +13,16 @@ export async function GET(
     const supabase = createAdminClient()
     const viewerId = new URL(request.url).searchParams.get('user_id')
 
-    const { data: group, error: groupError } = await supabase
+    // The group record and active roster do not depend on one another. Start
+    // both reads together so opening a tournament does not wait through two
+    // sequential database round trips before its cover and members can render.
+    const groupRequest = supabase
       .from('golf_groups')
       .select('*')
       .eq('id', id)
       .single()
 
-    if (groupError || !group) {
-      return NextResponse.json({ error: 'Group not found' }, { status: 404 })
-    }
-
-    const activeMembersQuery = supabase
+    const activeMembersRequest = supabase
       .from('group_members')
       .select(`
         *,
@@ -40,6 +39,15 @@ export async function GET(
       .eq('group_id', id)
       .eq('status', 'active')
 
+    const [{ data: group, error: groupError }, { data: members, error: membersError }] = await Promise.all([
+      groupRequest,
+      activeMembersRequest
+    ])
+
+    if (groupError || !group) {
+      return NextResponse.json({ error: 'Group not found' }, { status: 404 })
+    }
+
     const viewerIsCreator = viewerId && group.creator_id === viewerId
     const viewerMembershipQuery = viewerId && !viewerIsCreator
       ? supabase
@@ -51,10 +59,7 @@ export async function GET(
           .maybeSingle()
       : Promise.resolve({ data: null })
 
-    const [{ data: members, error: membersError }, { data: viewerMembership }] = await Promise.all([
-      activeMembersQuery,
-      viewerMembershipQuery
-    ])
+    const { data: viewerMembership } = await viewerMembershipQuery
 
     if (membersError) {
       console.error('Error fetching group members:', membersError)

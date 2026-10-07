@@ -59,6 +59,11 @@ function formatTimeAgo(timestamp?: string) {
   return messageTime.toLocaleDateString()
 }
 
+function messagePreview(value?: string) {
+  const preview = (value || '').replace(/\s+/g, ' ').trim()
+  return preview || 'Start the conversation.'
+}
+
 export default function MessagesScreen() {
   const { loading, user } = useAuth()
   const [busy, setBusy] = useState(true)
@@ -159,7 +164,7 @@ export default function MessagesScreen() {
                   <Text style={styles.name}>{formatName(conversation.user)}</Text>
                   <Text style={styles.time}>{formatTimeAgo(conversation.lastMessage.created_at)}</Text>
                 </View>
-                <Text style={styles.preview}>Conversation</Text>
+                <Text numberOfLines={1} style={[styles.preview, conversation.unreadCount > 0 && styles.previewUnread]}>{messagePreview(conversation.lastMessage.message_content)}</Text>
               </View>
               {conversation.unreadCount ? (
                 <View style={styles.unreadPill}>
@@ -180,15 +185,19 @@ const styles = StyleSheet.create({
     flex: 1
   },
   content: {
-    gap: 18,
+    gap: 12,
     padding: 20
   },
   card: {
-    backgroundColor: palette.card,
-    borderColor: palette.border,
-    borderRadius: 24,
+    backgroundColor: 'rgba(246, 242, 232, 0.94)',
+    borderColor: 'rgba(255,255,255,0.72)',
+    borderRadius: 20,
     borderWidth: 1,
-    padding: 18
+    padding: 14,
+    shadowColor: '#153b2d',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 14
   },
   row: {
     alignItems: 'center',
@@ -197,7 +206,7 @@ const styles = StyleSheet.create({
   },
   copy: {
     flex: 1,
-    gap: 6
+    gap: 4
   },
   nameRow: {
     alignItems: 'center',
@@ -205,19 +214,23 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between'
   },
   name: {
-    color: palette.text,
+    color: palette.ink,
     fontSize: 17,
-    fontWeight: '700'
+    fontWeight: '800'
   },
   time: {
-    color: palette.textMuted,
-    fontSize: 13,
+    color: '#638074',
+    fontSize: 12,
     fontWeight: '600'
   },
   preview: {
-    color: palette.textMuted,
+    color: '#597268',
     fontSize: 13,
     fontWeight: '600'
+  },
+  previewUnread: {
+    color: palette.ink,
+    fontWeight: '800'
   },
   unreadPill: {
     alignItems: 'center',
@@ -234,20 +247,20 @@ const styles = StyleSheet.create({
     fontWeight: '800'
   },
   emptyCard: {
-    backgroundColor: palette.card,
-    borderColor: palette.border,
+    backgroundColor: 'rgba(246, 242, 232, 0.92)',
+    borderColor: 'rgba(255,255,255,0.72)',
     borderRadius: 24,
     borderWidth: 1,
     gap: 8,
     padding: 18
   },
   emptyTitle: {
-    color: palette.text,
+    color: palette.ink,
     fontSize: 17,
     fontWeight: '700'
   },
   emptyBody: {
-    color: palette.textMuted,
+    color: '#597268',
     fontSize: 15,
     lineHeight: 22
   }

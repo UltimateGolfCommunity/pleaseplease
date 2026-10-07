@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Redirect, useLocalSearchParams } from 'expo-router'
+import { Redirect, router, useLocalSearchParams } from 'expo-router'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   ActivityIndicator,
   Alert,
   Image,
+  Linking,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -16,7 +17,6 @@ import {
 } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import { Avatar } from '@/components/Avatar'
-import { BrandHeader } from '@/components/BrandHeader'
 import { PrimaryButton } from '@/components/PrimaryButton'
 import { apiGet, apiPost } from '@/lib/api'
 import { uploadImageToStorage } from '@/lib/supabase'
@@ -53,8 +53,28 @@ type CourseDetail = {
   holes?: number | null
   average_rating?: number
   review_count?: number
+  course_type?: string | null
+  green_fees_min?: number | null
+  green_fees_max?: number | null
+  website_url?: string | null
+  scorecard_url?: string | null
+  menu_url?: string | null
+  restaurant?: boolean | null
+  driving_range?: boolean | null
+  putting_green?: boolean | null
+  practice_facilities?: boolean | null
   recent_reviews?: CourseReview[]
   course_reviews?: CourseReview[]
+}
+
+type CourseTournament = {
+  id: string
+  name: string
+  description?: string | null
+  profile_photo_url?: string | null
+  tournament_date?: string | null
+  tournament_end_date?: string | null
+  tournament_format?: string | null
 }
 
 const reviewCategories = [
@@ -63,6 +83,12 @@ const reviewCategories = [
   'Price',
   'Difficulty'
 ]
+
+const verifiedCourseResources: Record<string, { scorecardUrl?: string; menuUrl?: string }> = {
+  'mccabe golf course': {
+    scorecardUrl: 'https://filetransfer.nashville.gov/portals/0/sitecontent/Parks/docs/golf/Parks%20McCabe%20golf%20scorecard%20PROOF%20%282%29.pdf'
+  }
+}
 
 export default function CourseScreen() {
   const { loading, user } = useAuth()
@@ -74,6 +100,7 @@ export default function CourseScreen() {
   const [reviewPhotoUri, setReviewPhotoUri] = useState('')
   const [reviewComposerY, setReviewComposerY] = useState(0)
   const [course, setCourse] = useState<CourseDetail | null>(null)
+  const [upcomingTournaments, setUpcomingTournaments] = useState<CourseTournament[]>([])
   const [comment, setComment] = useState('')
   const [ratings, setRatings] = useState<Record<string, number>>({
     'Course Condition': 0,
@@ -93,12 +120,18 @@ export default function CourseScreen() {
     return values.reduce((sum, value) => sum + value, 0) / values.length
   }, [ratings])
 
+  const verifiedResources = useMemo(
+    () => verifiedCourseResources[(course?.name || '').trim().toLowerCase()] || {},
+    [course?.name]
+  )
+
   const loadCourse = useCallback(async () => {
     if (!id) return
 
     try {
-      const response = await apiGet<{ course: CourseDetail | null }>(`/api/golf-courses?id=${encodeURIComponent(id)}`)
+      const response = await apiGet<{ course: CourseDetail | null; upcoming_tournaments?: CourseTournament[] }>(`/api/golf-courses?id=${encodeURIComponent(id)}`)
       setCourse(response.course)
+      setUpcomingTournaments(response.upcoming_tournaments || [])
     } finally {
       setBusy(false)
       setRefreshing(false)
@@ -202,13 +235,6 @@ export default function CourseScreen() {
           />
         }
       >
-        <BrandHeader
-          showBack
-          largeLogo
-          rightIconName="create-outline"
-          onRightPress={() => scrollRef.current?.scrollTo({ y: reviewComposerY, animated: true })}
-        />
-
         <View style={styles.heroCard}>
           <View style={styles.coverShell}>
             {course?.course_image_url ? (
@@ -218,6 +244,15 @@ export default function CourseScreen() {
                 <Text style={styles.coverFallbackText}>Golf Club</Text>
               </View>
             )}
+            <View style={styles.coverActions}>
+              <Pressable accessibilityLabel="Back" onPress={() => router.back()} style={styles.coverActionButton}>
+                <Ionicons color={palette.white} name="chevron-back" size={23} />
+              </Pressable>
+              <Pressable accessibilityLabel="Write a review" onPress={() => scrollRef.current?.scrollTo({ y: reviewComposerY, animated: true })} style={styles.reviewHeroButton}>
+                <Ionicons color={palette.ink} name="star" size={16} />
+                <Text style={styles.reviewHeroButtonText}>Review</Text>
+              </Pressable>
+            </View>
           </View>
           <View style={styles.avatarWrap}>
             <Avatar label={course?.name || 'Course'} shape="rounded" size={94} uri={course?.logo_url} />
@@ -232,12 +267,31 @@ export default function CourseScreen() {
               </Text>
             </View>
             <View style={styles.courseFactsRow}>
-              <Text style={styles.meta}>Founded {course?.year_founded || course?.founded || 'not listed'}</Text>
-              <Text style={styles.meta}>{course?.holes || 18} holes</Text>
+              <View style={styles.factPill}><Ionicons color={palette.aqua} name="flag-outline" size={14} /><Text style={styles.factPillText}>{course?.holes || 18} holes • par {course?.par || '—'}</Text></View>
+              {course?.course_type ? <View style={styles.factPill}><Ionicons color={palette.aqua} name="golf-outline" size={14} /><Text style={styles.factPillText}>{course.course_type}</Text></View> : null}
             </View>
           </View>
           {busy ? <ActivityIndicator color={palette.aqua} /> : null}
           {course?.description ? <Text style={styles.body}>{course.description}</Text> : null}
+        </View>
+
+        <View style={styles.courseEssentialsCard}>
+          <Text style={styles.kicker}>Plan your round</Text>
+          <View style={styles.essentialsGrid}>
+            <View style={styles.essentialItem}><Ionicons color={palette.gold} name="cash-outline" size={19} /><Text style={styles.essentialLabel}>Typical green fee</Text><Text style={styles.essentialValue}>{course?.green_fees_min ? `$${course.green_fees_min}${course.green_fees_max && course.green_fees_max !== course.green_fees_min ? `–$${course.green_fees_max}` : ''}` : 'Check tee sheet'}</Text></View>
+            <View style={styles.essentialItem}><Ionicons color={palette.gold} name="restaurant-outline" size={19} /><Text style={styles.essentialLabel}>Food & drink</Text><Text style={styles.essentialValue}>{course?.restaurant ? 'Available' : 'Not listed'}</Text></View>
+            <View style={styles.essentialItem}><Ionicons color={palette.gold} name="golf-outline" size={19} /><Text style={styles.essentialLabel}>Practice</Text><Text style={styles.essentialValue}>{course?.driving_range || course?.putting_green || course?.practice_facilities ? 'On site' : 'Not listed'}</Text></View>
+          </View>
+          <View style={styles.courseLinkRow}>
+            {course?.scorecard_url || verifiedResources.scorecardUrl ? <Pressable onPress={() => void Linking.openURL(course?.scorecard_url || verifiedResources.scorecardUrl || '')} style={styles.courseLinkButton}><Ionicons color={palette.aqua} name="reader-outline" size={17} /><Text style={styles.courseLinkText}>Scorecard</Text></Pressable> : null}
+            {course?.menu_url || verifiedResources.menuUrl ? <Pressable onPress={() => void Linking.openURL(course?.menu_url || verifiedResources.menuUrl || '')} style={styles.courseLinkButton}><Ionicons color={palette.aqua} name="restaurant-outline" size={17} /><Text style={styles.courseLinkText}>Menu</Text></Pressable> : null}
+            {course?.website_url ? <Pressable onPress={() => void Linking.openURL(course.website_url!)} style={styles.courseLinkButton}><Ionicons color={palette.aqua} name="globe-outline" size={17} /><Text style={styles.courseLinkText}>Course site</Text></Pressable> : null}
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <View style={styles.sectionHeading}><View><Text style={styles.kicker}>On the calendar</Text><Text style={styles.sectionTitle}>Tournaments here</Text></View><Ionicons color={palette.gold} name="trophy-outline" size={23} /></View>
+          {!upcomingTournaments.length ? <Text style={styles.body}>No UGC tournament is scheduled here yet. When a tournament adds this course to its matchups, it will appear here.</Text> : upcomingTournaments.map((tournament) => <Pressable key={tournament.id} onPress={() => router.push(`/group/${tournament.id}`)} style={styles.tournamentRow}><Avatar label={tournament.name} shape="rounded" size={48} uri={tournament.profile_photo_url} /><View style={styles.tournamentCopy}><Text numberOfLines={1} style={styles.tournamentName}>{tournament.name}</Text><Text style={styles.tournamentMeta}>{[tournament.tournament_date ? new Date(`${tournament.tournament_date}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : null, tournament.tournament_format].filter(Boolean).join(' • ')}</Text></View><Ionicons color={palette.aqua} name="chevron-forward" size={18} /></Pressable>)}
         </View>
 
         <View
@@ -346,11 +400,44 @@ const styles = StyleSheet.create({
   },
   coverShell: {
     borderRadius: 22,
-    overflow: 'hidden'
+    overflow: 'hidden',
+    position: 'relative'
   },
   coverImage: {
     height: 170,
     width: '100%'
+  },
+  coverActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    left: 12,
+    position: 'absolute',
+    right: 12,
+    top: 12
+  },
+  coverActionButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(8, 37, 29, 0.78)',
+    borderColor: 'rgba(255,255,255,0.32)',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 42,
+    justifyContent: 'center',
+    width: 42
+  },
+  reviewHeroButton: {
+    alignItems: 'center',
+    backgroundColor: palette.cream,
+    borderRadius: 999,
+    flexDirection: 'row',
+    gap: 6,
+    minHeight: 42,
+    paddingHorizontal: 14
+  },
+  reviewHeroButtonText: {
+    color: palette.ink,
+    fontSize: 13,
+    fontWeight: '900'
   },
   coverFallback: {
     alignItems: 'center',
@@ -402,6 +489,23 @@ const styles = StyleSheet.create({
     gap: 10,
     justifyContent: 'center'
   },
+  factPill: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 7
+  },
+  factPillText: {
+    color: palette.text,
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'capitalize'
+  },
   meta: {
     color: palette.textMuted,
     fontSize: 13,
@@ -436,6 +540,90 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 14,
     padding: 18
+  },
+  courseEssentialsCard: {
+    backgroundColor: 'rgba(22, 63, 49, 0.94)',
+    borderColor: 'rgba(232,204,135,0.28)',
+    borderRadius: 26,
+    borderWidth: 1,
+    gap: 14,
+    padding: 18
+  },
+  kicker: {
+    color: palette.gold,
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase'
+  },
+  essentialsGrid: {
+    flexDirection: 'row',
+    gap: 8
+  },
+  essentialItem: {
+    flex: 1,
+    gap: 4,
+    minWidth: 0
+  },
+  essentialLabel: {
+    color: palette.textMuted,
+    fontSize: 10,
+    fontWeight: '700'
+  },
+  essentialValue: {
+    color: palette.text,
+    fontSize: 12,
+    fontWeight: '900'
+  },
+  courseLinkRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8
+  },
+  courseLinkButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(139,233,247,0.08)',
+    borderColor: 'rgba(139,233,247,0.20)',
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 11,
+    paddingVertical: 8
+  },
+  courseLinkText: {
+    color: palette.aqua,
+    fontSize: 12,
+    fontWeight: '900'
+  },
+  sectionHeading: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between'
+  },
+  tournamentRow: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.045)',
+    borderColor: 'rgba(255,255,255,0.09)',
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    padding: 10
+  },
+  tournamentCopy: {
+    flex: 1,
+    gap: 3
+  },
+  tournamentName: {
+    color: palette.text,
+    fontSize: 14,
+    fontWeight: '900'
+  },
+  tournamentMeta: {
+    color: palette.textMuted,
+    fontSize: 12,
+    fontWeight: '700'
   },
   sectionTitle: {
     color: palette.text,

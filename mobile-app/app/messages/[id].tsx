@@ -148,7 +148,7 @@ export default function ConversationScreen() {
         >
         <View style={styles.conversationHeader}>
           <Pressable accessibilityLabel="Back" hitSlop={10} onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons color={palette.text} name="chevron-back" size={23} />
+            <Ionicons color={palette.ink} name="chevron-back" size={23} />
           </Pressable>
           <View style={styles.headerIdentity}>
             <Avatar label={formatName(otherUser)} size={46} uri={otherUser?.avatar_url} />
@@ -201,7 +201,7 @@ export default function ConversationScreen() {
             />
             <Pressable disabled={sending || !draft.trim()} onPress={() => void handleSend()} style={[styles.sendButton, (sending || !draft.trim()) && styles.sendButtonDisabled]}>
               {sending ? (
-                <ActivityIndicator color={palette.bg} size="small" />
+                <ActivityIndicator color="#fffdf5" size="small" />
               ) : (
                 <Text style={styles.sendButtonText}>Send</Text>
               )}
@@ -219,8 +219,8 @@ const styles = StyleSheet.create({
     flex: 1
   },
   content: {
-    gap: 18,
-    padding: 20,
+    gap: 12,
+    padding: 16,
     paddingBottom: 24
   },
   conversationHeader: {
@@ -232,8 +232,8 @@ const styles = StyleSheet.create({
   },
   backButton: {
     alignItems: 'center',
-    backgroundColor: palette.card,
-    borderColor: palette.border,
+    backgroundColor: 'rgba(21,59,45,0.1)',
+    borderColor: 'rgba(21,59,45,0.12)',
     borderRadius: 999,
     borderWidth: 1,
     height: 42,
@@ -249,25 +249,25 @@ const styles = StyleSheet.create({
     maxWidth: '72%'
   },
   headerName: {
-    color: palette.text,
+    color: palette.ink,
     fontSize: 18,
     fontWeight: '700'
   },
   emptyCard: {
-    backgroundColor: palette.card,
-    borderColor: palette.border,
+    backgroundColor: 'rgba(246, 242, 232, 0.9)',
+    borderColor: 'rgba(255,255,255,0.56)',
     borderRadius: 24,
     borderWidth: 1,
     gap: 8,
     padding: 18
   },
   emptyTitle: {
-    color: palette.text,
+    color: palette.ink,
     fontSize: 17,
     fontWeight: '700'
   },
   emptyBody: {
-    color: palette.textMuted,
+    color: '#597268',
     fontSize: 15,
     lineHeight: 22
   },
@@ -281,53 +281,61 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end'
   },
   messageBubble: {
-    borderRadius: 22,
+    borderRadius: 20,
     gap: 8,
     maxWidth: '84%',
-    paddingHorizontal: 16,
-    paddingVertical: 12
+    paddingHorizontal: 15,
+    paddingVertical: 11
   },
   messageBubbleMine: {
-    backgroundColor: palette.white
+    backgroundColor: '#255f4c',
+    borderBottomRightRadius: 6,
+    shadowColor: '#153b2d',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8
   },
   messageBubbleTheirs: {
-    backgroundColor: palette.card,
-    borderColor: palette.border,
-    borderWidth: 1
+    backgroundColor: 'rgba(246, 242, 232, 0.95)',
+    borderBottomLeftRadius: 6,
+    borderColor: 'rgba(255,255,255,0.56)',
+    borderWidth: 1,
+    shadowColor: '#153b2d',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8
   },
   messageText: {
-    color: palette.text,
+    color: palette.ink,
     fontSize: 15,
     lineHeight: 22
   },
   messageTextMine: {
-    color: palette.bg
+    color: '#fffdf5'
   },
   messageTime: {
-    color: palette.textMuted,
-    fontSize: 12
+    color: '#668077',
+    fontSize: 11
   },
   messageTimeMine: {
-    color: 'rgba(2, 6, 23, 0.62)'
+    color: 'rgba(255,253,245,0.68)'
   },
   composer: {
-    backgroundColor: palette.bg,
-    borderTopColor: palette.border,
-    borderTopWidth: 1,
-    padding: 16
+    backgroundColor: 'rgba(99,147,163,0.96)',
+    padding: 12
   },
   composerField: {
     alignItems: 'flex-end',
-    backgroundColor: palette.card,
-    borderColor: palette.border,
-    borderRadius: 22,
+    backgroundColor: 'rgba(246, 242, 232, 0.96)',
+    borderColor: 'rgba(255,255,255,0.7)',
+    borderRadius: 24,
     borderWidth: 1,
     flexDirection: 'row',
     gap: 10,
     padding: 10
   },
   input: {
-    color: palette.text,
+    color: palette.ink,
     flex: 1,
     maxHeight: 120,
     minHeight: 56,
@@ -338,7 +346,7 @@ const styles = StyleSheet.create({
   sendButton: {
     alignItems: 'center',
     alignSelf: 'flex-end',
-    backgroundColor: palette.white,
+    backgroundColor: '#255f4c',
     borderRadius: 999,
     height: 42,
     justifyContent: 'center',
@@ -349,7 +357,7 @@ const styles = StyleSheet.create({
     opacity: 0.5
   },
   sendButtonText: {
-    color: palette.bg,
+    color: '#fffdf5',
     fontSize: 14,
     fontWeight: '800'
   }

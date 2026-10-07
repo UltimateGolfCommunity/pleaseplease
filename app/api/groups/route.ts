@@ -37,6 +37,105 @@ async function logGroupActivity(
   }
 }
 
+const TOURNAMENT_POST_PREFIX = '[[ugc-tournament-update:'
+
+function parseTournamentPostSetup(value?: string | null) {
+  if (!value) return { matchups: [], closestToPin: false, closestToPinSetup: {}, closestToPinWinners: {} }
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed)
+      ? { matchups: parsed, closestToPin: false, closestToPinSetup: {}, closestToPinWinners: {} }
+      : {
+          matchups: Array.isArray(parsed?.matchups) ? parsed.matchups : [],
+          closestToPin: Boolean(parsed?.closestToPin),
+          closestToPinSetup: parsed?.closestToPinSetup || {},
+          closestToPinWinners: parsed?.closestToPinWinners || {}
+        }
+  } catch {
+    return { matchups: [], closestToPin: false, closestToPinSetup: {}, closestToPinWinners: {} }
+  }
+}
+
+async function syncTournamentPost(
+  supabase: any,
+  { groupId, userId, kind, content }: { groupId: string; userId: string; kind: 'scores' | 'ctp'; content?: string | null }
+) {
+  const marker = `${TOURNAMENT_POST_PREFIX}${kind}]]`
+  const primaryExisting = await supabase
+    .from('group_messages')
+    .select('id')
+    .eq('group_id', groupId)
+    .like('message_content', `${marker}%`)
+    .maybeSingle()
+  let existing = primaryExisting.data
+  let contentColumn = 'message_content'
+
+  // Earlier installations used `message` instead of `message_content`.
+  // Resolve against whichever schema this project is running so an updated
+  // tournament post replaces its prior version rather than creating a second.
+  if (primaryExisting.error) {
+    const legacyExisting = await supabase
+      .from('group_messages')
+      .select('id')
+      .eq('group_id', groupId)
+      .like('message', `${marker}%`)
+      .maybeSingle()
+    existing = legacyExisting.data
+    contentColumn = 'message'
+  }
+
+  if (!content) {
+    if (existing?.id) await supabase.from('group_messages').delete().eq('id', existing.id)
+    return
+  }
+
+  const messageContent = `${marker}\n${content}`
+  if (existing?.id) {
+    await supabase.from('group_messages').update({ [contentColumn]: messageContent }).eq('id', existing.id)
+    return
+  }
+
+  const insert = await supabase.from('group_messages').insert({
+    group_id: groupId,
+    sender_id: userId,
+    message_content: messageContent
+  })
+
+  // A few early installations used `message` instead of `message_content`.
+  if (insert.error) {
+    await supabase.from('group_messages').insert({ group_id: groupId, sender_id: userId, message: messageContent })
+  }
+}
+
+async function syncTournamentUpdatePosts(supabase: any, groupId: string, userId: string, tournamentMatchups?: string | null) {
+  const setup = parseTournamentPostSetup(tournamentMatchups)
+  const scoredMatchups = setup.matchups.filter((matchup: any) =>
+    matchup?.leftScore != null || matchup?.rightScore != null ||
+    Object.keys(matchup?.holeWinners || {}).length > 0 ||
+    Object.keys(matchup?.leftHoleScores || {}).length > 0 ||
+    Object.keys(matchup?.rightHoleScores || {}).length > 0
+  )
+  const scorePost = scoredMatchups.length
+    ? `Score update\n${scoredMatchups.length} matchup${scoredMatchups.length === 1 ? '' : 's'} now ${scoredMatchups.length === 1 ? 'has' : 'have'} recorded scores. Open Scores for the latest results.`
+    : null
+
+  const configuredDays = Array.isArray(setup.closestToPinSetup?.days) && setup.closestToPinSetup.days.length
+    ? setup.closestToPinSetup.days.length
+    : 1
+  const configuredHoles = Array.isArray(setup.closestToPinSetup?.days) && setup.closestToPinSetup.days.length
+    ? setup.closestToPinSetup.days.reduce((total: number, day: any) => total + (Array.isArray(day?.distances) ? day.distances.length : 0), 0)
+    : (Array.isArray(setup.closestToPinSetup?.distances) ? setup.closestToPinSetup.distances.length : 0)
+  const winnerCount = Object.keys(setup.closestToPinWinners || {}).length
+  const ctpPost = setup.closestToPin
+    ? `Closest to the Pin update\n${configuredHoles || 1} contest hole${configuredHoles === 1 ? '' : 's'} across ${configuredDays} day${configuredDays === 1 ? '' : 's'}${winnerCount ? ` • ${winnerCount} winner${winnerCount === 1 ? '' : 's'} selected` : ''}.`
+    : null
+
+  await Promise.all([
+    syncTournamentPost(supabase, { groupId, userId, kind: 'scores', content: scorePost }),
+    syncTournamentPost(supabase, { groupId, userId, kind: 'ctp', content: ctpPost })
+  ])
+}
+
 async function ensureCourseForGroup(supabase: any, group: any) {
   if ((group?.group_type || '').toLowerCase() !== 'course') return
 
@@ -717,6 +816,10 @@ export async function POST(request: NextRequest) {
           group_name: group?.name || null
         }
       })
+
+      if ((group?.group_type || group_type || '').toLowerCase() === 'tournament') {
+        await syncTournamentUpdatePosts(supabase, group_id, user_id, group?.tournament_matchups ?? tournament_matchups)
+      }
 
       await ensureCourseForGroup(supabase, group)
 

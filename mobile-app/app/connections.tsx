@@ -181,8 +181,8 @@ export default function ConnectionsScreen() {
       >
         <BrandHeader
           title="Connections"
-          subtitle="Search golfers, respond to requests, and keep your network feeling native on mobile."
           showBack
+          showLogo={false}
         />
 
         <View style={styles.searchCard}>

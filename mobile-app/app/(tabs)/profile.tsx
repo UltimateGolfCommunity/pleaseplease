@@ -1041,11 +1041,15 @@ export default function ProfileTab() {
           ) : (
             <View style={styles.activityCard}>
               <View style={styles.aboutFeed}>
+              <View style={styles.aboutMemberCard}>
               {profile?.bio ? (
                 <View style={[styles.bioCard, styles.aboutBioCard]}>
                   <Text style={[styles.meta, styles.bioText]}>{profile.bio}</Text>
                 </View>
-              ) : null}
+              ) : (
+                <Text style={styles.aboutEmptyBio}>Add a few words about your game, favorite courses, or what brings you out to play.</Text>
+              )}
+              <View style={styles.aboutDivider} />
               <View style={styles.aceCard}>
                 <View style={styles.aboutSectionHeading}>
                   <Ionicons color="#183f2e" name="flag-outline" size={16} />
@@ -1096,10 +1100,11 @@ export default function ProfileTab() {
                   <Text style={styles.infoLine}>No ace logged yet.</Text>
                 )}
               </View>
+              <View style={styles.aboutDivider} />
               <View style={styles.aboutGroupsSection}>
                 <View style={styles.aboutSectionHeading}>
                   <Ionicons color="#d8bd76" name="people-outline" size={16} />
-                  <Text style={styles.aboutSectionTitle}>Member Groups</Text>
+                  <Text style={styles.aboutSectionTitle}>Groups</Text>
                 </View>
                 {memberGroups.length ? (
                   <View style={styles.memberGroupRow}>
@@ -1116,10 +1121,11 @@ export default function ProfileTab() {
                   </View>
                 ) : <Text style={styles.infoLine}>No groups joined yet.</Text>}
               </View>
+              <View style={styles.aboutDivider} />
               <View style={styles.aboutBagSection}>
               <View style={styles.aboutSectionHeading}>
                 <MaterialCommunityIcons color="#d8bd76" name="golf" size={18} />
-                <Text style={styles.aboutSectionTitle}>What&apos;s In The Bag</Text>
+                <Text style={styles.aboutSectionTitle}>In the Bag</Text>
                 <Pressable
                   accessibilityLabel="Edit what's in the bag"
                   onPress={() => setShowBagModal(true)}
@@ -1154,6 +1160,7 @@ export default function ProfileTab() {
                   </View>
                 )
               })}
+              </View>
               </View>
               </View>
               </View>
@@ -1841,7 +1848,8 @@ const styles = StyleSheet.create({
     color: '#f5eedc',
     fontFamily: 'Georgia',
     fontSize: 16,
-    lineHeight: 24
+    lineHeight: 24,
+    textAlign: 'center'
   },
   bioCard: {
     backgroundColor: 'rgba(7, 39, 28, 0.64)',
@@ -1855,6 +1863,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14
   },
   aboutBioCard: {
+    backgroundColor: 'transparent',
+    borderColor: 'transparent',
+    borderLeftWidth: 0,
     marginHorizontal: 0,
     marginTop: 0
   },
@@ -1878,7 +1889,58 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20
   },
   aboutFeed: {
-    gap: 12,
+    gap: 0
+  },
+  aboutMemberCard: {
+    backgroundColor: 'rgba(32, 91, 71, 0.78)',
+    borderColor: 'rgba(246, 231, 186, 0.38)',
+    borderRadius: 24,
+    borderWidth: 1,
+    gap: 14,
+    padding: 16
+  },
+  aboutOverviewHeader: {
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  aboutOverviewIcon: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(216, 189, 118, 0.1)',
+    borderColor: 'rgba(216, 189, 118, 0.3)',
+    borderRadius: 15,
+    borderWidth: 1,
+    height: 38,
+    justifyContent: 'center',
+    width: 38
+  },
+  aboutOverviewCopy: {
+    flex: 1,
+    gap: 2
+  },
+  aboutOverviewEyebrow: {
+    color: '#d8bd76',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1.3,
+    textTransform: 'uppercase'
+  },
+  aboutOverviewTitle: {
+    color: '#fffaf0',
+    fontFamily: 'Georgia',
+    fontSize: 19,
+    fontWeight: '700',
+    textAlign: 'center'
+  },
+  aboutEmptyBio: {
+    color: 'rgba(245, 238, 220, 0.62)',
+    fontSize: 13,
+    fontStyle: 'italic',
+    lineHeight: 20
+  },
+  aboutDivider: {
+    backgroundColor: 'rgba(216, 189, 118, 0.16)',
+    height: StyleSheet.hairlineWidth,
+    width: '100%'
   },
   profileTabRow: {
     backgroundColor: '#34715b',
@@ -2287,20 +2349,14 @@ const styles = StyleSheet.create({
     gap: 8
   },
   aboutBagSection: {
-    backgroundColor: 'rgba(7,39,28,0.3)',
-    borderColor: 'rgba(255,255,255,0.14)',
-    borderRadius: 19,
-    borderWidth: 1,
+    backgroundColor: 'transparent',
     gap: 10,
-    padding: 12
+    padding: 0
   },
   aboutGroupsSection: {
-    backgroundColor: 'rgba(7,39,28,0.3)',
-    borderColor: 'rgba(255,255,255,0.14)',
-    borderRadius: 19,
-    borderWidth: 1,
+    backgroundColor: 'transparent',
     gap: 10,
-    padding: 12
+    padding: 0
   },
   memberGroupRow: {
     flexDirection: 'row',

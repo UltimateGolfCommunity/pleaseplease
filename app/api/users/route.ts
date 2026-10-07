@@ -805,7 +805,7 @@ export async function POST(request: NextRequest) {
           userId: data.connected_user_id,
           type: 'connection_request',
           title: 'New connection request',
-          message: 'A golfer wants to connect with you.',
+          message: `${await getConnectionDisplayName(supabase, data.user_id)} wants to connect with you.`,
           relatedId: data.user_id,
           notificationData: {
             connection_id: newConnection.id,

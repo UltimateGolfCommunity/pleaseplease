@@ -42,8 +42,6 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View pointerEvents="none" style={styles.sunGlow} />
-      <View pointerEvents="none" style={styles.hill} />
       <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', default: undefined })} style={styles.keyboardWrap}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <Pressable accessibilityRole="button" onPress={() => router.replace('/welcome')} style={styles.backButton}>
@@ -52,7 +50,7 @@ export default function LoginScreen() {
           </Pressable>
 
           <View style={styles.hero}>
-            <Text style={styles.title}>Welcome back.</Text>
+            <Text style={styles.title}>Sign in</Text>
           </View>
 
           <View style={styles.formCard}>
@@ -90,16 +88,14 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { backgroundColor: '#c1e0ea', flex: 1 },
+  safeArea: { backgroundColor: '#e7f1ef', flex: 1 },
   keyboardWrap: { flex: 1 },
-  sunGlow: { backgroundColor: 'rgba(255,240,182,0.72)', borderRadius: 999, height: 260, position: 'absolute', right: -88, top: 2, width: 260 },
-  hill: { backgroundColor: 'rgba(78,129,83,0.26)', borderRadius: 999, bottom: -190, height: 410, left: -110, position: 'absolute', width: '145%' },
   content: { flexGrow: 1, padding: 22, paddingBottom: 32 },
   backButton: { alignItems: 'center', alignSelf: 'flex-start', flexDirection: 'row', gap: 2, minHeight: 38 },
   backLabel: { color: palette.ink, fontSize: 14, fontWeight: '700' },
-  hero: { marginTop: 28, paddingHorizontal: 5 },
-  title: { color: palette.ink, fontFamily: 'Georgia', fontSize: 37, fontWeight: '700', letterSpacing: -0.8, lineHeight: 40 },
-  formCard: { backgroundColor: '#fffdf5', borderColor: 'rgba(27,70,51,0.10)', borderRadius: 27, borderWidth: 1, gap: 17, marginTop: 24, padding: 20, shadowColor: '#1a4b37', shadowOffset: { width: 0, height: 14 }, shadowOpacity: 0.16, shadowRadius: 26 },
+  hero: { marginTop: 30, paddingHorizontal: 2 },
+  title: { color: palette.ink, fontFamily: 'Georgia', fontSize: 31, fontWeight: '700', letterSpacing: -0.5 },
+  formCard: { backgroundColor: '#ffffff', borderColor: 'rgba(27,70,51,0.12)', borderRadius: 20, borderWidth: 1, gap: 17, marginTop: 22, padding: 18 },
   fieldGroup: { gap: 7 },
   passwordLabelRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   fieldLabel: { color: '#557267', fontSize: 10, fontWeight: '800', letterSpacing: 1.15 },

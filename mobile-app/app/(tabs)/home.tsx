@@ -1105,20 +1105,38 @@ export default function HomeTab() {
 
             <View style={styles.clubhouseMasthead}>
               <View pointerEvents="none" style={styles.clubhouseRoofBackdrop}>
-                <View style={styles.clubhouseCupola}><View style={styles.clubhouseCupolaWindow} /></View>
-                <View style={styles.clubhouseRoofGable} />
+                <View style={styles.clubhouseRoofBase} />
+                <View style={styles.clubhouseRoof} />
+                <View style={[styles.clubhouseChimney, styles.clubhouseChimneyLeft]} />
+                <View style={[styles.clubhouseChimney, styles.clubhouseChimneyRight]} />
                 <View style={styles.clubhouseFacade}>
-                  <View style={styles.clubhouseWindow} />
-                  <View style={styles.clubhouseWindow} />
-                  <View style={styles.clubhouseDoor} />
-                  <View style={styles.clubhouseWindow} />
-                  <View style={styles.clubhouseWindow} />
+                  <View style={styles.clubhouseWing}>
+                    <View style={styles.clubhouseFacadeWindow}><View style={styles.clubhouseWindowPaneVertical} /><View style={styles.clubhouseWindowPaneHorizontal} /></View>
+                    <View style={styles.clubhouseFacadeWindow}><View style={styles.clubhouseWindowPaneVertical} /><View style={styles.clubhouseWindowPaneHorizontal} /></View>
+                  </View>
+                  <View style={styles.clubhousePortico}>
+                    <View style={styles.clubhousePorticoRoof} />
+                    <View style={styles.clubhouseColonnade}>
+                      <View style={styles.clubhouseColumn} />
+                      <View style={styles.clubhouseColumn} />
+                      <View style={styles.clubhouseColumn} />
+                      <View style={styles.clubhouseColumn} />
+                    </View>
+                    <View style={styles.clubhouseDoorArch} />
+                    <View style={styles.clubhouseEntry}><View style={styles.clubhouseDoorSplit} /><View style={styles.clubhouseDoorStep} /></View>
+                  </View>
+                  <View style={styles.clubhouseWing}>
+                    <View style={styles.clubhouseFacadeWindow}><View style={styles.clubhouseWindowPaneVertical} /><View style={styles.clubhouseWindowPaneHorizontal} /></View>
+                    <View style={styles.clubhouseFacadeWindow}><View style={styles.clubhouseWindowPaneVertical} /><View style={styles.clubhouseWindowPaneHorizontal} /></View>
+                  </View>
+                </View>
+                <View style={styles.clubhouseSign}>
+                  <Text adjustsFontSizeToFit minimumFontScale={0.62} numberOfLines={1} style={styles.clubhouseTitle}>
+                    {clubhouseTitle}
+                  </Text>
                 </View>
                 <View style={styles.clubhouseLawn} />
               </View>
-              <Text adjustsFontSizeToFit minimumFontScale={0.65} numberOfLines={1} style={styles.clubhouseTitle}>
-                {clubhouseTitle}
-              </Text>
             </View>
           </View>
 
@@ -1591,82 +1609,91 @@ const styles = StyleSheet.create({
   },
   headerShell: {
     justifyContent: 'center',
-    minHeight: 112,
+    minHeight: 88,
     position: 'relative'
   },
   clubhouseMasthead: {
     alignItems: 'center',
     justifyContent: 'flex-start',
-    minHeight: 222,
+    minHeight: 154,
     overflow: 'hidden',
     paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingTop: 0,
     position: 'relative'
   },
   clubhouseRoofBackdrop: {
-    top: 54,
-    height: 142,
+    top: 6,
+    height: 132,
     left: 0,
     position: 'absolute',
     right: 0
   },
-  clubhouseCupola: { position: 'absolute', alignSelf: 'center', top: 0, width: 28, height: 42, backgroundColor: '#fffaf0', borderTopLeftRadius: 14, borderTopRightRadius: 14, borderTopWidth: 8, borderColor: '#263e3a', alignItems: 'center', zIndex: 1 },
-  clubhouseCupolaWindow: { width: 10, height: 19, marginTop: 5, borderTopLeftRadius: 5, borderTopRightRadius: 5, backgroundColor: '#244a46' },
-  clubhouseLawn: { position: 'absolute', bottom: -7, left: 0, right: 0, height: 18, borderRadius: 100, backgroundColor: '#688c50', borderTopWidth: 4, borderColor: '#8fac6c' },
-  clubhouseRoofGable: {
+  clubhouseLawn: { position: 'absolute', bottom: -7, left: 0, right: 0, height: 18, borderRadius: 100, backgroundColor: '#587c49', borderTopWidth: 3, borderColor: '#91ae67' },
+  clubhouseRoof: {
     alignSelf: 'center',
-    borderBottomColor: '#2c4541',
-    borderBottomWidth: 57,
+    borderBottomColor: '#343c3e',
+    borderBottomWidth: 64,
     borderLeftColor: 'transparent',
-    borderLeftWidth: 175,
+    borderLeftWidth: 168,
     borderRightColor: 'transparent',
-    borderRightWidth: 175,
+    borderRightWidth: 168,
     height: 0,
     position: 'absolute',
-    top: 24,
+    top: -4,
     width: 0
   },
+  clubhouseRoofBase: { alignSelf: 'center', backgroundColor: '#343c3e', borderBottomColor: '#242d2e', borderBottomWidth: 3, height: 18, position: 'absolute', top: 53, width: '94%' },
+  clubhouseChimney: { backgroundColor: '#9a5945', borderColor: '#6d4036', borderTopWidth: 3, borderWidth: 1, height: 24, position: 'absolute', top: 29, width: 10, zIndex: 1 },
+  clubhouseChimneyLeft: { left: '14%' },
+  clubhouseChimneyRight: { right: '14%' },
   clubhouseFacade: {
     alignItems: 'center',
     alignSelf: 'center',
-    backgroundColor: '#f6f0df',
-    borderColor: '#d5ccb4',
-    borderTopWidth: 2,
+    backgroundColor: '#fbfaf4',
+    borderColor: '#d8d4c8',
+    borderTopWidth: 0,
     borderWidth: 1,
     bottom: 0,
     flexDirection: 'row',
-    height: 60,
-    justifyContent: 'space-evenly',
+    height: 72,
+    justifyContent: 'space-between',
     position: 'absolute',
-    width: '92%'
+    width: '94%'
   },
-  clubhouseWindow: {
-    backgroundColor: '#345952',
-    borderColor: '#ffffff',
-    borderWidth: 3,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    height: 25,
-    width: 25
-  },
-  clubhouseDoor: {
-    alignSelf: 'flex-end',
-    backgroundColor: '#785938',
-    borderColor: '#dfd4b8',
-    borderTopLeftRadius: 15,
-    borderTopRightRadius: 15,
+  clubhouseWing: { alignItems: 'center', flexDirection: 'row', height: '100%', justifyContent: 'center', width: '28%' },
+  clubhouseFacadeWindow: { alignItems: 'center', backgroundColor: '#4c7479', borderColor: '#e6e9e1', borderWidth: 2, height: 27, justifyContent: 'center', marginHorizontal: 3, overflow: 'hidden', width: 19 },
+  clubhouseWindowPaneVertical: { backgroundColor: 'rgba(246,245,235,0.78)', height: '100%', position: 'absolute', width: 1 },
+  clubhouseWindowPaneHorizontal: { backgroundColor: 'rgba(246,245,235,0.78)', height: 1, position: 'absolute', width: '100%' },
+  clubhousePortico: { alignItems: 'center', alignSelf: 'stretch', backgroundColor: '#f7f5ed', borderLeftColor: '#d7d4ca', borderLeftWidth: 1, borderRightColor: '#d7d4ca', borderRightWidth: 1, justifyContent: 'flex-end', width: '44%' },
+  clubhousePorticoRoof: { position: 'absolute', top: 4, width: '98%', height: 12, backgroundColor: '#fefdf7', borderBottomColor: '#bfc2bc', borderBottomWidth: 3, borderTopColor: '#e1dfd5', borderTopWidth: 1 },
+  clubhouseColonnade: { bottom: 0, flexDirection: 'row', justifyContent: 'space-around', left: 10, position: 'absolute', right: 10, top: 17 },
+  clubhouseColumn: { backgroundColor: '#fffefa', borderColor: '#d2d2ca', borderBottomWidth: 3, borderLeftWidth: 1, borderRightWidth: 1, borderTopWidth: 3, height: '100%', width: 7 },
+  clubhouseDoorArch: { alignSelf: 'center', backgroundColor: '#e5e0d4', borderTopLeftRadius: 17, borderTopRightRadius: 17, bottom: 0, height: 48, position: 'absolute', width: 34, zIndex: 3 },
+  clubhouseEntry: { alignItems: 'center', alignSelf: 'center', backgroundColor: '#795738', borderColor: '#f1e8d6', borderTopLeftRadius: 10, borderTopRightRadius: 10, borderWidth: 2, bottom: 0, height: 50, justifyContent: 'center', position: 'absolute', width: 25, zIndex: 5 },
+  clubhouseDoorSplit: { backgroundColor: 'rgba(245,231,202,0.68)', height: '88%', position: 'absolute', width: 1 },
+  clubhouseDoorStep: { backgroundColor: '#c9c5ba', bottom: -5, height: 5, position: 'absolute', width: 34 },
+  clubhouseSign: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(250,247,234,0.96)',
+    borderColor: '#cfc5a9',
+    borderRadius: 2,
     borderWidth: 1,
-    height: 38,
-    width: 30
+    left: '23%',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    position: 'absolute',
+    right: '23%',
+    top: 48,
+    zIndex: 6
   },
   clubhouseTitle: {
-    color: '#fffaf0',
+    color: '#28463d',
     fontFamily: 'Georgia',
-    fontSize: 25,
+    fontSize: 14,
     fontWeight: '700',
-    letterSpacing: -0.4,
+    letterSpacing: -0.2,
     textAlign: 'center',
-    width: '66%'
+    width: '100%'
   },
   headerActions: {
     bottom: 0,

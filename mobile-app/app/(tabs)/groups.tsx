@@ -97,19 +97,26 @@ function formatRelativeTime(value?: string) {
 }
 
 function getGroupActivityTitle(item: GroupActivity) {
-  const actorName = item.actor?.first_name || item.actor?.username || 'A member'
+  const actorName = [item.actor?.first_name, item.actor?.last_name].filter(Boolean).join(' ') || item.actor?.username || 'A member'
+  const groupName = item.group?.name || 'the group'
 
   switch (item.activity_type) {
     case 'group_joined':
-      return `${actorName} joined the group`
+      return `${actorName} joined ${groupName}`
     case 'group_logo_updated':
-      return `${actorName} updated the group logo`
+      return `${actorName} updated ${groupName}'s logo`
     case 'group_cover_updated':
-      return `${actorName} updated the cover photo`
+      return `${actorName} updated ${groupName}'s cover`
     case 'group_details_updated':
-      return `${actorName} refreshed group details`
+      return `${actorName} updated ${groupName}`
     case 'group_created':
-      return `${actorName} created this group`
+      return `${actorName} created ${groupName}`
+    case 'group_board_post':
+      return `${actorName} posted in ${groupName}`
+    case 'group_thread_reply':
+      return `${actorName} replied in ${groupName}`
+    case 'group_member_role_updated':
+      return `${actorName} updated a role in ${groupName}`
     default:
       return item.title && !/^(group\s+)?activity$/i.test(item.title.trim())
         ? item.title
@@ -118,15 +125,9 @@ function getGroupActivityTitle(item: GroupActivity) {
 }
 
 function getGroupActivityDetail(item: GroupActivity) {
-  if (item.description && item.description.trim() && item.description.trim() !== item.title?.trim()) return item.description
-  switch (item.activity_type) {
-    case 'group_joined': return 'Welcome to the club.'
-    case 'group_logo_updated': return 'A fresh look for the community.'
-    case 'group_cover_updated': return 'The clubhouse view has been refreshed.'
-    case 'group_details_updated': return 'Club information has been updated.'
-    case 'group_created': return 'A new place for golfers to connect.'
-    default: return null
-  }
+  const detail = item.description?.trim()
+  if (!detail || detail === item.title?.trim()) return null
+  return detail
 }
 
 function getGroupActivityIcon(activityType?: string) {
@@ -509,7 +510,7 @@ export default function GroupsTab() {
             >
               <View style={styles.feedCardTop}>
                 <View style={styles.feedActorWrap}>
-                  <Avatar label={item.actor?.first_name || item.actor?.username || 'G'} shape="circle" size={44} uri={item.actor?.avatar_url} />
+                  <Avatar label={item.group?.name || 'Group'} shape="circle" size={42} uri={item.group?.logo_url || item.group?.image_url} />
                   <View style={styles.feedEventIcon}>
                     <Ionicons color={palette.bg} name={getGroupActivityIcon(item.activity_type)} size={13} />
                   </View>
@@ -520,10 +521,6 @@ export default function GroupsTab() {
                     <Text style={styles.feedTime}>{formatRelativeTime(item.created_at)}</Text>
                   </View>
                   {getGroupActivityDetail(item) ? <Text numberOfLines={1} style={styles.feedDetail}>{getGroupActivityDetail(item)}</Text> : null}
-                  <View style={styles.feedGroupBadge}>
-                    {item.group?.logo_url || item.group?.image_url ? <Avatar label={item.group?.name || 'Group'} shape="circle" size={18} uri={item.group.logo_url || item.group.image_url} /> : <Ionicons color={palette.aqua} name="people-outline" size={14} />}
-                    <Text numberOfLines={1} style={styles.feedGroupName}>{item.group?.name || 'Golf community'}</Text>
-                  </View>
                 </View>
               </View>
             </Pressable>
@@ -847,18 +844,18 @@ const styles = StyleSheet.create({
     lineHeight: 20
   },
   feedCard: {
-    backgroundColor: 'rgba(9, 44, 33, 0.84)',
-    borderColor: 'rgba(103,232,249,0.16)',
-    borderRadius: 20,
+    backgroundColor: 'rgba(9, 44, 33, 0.72)',
+    borderColor: 'rgba(103,232,249,0.12)',
+    borderRadius: 18,
     borderWidth: 1,
-    padding: 12,
+    padding: 11,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.12,
     shadowRadius: 18
   },
   feedCardTop: {
-    alignItems: 'flex-start',
+    alignItems: 'center',
     flexDirection: 'row',
     gap: 12
   },
@@ -890,7 +887,7 @@ const styles = StyleSheet.create({
   },
   feedCopy: {
     flex: 1,
-    gap: 5,
+    gap: 3,
   },
   feedMetaRow: {
     alignItems: 'center',
@@ -913,25 +910,14 @@ const styles = StyleSheet.create({
   feedHeadline: {
     color: palette.text,
     flex: 1,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '800',
-    lineHeight: 20
+    lineHeight: 19
   },
   feedDetail: {
     color: palette.textMuted,
     fontSize: 12,
-    lineHeight: 17
-  },
-  feedGroupBadge: {
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(103,232,249,0.08)',
-    borderRadius: 999,
-    flexDirection: 'row',
-    gap: 5,
-    maxWidth: '100%',
-    paddingHorizontal: 7,
-    paddingVertical: 4
+    lineHeight: 16
   },
   card: {
     backgroundColor: palette.card,

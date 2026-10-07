@@ -31,6 +31,35 @@ const mockCourses = [
   }
 ]
 
+function normalizedCourseKey(course: { name?: string | null; location?: string | null }) {
+  const normalize = (value: string | null | undefined) => (value || '')
+    .toLowerCase()
+    .replace(/golf course|golf club|golf links|country club/g, '')
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]/g, '')
+
+  return `${normalize(course.name)}|${normalize(course.location)}`
+}
+
+function deduplicateCourses(courses: any[]) {
+  const unique = new Map<string, any>()
+
+  for (const course of courses) {
+    const key = normalizedCourseKey(course)
+    const existing = unique.get(key)
+    if (!existing) {
+      unique.set(key, course)
+      continue
+    }
+
+    const existingScore = Number(Boolean(existing.logo_url)) + Number(Boolean(existing.course_image_url)) + Number(existing.course_reviews?.length || 0)
+    const candidateScore = Number(Boolean(course.logo_url)) + Number(Boolean(course.course_image_url)) + Number(course.course_reviews?.length || 0)
+    if (candidateScore > existingScore) unique.set(key, course)
+  }
+
+  return [...unique.values()]
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -93,6 +122,11 @@ export async function GET(request: NextRequest) {
           id,
           rating,
           comment,
+          course_condition_rating,
+          staff_rating,
+          price_rating,
+          difficulty_rating,
+          photo_url,
           created_at,
           user_profiles (
             first_name,
@@ -134,7 +168,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculate average ratings and review counts
-    let coursesWithStats = courses?.map((course: any) => {
+    let coursesWithStats = deduplicateCourses((courses || []).map((course: any) => {
       const reviews = course.course_reviews || []
       const totalRating = reviews.reduce((sum: number, review: any) => sum + review.rating, 0)
       const averageRating = reviews.length > 0 ? (totalRating / reviews.length).toFixed(1) : '0.0'
@@ -145,7 +179,7 @@ export async function GET(request: NextRequest) {
         review_count: reviews.length,
         recent_reviews: reviews.slice(0, 3) // Get last 3 reviews
       }
-    })
+    }))
 
     // Apply location-based filtering if zip code is provided
     if (zipCode && coursesWithStats) {
@@ -171,7 +205,28 @@ export async function GET(request: NextRequest) {
     }
 
     if (id) {
-      return NextResponse.json({ course: coursesWithStats?.[0] || null })
+      const course = coursesWithStats?.[0] || null
+      let upcomingTournaments: any[] = []
+
+      if (course) {
+        try {
+          const { data: tournaments } = await supabase
+            .from('golf_groups')
+            .select('id, name, description, profile_photo_url, cover_photo_url, tournament_date, tournament_end_date, tournament_format, tournament_matchups')
+            .eq('group_type', 'tournament')
+            .order('tournament_date', { ascending: true })
+
+          const courseNeedle = course.name.toLowerCase().replace(/golf course|golf club|golf links/g, '').trim()
+          upcomingTournaments = (tournaments || []).filter((tournament: any) => {
+            const matchupText = typeof tournament.tournament_matchups === 'string' ? tournament.tournament_matchups : JSON.stringify(tournament.tournament_matchups || '')
+            return matchupText.toLowerCase().includes(courseNeedle)
+          })
+        } catch {
+          // The course profile remains available if a deployment is still missing tournament columns.
+        }
+      }
+
+      return NextResponse.json({ course, upcoming_tournaments: upcomingTournaments })
     }
 
     return NextResponse.json({ courses: coursesWithStats })

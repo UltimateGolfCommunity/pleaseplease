@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Linking,
   Modal,
   Pressable,
   RefreshControl,
@@ -33,6 +34,9 @@ type PublicUser = {
   home_club?: string | null
   linkedin?: string | null
   linkedin_url?: string | null
+  instagram_url?: string | null
+  facebook_url?: string | null
+  x_url?: string | null
   bag_items?: Record<string, string | null> | null
   ace_details?: {
     course?: string | null
@@ -318,6 +322,20 @@ export default function PublicUserScreen() {
   const homeCourse = profile?.home_course || profile?.home_club || 'Home course not added'
   const bagItems = useMemo(() => normalizeBagItems(profile?.bag_items), [profile?.bag_items])
   const aceDetails = useMemo(() => normalizeAceDetails(profile?.ace_details), [profile?.ace_details])
+  const socialLinks = useMemo(() => {
+    const normalizeUrl = (value?: string | null) => {
+      const trimmed = value?.trim() || ''
+      if (!trimmed) return ''
+      return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
+    }
+
+    return [
+      { key: 'linkedin', label: 'LinkedIn', icon: 'logo-linkedin' as const, url: normalizeUrl(profile?.linkedin_url || profile?.linkedin) },
+      { key: 'instagram', label: 'Instagram', icon: 'logo-instagram' as const, url: normalizeUrl(profile?.instagram_url) },
+      { key: 'facebook', label: 'Facebook', icon: 'logo-facebook' as const, url: normalizeUrl(profile?.facebook_url) },
+      { key: 'x', label: 'X', icon: 'logo-twitter' as const, url: normalizeUrl(profile?.x_url) }
+    ].filter((link) => link.url)
+  }, [profile?.facebook_url, profile?.instagram_url, profile?.linkedin, profile?.linkedin_url, profile?.x_url])
 
   const connectedGolfers = useMemo(() => {
     if (!id) return []
@@ -426,6 +444,16 @@ export default function PublicUserScreen() {
     }
   }
 
+  const handleOpenSocialLink = async (url: string, label: string) => {
+    try {
+      const supported = await Linking.canOpenURL(url)
+      if (!supported) throw new Error('This link cannot be opened on this device.')
+      await Linking.openURL(url)
+    } catch (error) {
+      Alert.alert(`Unable to open ${label}`, error instanceof Error ? error.message : 'Please try again.')
+    }
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -477,6 +505,20 @@ export default function PublicUserScreen() {
                 <Ionicons color="#fffaf0" name="people-outline" size={20} />
               </Pressable>
             </View>
+            {socialLinks.length ? (
+              <View style={styles.coverSocialLinks}>
+                {socialLinks.map((link) => (
+                  <Pressable
+                    key={link.key}
+                    accessibilityLabel={`Open ${link.label}`}
+                    onPress={() => void handleOpenSocialLink(link.url, link.label)}
+                    style={styles.coverSocialLink}
+                  >
+                    <Ionicons color="#fffaf0" name={link.icon} size={16} />
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
 
             <View style={styles.coverIdentity}>
               <View style={styles.avatarWrap}>
@@ -588,32 +630,33 @@ export default function PublicUserScreen() {
           </View>
         ) : (
           <View style={styles.aboutFeed}>
-            {profile?.bio ? (
-              <View style={styles.aboutBioCard}>
-                <Text style={styles.aboutBioEyebrow}>Member&apos;s Note</Text>
-                <Text style={styles.aboutBioText}>{profile.bio}</Text>
+            <View style={styles.aboutMemberCard}>
+              <View style={styles.aboutMemberHeading}><View style={styles.aboutMemberIcon}><Ionicons color="#d8bd76" name="person-outline" size={18} /></View><View><Text style={styles.aboutBioEyebrow}>Golfer profile</Text><Text style={styles.aboutMemberTitle}>{displayName.split(' ')[0]} on the course</Text></View></View>
+              {profile?.bio ? <Text style={styles.aboutBioText}>{profile.bio}</Text> : <Text style={styles.helper}>This golfer has not added an introduction yet.</Text>}
+              <View style={styles.aboutHighlights}><View style={styles.aboutHighlight}><Ionicons color={palette.aqua} name="golf-outline" size={16} /><View><Text style={styles.aboutHighlightLabel}>Home club</Text><Text numberOfLines={1} style={styles.aboutHighlightValue}>{homeCourse}</Text></View></View><View style={styles.aboutHighlight}><Ionicons color={palette.aqua} name="trophy-outline" size={16} /><View><Text style={styles.aboutHighlightLabel}>Rounds</Text><Text style={styles.aboutHighlightValue}>{rounds.length || '0'} logged</Text></View></View></View>
+            </View>
+            <View style={styles.aboutGroupsSection}>
+                <View style={styles.aboutSectionHeading}>
+                  <View style={styles.aboutSectionIcon}><Ionicons color="#d8bd76" name="people-outline" size={16} /></View>
+                <View><Text style={styles.aboutBioEyebrow}>Communities</Text><Text style={styles.aboutSectionTitle}>Groups</Text></View>
               </View>
-            ) : null}
-            <View style={styles.aboutInfoGrid}>
-              <View style={styles.aboutInfoCard}>
-                <Text style={styles.aboutInfoLabel}>Home Course</Text>
-                <Text style={styles.aboutInfoValue}>{homeCourse}</Text>
-              </View>
-              <View style={styles.aboutInfoCard}>
-                <Text style={styles.aboutInfoLabel}>Location</Text>
-                <Text style={styles.aboutInfoValue}>{profile?.location || 'Not added yet'}</Text>
-              </View>
-              <View style={styles.aboutInfoCard}>
-                <Text style={styles.aboutInfoLabel}>Handicap</Text>
-                <Text style={styles.aboutInfoValue}>{profile?.handicap ?? 'Not added yet'}</Text>
-              </View>
-              <View style={styles.aboutInfoCard}>
-                <Text style={styles.aboutInfoLabel}>Rounds Logged</Text>
-                <Text style={styles.aboutInfoValue}>{rounds.length || '0'}</Text>
-              </View>
+              {memberGroups.length ? (
+                <View style={styles.memberGroupRow}>
+                  {memberGroups.slice(0, 6).map((group) => (
+                    <Pressable key={group.id} onPress={() => router.push(`/group/${group.id}`)} style={styles.memberGroupItem}>
+                      {group.logo_url || group.image_url ? (
+                        <Image source={{ uri: group.logo_url || group.image_url || '' }} style={styles.memberGroupLogo} />
+                      ) : (
+                        <View style={styles.memberGroupLogoFallback}><Text style={styles.memberGroupInitial}>{group.name.slice(0, 1)}</Text></View>
+                      )}
+                      <Text numberOfLines={1} style={styles.memberGroupName}>{group.name}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              ) : <Text style={styles.helper}>No groups joined yet.</Text>}
             </View>
             <View style={styles.aceCard}>
-              <Text style={styles.aboutSectionTitle}>Hole In One</Text>
+              <View style={styles.aboutSectionHeading}><View style={styles.aceIcon}><Ionicons color="#f5c55d" name="medal-outline" size={18} /></View><View><Text style={styles.aboutBioEyebrow}>Achievement</Text><Text style={styles.aboutSectionTitle}>Hole In One</Text></View></View>
               {aceDetails ? (
                 <View style={styles.aceDetailsRow}>
                   <View style={styles.acePill}>
@@ -633,28 +676,7 @@ export default function PublicUserScreen() {
                 <Text style={styles.helper}>No hole in one posted yet.</Text>
               )}
             </View>
-            <View style={styles.aboutGroupsSection}>
-              <View style={styles.aboutSectionHeading}>
-                <Ionicons color="#d8bd76" name="people-outline" size={16} />
-                <Text style={styles.aboutSectionTitle}>Member Groups</Text>
-              </View>
-              {memberGroups.length ? (
-                <View style={styles.memberGroupRow}>
-                  {memberGroups.slice(0, 6).map((group) => (
-                    <Pressable key={group.id} onPress={() => router.push(`/group/${group.id}`)} style={styles.memberGroupItem}>
-                      {group.logo_url || group.image_url ? (
-                        <Image source={{ uri: group.logo_url || group.image_url || '' }} style={styles.memberGroupLogo} />
-                      ) : (
-                        <View style={styles.memberGroupLogoFallback}><Text style={styles.memberGroupInitial}>{group.name.slice(0, 1)}</Text></View>
-                      )}
-                      <Text numberOfLines={1} style={styles.memberGroupName}>{group.name}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              ) : <Text style={styles.helper}>No groups joined yet.</Text>}
-            </View>
-            <Text style={styles.aboutSectionTitle}>What&apos;s In The Bag</Text>
-            <View style={styles.bagGrid}>
+            <View style={styles.aboutBagSection}><View style={styles.aboutSectionHeading}><View style={styles.aboutSectionIcon}><Ionicons color="#d8bd76" name="golf-outline" size={16} /></View><View><Text style={styles.aboutBioEyebrow}>Equipment</Text><Text style={styles.aboutSectionTitle}>In the Bag</Text></View></View><View style={styles.bagGrid}>
             {bagFields.map((field) => {
               const value = bagItems[field.key]?.trim()
               return (
@@ -664,7 +686,7 @@ export default function PublicUserScreen() {
                 </View>
               )
             })}
-            </View>
+            </View></View>
           </View>
         )}
       </ScrollView>
@@ -785,6 +807,23 @@ const styles = StyleSheet.create({
   connectionCoverButtonActive: {
     backgroundColor: 'rgba(51,93,45,0.82)',
     borderColor: 'rgba(232,196,91,0.55)'
+  },
+  coverSocialLinks: {
+    flexDirection: 'row',
+    gap: 8,
+    left: 12,
+    position: 'absolute',
+    top: 58
+  },
+  coverSocialLink: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(4,18,12,0.54)',
+    borderColor: 'rgba(255,250,240,0.2)',
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 32,
+    justifyContent: 'center',
+    width: 32
   },
   avatarWrap: {
     borderColor: '#f6e7ba',
@@ -937,6 +976,66 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22
   },
+  aboutMemberCard: {
+    backgroundColor: 'rgba(32,91,71,0.76)',
+    borderColor: 'rgba(246,231,186,0.36)',
+    borderRadius: 22,
+    borderWidth: 1,
+    gap: 14,
+    padding: 16
+  },
+  aboutMemberHeading: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 9
+  },
+  aboutMemberIcon: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(216,189,118,0.12)',
+    borderRadius: 16,
+    height: 32,
+    justifyContent: 'center',
+    width: 32
+  },
+  aboutMemberTitle: {
+    color: palette.text,
+    fontSize: 17,
+    fontWeight: '800',
+    marginTop: 2
+  },
+  aboutHighlights: {
+    borderTopColor: 'rgba(255,255,255,0.12)',
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    gap: 8,
+    paddingTop: 12
+  },
+  aboutHighlight: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.055)',
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 14,
+    borderWidth: 1,
+    flex: 1,
+    flexDirection: 'row',
+    gap: 7,
+    minHeight: 50,
+    paddingHorizontal: 9
+  },
+  aboutHighlightLabel: {
+    color: palette.textMuted,
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase'
+  },
+  aboutHighlightValue: {
+    color: palette.text,
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 2,
+    maxWidth: 108
+  },
   aboutFeed: {
     gap: 12,
   },
@@ -945,9 +1044,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 7
   },
+  aboutSectionIcon: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(216,189,118,0.1)',
+    borderRadius: 15,
+    height: 30,
+    justifyContent: 'center',
+    width: 30
+  },
   aboutGroupsSection: {
-    backgroundColor: 'rgba(7,39,28,0.3)',
-    borderColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: 'rgba(39,102,80,0.58)',
+    borderColor: 'rgba(246,231,186,0.2)',
     borderRadius: 19,
     borderWidth: 1,
     gap: 10,
@@ -1180,6 +1287,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 10,
     padding: 16
+  },
+  aceIcon: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(245,197,93,0.12)',
+    borderRadius: 15,
+    height: 30,
+    justifyContent: 'center',
+    width: 30
+  },
+  aboutBagSection: {
+    backgroundColor: 'rgba(39,102,80,0.58)',
+    borderColor: 'rgba(246,231,186,0.2)',
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 12,
+    padding: 13
   },
   aboutSectionTitle: {
     color: palette.text,

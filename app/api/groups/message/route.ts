@@ -1,5 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
+import { createNotificationAndDeliverPush } from '@/lib/notifications'
+
+const GROUP_POST_PHOTO_PREFIX = '[[ugc-photo:'
+
+function readablePostContent(content: string) {
+  if (!content.startsWith(GROUP_POST_PHOTO_PREFIX)) return content.trim()
+
+  const markerEnd = content.indexOf(']]')
+  if (markerEnd < 0) return content.trim()
+
+  return content.slice(markerEnd + 2).trim() || 'Shared a photo'
+}
 
 function getSupabase() {
   return createAdminClient()
@@ -334,11 +346,12 @@ export async function POST(request: NextRequest) {
       .maybeSingle()
 
     const groupName = activityGroup?.name || 'a group'
+    const readableMessage = readablePostContent(message)
     const { error: activityError } = await supabase.from('user_activities').insert({
       user_id,
       activity_type: parent_message_id ? 'group_thread_reply' : 'group_board_post',
       title: parent_message_id ? `replied in ${groupName}` : `posted in ${groupName}`,
-      description: message.substring(0, 140),
+      description: readableMessage.substring(0, 140),
       related_id: group_id,
       related_type: 'group',
       metadata: {
@@ -360,15 +373,17 @@ export async function POST(request: NextRequest) {
       .neq('user_id', user_id)
 
     if (!membersError && members) {
-      for (const member of members) {
-        await supabase.rpc('create_notification', {
-          user_id_param: member.user_id,
-          type_param: 'group_message',
-          title_param: 'New Group Message',
-          message_param: `New message in your group: ${message.substring(0, 50)}${message.length > 50 ? '...' : ''}`,
-          related_id_param: group_id
+      const preview = readableMessage.substring(0, 80)
+      await Promise.allSettled(members.map((member) =>
+        createNotificationAndDeliverPush(supabase, {
+          userId: member.user_id,
+          type: 'group_message',
+          title: `New post in ${groupName}`,
+          message: preview.length < readableMessage.length ? `${preview}…` : preview,
+          relatedId: group_id,
+          notificationData: { group_id, message_id: data?.id || null }
         })
-      }
+      ))
     }
 
     const messages = await fetchGroupMessages(group_id, user_id)
