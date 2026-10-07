@@ -1,5 +1,15 @@
-.expo
-app-store-screenshots
-node_modules
-ios/build
+# Installed from the lockfile by EAS; never needed in the upload archive.
+/node_modules
+/.expo
+
+# Store artwork, simulator captures, and video are not part of the binary.
+/app-store-screenshots
+*.mov
+*.mp4
+
+# CocoaPods are regenerated from Podfile.lock during the cloud build.
+/ios/Pods
+/ios/build
+/ios/.DS_Store
+
 *.log
