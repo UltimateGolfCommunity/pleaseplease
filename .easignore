@@ -6,10 +6,13 @@
 /mobile-app/.expo
 /mobile-app/app-store-screenshots
 /mobile-app/ios/Pods
+/mobile-app/ios/Pods/**
 /mobile-app/ios/build
 
 # Local deliverables and caches are not application source.
 *.mov
 *.mp4
+public/*.mov
+public/*.mp4
 *.log
 **/.DS_Store
